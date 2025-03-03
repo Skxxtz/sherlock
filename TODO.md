@@ -23,6 +23,7 @@
 - [ ] Finish setting up the loading animation for asynchronous widgets
 - [ ] Property/Detail tab on the right side of the screen to display application information
 - [ ] Markdown parser: Markdown > GTK ui
+- [ ] Currency calculator function / clipboard function
 
 - X Consider changing the alias for each command in `commandlauncher` (if possible). -> Not viable
 
