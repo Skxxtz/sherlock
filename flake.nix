@@ -13,13 +13,10 @@
   outputs = inputs @ {
     self,
     nixpkgs,
-    crane,
-    flake-parts,
-    rust-overlay,
     ...
   }:
     with nixpkgs;
-      flake-parts.lib.mkFlake {inherit inputs;} {
+      inputs.flake-parts.lib.mkFlake {inherit inputs;} {
         # sherlock currently only supports linux
         systems = [
           "x86_64-linux"
@@ -36,11 +33,11 @@
 
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [(import rust-overlay)];
+            overlays = [(import inputs.rust-overlay)];
           };
 
           rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
-          craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+          craneLib = (inputs.crane.mkLib pkgs).overrideToolchain rustToolchain;
 
           src = lib.fileset.toSource {
             root = ./.;
