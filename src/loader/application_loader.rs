@@ -261,7 +261,16 @@ fn get_applications_dir() -> HashSet<PathBuf> {
                 .collect();
             app_dirs
         }
-        _ => HashSet::from([PathBuf::from("/usr/share/applications/")]),
+        _ => {
+            let mut app_dirs = HashSet::from([PathBuf::from("/usr/share/applications/")]);
+
+            // Add ~/.local/share/applications/ if HOME is available
+            if let Ok(home) = env::var("HOME") {
+                app_dirs.insert(PathBuf::from(home).join(".local/share/applications/"));
+            }
+
+            app_dirs
+        }
     }
 }
 
