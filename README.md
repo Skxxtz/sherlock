@@ -22,7 +22,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 - [sherlock-wiki](https://github.com/Skxxtz/sherlock-wiki): allows you to search wikipedia from within sherlock unsing the `bulk_text` launcher.
 <br><br>
 
-> **🚨 Warning:** The app is was created on **Arch Linux** with the **Hyprland** tiling window manager in mind. It may cause errors or won't function at all on other system configurations.
+> **🚨 Warning:** This app is/was created on **Arch Linux** with the **Hyprland** tiling window manager in mind. It may cause errors or won't function at all on other system configurations.
 ---
 ## Table of Contents
 - [Features](#features)
@@ -35,7 +35,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
     - [Post Installation](#3-post-installation)
         - [Config Setup](#config-setup)
         - [Keybind Setup](#keybind-setup)
---- 
+---
 <br><br>
 
 ## Features
@@ -63,14 +63,14 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 ### 📅 Teams Events Launcher
 - Use the Teams Event Launcher to easily join upcoming Microsoft Teams meetings
 
-### 🔍 Category-Based Search 
+### 🔍 Category-Based Search
 - Type the launcher alias and spacebar to only search within a specific category of commands.
 - Categories are fully configureable, allowing you to customize search scopes.
 
 ### ⌨️ Shortcuts
 - Use shortcuts like ctrl + 4 to quickly launch a command or app without having to scroll.
 
---- 
+---
 <br><br>
 
 ## Getting Started
@@ -170,13 +170,13 @@ Make sure you have the folloing dependencies installed:
 <br><br>
 ### 3. Post Installation
 
-#### **Config Setup**  
-After the installation is completed, you can set up your configuration files. The location for them is `~/.config/sherlock/`. Depending on your needs, you should add the following files:  
+#### **Config Setup**
+After the installation is completed, you can set up your configuration files. The location for them is `~/.config/sherlock/`. Depending on your needs, you should add the following files:
 
-1. [**config.toml**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/config.toml): This file specifies the behavior and defaults of your launcher. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/config.md).  
-2. [**fallback.json**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/fallback.json): This file specifies the features your launcher should have. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/launchers.md).  
-3. [**sherlock_alias.json**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/sherlock_alias.json): This file specifies aliases for applications. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/aliases.md).  
-4. [**sherlockignore**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/sherlockignore): This file specifies which applications to exclude from your search. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/sherlockignore.md).  
+1. [**config.toml**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/config.toml): This file specifies the behavior and defaults of your launcher. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/config.md).
+2. [**fallback.json**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/fallback.json): This file specifies the features your launcher should have. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/launchers.md).
+3. [**sherlock_alias.json**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/sherlock_alias.json): This file specifies aliases for applications. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/aliases.md).
+4. [**sherlockignore**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/sherlockignore): This file specifies which applications to exclude from your search. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/sherlockignore.md).
 
 ```bash
 mkdir -p ~/.config/sherlock/
@@ -199,11 +199,11 @@ curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/she
 #### Warnings after startup
 If you're getting warnings after startup, you can press `return` to access the main application. Alternatively you can set the `try_surpress_warnings` key in the config file to true. This will prevent any warnings to be shown. The same thing can be done for errors. However, if you surpress errors, the application might not work as expected.
 
-#### **Keybind Setup**  
-To launch Sherlock, you can either type `sherlock` into the command line or bind it to a key. The latter is recommended.  
+#### **Keybind Setup**
+To launch Sherlock, you can either type `sherlock` into the command line or bind it to a key. The latter is recommended.
 The setup steps vary by display manager. The setup for **Hyprland** is outlined here:
 
-1. (Recommended) Bind the `$menu` variable to Sherlock:  
+1. (Recommended) Bind the `$menu` variable to Sherlock:
 ```conf
 $menu = sherlock
 ```
@@ -211,4 +211,3 @@ $menu = sherlock
 ```conf
 bind = $mainMod, space, exec, $menu
 ```
-
