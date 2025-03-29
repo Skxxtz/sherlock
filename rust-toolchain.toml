@@ -1,0 +1,5 @@
+[toolchain]
+channel = "stable"
+components = [ "rust-analyzer", "rust-src" ]
+targets = [] # host platform is added by default
+profile = "default" # adds components rustc, rust-std, cargo, rust-docs, rustfmt, and clippy
