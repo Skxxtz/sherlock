@@ -158,9 +158,9 @@ async fn main() {
         };
 
         // Logic for the Error-View
-        if !app_config.debug.try_surpress_errors {
+        if !app_config.debug.try_suppress_errors {
             let show_errors = !error_list.is_empty();
-            let show_warnings = !app_config.debug.try_surpress_warnings && !non_breaking.is_empty();
+            let show_warnings = !app_config.debug.try_suppress_warnings && !non_breaking.is_empty();
             if show_errors || show_warnings {
                 ui::error_view::errors(&error_list, &non_breaking);
                 show_stack_page("error-page", None);

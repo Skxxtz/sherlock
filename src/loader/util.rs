@@ -159,8 +159,8 @@ impl SherlockConfig {
                         .unwrap_or_default(),
                 },
                 debug: ConfigDebug {
-                    try_surpress_errors: false,
-                    try_surpress_warnings: false,
+                    try_suppress_errors: false,
+                    try_suppress_warnings: false,
                 },
                 appearance: ConfigAppearance {
                     width: 900,
@@ -216,9 +216,9 @@ pub struct ConfigBehavior {
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct ConfigDebug {
     #[serde(default)]
-    pub try_surpress_errors: bool,
+    pub try_suppress_errors: bool,
     #[serde(default)]
-    pub try_surpress_warnings: bool,
+    pub try_suppress_warnings: bool,
 }
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct ConfigAppearance {
