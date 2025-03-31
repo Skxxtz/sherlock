@@ -199,7 +199,7 @@ curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/fal
 curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/sherlock_alias.json
 ```
 #### Warnings after startup
-If you're getting warnings after startup, you can press `return` to access the main application. Alternatively you can set the `try_surpress_warnings` key in the config file to true. This will prevent any warnings to be shown. The same thing can be done for errors. However, if you surpress errors, the application might not work as expected.
+If you're getting warnings after startup, you can press `return` to access the main application. Alternatively you can set the `try_suppress_warnings` key in the config file to true. This will prevent any warnings to be shown. The same thing can be done for errors. However, if you suppress errors, the application might not work as expected.
 
 #### **Keybind Setup**
 To launch Sherlock, you can either type `sherlock` into the command line or bind it to a key. The latter is recommended.

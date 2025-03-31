@@ -4,8 +4,8 @@ calendar_client         =   "thunderbird"                           # For fetchi
 terminal                =   "kitty"                                 # Used to start applications
 
 [debug]
-try_surpress_errors     =   false                                   # Disables the error screen for errors
-try_surpress_warnings   =   true                                    # Disables the error screen for warnings
+try_suppress_errors     =   false                                   # Disables the error screen for errors
+try_suppress_warnings   =   true                                    # Disables the error screen for warnings
 
 [appearance]
 width                   =   900                                     # Sets the width of the main window
