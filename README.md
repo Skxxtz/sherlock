@@ -81,6 +81,8 @@ To run the Sherlock Launcher, ensure the following dependencies are installed:
 
 - `gtk4` - [Gtk4 Documentation](https://docs.gtk.org/gtk4/)
 - `gtk-4-layer-shell` - [Gtk4 Layer Shell](https://github.com/wmww/gtk4-layer-shell)
+- `dbus` - (Used to get currently playing song)
+- `openssl` - (Used for retrieving spotify album art)
 
 Additionally, if you're building from source, you will need:
 

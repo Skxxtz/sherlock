@@ -49,13 +49,13 @@
 
         nativeBuildInputs = with pkgs; [rustToolchain pkg-config];
         buildInputs = with pkgs; [
-          dbus.dev
           glib.dev
           gtk4.dev
           gtk4-layer-shell.dev
-          openssl.dev
           sqlite.dev
           wayland.dev
+          openssl.dev
+          dbus.dev
         ];
         commonArgs = {
           inherit src buildInputs nativeBuildInputs;
