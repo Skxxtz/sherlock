@@ -44,7 +44,6 @@
 
         rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         craneLib = (inputs.crane.mkLib pkgs).overrideToolchain rustToolchain;
-
         src = with nixpkgs;
           lib.fileset.toSource {
             root = ./.;
