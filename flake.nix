@@ -4,23 +4,46 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     crane.url = "github:ipetkov/crane";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = inputs @ {
+  outputs = {
     self,
     nixpkgs,
+    home-manager,
     ...
-  }:
+  } @ inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
       # sherlock currently only supports linux
       systems = [
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      flake.homeManagerModules.default = {
+        config,
+        lib,
+        pkgs,
+        ...
+      }: {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Manage sherlock config files with Nix module.";
+          };
+        };
+        config = lib.mkIf config.options.enable {
+          xdg.configFile."sherlock/test".text = "";
+        };
+      };
 
       perSystem = {
         system,
@@ -49,13 +72,13 @@
 
         nativeBuildInputs = with pkgs; [rustToolchain pkg-config];
         buildInputs = with pkgs; [
+          dbus.dev
           glib.dev
           gtk4.dev
           gtk4-layer-shell.dev
+          openssl.dev
           sqlite.dev
           wayland.dev
-          openssl.dev
-          dbus.dev
         ];
         commonArgs = {
           inherit src buildInputs nativeBuildInputs;
