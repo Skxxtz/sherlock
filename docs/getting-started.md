@@ -59,7 +59,7 @@ Make sure you have the necessary dependencies installed:
 ### <ins>Build Debian Package</ins>
 
 To build a `.deb` package directly from the source, follow these steps:<br>
-Make sure you have the folloing dependencies installed:
+Make sure you have the following dependencies installed:
 - `rust` - [How to install rust](https://www.rust-lang.org/tools/install)
 - `git` - [How to install git](https://github.com/git-guides/install-git)
 - `gtk4` - [Gtk4 Documentation](https://docs.gtk.org/gtk4/)
@@ -122,7 +122,7 @@ curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/fal
 curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/sherlock_alias.json
 ```
 ### Warnings after startup
-If you're getting warnings after startup, you can press `return` to access the main application. Alternatively you can set the `try_surpress_warnings` key in the config file to true. This will prevent any warnings to be shown. The same thing can be done for errors. However, if you surpress errors, the application might not work as expected.
+If you're getting warnings after startup, you can press `return` to access the main application. Alternatively you can set the `try_suppress_warnings` key in the config file to true. This will prevent any warnings to be shown. The same thing can be done for errors. However, if you suppress errors, the application might not work as expected.
 
 ### **Keybind Setup**
 To launch Sherlock, you can either type `sherlock` into the command line or bind it to a key. The latter is recommended.
