@@ -41,7 +41,7 @@
         options.programs.sherlock = {
           enable = lib.mkOption {
             type = lib.types.bool;
-            default = true;
+            default = false;
             description = "Manage sherlock config files with Nix module.";
           };
         };
