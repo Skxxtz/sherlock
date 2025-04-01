@@ -32,15 +32,17 @@
         lib,
         pkgs,
         ...
-      }: {
-        options = {
+      }: let
+        cfg = config.programs.sherlock;
+      in {
+        options.programs.sherlock = {
           enable = lib.mkOption {
             type = lib.types.bool;
             default = true;
             description = "Manage sherlock config files with Nix module.";
           };
         };
-        config = lib.mkIf config.options.enable {
+        config = lib.mkIf cfg.enable {
           xdg.configFile."sherlock/test".text = "";
         };
       };
