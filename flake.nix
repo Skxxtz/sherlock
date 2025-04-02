@@ -46,6 +46,7 @@
           };
         };
         config = lib.mkIf cfg.enable {
+          home.packages = [self.packages.${pkgs.system}.default];
           xdg.configFile."sherlock/test".text = "";
         };
       };
