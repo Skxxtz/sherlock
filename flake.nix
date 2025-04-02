@@ -33,18 +33,36 @@
         pkgs,
         ...
       }: let
+        inherit (lib) mkIf mkOption types;
         cfg = config.programs.sherlock;
       in {
-        options.programs.sherlock = {
-          enable = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-            description = "Manage sherlock config files with Nix module.";
+        options.programs.sherlock = with types; {
+          enable = lib.mkEnableOption "Manage sherlock & config files with home-manager module." // {default = false;};
+
+          settings = mkOption {
+            description = "Sherlock settings, seperated by config file.";
+            default = {};
+            type = submodule {
+              options = {
+                aliases = mkOption {
+                  type = str;
+                  default = "";
+                  description = "'sherlock_alias.json'";
+                };
+                ignore = mkOption {
+                  type = lines;
+                  default = "";
+                  description = "'sherlockignore' file contents.";
+                };
+              };
+            };
           };
         };
-        config = lib.mkIf cfg.enable {
+
+        config = mkIf cfg.enable {
           home.packages = [self.packages.${pkgs.system}.default];
-          xdg.configFile."sherlock/test".text = "";
+          xdg.configFile."sherlock/sherlock_alias.json".text = cfg.settings.aliases;
+          xdg.configFile."sherlock/sherlockignore".text = cfg.settings.ignore;
         };
       };
 
@@ -54,7 +72,7 @@
         ...
       }: let
         name = "sherlock";
-        version = "0.1.6";
+        version = "0.1.7";
 
         pkgs = import nixpkgs {
           inherit system;
