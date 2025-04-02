@@ -27,30 +27,7 @@
         "aarch64-linux"
       ];
 
-<<<<<<< HEAD
       flake.homeManagerModules.default = import ./nix/home-manager.nix self;
-=======
-      flake.homeManagerModules.default = {
-        config,
-        lib,
-        pkgs,
-        ...
-      }: let
-        cfg = config.programs.sherlock;
-      in {
-        options.programs.sherlock = {
-          enable = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-            description = "Manage sherlock config files with Nix module.";
-          };
-        };
-        config = lib.mkIf cfg.enable {
-          home.packages = [self.packages.${pkgs.system}.default];
-          xdg.configFile."sherlock/test".text = "";
-        };
-      };
->>>>>>> 3772732 (first draft of home-manager support)
 
       perSystem = {
         system,

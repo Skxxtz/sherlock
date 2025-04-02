@@ -4,38 +4,11 @@ calendar_client = "thunderbird"                                                 
 terminal = "kitty"                                                                                        # Used to start applications
 
 [debug]
-<<<<<<< HEAD
-try_suppress_errors     =   false                                   # Disables the error screen for errors
-try_suppress_warnings   =   true                                    # Disables the error screen for warnings
-app_paths               =   ["~/.local/share/applications/"]        # Adds paths for Sherlock to look for desktop files
-
-[appearance]
-width                   = 900                                       # Sets the width of the main window
-height                  = 593                                       # Sets the height of the main window
-gsk_renderer            = "cairo"                                   # Sets the rendering engine. [ngl, cairo, ]
-recolor_icons           = false                                     # If set to true, uses the [icon-name]-symbolic icons
-icon_paths              = [ "~/.config/sherlock/icons"]             # Sets where the application should look for custom icons
-icon_size               = 22                                        # Sets the icon size for the tiles
-
-[behavior]
-caching                 =   true                                    # If set to true, will enable caching
-cache                   =   "~/.cache/sherlock_desktop_cache.json"  # Sets the location for caching files
-daemonize               =   false                                   # Enables daemon mode
-animation               =   true                                    # Enables startup animations
-
-[binds]
-prev                    =   "None"                                  # Sets an additional bind for selection the previous item in the list
-next                    =   "None"                                  # Sets an additional bind for selection the next item in the list
-modifier                =   "control"                               # Sets an additional bind for selection the next item in the list
-
-[files]
-fallback                =   "~/.config/sherlock/fallback.json"
-css                     =   "~/.config/sherlock/gruvbox.css"
-alias                   =   "~/.config/sherlock/sherlock_alias.json"
-ignore                  =   "~/.config/sherlock/sherlockignore"
-=======
-try_suppress_errors = false  # Disables the error screen for errors
+try_suppress_errors = false # Disables the error screen for errors
 try_suppress_warnings = true # Disables the error screen for warnings
+app_paths = [
+    "~/.local/share/applications/",
+] # Adds paths for Sherlock to look for desktop files
 
 [appearance]
 width = 900 # Sets the width of the main window
@@ -54,6 +27,12 @@ daemonize = false                              # Enables daemon mode
 animation = true                               # Enables startup animations
 
 [binds]
-prev = "None" # Sets an additional bind for selection the previous item in the list
-next = "None" # Sets an additional bind for selection the next item in the list
->>>>>>> 76de326 (fixed spelling errors, i forgot to update examples and docs when changing the source code)
+prev = "None"        # Sets an additional bind for selection the previous item in the list
+next = "None"        # Sets an additional bind for selection the next item in the list
+modifier = "control" # Sets an additional bind for selection the next item in the list
+
+[files]
+fallback = "~/.config/sherlock/fallback.json"
+css = "~/.config/sherlock/gruvbox.css"
+alias = "~/.config/sherlock/sherlock_alias.json"
+ignore = "~/.config/sherlock/sherlockignore"
