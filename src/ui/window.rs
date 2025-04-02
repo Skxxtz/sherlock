@@ -2,6 +2,7 @@ use gtk4::{gdk, Builder, Stack};
 use gtk4::{prelude::*, Application, ApplicationWindow, EventControllerKey};
 use gtk4_layer_shell::{Layer, LayerShell};
 
+use crate::application::util::reload_content;
 use crate::{APP_STATE, CONFIG};
 
 pub fn window(application: &Application) -> (ApplicationWindow, Stack) {
@@ -53,7 +54,10 @@ fn hide_app() {
     hide_window(true);
 }
 
-pub fn show_window() {
+pub fn show_window(reload: bool) {
+    if reload {
+        reload_content();
+    };
     APP_STATE.with(|state| {
         if let Some(ref state) = *state.borrow() {
             state.window.as_ref().map(|window| window.present());
@@ -70,6 +74,14 @@ pub fn hide_window(clear_search: bool) {
                     .as_ref()
                     .map(|search_bar| search_bar.set_text(""));
             }
+        }
+    });
+}
+
+pub fn destroy_window() {
+    APP_STATE.with(|state| {
+        if let Some(ref state) = *state.borrow() {
+            state.window.as_ref().map(|window| window.destroy());
         }
     });
 }

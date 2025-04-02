@@ -12,6 +12,10 @@ impl Loader {
             let _ = print_help();
             std::process::exit(0);
         }
+        if args.contains(&"-h".to_string()) {
+            let _ = print_help();
+            std::process::exit(0);
+        }
         if args.contains(&"--version".to_string()) {
             let _ = print_version();
             std::process::exit(0);
@@ -52,6 +56,7 @@ impl SherlockFlags {
             center_raw: check_flag_existance("--center"),
             caching: check_flag_existance("--cache"),
             cache: extract_flag_value("--cache", defaults.cache),
+            daemonize: check_flag_existance("--daemonize"),
         })
     }
 
@@ -70,6 +75,7 @@ impl SherlockFlags {
             center_raw: false,
             caching: false,
             cache: format!("{}/.cache/sherlock_desktop_cache.json", home_dir),
+            daemonize: false,
         })
     }
 }
@@ -95,6 +101,10 @@ pub fn print_help() -> Result<(), SherlockError> {
             "Force Sherlock to use a singular tile to display the piped content",
         ),
         ("--cache", "Specify the sherlock cache file (.json)."),
+        (
+            "--daemonize",
+            "If this flag is set, sherlock will run in daemon mode.",
+        ),
     ];
 
     // Print header

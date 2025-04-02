@@ -20,7 +20,7 @@ impl SherlockDeamon {
                             match received_data.trim() {
                                 "show" => {
                                     glib::idle_add(move || {
-                                        show_window();
+                                        show_window(true);
                                         ControlFlow::Break
                                     });
                                 }

@@ -94,9 +94,9 @@ fn construct_window(
 }
 
 fn nav_event(
-    results_ev_nav: Rc<ListBox>,
+    results: Rc<ListBox>,
     ui: SearchUI,
-    mode_ev_nav: Rc<RefCell<String>>,
+    mode: Rc<RefCell<String>>,
     custom_binds: ConfKeys,
 ) {
     let event_controller = EventControllerKey::new();
@@ -108,7 +108,7 @@ fn nav_event(
                     .prev_mod
                     .map_or(true, |m| modifiers.contains(m)) =>
             {
-                results_ev_nav.focus_prev(&ui.result_viewport);
+                results.focus_prev(&ui.result_viewport);
                 return true.into();
             }
             k if Some(k) == custom_binds.next
@@ -116,14 +116,14 @@ fn nav_event(
                     .next_mod
                     .map_or(true, |m| modifiers.contains(m)) =>
             {
-                results_ev_nav.focus_next(&ui.result_viewport);
+                results.focus_next(&ui.result_viewport);
                 return true.into();
             }
             gdk::Key::Up => {
-                results_ev_nav.focus_prev(&ui.result_viewport);
+                results.focus_prev(&ui.result_viewport);
             }
             gdk::Key::Down => {
-                results_ev_nav.focus_next(&ui.result_viewport);
+                results.focus_next(&ui.result_viewport);
                 return true.into();
             }
             gdk::Key::BackSpace => {
@@ -134,19 +134,17 @@ fn nav_event(
                 {
                     let _ = &ui.search_bar.set_text("");
                 } else {
-                    if ctext.is_empty() {
-                        set_mode(&ui.mode_title, &mode_ev_nav, "all", &"All".to_string());
+                    if ctext.is_empty() && mode.borrow().as_str() != "all" {
+                        set_mode(&ui.mode_title, &mode, "all", &"Home".to_string());
                         // to trigger homescreen rebuild
+                        let _ = &ui.search_bar.set_text("a");
                         let _ = &ui.search_bar.set_text("");
                     }
                 }
-                results_ev_nav.focus_first();
+                results.focus_first();
             }
             gdk::Key::Return => {
-                if let Some(row) = results_ev_nav
-                    .selected_row()
-                    .and_downcast_ref::<SherlockRow>()
-                {
+                if let Some(row) = results.selected_row().and_downcast_ref::<SherlockRow>() {
                     let attrs: HashMap<String, String> = get_row_attrs(row);
                     execute_from_attrs(attrs);
                 }
@@ -164,7 +162,7 @@ fn nav_event(
                         Key::_5 => 5,
                         _ => return false.into(),
                     };
-                    execute_by_index(&*results_ev_nav, key_index);
+                    execute_by_index(&*results, key_index);
                     return true.into();
                 }
             }
@@ -173,10 +171,10 @@ fn nav_event(
                 let shift = Some(ModifierType::SHIFT_MASK);
                 let tab = Some(Key::Tab);
                 if custom_binds.prev_mod == shift && custom_binds.prev == tab {
-                    results_ev_nav.focus_prev(&ui.result_viewport);
+                    results.focus_prev(&ui.result_viewport);
                     return true.into();
                 } else if custom_binds.next_mod == shift && custom_binds.next == tab {
-                    results_ev_nav.focus_next(&ui.result_viewport);
+                    results.focus_next(&ui.result_viewport);
                     return true.into();
                 }
             }
@@ -199,64 +197,56 @@ fn change_event(
     results: &Rc<ListBox>,
     custom_binds: &ConfKeys,
 ) {
-    //Cloning:
-    let mode_title_ev_changed = ui.mode_title.clone();
-    let launchers_ev_changed = launchers.clone();
-    let mode_ev_changed = Rc::clone(mode);
-    let results_ev_changed = Rc::clone(results);
-    let mod_str = custom_binds.shortcut_modifier_str.clone();
-
     // Setting up async capabilities
     let current_task: Rc<RefCell<Option<glib::JoinHandle<()>>>> = Rc::new(RefCell::new(None));
     let cancel_flag = Rc::new(RefCell::new(false));
 
+    // vars
+    let mod_str = custom_binds.shortcut_modifier_str.clone();
+
+    // Setting home screen
     async_calc(
         &cancel_flag,
         &current_task,
-        &launchers_ev_changed,
-        &mode_ev_changed,
+        &launchers,
+        &mode,
         String::new(),
-        &results_ev_changed,
-        true,
+        &results,
         &mod_str,
     );
 
-    ui.search_bar.connect_changed(move |search_bar| {
-        let current_text = search_bar.text().to_string();
-        if let Some(task) = current_task.borrow_mut().take() {
-            task.abort();
-        };
-        *cancel_flag.borrow_mut() = true;
-        if !current_text.is_empty() && modes.contains_key(&current_text) {
-            // Logic to apply modes
-            if let Some(mode_name) = modes.get(&current_text) {
-                set_mode(
-                    &mode_title_ev_changed,
-                    &mode_ev_changed,
-                    &current_text,
-                    mode_name,
-                );
-                search_bar.set_text("");
+    ui.search_bar.connect_changed({
+        let mode_title_clone = ui.mode_title.clone();
+        let launchers_clone = launchers.clone();
+        let mode_clone = Rc::clone(mode);
+        let results_clone = Rc::clone(results);
 
-                set_results(
-                    "",
-                    &mode_ev_changed.borrow(),
-                    &*results_ev_changed,
-                    &launchers_ev_changed,
-                    None,
-                    false,
-                    mod_str.clone().as_str(),
-                );
+        move |search_bar| {
+            let mut current_text = search_bar.text().to_string();
+            if let Some(task) = current_task.borrow_mut().take() {
+                task.abort();
+            };
+            *cancel_flag.borrow_mut() = true;
+            if !current_text.trim().is_empty() && modes.contains_key(&current_text) {
+                // Logic to apply modes
+                if let Some(mode_name) = modes.get(&current_text) {
+                    set_mode(&mode_title_clone, &mode_clone, &current_text, mode_name);
+                    // Logic to safely reset the search bar
+                    let search_bar_clone = search_bar.clone();
+                    glib::idle_add_local(move || {
+                        search_bar_clone.set_text("");
+                        glib::ControlFlow::Break
+                    });
+                    current_text.clear();
+                }
             }
-        } else {
             async_calc(
                 &cancel_flag,
                 &current_task,
-                &launchers_ev_changed,
-                &mode_ev_changed,
+                &launchers_clone,
+                &mode_clone,
                 current_text,
-                &results_ev_changed,
-                false,
+                &results_clone,
                 &mod_str,
             );
         }
@@ -266,31 +256,32 @@ fn change_event(
 pub fn async_calc(
     cancel_flag: &Rc<RefCell<bool>>,
     current_task: &Rc<RefCell<Option<glib::JoinHandle<()>>>>,
-    launchers: &Vec<Launcher>,
+    launchers: &[Launcher],
     mode: &Rc<RefCell<String>>,
     current_text: String,
     results: &Rc<ListBox>,
-    home: bool,
     mod_str: &str,
 ) {
     *cancel_flag.borrow_mut() = false;
-    let cancel_flag = Rc::clone(&cancel_flag);
-    let launchers = if home {
-        let (show, _): (Vec<Launcher>, Vec<Launcher>) = launchers
-            .clone()
-            .into_iter()
-            .partition(|launcher| launcher.home);
-        show
-    } else {
-        launchers.clone()
+    // If task is currently running, abort it
+    if let Some(t) = current_task.borrow_mut().take() {
+        t.abort();
     };
-    let (async_launchers, non_async_launchers): (Vec<Launcher>, Vec<Launcher>) =
-        launchers.into_iter().partition(|launcher| launcher.r#async);
+    let cancel_flag = Rc::clone(&cancel_flag);
+    let home = current_text.is_empty() && mode.borrow().as_str() == "all";
+    let filtered_launchers: Vec<Launcher> = launchers
+        .iter()
+        .filter(|launcher| (home && launcher.home) || (!home && !launcher.only_home))
+        .cloned()
+        .collect();
+    let (async_launchers, non_async_launchers): (Vec<Launcher>, Vec<Launcher>) = filtered_launchers
+        .into_iter()
+        .partition(|launcher| launcher.r#async);
 
     // Create loader widgets
     // TODO
     let current_mode = mode.borrow().trim().to_string();
-    let widgets: Vec<AsyncLauncherTile> = async_launchers
+    let async_widgets: Vec<AsyncLauncherTile> = async_launchers
         .iter()
         .filter_map(|launcher| {
             if (launcher.priority == 0 && current_mode == launcher.alias.as_deref().unwrap_or(""))
@@ -312,58 +303,62 @@ pub fn async_calc(
         })
         .collect();
 
-    set_results(
+    populate(
         &current_text,
         &mode.borrow(),
         &*results,
         &non_async_launchers,
-        Some(&widgets),
+        Some(&async_widgets),
         home,
         mod_str,
     );
-    results.focus_first();
 
-    // Async widget execution
-    let task = glib::MainContext::default().spawn_local(async move {
-        if *cancel_flag.borrow() {
-            return;
-        }
-        // get results for aysnc launchers
-        for widget in widgets.iter() {
-            if let Some((title, body, next_content)) =
-                widget.launcher.get_result(&current_text).await
-            {
-                widget.title.as_ref().map(|t| t.set_text(&title));
-                widget.body.as_ref().map(|b| b.set_text(&body));
-                if let Some(next_content) = next_content {
-                    let label =
-                        Label::new(Some(format!("next_content | {}", next_content).as_str()));
-                    widget.attrs.append(&label);
-                }
+    // Gather results for aynchronous widgets
+
+    let task = glib::MainContext::default().spawn_local({
+        let current_task_clone = Rc::clone(current_task);
+        async move {
+            if *cancel_flag.borrow() {
+                return;
             }
-            if let Some(opts) = &widget.async_opts {
-                // Replace one image with another
-                if let Some(overlay) = &opts.icon_holder_overlay {
-                    if let Some((image, was_cached)) = widget.launcher.get_image().await {
-                        // Also check for animate key
-                        if !was_cached {
-                            overlay.add_css_class("image-replace-overlay");
+            // get results for aysnc launchers
+            for widget in async_widgets.iter() {
+                if let Some((title, body, next_content)) =
+                    widget.launcher.get_result(&current_text).await
+                {
+                    widget.title.as_ref().map(|t| t.set_text(&title));
+                    widget.body.as_ref().map(|b| b.set_text(&body));
+                    if let Some(next_content) = next_content {
+                        let label =
+                            Label::new(Some(format!("next_content | {}", next_content).as_str()));
+                        widget.attrs.append(&label);
+                    }
+                }
+                if let Some(opts) = &widget.async_opts {
+                    // Replace one image with another
+                    if let Some(overlay) = &opts.icon_holder_overlay {
+                        if let Some((image, was_cached)) = widget.launcher.get_image().await {
+                            // Also check for animate key
+                            if !was_cached {
+                                overlay.add_css_class("image-replace-overlay");
+                            }
+                            let gtk_image = Image::from_pixbuf(Some(&image));
+                            gtk_image.set_widget_name("album-cover");
+                            gtk_image.set_pixel_size(50);
+                            overlay.add_overlay(&gtk_image);
+                        } else {
+                            println!("failed to load image");
                         }
-                        let gtk_image = Image::from_pixbuf(Some(&image));
-                        gtk_image.set_widget_name("album-cover");
-                        gtk_image.set_pixel_size(50);
-                        overlay.add_overlay(&gtk_image);
-                    } else {
-                        println!("failed to load image");
                     }
                 }
             }
+            *current_task_clone.borrow_mut() = None;
         }
     });
     *current_task.borrow_mut() = Some(task);
 }
 
-pub fn set_results(
+pub fn populate(
     keyword: &str,
     mode: &str,
     results_frame: &ListBox,

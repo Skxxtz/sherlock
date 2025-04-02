@@ -6,12 +6,18 @@ on:
       - "**.md"
       - "**.markdown"
       - "**.rasi"
+      - "**build.yml"
+      - "**.flake"
+      - "**.json"
+      
   pull_request:
     branches: [ "**" ]
     paths-ignore:
       - "**.md"
       - "**.markdown"
       - "**.rasi"
+      - "**.json"
+      - "**.flake"
 
 env:
   CARGO_TERM_COLOR: always

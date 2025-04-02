@@ -26,7 +26,7 @@ pub fn display_pipe(pipe_content: Vec<String>) {
 
     let keyword = search_bar.text();
 
-    let tiles = Tile::simple_text_tile(&pipe_content, "", &keyword);
+    let tiles = Tile::simple_text_tile(&pipe_content, "copy", &keyword);
     for item in tiles {
         results.append(&item);
     }

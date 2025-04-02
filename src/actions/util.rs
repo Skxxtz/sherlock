@@ -7,6 +7,7 @@ pub fn copy_to_clipboard(string: &str) -> Result<(), SherlockError> {
         error: SherlockErrorType::ClipboardError,
         traceback: e.to_string(),
     })?;
+
     let _ = ctx.set_contents(string.to_string());
     Ok(())
 }

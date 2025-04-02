@@ -8,6 +8,7 @@ pub mod bulk_text_launcher;
 pub mod clipboard_launcher;
 pub mod event_launcher;
 pub mod system_cmd_launcher;
+mod utils;
 pub mod web_launcher;
 
 use crate::{
@@ -51,6 +52,7 @@ pub struct Launcher {
     pub launcher_type: LauncherType,
     pub shortcut: bool,
     pub spawn_focus: bool,
+    pub only_home: bool,
 }
 
 #[derive(Clone, Debug)]

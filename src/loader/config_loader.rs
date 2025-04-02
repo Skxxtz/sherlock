@@ -1,12 +1,16 @@
 use std::fs;
 
-use super::util::{SherlockConfig, SherlockError, SherlockErrorType, SherlockFlags};
+use crate::FLAGS;
+
+use super::util::{SherlockConfig, SherlockError, SherlockErrorType};
 use super::Loader;
 
 impl Loader {
-    pub fn load_config(
-        sherlock_flags: &SherlockFlags,
-    ) -> Result<(SherlockConfig, Vec<SherlockError>), SherlockError> {
+    pub fn load_config() -> Result<(SherlockConfig, Vec<SherlockError>), SherlockError> {
+        let sherlock_flags = FLAGS.get().ok_or_else(|| SherlockError {
+            error: SherlockErrorType::ConfigError(None),
+            traceback: String::new(),
+        })?;
         match fs::read_to_string(&sherlock_flags.config) {
             Ok(config_str) => {
                 let mut config: SherlockConfig = match toml::de::from_str(&config_str) {
@@ -21,9 +25,13 @@ impl Loader {
                     }
                 };
 
+                // Override from flags
                 if sherlock_flags.caching {
                     config.behavior.caching = true;
                     config.behavior.cache = sherlock_flags.cache.clone();
+                }
+                if sherlock_flags.daemonize {
+                    config.behavior.daemonize = true;
                 }
                 Ok((config, vec![]))
             }
@@ -38,9 +46,13 @@ impl Loader {
                     let (mut config, n) = SherlockConfig::default();
                     non_breaking.extend(n);
 
+                    // Override from flags
                     if sherlock_flags.caching {
                         config.behavior.caching = true;
                         config.behavior.cache = sherlock_flags.cache.clone();
+                    }
+                    if sherlock_flags.daemonize {
+                        config.behavior.daemonize = true;
                     }
                     Ok((config, non_breaking))
                 }

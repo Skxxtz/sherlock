@@ -5,7 +5,7 @@
 ## Scripts
 - [x] On startup, check if the clipboard contains a URL and enable URL search from it.
     - [x] Improve the functionality further for example display colors
-- [ ] Create a custom Spotify (ncspot) script to control it.
+- [x] Create a custom Spotify (ncspot) script to control it.
 
 
 ## Functionalities
@@ -16,9 +16,10 @@
 - [x] Startup animation
 - [x] Caching: Add functionality to read files that are not yet cached
 - [x] Teams Event Tile: Make a launcher and tile that allows joining upcoming teams meetings
-- [ ] Daemonize for faster startup
-    - [ ] Make animations possible on every show
-    - [ ] Reconstruct the window content on every startup and reread the appfiles
+- [x] Daemonize for faster startup
+    - [x] Make animations possible on every show
+    - [x] Reconstruct the window content on every startup and reread the appfiles
+- [ ] Make the home screen function as a dashboard with event tiles, spotify widget, most used apps widget, time, etc
 - [ ] Create a widget that uses `gtk4::Builder::from_string(ui_string)`.
 - [ ] Modular Widget: depending on an external condition (e.g. Spotify is playing -> Spotify tile)
 - [ ] Make more widgets asynchronous.
@@ -52,8 +53,10 @@
 
 ## Documentation
 - [x] Add flag section in docs.
+- [ ] Add documentation for custom scripts
+- [ ] Add documentation for piping
 
 ## Porting
-- [ ] X11 Support?
+- [ ] X11 Support? Seems to work apart from centering the window and hiding the title bar
 - [ ] Windows? 
 

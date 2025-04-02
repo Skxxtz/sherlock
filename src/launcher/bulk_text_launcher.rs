@@ -30,6 +30,10 @@ impl AsyncCommandResponse {
 
 impl BulkText {
     pub async fn get_result(&self, keyword: &str) -> Option<(String, String, Option<String>)> {
+        if self.args.contains("{keyword}") && keyword.trim().is_empty() {
+            return None;
+        };
+
         let a = self.args.replace("{keyword}", &keyword);
         let args = a.split(" ");
         let mut cmd = Command::new(&self.exec);

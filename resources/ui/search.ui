@@ -21,7 +21,7 @@
                 <child>
                     <object class="GtkLabel" id="category-type-label">
                         <property name="name">category-type</property>
-                        <property name="label">All</property>
+                        <property name="label">Home</property>
                         <property name="hexpand">True</property>
                         <property name="xalign">0</property>
                     </object>

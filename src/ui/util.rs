@@ -24,6 +24,17 @@ pub fn show_stack_page<T: AsRef<str>>(page_name: T, transition: Option<StackTran
         }
     });
 }
+pub fn remove_stack_children() {
+    APP_STATE.with(|state| {
+        if let Some(ref state) = *state.borrow() {
+            state.stack.as_ref().map(|stack| {
+                while let Some(x) = stack.first_child() {
+                    stack.remove(&x);
+                }
+            });
+        }
+    });
+}
 
 pub fn execute_by_index(results: &ListBox, index: i32) {
     let mut child_counter = 1;

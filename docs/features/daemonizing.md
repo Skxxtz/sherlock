@@ -10,7 +10,7 @@ Sherlock's daemonizing feature is still experimental. Therefore, it doesn't supp
 - GPU will be defaulted to `on` state (on laptops)  
 
 ## How to Enable  
-To enable `daemonizing`, you'll have to set its key in the `behavior` section of the `config.toml` file to `true`.  
+To enable `daemonizing`, you'll have to set its key in the `behavior` section of the `config.toml` file to `true`. Alternatively, you can run sherlock with the `--daemonize` flag. This will override the value set in the `config.toml` file.
 
 ## How to Use  
 1. In your system's configuration, set Sherlock to run at startup.  

@@ -27,6 +27,8 @@ pub struct CommandConfig {
     #[serde(default)]
     pub home: bool,
     #[serde(default)]
+    pub only_home: bool,
+    #[serde(default)]
     pub args: serde_json::Value,
 }
 
@@ -53,6 +55,7 @@ pub struct SherlockFlags {
     pub center_raw: bool,
     pub caching: bool,
     pub cache: String,
+    pub daemonize: bool,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -76,6 +79,7 @@ pub enum SherlockErrorType {
     ResourceLookupError(String),
     DisplayError,
     ConfigError(Option<String>),
+    FlagLoadError,
     RegexError(String),
     CommandExecutionError(String),
     ClipboardError,
@@ -135,6 +139,9 @@ impl SherlockErrorType {
                     "It should never come to this".to_string()
                 };
                 ("ConfigError".to_string(), message)
+            }
+            SherlockErrorType::FlagLoadError => {
+                (format!("FlagLoadError"), format!("Failed to load flags"))
             }
             SherlockErrorType::RegexError(key) => (
                 format!("RegexError"),
@@ -385,4 +392,8 @@ fn is_terminal_installed(terminal: &str) -> bool {
         .arg("--version") // You can adjust this if the terminal doesn't have a "--version" flag
         .output()
         .is_ok()
+}
+
+pub fn parse_priority(priority: f32, count: f32, decimals: i32) -> f32 {
+    priority + 1.0 - count * 10f32.powi(-decimals)
 }

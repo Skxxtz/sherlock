@@ -11,7 +11,7 @@ use std::time::SystemTime;
 use super::util::{SherlockError, SherlockErrorType, SherlockFlags};
 use super::{util, Loader};
 use crate::CONFIG;
-use util::{read_file, read_lines, AppData, SherlockAlias};
+use util::{parse_priority, read_file, read_lines, AppData, SherlockAlias};
 
 impl Loader {
     pub fn load_applications_from_disk(
@@ -123,7 +123,7 @@ impl Loader {
 
                         // apply counts
                         let count = counts.get(&exec).unwrap_or(&0.0);
-                        let priority = priority - count * 10f32.powi(-decimals);
+                        let priority = parse_priority(priority, *count, decimals);
 
                         // Return the processed app data
                         Some((
@@ -237,13 +237,13 @@ impl Loader {
             // apply the current counts
             for (_, v) in apps.iter_mut() {
                 let count = counts.get(&v.exec).unwrap_or(&0.0);
-                let priority = priority - count * 10f32.powi(-decimals);
+                let priority = parse_priority(priority, *count, decimals);
                 v.priority = priority
             }
 
             // Refresh cache in the background
             let old_apps = apps.clone();
-            std::thread::spawn(move || {
+            rayon::spawn_fifo(move || {
                 if let Ok(new_apps) =
                     Loader::get_new_applications(old_apps, &flags, priority, counts, decimals)
                 {
@@ -257,7 +257,7 @@ impl Loader {
             Loader::load_applications_from_disk(sherlock_flags, None, priority, counts, decimals)?;
         // Write the cache in the background
         let app_clone = apps.clone();
-        std::thread::spawn(move || Loader::write_cache(&app_clone, &cache_loc));
+        rayon::spawn_fifo(move || Loader::write_cache(&app_clone, &cache_loc));
         Ok(apps)
     }
 }

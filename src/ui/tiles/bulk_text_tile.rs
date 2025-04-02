@@ -40,7 +40,6 @@ impl Tile {
         let res = ResultItem {
             priority: launcher.priority as f32,
             row_item: builder.object,
-            // builder.shortcut_holder if key in launcher is not false
             shortcut_holder,
         };
 

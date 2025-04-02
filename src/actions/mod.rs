@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::process::exit;
 
+use crate::ui::window::destroy_window;
 use teamslaunch::teamslaunch;
 
 use crate::{
@@ -72,9 +72,10 @@ pub fn execute_from_attrs(attrs: HashMap<String, String>) {
                 }
             }
             _ => {
-                println!("{}", method);
                 if let Some(out) = attrs.get("text_content") {
                     print!("{}", out);
+                } else {
+                    println!("Return method \"{}\" not recognized", method);
                 }
                 eval_exit();
             }
@@ -86,12 +87,12 @@ fn eval_exit() {
     if let Some(c) = CONFIG.get() {
         match c.behavior.daemonize {
             true => hide_window(true),
-            false => exit(0),
+            false => destroy_window(),
         }
     }
 }
+
 fn increment(key: &str) {
-    println!("incrementing {:?}", key);
     if let Ok(count_reader) = CounterReader::new() {
         let _ = count_reader.increment(key);
     };

@@ -19,11 +19,14 @@ impl Tile {
         Box,
     )> {
         let builder = TileBuilder::new("/dev/skxxtz/sherlock/ui/mpris_tile.ui");
+        builder.object.add_css_class("mpris-tile");
         builder.object.set_spawn_focus(launcher.spawn_focus);
         builder.object.set_shortcut(launcher.shortcut);
 
-        builder.category.set_text(&mpris.artist);
-        builder.title.set_text(&mpris.title);
+        builder
+            .category
+            .set_text(&mpris.mpris.metadata.artists.join(", "));
+        builder.title.set_text(&mpris.mpris.metadata.title);
         builder.object.set_overflow(gtk4::Overflow::Hidden);
 
         let overlay = Overlay::new();
