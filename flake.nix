@@ -27,7 +27,7 @@
         "aarch64-linux"
       ];
 
-      flake.homeManagerModules.default = import ./nix/home-manager.nix {inherit self;};
+      flake.homeManagerModules.default = import ./nix/home-manager.nix self;
 
       perSystem = {
         system,
