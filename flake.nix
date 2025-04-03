@@ -27,44 +27,7 @@
         "aarch64-linux"
       ];
 
-      flake.homeManagerModules.default = {
-        config,
-        lib,
-        pkgs,
-        ...
-      }: let
-        inherit (lib) mkIf mkOption types;
-        cfg = config.programs.sherlock;
-      in {
-        options.programs.sherlock = with types; {
-          enable = lib.mkEnableOption "Manage sherlock & config files with home-manager module." // {default = false;};
-
-          settings = mkOption {
-            description = "Sherlock settings, seperated by config file.";
-            default = {};
-            type = submodule {
-              options = {
-                aliases = mkOption {
-                  type = str;
-                  default = "";
-                  description = "'sherlock_alias.json'";
-                };
-                ignore = mkOption {
-                  type = lines;
-                  default = "";
-                  description = "'sherlockignore' file contents.";
-                };
-              };
-            };
-          };
-        };
-
-        config = mkIf cfg.enable {
-          home.packages = [self.packages.${pkgs.system}.default];
-          xdg.configFile."sherlock/sherlock_alias.json".text = cfg.settings.aliases;
-          xdg.configFile."sherlock/sherlockignore".text = cfg.settings.ignore;
-        };
-      };
+      flake.homeManagerModules.default = import ./nix/home-manager.nix {inherit self;};
 
       perSystem = {
         system,

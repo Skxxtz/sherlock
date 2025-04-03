@@ -20,7 +20,7 @@ of an app.
         "name": "your desired name",
         "icon": "your icon",
         "exec": "/path/to/applicatoin --your-flags %U",
-        "keyword": "sample alias"
+        "keywords": "sample alias"
     }
 }
 ```
