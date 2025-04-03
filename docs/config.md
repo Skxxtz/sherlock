@@ -10,7 +10,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | **Keyword**       | **Default**          | **Explanation**                                                                                                                  |
 |-------------------|----------------------|-------------------------------------------------------------------------------------------------------------------------------|
 | `terminal`        | Automatically detected | May be required if the `TERMINAL` environment variable is not set. Specify the executable name of your terminal (e.g., `"gnome-terminal"`, `"konsole"`). |
-| `teams`        | `teams-for-linux --enable-features=UseOzonePlatform --ozone-platform=wayland --url {meeting_url}` | Only required for the teams-event tile to automatically enter a teams meeting. The `{meeting_url}` will be replaced by the actual teams meeting url. |
+| `teams`        | `teams-for-linux --enable-features=UseOzonePlatform --ozone-platform=wayland --url {meeting_url}` | Only required for the teams-event tile to automatically enter a teams meeting. The `{meeting_url}` will be replaced by the actual teams meeting URL. |
 | `calendar_client`        | `thunderbird` | Sets your calendar client used in event tiles. Currently only thunderbird is supported. |
 
 ---
@@ -42,12 +42,12 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 |-----------------------|-------------|---------------------------------------------------------------------------------|-------------------|
 | `caching` | `false`     | If set to `true`, Desktop file caching will be activated to either the specified or the default location `~/.cache/sherlock_desktop_cache.json`. |[Caching](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
 | `cache` | `~/.cache/sherlock_desktop_cache.json`   | Overrides the default caching location. ||
-| `daemonize` | `false`     | If set to `true`, Sherlock will run in daemon mode. This will consume more memory because the rendered application will be kept in memory. Damonizing will allow faster startup times. Send the `open` message to socket `/tmp/sherlock_daemon.socket` to open the window. |[Daemonizing](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
-| `animate` | `true`   | Sets if startup animation should play.||
+| `daemonize` | `false`     | If set to `true`, Sherlock will run in daemon mode. This will consume more memory because the rendered application will be kept in memory. Daemonizing will allow faster startup times. Send the `open` message to socket `/tmp/sherlock_daemon.socket` to open the window. |[Daemonizing](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
+| `animate` | `true`   | Sets if startup animation should play. (Only works on daemonize=false) ||
 ---
 ## Binds Section `[binds]`
 
-THe `[binds]` section allows you to configure additional keybindings for navigation. The values of the binds are specified in the format `<modifier>-<key>`. For example, `control-tab` binds the Control key and the Tab key. If you only want to bind a single Key, you only provide `<key>`. For the modifier key you can only provide `<modifier>.
+The `[binds]` section allows you to configure additional keybindings for navigation. The values of the binds are specified in the format `<modifier>-<key>`. For example, `control-tab` binds the Control key and the Tab key. If you only want to bind a single Key, you only provide `<key>`. For the modifier key you can only provide `<modifier>.
 
 | **Keyword**           | **Default** | **Explanation**                                                                 |
 |-----------------------|-------------|---------------------------------------------------------------------------------|

@@ -19,7 +19,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 
 ### Suggested packages
 
-- [sherlock-wiki](https://github.com/Skxxtz/sherlock-wiki): allows you to search wikipedia from within sherlock unsing the `bulk_text` launcher.
+- [sherlock-wiki](https://github.com/Skxxtz/sherlock-wiki): allows you to search Wikipedia from within Sherlock using the `bulk_text` launcher.
 <br><br>
 
 > **🚨 Warning:** This app is/was created on **Arch Linux** with the **Hyprland** tiling window manager in mind. It may cause errors or won't function at all on other system configurations.
@@ -45,7 +45,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 
 ### 🛠️ Custom Commands
 - Define your own commands and extend the functionality of the launcher.
-- Add new feartures or workflows tailored to your specifig needs.
+- Add new features or workflows tailored to your specific needs.
 
 ### 🚀 Fallbacks
 - Configure fallback behaviours for various commands and operations.
@@ -53,7 +53,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 
 ### 🖼️ Application Aliases and Customization
 - Assign aliases to your applications for better looks and quicker access.
-- Assign cusom icons to your applications for a personalized touch.
+- Assign custom icons to your applications for a personalized touch.
 - Hide apps that you don't use and don't want to clutter up your launcher.
 
 ### 🌐 Async Widget
@@ -65,7 +65,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 
 ### 🔍 Category-Based Search
 - Type the launcher alias and spacebar to only search within a specific category of commands.
-- Categories are fully configureable, allowing you to customize search scopes.
+- Categories are fully configurable, allowing you to customize search scopes.
 
 ### ⌨️ Shortcuts
 - Use shortcuts like ctrl + 4 to quickly launch a command or app without having to scroll.
@@ -82,7 +82,7 @@ To run the Sherlock Launcher, ensure the following dependencies are installed:
 - `gtk4` - [Gtk4 Documentation](https://docs.gtk.org/gtk4/)
 - `gtk-4-layer-shell` - [Gtk4 Layer Shell](https://github.com/wmww/gtk4-layer-shell)
 - `dbus` - (Used to get currently playing song)
-- `openssl` - (Used for retrieving spotify album art)
+- `openssl` - (Used for retrieving Spotify album art)
 
 Additionally, if you're building from source, you will need:
 
@@ -136,7 +136,7 @@ Make sure you have the necessary dependencies installed:
 #### <ins>Build Debian Package</ins>
 
 To build a `.deb` package directly from the source, follow these steps:<br>
-Make sure you have the folloing dependencies installed:
+Make sure you have the following dependencies installed:
 - `rust` - [How to install rust](https://www.rust-lang.org/tools/install)
 - `git` - [How to install git](https://github.com/git-guides/install-git)
 - `gtk4` - [Gtk4 Documentation](https://docs.gtk.org/gtk4/)

@@ -27,7 +27,7 @@ of an app.
 **DONE!**<br>
 
 ## Examples
-### Start `vesktop` using wayland flags
+### Start `vesktop` using Wayland flags
 ```json
 {
     "Vesktop": {

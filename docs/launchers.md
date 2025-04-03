@@ -10,9 +10,9 @@ Launchers are defined in the `fallback.json` file located in your config directo
 The launcher can be of the following types:<br>
 
 - **[App Launcher](#app-launcher):** Launches your apps. 
-- **[Web Launcher](#web-launcher):** Opens the ``{keyword}`` in your default webbrowser. The used search engine is configureable and the most common search engines are included. 
+- **[Web Launcher](#web-launcher):** Opens the ``{keyword}`` in your default web browser. The used search engine is configurable and the most common search engines are included. 
 - **[Calculator](#calculator):** Converts your input into a math equation and displays its result. On Return, it also copies the result into the clipboard.
-- **[Clipboard Launcher](#clipboard-launcher):** Checks if your clipboard currently holds a URL. On Return, it opens the url in the default webbrowser. Also displays hex and rgb colors.
+- **[Clipboard Launcher](#clipboard-launcher):** Checks if your clipboard currently holds a URL. On Return, it opens the URL in the default web browser. Also displays hex and rgb colors.
 - **[Command](#command-launcher):** This field can execute commands that do not rely on the ``{keyword}`` attribute (such as connecting to a specific wifi).
 - **[Bulk Text](#bulk-text):** The Bulk Text is a way to launch a custom script/application in an async form and to display its result in a widget.
 - **[Teams Event Launcher](#teams-event):** This launcher is capable of joining Microsoft Teams meetings that are scheduled to begin between 5mins ago and in 15mins. 
@@ -139,7 +139,7 @@ Sets the icon-name the launcher should show. For a guide on how to add your own 
 ### Arguments (args):
 **commands** (required):<br>
 Has following fields of its own:
-1. `name field` / the name of the applicaiton
+1. `name field` / the name of the application
 2. `icon` / the icon-name for the icon to display 
 3. `exec` / the command to execute
 4. `search_string` / the string to match to on search

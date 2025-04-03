@@ -13,4 +13,4 @@ touch ~/.config/sherlock/sherlockignore
 Avahi*
 ```
 <br>
-> **Tip:** You can use wildcard operations like `*` to match anything.
+> **Tip:** You can use wild card operations like `*` to match anything.
