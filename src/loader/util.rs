@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use zbus::zvariant::Str;
 use std::collections::HashSet;
 use std::env;
 use std::fs::File;
@@ -242,6 +243,8 @@ impl Default for ConfigDefaultApps {
 pub struct ConfigUnits {
     #[serde(default = "default_measurements")]
     pub lengths: String,
+    #[serde(default = "default_weights")]
+    pub weights: String,
     #[serde(default = "default_currency")]
     pub _currency: String,
 }
@@ -249,6 +252,7 @@ impl Default for ConfigUnits {
     fn default() -> Self {
         Self {
             lengths: default_measurements(),
+            weights: default_weights(),
             _currency: default_currency(),
         }
     }
@@ -416,7 +420,9 @@ pub fn default_teams() -> String {
 pub fn default_calendar_client() -> String {
     String::from("thunderbird")
 }
-
+pub fn default_weights() -> String {
+    String::from("kg")
+}
 pub fn default_measurements() -> String {
     String::from("meters")
 }
