@@ -321,6 +321,7 @@ pub struct ConfigBehavior {
     #[serde(default = "default_true")]
     pub animate: bool,
     pub field: Option<String>,
+    pub launch_prefix: Option<String>,
 }
 impl Default for ConfigBehavior {
     fn default() -> Self {
@@ -330,6 +331,7 @@ impl Default for ConfigBehavior {
             daemonize: false,
             animate: true,
             field: None,
+            launch_prefix: None,
         }
     }
 }

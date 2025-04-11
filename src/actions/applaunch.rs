@@ -1,10 +1,23 @@
+use crate::loader::util::{SherlockError, SherlockErrorType};
+use crate::CONFIG;
 use std::{
     os::unix::process::CommandExt,
     process::{exit, Command, Stdio},
 };
 
-pub fn applaunch(exec: &str) {
-    let parts: Vec<String> = exec.split_whitespace().map(String::from).collect();
+pub fn applaunch(exec: &str) -> Result<(), SherlockError> {
+    let config = CONFIG.get().ok_or(SherlockError {
+        error: SherlockErrorType::ConfigError(None),
+        traceback: format!(""),
+    })?;
+
+    let parts: Vec<String> = match &config.behavior.launch_prefix {
+        Some(prefix) => String::from(prefix) + " " + exec,
+        None => String::from(exec),
+    }
+    .split_whitespace()
+    .map(String::from)
+    .collect();
 
     if parts.is_empty() {
         eprintln!("Error: Command is empty");
@@ -32,4 +45,5 @@ pub fn applaunch(exec: &str) {
 
     // TODO make error handling so that error tile will show up
     let _output = command.spawn();
+    Ok(())
 }
