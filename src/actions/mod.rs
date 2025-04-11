@@ -34,7 +34,7 @@ pub fn execute_from_attrs(row: &SherlockRow, attrs: &HashMap<String, String>) {
             }
             "app_launcher" => {
                 let exec = attrs.get("exec").map_or("", |s| s.as_str());
-                applaunch::applaunch(exec);
+                let _ = applaunch::applaunch(exec);
                 increment(&exec);
                 eval_exit();
             }
