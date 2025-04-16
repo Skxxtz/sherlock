@@ -21,7 +21,7 @@
     {
         "name": "Spotify",
         "type": "audio_sink",
-        "args": { },
+        "args": {},
         "async": true,
         "priority": 1,
         "home": true,
@@ -45,55 +45,102 @@
         "name": "Bookmarks",
         "alias": "",
         "type": "command",
-        "args": {"commands": {
-            "ChatGPT": {"icon": "chat-gpt", "exec": "xdg-open https://chatgpt.com &", "search_string": "chatgpt;ai;"},
-            "Github": {"icon": "sherlock-github", "exec": "xdg-open https://github.com/skxxtz &", "search_string": "github;"}
-        }},
+        "args": {
+            "commands": {
+                "ChatGPT": {
+                    "icon": "chat-gpt",
+                    "exec": "xdg-open https://chatgpt.com &",
+                    "search_string": "chatgpt;ai;"
+                },
+                "Github": {
+                    "icon": "sherlock-github",
+                    "exec": "xdg-open https://github.com/skxxtz &",
+                    "search_string": "github;"
+                }
+            }
+        },
         "priority": 3
     },
     {
         "name": "Network Management",
         "alias": "nm",
         "type": "command",
-        "args": {"commands": {
-            "Waves": {"icon": "network-connect", "exec": "nmcli d wifi c Waves &", "search_string": "wifi;waves"},
-            "Waves-AP": {"icon": "network-connect", "exec": "nmcli d wifi c Waves-AP &", "search_string": "wifi;wavesap"}
-        }},
+        "args": {
+            "commands": {
+                "Waves": {
+                    "icon": "network-connect",
+                    "exec": "nmcli d wifi c Waves &",
+                    "search_string": "wifi;waves"
+                },
+                "Waves-AP": {
+                    "icon": "network-connect",
+                    "exec": "nmcli d wifi c Waves-AP &",
+                    "search_string": "wifi;wavesap"
+                }
+            }
+        },
         "priority": 4
     },
     {
         "name": "Power Management",
         "alias": "pm",
         "type": "command",
-        "args": {"commands": {
-            "Shutdown": {"icon": "system-shutdown", "exec": "systemctl poweroff", "search_string": "Poweroff;Shutdown"},
-            "Sleep": {"icon": "system-suspend", "exec": "systemctl suspend", "search_string": "Sleep;"},
-            "Lock": {"icon": "system-lock-screen", "exec": "systemctl suspend & swaylock", "search_string": "Lock Screen;"},
-            "Reboot": {"icon": "system-reboot", "exec": "systemctl reboot", "search_string": "reboot"}
-        }},
+        "args": {
+            "commands": {
+                "Shutdown": {
+                    "icon": "system-shutdown",
+                    "exec": "systemctl poweroff",
+                    "search_string": "Poweroff;Shutdown"
+                },
+                "Sleep": {
+                    "icon": "system-suspend",
+                    "exec": "systemctl suspend",
+                    "search_string": "Sleep;"
+                },
+                "Lock": {
+                    "icon": "system-lock-screen",
+                    "exec": "systemctl suspend & swaylock",
+                    "search_string": "Lock Screen;"
+                },
+                "Reboot": {
+                    "icon": "system-reboot",
+                    "exec": "systemctl reboot",
+                    "search_string": "reboot"
+                }
+            }
+        },
         "priority": 4
     },
     {
         "name": "OBS Studio",
         "alias": "",
         "type": "command",
-        "args": {"commands": {
-            "Start Recording": {"icon": "sherlock-record", "exec": "obs --startrecording &", "search_string": "recording;start recording;startrecording;obs studio;"}
-        }},
+        "args": {
+            "commands": {
+                "Start Recording": {
+                    "icon": "sherlock-record",
+                    "exec": "obs --startrecording &",
+                    "search_string": "recording;start recording;startrecording;obs studio;"
+                }
+            }
+        },
         "priority": 5
     },
     {
         "name": "Utilities",
         "alias": "",
         "type": "command",
-        "args": {"commands": {
-            "Color Picker": {"icon": "colorgrab", "exec": "hyprpicker -a &", "search_string": "colorpicker"}
-        }},
+        "args": {
+            "commands": {
+                "Color Picker": {
+                    "icon": "colorgrab",
+                    "exec": "hyprpicker -a &",
+                    "search_string": "colorpicker"
+                }
+            }
+        },
         "priority": 5
     },
-
-
-
 
     {
         "name": "Web Search",
@@ -101,7 +148,7 @@
         "tag_start": "{keyword}",
         "alias": "gg",
         "type": "web_launcher",
-        "args": {"search_engine": "google", "icon": "google"},
+        "args": { "search_engine": "google", "icon": "google" },
         "priority": 100
     },
     {
@@ -110,7 +157,10 @@
         "tag_start": "{keyword}",
         "alias": "yt",
         "type": "web_launcher",
-        "args": {"search_engine": "https://www.youtube.com/results?search_query={keyword}", "icon": "sherlock-youtube"},
+        "args": {
+            "search_engine": "https://www.youtube.com/results?search_query={keyword}",
+            "icon": "sherlock-youtube"
+        },
         "priority": 0
     },
     {
@@ -118,13 +168,13 @@
         "alias": "wiki",
         "type": "bulk_text",
         "on_return": "next",
-        "async": true, 
-        "args": {"icon": "wikipedia", "exec": "/home/basti/.config/sherlock/scripts/sherlock-wiki", "exec-args": "'{keyword}'"},
+        "async": true,
+        "args": {
+            "icon": "wikipedia",
+            "exec": "/home/basti/.config/sherlock/scripts/sherlock-wiki",
+            "exec-args": "'{keyword}'"
+        },
         "priority": 0,
         "shortcut": false
     }
 ]
-
-
-
-
