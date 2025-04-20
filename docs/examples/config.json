@@ -30,7 +30,7 @@
         "caching": true,
         "cache": "~/.cache/sherlock_desktop_cache.json",
         "daemonize": false,
-        "animation": true,
+        "animate": true,
         "global_prefix": "",
         "global_flags": ""
     },
