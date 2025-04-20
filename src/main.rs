@@ -147,7 +147,6 @@ async fn main() {
         };
         stack.add_named(&search_stack, Some("search-page"));
 
-        
         // Notify the user about the value not having any effect to avoid confusion
         if let Some(c) = CONFIG.get() {
             let opacity = c.appearance.opacity;
