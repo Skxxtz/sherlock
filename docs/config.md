@@ -46,6 +46,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | `search_icon`    | `true`        | Enables or disables the use of the search icon |
 | `use_base_css`    | `true`        | Enables or disables the extension of Sherlock's default style sheet. |
 | `status_bar`    | `true`        | Enables or disables the status bar. |
+| `opacity` | `1.0` | Controls the opacity of the window. Allowed range: `0.1 - 1.0` |
 
 ---
 ## Behavior Section `[behavior]`

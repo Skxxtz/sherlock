@@ -24,7 +24,8 @@
         "icon_size": 22
         "search_icon": true,
         "use_base_css": true,
-        "status_bar": true
+        "status_bar": true,
+        "opacity": 1.0
     },
     "behavior": {
         "caching": true,
