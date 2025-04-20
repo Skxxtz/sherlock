@@ -35,6 +35,7 @@ pub fn window(application: &Application) -> (ApplicationWindow, Stack, Rc<RefCel
         .build();
 
     window.init_layer_shell();
+    window.set_namespace("sherlock");
     window.set_layer(Layer::Overlay);
     window.set_keyboard_mode(gtk4_layer_shell::KeyboardMode::Exclusive);
 
