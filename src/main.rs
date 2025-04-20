@@ -147,6 +147,22 @@ async fn main() {
         };
         stack.add_named(&search_stack, Some("search-page"));
 
+        // Notify the user about the value not having any effect to avoid confusion
+        if let Some(c) = CONFIG.get() {
+            let opacity = c.appearance.opacity;
+
+            if opacity > 1.0 || opacity < 0.1 {
+                non_breaking.push(SherlockError {
+                    error: SherlockErrorType::ConfigError(Some(format!(
+                        "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
+                        opacity,
+                        opacity.clamp(0.1, 1.0)
+                    ))),
+                    traceback: String::new(),
+                });
+            }
+        }
+
         // Logic for the Error-View
         let error_stack = ui::error_view::errors(&error_list, &non_breaking, &current_stack_page);
         stack.add_named(&error_stack, Some("error-page"));

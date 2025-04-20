@@ -13,9 +13,15 @@ use super::tiles::util::TextViewTileBuilder;
 
 pub fn window(application: &Application) -> (ApplicationWindow, Stack, Rc<RefCell<String>>) {
     // 617 with, 593 without notification bar
-    let (width, height) = CONFIG.get().map_or_else(
-        || (900, 593),
-        |config| (config.appearance.width, config.appearance.height),
+    let (width, height, opacity) = CONFIG.get().map_or_else(
+        || (900, 593, 1.0),
+        |config| {
+            (
+                config.appearance.width,
+                config.appearance.height,
+                config.appearance.opacity,
+            )
+        },
     );
 
     let current_stack_page = Rc::new(RefCell::new(String::from("search-page")));
@@ -25,6 +31,7 @@ pub fn window(application: &Application) -> (ApplicationWindow, Stack, Rc<RefCel
         .default_width(width)
         .default_height(height)
         .resizable(false)
+        .opacity(opacity.clamp(0.1, 1.0)) // Avoid overflow and full-transparency
         .build();
 
     window.init_layer_shell();

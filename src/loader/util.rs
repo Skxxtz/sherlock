@@ -315,6 +315,8 @@ pub struct ConfigAppearance {
     pub use_base_css: bool,
     #[serde(default = "default_true")]
     pub status_bar: bool,
+    #[serde(default)]
+    pub opacity: f64,
 }
 impl Default for ConfigAppearance {
     fn default() -> Self {
@@ -327,6 +329,7 @@ impl Default for ConfigAppearance {
             search_icon: false,
             use_base_css: true,
             status_bar: true,
+            opacity: 1.0,
         }
     }
 }
