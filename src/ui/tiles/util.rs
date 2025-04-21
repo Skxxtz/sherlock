@@ -4,8 +4,13 @@ use crate::{
     loader::pipe_loader::PipeData,
     CONFIG,
 };
+use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gio::glib::{self, clone::Downgrade, RustClosure, WeakRef};
 use gtk4::{prelude::*, Box, Builder, Image, Label, Overlay, Spinner, TextView};
-use std::collections::{HashMap, HashSet};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+};
 
 #[derive(Debug)]
 pub struct AsyncLauncherTile {
@@ -88,6 +93,47 @@ impl EventTileBuilder {
     }
 }
 
+#[derive(Clone)]
+pub struct TileWidgets {
+    pub icon: WeakRef<Image>,
+    pub icon_holder: WeakRef<Box>,
+
+    pub title: WeakRef<Label>,
+    pub category: WeakRef<Label>,
+}
+
+pub struct Tile {
+    pub root: Box,
+    pub widgets: TileWidgets,
+}
+
+impl Tile {
+    pub fn from_resource<T>(resource: T) -> Self
+    where
+        T: AsRef<str>,
+    {
+        let builder = Builder::from_resource(resource.as_ref());
+
+        let holder: Box = builder.object("holder").unwrap();
+        let icon: Image = builder.object("icon-name").unwrap();
+        let title: Label = builder.object("app-name").unwrap();
+        let category: Label = builder.object("launcher-type").unwrap();
+        let icon_holder: Box = builder.object("app-icon-holder").unwrap();
+
+        Self {
+            root: holder,
+
+            widgets: TileWidgets {
+                icon: Downgrade::downgrade(&icon),
+                icon_holder: Downgrade::downgrade(&icon_holder),
+
+                title: Downgrade::downgrade(&title),
+                category: Downgrade::downgrade(&category),
+            },
+        }
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct TileBuilder {
     pub object: SherlockRow,
@@ -110,6 +156,7 @@ pub struct TileBuilder {
 impl TileBuilder {
     pub fn new(resource: &str) -> Self {
         let builder = Builder::from_resource(resource);
+
         let holder: Box = builder.object("holder").unwrap_or_default();
         let icon: Image = builder.object("icon-name").unwrap_or_default();
         let title: Label = builder.object("app-name").unwrap_or_default();
@@ -120,6 +167,7 @@ impl TileBuilder {
 
         // Append content to the sherlock row
         let object = SherlockRow::new();
+
         object.set_child(Some(&holder));
         object.set_css_classes(&vec!["tile"]);
 

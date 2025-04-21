@@ -4,33 +4,31 @@
     --text: 53, 100%, 97%;
     --border: 0, 0%, 19%;
 
-
     --tag-background: 180, 0%, 30%;
     --tag-color: 220, 10%, 100%;
     --error: 4, 71%, 62%;
     --warning: 55, 100%, 68%;
     --success: 140, 40%, 40%;
 
-    --weather-clear: 210, 60%, 70%;                     /* Clear sky blue */
-    --weather-few-clouds: 210, 30%, 85%;                 /* Pale blue with some haze */
-    --weather-many-clouds: 220, 0%, 70%;                 /* Soft gray-blue */
-    --weather-mist: 60, 10%, 80%;                        /* Foggy pale beige */
-    --weather-showers: 200, 10%, 50%;                    /* Desaturated rainy blue */
+    --weather-clear: 210, 60%, 70%; /* Clear sky blue */
+    --weather-few-clouds: 210, 30%, 85%; /* Pale blue with some haze */
+    --weather-many-clouds: 220, 0%, 70%; /* Soft gray-blue */
+    --weather-mist: 60, 10%, 80%; /* Foggy pale beige */
+    --weather-showers: 200, 10%, 50%; /* Desaturated rainy blue */
     --weather-freezing-scattered-rain-storm: 220, 30%, 35%; /* Cold stormy gray-blue */
-    --weather-freezing-scattered-rain: 220, 40%, 45%;    /* Chilly wet gray */
-    --weather-snow-scattered-day: 200, 40%, 95%;         /* Bright, snowy blue-white */
-    --weather-storm: 240, 10%, 20%;                      /* Deep stormy indigo */
-    --weather-snow-storm: 210, 20%, 92%;                 /* Snowy light gray-blue */
-    --weather-snow-scattered-storm: 210, 10%, 25%;       /* Soft overcast snow blend */
-    --weather-showers-scattered: 200, 30%, 65%;          /* Lighter scattered rain */
-    --weather-none-available: 0, 0%, 50%;                /* Neutral placeholder gray */
+    --weather-freezing-scattered-rain: 220, 40%, 45%; /* Chilly wet gray */
+    --weather-snow-scattered-day: 200, 40%, 95%; /* Bright, snowy blue-white */
+    --weather-storm: 240, 10%, 20%; /* Deep stormy indigo */
+    --weather-snow-storm: 210, 20%, 92%; /* Snowy light gray-blue */
+    --weather-snow-scattered-storm: 210, 10%, 25%; /* Soft overcast snow blend */
+    --weather-showers-scattered: 200, 30%, 65%; /* Lighter scattered rain */
+    --weather-none-available: 0, 0%, 50%; /* Neutral placeholder gray */
 }
 /*
 --warning: 36, 89%, 52%;
 --error: 0, 89%, 59%;
 --success: 102, 36%, 53%;
 */
-
 
 overshoot *,
 undershoot *,
@@ -41,7 +39,7 @@ overshoot.left undershoot.top,
 undershoot.right,
 undershoot.bottom,
 undershoot.left,
-.scroll-window>*,
+.scroll-window > *,
 overshoot:backdrop {
     background: none;
     border: none;
@@ -59,7 +57,7 @@ overshoot:backdrop {
     font-family: "Cantarell";
 }
 
-#overlay spinner{
+#overlay spinner {
     color: hsl(var(--text));
 }
 #overlay * {
@@ -69,17 +67,15 @@ overshoot:backdrop {
     background: transparent;
 }
 
-scrolledwindow>viewport,
-scrolledwindow>viewport>*,
+scrolledwindow > viewport,
+scrolledwindow > viewport > *,
 window {
     background: hsl(var(--background));
 }
 
-
 label {
     color: hsl(var(--text));
 }
-
 
 window {
     color: hsl(var(--text));
@@ -104,7 +100,6 @@ window {
     animation: rotate 0.3s linear infinite;
 }
 
-
 /* SEARCH PAGE */
 #search-bar {
     outline: none;
@@ -116,6 +111,10 @@ window {
     padding-left: 20px;
 }
 
+.result-frame {
+    background: transparent;
+}
+
 #search-bar-holder {
     border-bottom: 2px solid hsl(var(--border));
     padding: 5px 10px 4px 10px;
@@ -124,22 +123,21 @@ window {
 #search-icon-holder image {
     transition: 0.1s ease;
 }
-#search-icon-holder.search image:nth-child(1){
+#search-icon-holder.search image:nth-child(1) {
     transition-delay: 0.05s;
     opacity: 1;
 }
-#search-icon-holder.search image:nth-child(2){
+#search-icon-holder.search image:nth-child(2) {
     transform: rotate(-180deg);
     opacity: 0;
 }
-#search-icon-holder.back image:nth-child(1){
+#search-icon-holder.back image:nth-child(1) {
     opacity: 0;
 }
-#search-icon-holder.back image:nth-child(2){
+#search-icon-holder.back image:nth-child(2) {
     transition-delay: 0.05s;
     opacity: 1;
 }
-
 
 #search-icon {
     margin-left: 10px;
@@ -180,7 +178,6 @@ scrollbar slider {
     border: none;
 }
 
-
 image {
     color: white;
 }
@@ -193,24 +190,44 @@ image {
     border-radius: 4px;
 }
 .tile:hover *,
-.tile:hover{
+.tile:hover {
     background: transparent;
 }
 .tile.animate {
-    transform: translateY(20px); 
+    transform: translateY(20px);
     opacity: 0;
     animation: fadeInUp 0.2s ease-out forwards;
 }
-.tile.animate:nth-child(1) { animation-delay: 0.05s; }
-.tile.animate:nth-child(2) { animation-delay: 0.1s; }
-.tile.animate:nth-child(3) { animation-delay: 0.15s; }
-.tile.animate:nth-child(4) { animation-delay: 0.2s; }
-.tile.animate:nth-child(5) { animation-delay: 0.25s; }
-.tile.animate:nth-child(6) { animation-delay: 0.3s; }
-.tile.animate:nth-child(7) { animation-delay: 0.35s; }
-.tile.animate:nth-child(8) { animation-delay: 0.4s; }
-.tile.animate:nth-child(9) { animation-delay: 0.45s; }
-.tile.animate:nth-child(10) { animation-delay: 0.5s; }
+.tile.animate:nth-child(1) {
+    animation-delay: 0.05s;
+}
+.tile.animate:nth-child(2) {
+    animation-delay: 0.1s;
+}
+.tile.animate:nth-child(3) {
+    animation-delay: 0.15s;
+}
+.tile.animate:nth-child(4) {
+    animation-delay: 0.2s;
+}
+.tile.animate:nth-child(5) {
+    animation-delay: 0.25s;
+}
+.tile.animate:nth-child(6) {
+    animation-delay: 0.3s;
+}
+.tile.animate:nth-child(7) {
+    animation-delay: 0.35s;
+}
+.tile.animate:nth-child(8) {
+    animation-delay: 0.4s;
+}
+.tile.animate:nth-child(9) {
+    animation-delay: 0.45s;
+}
+.tile.animate:nth-child(10) {
+    animation-delay: 0.5s;
+}
 
 @keyframes fadeInUp {
     from {
@@ -249,7 +266,7 @@ image {
     border-radius: 3px;
     padding: 2px 8px;
     color: hsl(var(--tag-color));
-    box-shadow: 0px 0px 10px 0px rgba(2,2,2,0.4);
+    box-shadow: 0px 0px 10px 0px rgba(2, 2, 2, 0.4);
     border: 1px solid hsla(var(--text), 0.1);
     margin-left: 7px;
 }
@@ -273,10 +290,9 @@ image {
     color: hsla(var(--text), 0.4);
     margin-left: 0px;
 }
-#color-icon-holder{
+#color-icon-holder {
     border-radius: 50px;
 }
-
 
 /*SHORTCUT*/
 #shortcut-holder {
@@ -285,27 +301,27 @@ image {
     background: hsla(var(--foreground), 0.5);
     border-radius: 5px;
     border: 1px solid hsla(var(--text), 0.1);
-    box-shadow: 0px 0px 6px 0px rgba(15,15,15,1);
+    box-shadow: 0px 0px 6px 0px rgba(15, 15, 15, 1);
 }
 
 .tile:selected #shortcut-holder {
     background: hsla(var(--background), 0.5);
     background-color: hsla(var(--background), 0.5);
     color: hsla(var(--text), 0.5);
-    box-shadow: 0px 0px 6px 0px rgba(22,22,22,1);
+    box-shadow: 0px 0px 6px 0px rgba(22, 22, 22, 1);
 }
 
-#shortcut, #shortcut-modkey{
+#shortcut,
+#shortcut-modkey {
     background: hsla(var(--background), 0);
     background-color: hsla(var(--background), 0);
     font-size: 11px;
     font-weight: bold;
     color: hsla(var(--text), 0.5);
 }
-#shortcut-modkey{
+#shortcut-modkey {
     font-size: 13px;
 }
-
 
 /*CALCULATOR*/
 .calc-tile {
@@ -331,22 +347,18 @@ image {
     padding: 2px 0px 7px 5px;
     text-transform: capitalize;
 }
-.tile.event-tile #time-label{
+.tile.event-tile #time-label {
     font-size: 3rem;
 }
 #end-time-label {
     color: gray;
 }
 
-
-
-
 /* BULK TEXT TILE */
 .bulk-text {
     padding-bottom: 10px;
     min-height: 50px;
 }
-
 
 #bulk-text-title {
     margin-left: 10px;
@@ -369,23 +381,15 @@ image {
     min-height: 20px;
 }
 
-
-
 /* MPRIS TILE*/
-#mpris-icon-holder{
+#mpris-icon-holder {
     border-radius: 5px;
 }
 /*Animation for replacing album covers*/
-.image-replace-overlay #album-cover{
+.image-replace-overlay #album-cover {
     opacity: 1;
     animation: ease-opacity 0.5s forwards;
 }
-
-
-
-
-
-
 
 /* NEXT PAGE */
 .next_tile {
@@ -397,12 +401,12 @@ image {
     padding: 10px;
     color: hsl(var(--text));
 }
-.raw_text, .next_tile #content-body {
-    font-family: 'Fira Code', monospace;
+.raw_text,
+.next_tile #content-body {
+    font-family: "Fira Code", monospace;
     font-feature-settings: "kern" off;
     font-kerning: None;
 }
-
 
 /*Error*/
 .error-tile #scroll-window {
@@ -453,7 +457,6 @@ image {
     color: gray;
 }
 
-
 /* STATUS BAR */
 .status-bar {
     background: hsla(var(--foreground), 0.2);
@@ -463,7 +466,6 @@ image {
 .status-bar label {
     color: hsl(var(--text), 0.3);
 }
-
 
 @keyframes slide {
     from {
@@ -481,7 +483,7 @@ image {
     background: darkgray;
     margin-bottom: 10px;
 }
-.tile.weather-tile #content-holder{
+.tile.weather-tile #content-holder {
     opacity: 0;
 }
 .tile.weather-tile.weather-animate #content-holder {
@@ -489,7 +491,7 @@ image {
     transition: background 0.3s ease;
     opacity: 1;
 }
-.tile.weather-tile.weather-no-animate #content-holder{
+.tile.weather-tile.weather-no-animate #content-holder {
     opacity: 1;
 }
 .tile.weather-tile #location {
@@ -503,11 +505,6 @@ image {
 .tile.weather-tile #content-holder {
     margin-bottom: 15px;
 }
-
-
-
-
-
 
 /*WEATHER CLASSES*/
 .tile.weather-tile.weather-clear {
@@ -601,10 +598,8 @@ image {
     color: hsl(var(--text));
 }
 
-
-
 /*ANIMATIONS*/
-@keyframes vanish-rotate{
+@keyframes vanish-rotate {
     from {
         opacity: 1;
     }
@@ -612,9 +607,8 @@ image {
         opacity: 0;
         transform: rotate(360deg);
     }
-    
 }
-@keyframes rotate{
+@keyframes rotate {
     from {
         transform: rotate(0deg);
         --start-rotation: 0deg;
@@ -623,7 +617,6 @@ image {
         transform: rotate(360deg);
         --start-rotation: 360deg;
     }
-
 }
 @keyframes ease-opacity {
     from {
@@ -632,7 +625,6 @@ image {
     to {
         opacity: 1;
     }
-    
 }
 @keyframes slide {
     from {
@@ -643,4 +635,3 @@ image {
         transform: translate(-20px, 0px);
     }
 }
-

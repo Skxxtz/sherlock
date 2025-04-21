@@ -3,8 +3,11 @@ use gio::glib::subclass::Signal;
 use gtk4::prelude::{GestureSingleExt, WidgetExt};
 use gtk4::subclass::prelude::*;
 use gtk4::{glib, GestureClick};
+use once_cell::sync::OnceCell;
 use std::cell::Cell;
 use std::sync::OnceLock;
+
+use crate::ui::tiles::util::TileWidgets;
 
 // SHERLOCK ROW
 // Object holding the state
@@ -12,6 +15,15 @@ use std::sync::OnceLock;
 pub struct SherlockRow {
     pub spawn_focus: Cell<bool>,
     pub shortcut: Cell<bool>,
+    pub priority: Cell<f32>,
+    pub launcher_name: OnceCell<String>,
+    pub widgets: OnceCell<TileWidgets>,
+}
+
+impl Drop for SherlockRow {
+    fn drop(&mut self) {
+        println!("ROW DROPPPED");
+    }
 }
 
 // The central trait for subclassing a GObject

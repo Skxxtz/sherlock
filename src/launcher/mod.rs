@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use gtk4::Box;
 
@@ -17,6 +17,7 @@ pub mod web_launcher;
 
 use crate::{
     g_subclasses::sherlock_row::SherlockRow,
+    loader::util::AppData,
     ui::tiles::{util::AsyncLauncherTile, Tile},
 };
 
@@ -90,6 +91,14 @@ impl Launcher {
             _ => Vec::new(),
         }
     }
+
+    pub fn get_apps(&self) -> Option<&HashMap<String, AppData>> {
+        match &self.launcher_type {
+            LauncherType::App(app) => Some(&app.apps),
+            _ => None,
+        }
+    }
+
     pub fn get_execs(&self) -> Option<HashSet<String>> {
         // NOTE: make a function to check for exec changes in the caching algorithm
         match &self.launcher_type {

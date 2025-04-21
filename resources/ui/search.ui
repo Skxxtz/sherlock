@@ -49,7 +49,7 @@
                         <property name="name">scroll-window</property>
                         <property name="focusable">false</property>
                         <child>
-                            <object class="GtkListBox" id="result-frame">
+                            <object class="GtkListView" id="result-frame">
                                 <property name="name">list_box</property>
 
                                 <child>
@@ -98,4 +98,3 @@
     </object>
 
 </interface>
-
