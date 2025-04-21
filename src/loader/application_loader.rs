@@ -265,7 +265,7 @@ fn should_ignore(ignore_apps: &Vec<Pattern>, app: &str) -> bool {
 
 fn get_regex_patterns() -> Result<(Regex, Regex, Regex, Regex, Regex, Regex), SherlockError> {
     fn construct_pattern(key: &str) -> Result<Regex, SherlockError> {
-        let pattern = format!(r"(?i)\n{}\s*=\s*(.*)\n", key);
+        let pattern = format!(r#"(?i)\n{}\s*=\s*"?([^"\n]*)"?\n"#, key);
         Regex::new(&pattern).map_err(|e| SherlockError {
             error: SherlockErrorType::RegexError(key.to_string()),
             traceback: e.to_string(),
