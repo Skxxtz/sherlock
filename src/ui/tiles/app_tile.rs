@@ -1,4 +1,5 @@
 use gtk4::prelude::*;
+use levenshtein::levenshtein;
 use std::collections::HashMap;
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
@@ -40,30 +41,44 @@ impl Tile {
                 // Icon stuff
                 builder.icon.upgrade().map(|ico| {
                     ico.set_icon_name(Some(&value.icon));
-                    value
-                        .icon_class
-                        .as_ref()
-                        .map(|c| ico.add_css_class(c));
+                    value.icon_class.as_ref().map(|c| ico.add_css_class(c));
                 });
 
-                builder.title.upgrade().map(|title| title.set_markup(&tile_name));
+                builder
+                    .title
+                    .upgrade()
+                    .map(|title| title.set_markup(&tile_name));
 
                 let attrs =
                     get_attrs_map(vec![("method", &launcher.method), ("exec", &value.exec)]);
 
                 builder.object.set_spawn_focus(launcher.spawn_focus);
                 builder.object.set_shortcut(launcher.shortcut);
-                builder.object.connect("row-should-activate", false, move |row| {
-                    let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
-                    execute_from_attrs(&row, &attrs);
-                    None
-                });
+                builder
+                    .object
+                    .connect("row-should-activate", false, move |row| {
+                        let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
+                        execute_from_attrs(&row, &attrs);
+                        None
+                    });
                 let shortcut_holder = match launcher.shortcut {
                     true => builder.shortcut_holder,
                     _ => None,
                 };
+
+                let priority = value.priority;
+                let mut edits = 0.0;
+
+                if !value.search_string.starts_with(keyword) {
+                    edits = levenshtein(&value.search_string, keyword) as f32;
+                }
+
                 results.push(ResultItem {
-                    priority: value.priority,
+                    priority: if keyword.is_empty() {
+                        priority
+                    } else {
+                        edits + priority
+                    },
                     row_item: builder.object,
                     shortcut_holder,
                 });

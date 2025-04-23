@@ -37,7 +37,9 @@ pub fn search(
 ) -> HVBox {
     // Initialize the view to show all apps
     let (mode, modes, stack_page, ui, results) = construct_window(&launchers);
-    ui.result_viewport.upgrade().map(|view| view.set_policy(gtk4::PolicyType::Automatic, gtk4::PolicyType::Automatic));
+    ui.result_viewport
+        .upgrade()
+        .map(|view| view.set_policy(gtk4::PolicyType::Automatic, gtk4::PolicyType::Automatic));
 
     let initial_mode = mode.borrow().clone();
     let search_bar_clone = ui.search_bar.clone();
@@ -47,7 +49,9 @@ pub fn search(
 
     let search_bar = ui.search_bar.clone();
     stack_page.connect_realize(move |_| {
-        search_bar.upgrade().map(|search_bar|search_bar.grab_focus());
+        search_bar
+            .upgrade()
+            .map(|search_bar| search_bar.grab_focus());
     });
 
     let custom_binds = ConfKeys::new();
@@ -81,21 +85,31 @@ pub fn search(
             if let (Some(mut state), Some(mut parameter)) = (state, parameter) {
                 match parameter.as_str() {
                     "search" => {
-                        ui.search_icon_holder.upgrade().map(|holder| holder.set_css_classes(&["back"]));
-                        ui.mode_title.upgrade().map(|title| title.set_text("Search"));
+                        ui.search_icon_holder
+                            .upgrade()
+                            .map(|holder| holder.set_css_classes(&["back"]));
+                        ui.mode_title
+                            .upgrade()
+                            .map(|title| title.set_text("Search"));
                     }
                     _ => {
                         parameter.push_str(" ");
                         let mode_name = modes_clone.get(&parameter);
                         match mode_name {
                             Some(name) => {
-                                ui.search_icon_holder.upgrade().map(|holder| holder.set_css_classes(&["back"]));
-                                ui.mode_title.upgrade().map(|title| title.set_text(name.as_deref().unwrap_or_default()));
+                                ui.search_icon_holder
+                                    .upgrade()
+                                    .map(|holder| holder.set_css_classes(&["back"]));
+                                ui.mode_title.upgrade().map(|title| {
+                                    title.set_text(name.as_deref().unwrap_or_default())
+                                });
                                 *mode_clone.borrow_mut() = parameter.clone();
                                 state = parameter;
                             }
                             _ => {
-                                ui.search_icon_holder.upgrade().map(|holder| holder.set_css_classes(&["search"]));
+                                ui.search_icon_holder
+                                    .upgrade()
+                                    .map(|holder| holder.set_css_classes(&["search"]));
                                 ui.mode_title.upgrade().map(|title| title.set_text("All"));
                                 parameter = String::from("all ");
                                 *mode_clone.borrow_mut() = parameter.clone();
@@ -126,11 +140,17 @@ pub fn search(
             let parameter = parameter.and_then(|p| p.get::<bool>());
             parameter.map(|p| {
                 if p {
-                    spinner_clone.upgrade().map(|spinner| spinner.set_css_classes(&["spinner-appear"]));
+                    spinner_clone
+                        .upgrade()
+                        .map(|spinner| spinner.set_css_classes(&["spinner-appear"]));
                 } else {
-                    spinner_clone.upgrade().map(|spinner| spinner.set_css_classes(&["spinner-disappear"]));
+                    spinner_clone
+                        .upgrade()
+                        .map(|spinner| spinner.set_css_classes(&["spinner-disappear"]));
                 };
-                spinner_clone.upgrade().map(|spinner| spinner.set_spinning(p));
+                spinner_clone
+                    .upgrade()
+                    .map(|spinner| spinner.set_spinning(p));
             });
         })
         .build();
@@ -218,12 +238,12 @@ fn construct_window(
         spinner: spinner.downgrade(),
     };
     CONFIG.get().map(|c| {
-        ui.result_viewport
+        ui.result_viewport.upgrade().map(|viewport| {
+            viewport.set_size_request((c.appearance.width as f32 * 0.4) as i32, 10);
+        });
+        ui.search_icon_holder
             .upgrade()
-            .map(|viewport| {
-                viewport.set_size_request((c.appearance.width as f32 * 0.4) as i32, 10);
-            });
-        ui.search_icon_holder.upgrade().map(|holder| holder.set_visible(c.appearance.search_icon));
+            .map(|holder| holder.set_visible(c.appearance.search_icon));
         search_icon.set_pixel_size(c.appearance.icon_size);
         search_icon_back.set_pixel_size(c.appearance.icon_size);
     });
@@ -252,7 +272,9 @@ fn nav_event(
                     .prev_mod
                     .map_or(true, |m| modifiers.contains(m)) =>
             {
-                results.upgrade().map(|results| results.focus_prev(&result_viewport));
+                results
+                    .upgrade()
+                    .map(|results| results.focus_prev(&result_viewport));
                 return true.into();
             }
             k if Some(k) == custom_binds.next
@@ -260,18 +282,26 @@ fn nav_event(
                     .next_mod
                     .map_or(true, |m| modifiers.contains(m)) =>
             {
-                results.upgrade().map(|results| results.focus_next(&result_viewport));
+                results
+                    .upgrade()
+                    .map(|results| results.focus_next(&result_viewport));
                 return true.into();
             }
             gdk::Key::Up => {
-                results.upgrade().map(|results| results.focus_prev(&result_viewport));
+                results
+                    .upgrade()
+                    .map(|results| results.focus_prev(&result_viewport));
             }
             gdk::Key::Down => {
-                results.upgrade().map(|results| results.focus_next(&result_viewport));
+                results
+                    .upgrade()
+                    .map(|results| results.focus_next(&result_viewport));
                 return true.into();
             }
             gdk::Key::BackSpace => {
-                let mut ctext = search_bar.upgrade().map_or(String::new(), |entry| entry.text().to_string());
+                let mut ctext = search_bar
+                    .upgrade()
+                    .map_or(String::new(), |entry| entry.text().to_string());
                 if custom_binds
                     .shortcut_modifier
                     .map_or(false, |modifier| modifiers.contains(modifier))
@@ -280,13 +310,15 @@ fn nav_event(
                     ctext.clear();
                 }
                 if ctext.is_empty() {
-                    let _ = search_bar.upgrade().map(|entry| entry.activate_action("win.switch-mode", Some(&"all".to_variant())));
+                    let _ = search_bar.upgrade().map(|entry| {
+                        entry.activate_action("win.switch-mode", Some(&"all".to_variant()))
+                    });
                 }
                 results.upgrade().map(|results| results.focus_first());
             }
             gdk::Key::Return => {
-                if let Some(upgr) = results.upgrade(){
-                    if let Some(row) = upgr.selected_row().and_downcast_ref::<SherlockRow>(){
+                if let Some(upgr) = results.upgrade() {
+                    if let Some(row) = upgr.selected_row().and_downcast_ref::<SherlockRow>() {
                         row.emit_by_name::<()>("row-should-activate", &[]);
                     }
                 }
@@ -313,10 +345,14 @@ fn nav_event(
                 let shift = Some(ModifierType::SHIFT_MASK);
                 let tab = Some(Key::Tab);
                 if custom_binds.prev_mod == shift && custom_binds.prev == tab {
-                    results.upgrade().map(|results| results.focus_prev(&result_viewport));
+                    results
+                        .upgrade()
+                        .map(|results| results.focus_prev(&result_viewport));
                     return true.into();
                 } else if custom_binds.next_mod == shift && custom_binds.next == tab {
-                    results.upgrade().map(|results| results.focus_next(&result_viewport));
+                    results
+                        .upgrade()
+                        .map(|results| results.focus_next(&result_viewport));
                     return true.into();
                 }
             }
@@ -335,7 +371,7 @@ fn change_event(
     launchers: &Vec<Launcher>,
     results: WeakRef<ListBox>,
     custom_binds: &ConfKeys,
-)->Option<()>{
+) -> Option<()> {
     // Setting up async capabilities
     let current_task: Rc<RefCell<Option<glib::JoinHandle<()>>>> = Rc::new(RefCell::new(None));
     let cancel_flag = Rc::new(RefCell::new(false));
@@ -432,10 +468,12 @@ pub fn async_calc(
             if (launcher.priority == 0 && current_mode == launcher.alias.as_deref().unwrap_or(""))
                 || (current_mode == "all" && launcher.priority > 0)
             {
-                launcher.get_loader_widget(&current_text).map(|(tile, result_item)| {
-                    async_widgets.push(result_item);
-                    tile
-                })
+                launcher
+                    .get_loader_widget(&current_text)
+                    .map(|(tile, result_item)| {
+                        async_widgets.push(result_item);
+                        tile
+                    })
             } else {
                 None
             }
@@ -490,8 +528,7 @@ pub fn async_calc(
                         // Process image replacement
                         if let Some(opts) = &widget.image_replacement {
                             if let Some(overlay) = &opts.icon_holder_overlay {
-                                if let Some((image, was_cached)) =
-                                    widget.launcher.get_image().await
+                                if let Some((image, was_cached)) = widget.launcher.get_image().await
                                 {
                                     if !was_cached {
                                         overlay.add_css_class("image-replace-overlay");
@@ -506,9 +543,7 @@ pub fn async_calc(
 
                         // Process weather tile
                         if let Some(wtr) = &widget.weather_tile {
-                            if let Some((data, was_changed)) =
-                                widget.launcher.get_weather().await
-                            {
+                            if let Some((data, was_changed)) = widget.launcher.get_weather().await {
                                 let css_class = if was_changed {
                                     "weather-animate"
                                 } else {
@@ -518,10 +553,16 @@ pub fn async_calc(
                                     row.add_css_class(css_class);
                                     row.add_css_class(&data.icon);
                                 });
-                                wtr.temperature.upgrade().map(|tmp| tmp.set_text(&data.temperature));
+                                wtr.temperature
+                                    .upgrade()
+                                    .map(|tmp| tmp.set_text(&data.temperature));
                                 wtr.spinner.upgrade().map(|spn| spn.set_spinning(false));
-                                wtr.icon.upgrade().map(|ico| ico.set_icon_name(Some(&data.icon)));
-                                wtr.location.upgrade().map(|loc| loc.set_text(&data.format_str));
+                                wtr.icon
+                                    .upgrade()
+                                    .map(|ico| ico.set_icon_name(Some(&data.icon)));
+                                wtr.location
+                                    .upgrade()
+                                    .map(|loc| loc.set_text(&data.format_str));
                             } else {
                                 widget.row.upgrade().map(|row| row.set_visible(false));
                             }
@@ -529,15 +570,11 @@ pub fn async_calc(
 
                         // Connect row-should-activate signal
                         widget.row.upgrade().map(|row| {
-                            row.connect(
-                                "row-should-activate",
-                                false,
-                                move |row| {
-                                    let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
-                                    execute_from_attrs(&row, &attrs);
-                                    None
-                                },
-                            );
+                            row.connect("row-should-activate", false, move |row| {
+                                let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
+                                execute_from_attrs(&row, &attrs);
+                                None
+                            });
                         })
                     }
                 })
@@ -564,7 +601,7 @@ pub fn populate(
     mod_str: &str,
 ) {
     // Remove all elements inside to avoid duplicates
-    if let Some(frame) = results_frame.upgrade(){
+    if let Some(frame) = results_frame.upgrade() {
         while let Some(row) = frame.last_child() {
             frame.remove(&row);
         }
@@ -578,13 +615,15 @@ pub fn populate(
 
     if let Some(c) = CONFIG.get() {
         let mut shortcut_index = 1;
-        if let Some(frame) = results_frame.upgrade(){
+        if let Some(frame) = results_frame.upgrade() {
             launcher_tiles.into_iter().for_each(|widget| {
                 if animate && c.behavior.animate {
                     widget.row_item.add_css_class("animate");
                 }
                 if let Some(shortcut_holder) = &widget.shortcut_holder {
-                    shortcut_index += shortcut_holder.upgrade().map_or(0, |holder| holder.apply_shortcut(shortcut_index, mod_str));
+                    shortcut_index += shortcut_holder
+                        .upgrade()
+                        .map_or(0, |holder| holder.apply_shortcut(shortcut_index, mod_str));
                 }
                 frame.append(&widget.row_item);
             });
