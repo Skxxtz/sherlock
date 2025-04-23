@@ -75,14 +75,13 @@ in {
             default = [];
             type = nullOr (listOf launcherType);
           };
+          style = mkOption {
+            description = "CSS content for Sherlock UI styling, written to 'main.css'";
+            default = "";
+            type = nullOr lines;
+          };
         };
       };
-    };
-
-    style = mkOption {
-      description = "CSS content for Sherlock UI styling, written to 'main.css'";
-      default = "";
-      type = nullOr lines;
     };
   };
 
