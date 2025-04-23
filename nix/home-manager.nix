@@ -104,8 +104,8 @@ in {
       (mkIf (cfg.settings.launchers != null) {
         xdg.configFile."sherlock/fallback.json".text = builtins.toJSON cfg.settings.launchers;
       })
-      (mkIf (cfg.style != null) {
-        xdg.configFile."sherlock/main.css".text = cfg.style;
+      (mkIf (cfg.settings.style != null) {
+        xdg.configFile."sherlock/main.css".text = cfg.settings.style;
       })
     ]))
   ]);
