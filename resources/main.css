@@ -58,6 +58,7 @@ overshoot:backdrop {
     font-family: "Cantarell";
 }
 
+/* OVERLAY */
 #overlay spinner{
     color: hsl(var(--text));
 }
@@ -66,8 +67,16 @@ overshoot:backdrop {
     background: transparent;
 }
 
+/* NOTIFICATIONS */
 .notifications {
     background: transparent;
+}
+
+/* WINDOW */
+window {
+    color: hsl(var(--text));
+    border-radius: 5px;
+    border: 2px solid hsl(var(--border));
 }
 
 scrolledwindow>viewport,
@@ -78,12 +87,6 @@ window {
 
 label {
     color: hsl(var(--text));
-}
-
-window {
-    color: hsl(var(--text));
-    border-radius: 5px;
-    border: 2px solid hsl(var(--border));
 }
 
 /* STATUS BAR */
@@ -110,7 +113,6 @@ window {
     from {
         transform: translate(0px, 0px);
     }
-
     to {
         transform: translate(-20px, 0px);
     }
@@ -313,6 +315,7 @@ image {
     font-weight: bold;
     color: hsla(var(--text), 0.5);
 }
+
 #shortcut-modkey{
     font-size: 13px;
 }
