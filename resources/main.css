@@ -4,7 +4,6 @@
     --text: 53, 100%, 97%;
     --border: 0, 0%, 19%;
 
-
     --tag-background: 180, 0%, 30%;
     --tag-color: 220, 10%, 100%;
     --error: 4, 71%, 62%;
@@ -25,12 +24,12 @@
     --weather-showers-scattered: 200, 30%, 65%;          /* Lighter scattered rain */
     --weather-none-available: 0, 0%, 50%;                /* Neutral placeholder gray */
 }
+
 /*
 --warning: 36, 89%, 52%;
 --error: 0, 89%, 59%;
 --success: 102, 36%, 53%;
 */
-
 
 overshoot *,
 undershoot *,
@@ -62,9 +61,11 @@ overshoot:backdrop {
 #overlay spinner{
     color: hsl(var(--text));
 }
+
 #overlay * {
     background: transparent;
 }
+
 .notifications {
     background: transparent;
 }
@@ -75,11 +76,9 @@ window {
     background: hsl(var(--background));
 }
 
-
 label {
     color: hsl(var(--text));
 }
-
 
 window {
     color: hsl(var(--text));
@@ -93,12 +92,15 @@ window {
     border-top: 1px solid hsl(var(--border));
     padding: 4px 10px 4px 20px;
 }
+
 .status-bar label {
     color: hsl(var(--text), 0.3);
 }
+
 .spinner-disappear {
     animation: vanish-rotate 0.3s ease forwards;
 }
+
 .spinner-appear {
     animation: ease-opacity 0.3s ease forwards;
     animation: rotate 0.3s linear infinite;
@@ -149,7 +151,6 @@ window {
     opacity: 1;
 }
 
-
 #search-icon {
     margin-left: 10px;
 }
@@ -189,7 +190,6 @@ scrollbar slider {
     border: none;
 }
 
-
 image {
     color: white;
 }
@@ -201,10 +201,12 @@ image {
     margin-bottom: 5px;
     border-radius: 4px;
 }
+
 .tile:hover *,
 .tile:hover{
     background: transparent;
 }
+
 .tile.animate {
     transform: translateY(20px); 
     opacity: 0;
@@ -282,10 +284,10 @@ image {
     color: hsla(var(--text), 0.4);
     margin-left: 0px;
 }
+
 #color-icon-holder{
     border-radius: 50px;
 }
-
 
 /*SHORTCUT*/
 #shortcut-holder {
@@ -315,7 +317,6 @@ image {
     font-size: 13px;
 }
 
-
 /*CALCULATOR*/
 .calc-tile {
     padding: 10px 10px 20px 10px;
@@ -336,26 +337,25 @@ image {
 .tile.tile.event-tile {
     padding: 5px 10px;
 }
+
 .tile.event-tile #title-label {
     padding: 2px 0px 7px 5px;
     text-transform: capitalize;
 }
+
 .tile.event-tile #time-label{
     font-size: 3rem;
 }
+
 #end-time-label {
     color: gray;
 }
-
-
-
 
 /* BULK TEXT TILE */
 .bulk-text {
     padding-bottom: 10px;
     min-height: 50px;
 }
-
 
 #bulk-text-title {
     margin-left: 10px;
@@ -378,40 +378,34 @@ image {
     min-height: 20px;
 }
 
-
-
 /* MPRIS TILE*/
 #mpris-icon-holder{
     border-radius: 5px;
 }
+
 /*Animation for replacing album covers*/
 .image-replace-overlay #album-cover{
     opacity: 1;
     animation: ease-opacity 0.5s forwards;
 }
 
-
-
-
-
-
-
 /* NEXT PAGE */
 .next_tile {
     color: hsl(var(--text));
     background: hsl(var(--background));
 }
+
 .next_tile #content-body {
     background: hsl(var(--background));
     padding: 10px;
     color: hsl(var(--text));
 }
+
 .raw_text, .next_tile #content-body {
     font-family: 'Fira Code', monospace;
     font-feature-settings: "kern" off;
     font-kerning: None;
 }
-
 
 /*Error*/
 .error-tile #scroll-window {
@@ -468,6 +462,7 @@ image {
     background: darkgray;
     margin-bottom: 10px;
 }
+
 .tile.weather-tile #content-holder{
     opacity: 0;
 }
@@ -490,11 +485,6 @@ image {
 .tile.weather-tile #content-holder {
     margin-bottom: 15px;
 }
-
-
-
-
-
 
 /*WEATHER CLASSES*/
 .tile.weather-tile.weather-clear {
@@ -588,8 +578,6 @@ image {
     color: hsl(var(--text));
 }
 
-
-
 /*ANIMATIONS*/
 @keyframes vanish-rotate{
     from {
@@ -599,8 +587,8 @@ image {
         opacity: 0;
         transform: rotate(360deg);
     }
-    
 }
+
 @keyframes rotate{
     from {
         transform: rotate(0deg);
@@ -610,8 +598,8 @@ image {
         transform: rotate(360deg);
         --start-rotation: 360deg;
     }
-
 }
+
 @keyframes ease-opacity {
     from {
         opacity: 0;
@@ -619,15 +607,13 @@ image {
     to {
         opacity: 1;
     }
-    
 }
+
 @keyframes slide {
     from {
         transform: translate(0px, 0px);
     }
-
     to {
         transform: translate(-20px, 0px);
     }
 }
-
