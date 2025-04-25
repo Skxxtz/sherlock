@@ -104,6 +104,15 @@ window {
     animation: rotate 0.3s linear infinite;
 }
 
+@keyframes slide {
+    from {
+        transform: translate(0px, 0px);
+    }
+
+    to {
+        transform: translate(-20px, 0px);
+    }
+}
 
 /* SEARCH PAGE */
 #search-bar {
@@ -451,28 +460,6 @@ image {
     color: hsl(var(--text));
     line-height: 1.4;
     color: gray;
-}
-
-
-/* STATUS BAR */
-.status-bar {
-    background: hsla(var(--foreground), 0.2);
-    border-top: 1px solid hsl(var(--border));
-    padding: 4px 10px 4px 20px;
-}
-.status-bar label {
-    color: hsl(var(--text), 0.3);
-}
-
-
-@keyframes slide {
-    from {
-        transform: translate(0px, 0px);
-    }
-
-    to {
-        transform: translate(-20px, 0px);
-    }
 }
 
 /* WEATHER TILE */
