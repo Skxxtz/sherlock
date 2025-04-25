@@ -289,7 +289,7 @@ image {
     border-radius: 50px;
 }
 
-/*SHORTCUT*/
+/* SHORTCUT */
 #shortcut-holder {
     margin-right: 25px;
     padding: 5px 10px;
@@ -317,7 +317,7 @@ image {
     font-size: 13px;
 }
 
-/*CALCULATOR*/
+/* CALCULATOR */
 .calc-tile {
     padding: 10px 10px 20px 10px;
     border-radius: 5px;
@@ -333,7 +333,7 @@ image {
     color: gray;
 }
 
-/*EVENT TILE*/
+/* EVENT TILE */
 .tile.tile.event-tile {
     padding: 5px 10px;
 }
@@ -383,7 +383,7 @@ image {
     border-radius: 5px;
 }
 
-/*Animation for replacing album covers*/
+/* Animation for replacing album covers */
 .image-replace-overlay #album-cover{
     opacity: 1;
     animation: ease-opacity 0.5s forwards;
@@ -407,7 +407,7 @@ image {
     font-kerning: None;
 }
 
-/*Error*/
+/* ERROR */
 .error-tile #scroll-window {
     padding: 10px;
     min-height: 50px;
@@ -486,7 +486,7 @@ image {
     margin-bottom: 15px;
 }
 
-/*WEATHER CLASSES*/
+/* WEATHER CLASSES */
 .tile.weather-tile.weather-clear {
     background: hsl(var(--weather-clear)); /* Light sky blue */
 }
@@ -578,7 +578,7 @@ image {
     color: hsl(var(--text));
 }
 
-/*ANIMATIONS*/
+/* ANIMATIONS */
 @keyframes vanish-rotate{
     from {
         opacity: 1;
