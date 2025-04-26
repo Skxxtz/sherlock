@@ -43,7 +43,6 @@ pub fn clear_cached_files() -> Result<(), SherlockError> {
         traceback: e.to_string(),
     })?;
 
-
     Ok(())
 }
 
