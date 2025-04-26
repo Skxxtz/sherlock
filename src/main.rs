@@ -67,7 +67,7 @@ async fn main() {
         .map_err(|_| {
             startup_errors.push(SherlockError {
                 error: SherlockErrorType::ConfigError(None),
-                traceback: format!(""),
+                traceback: String::new(),
             });
         })
         .ok();
@@ -120,7 +120,7 @@ async fn main() {
         non_breaking.extend(n);
 
         // Main logic for the Search-View
-        let (window, stack, current_stack_page) = ui::window::window(&app);
+        let (window, stack, current_stack_page) = ui::window::window(app);
 
         // Add closing logic
         app.set_accels_for_action("win.close", &["<Ctrl>W", "Escape"]);
@@ -152,7 +152,7 @@ async fn main() {
         if let Some(c) = CONFIG.get() {
             let opacity = c.appearance.opacity;
 
-            if opacity > 1.0 || opacity < 0.1 {
+            if !(0.1..=1.0).contains(&opacity) {
                 non_breaking.push(SherlockError {
                     error: SherlockErrorType::ConfigError(Some(format!(
                         "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
@@ -187,31 +187,30 @@ async fn main() {
 
         // Logic for handling the daemonization
         if let Some(c) = CONFIG.get() {
-            match c.behavior.daemonize {
-                true => {
-                    // Used to cache render
-                    let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.open", None);
-                    let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
+            if c.behavior.daemonize {
+                // Used to cache render
+                let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.open", None);
+                let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
 
-                    // Create async pipeline
-                    let (sender, receiver) = async_channel::bounded(1);
-                    thread::spawn(move || {
-                        async_std::task::block_on(async {
-                            let _daemon = SherlockDaemon::new(sender).await;
-                        });
+                // Create async pipeline
+                let (sender, receiver) = async_channel::bounded(1);
+                thread::spawn(move || {
+                    async_std::task::block_on(async {
+                        let _daemon = SherlockDaemon::new(sender).await;
                     });
-                    // Handle receiving using pipline
-                    MainContext::default().spawn_local(async move {
-                        while let Ok(_msg) = receiver.recv().await {
-                            let _ = gtk4::prelude::WidgetExt::activate_action(
-                                &window, "win.open", None,
-                            );
-                        }
-                    });
-                }
-                false => {}
+                });
+
+                // Handle receiving using pipline
+                MainContext::default().spawn_local(async move {
+                    while let Ok(_msg) = receiver.recv().await {
+                        let _ = gtk4::prelude::WidgetExt::activate_action(
+                            &window, "win.open", None,
+                        );
+                    }
+                });
             }
         }
+
         if sherlock_flags.time_inspect {
             println!("Startup time 0 → full content: {:?}", t0.elapsed());
         }

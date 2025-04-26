@@ -72,7 +72,7 @@ impl EventTileBuilder {
         // Append content to the sherlock row
         let object = SherlockRow::new();
         object.set_child(Some(&holder));
-        object.set_css_classes(&vec!["tile"]);
+        object.set_css_classes(&["tile"]);
 
         let title: Label = builder.object("title-label").unwrap_or_default();
         let start_time: Label = builder.object("time-label").unwrap_or_default();
@@ -126,7 +126,7 @@ impl TileBuilder {
         // Append content to the sherlock row
         let object = SherlockRow::new();
         object.set_child(Some(&holder));
-        object.set_css_classes(&vec!["tile"]);
+        object.set_css_classes(&["tile"]);
 
         // Specific to 'bulk_text_tile' and 'error_tile'
         let content_title: Label = builder.object("content-title").unwrap_or_default();
@@ -211,7 +211,7 @@ impl WeatherTileBuilder {
 
         // Append content to the sherlock row
         let object = SherlockRow::new();
-        object.set_css_classes(&vec!["tile"]);
+        object.set_css_classes(&["tile"]);
 
         let overlay = Overlay::new();
         overlay.set_child(Some(&body));

@@ -37,5 +37,5 @@ pub fn home_dir() -> Result<PathBuf, SherlockError> {
             error: SherlockErrorType::EnvVarNotFoundError(String::from("HOME")),
             traceback: e.to_string(),
         })
-        .map(|s| PathBuf::from(s))
+        .map(PathBuf::from)
 }
