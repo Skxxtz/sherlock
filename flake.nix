@@ -27,13 +27,12 @@
         "aarch64-linux"
       ];
 
-      flake.homeManagerModules.default = import ./nix/home-manager.nix self;
+      flake = rec {
+        homeManagerModules.default = import ./nix/home-manager.nix self;
+        homeModules.default = homeManagerModules.default;
+      };
 
-      perSystem = {
-        system,
-        stdenv,
-        ...
-      }: let
+      perSystem = {system, ...}: let
         name = "sherlock";
         version = "0.1.10";
 
