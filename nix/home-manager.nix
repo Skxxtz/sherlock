@@ -33,6 +33,9 @@ self: {
 in {
   options.programs.sherlock = with types; {
     enable = lib.mkEnableOption "Manage sherlock & config files with home-manager module." // {default = false;};
+    package = lib.mkPackageOption pkgs "sherlock" {
+      default = ["sherlock-launcher"];
+    };
 
     settings = mkOption {
       description = "Sherlock settings, seperated by config file.";
@@ -87,9 +90,7 @@ in {
 
   config = mkIf cfg.enable (mkMerge [
     {
-      # always install the package, because why else would you include the home-manager module.
-      # this could be made more customizable if `flake.nix` outputted nightly/unstable & release packages
-      home.packages = [self.packages.${pkgs.system}.default];
+      home.packages = [cfg.package];
     }
     (mkIf (cfg.settings != null) (mkMerge [
       (mkIf (cfg.settings.aliases != null) {
