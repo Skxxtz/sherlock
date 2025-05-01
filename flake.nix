@@ -14,12 +14,7 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    home-manager,
-    ...
-  } @ inputs:
+  outputs = {nixpkgs, ...} @ inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
       # sherlock currently only supports linux
       systems = [
@@ -28,8 +23,8 @@
       ];
 
       flake = rec {
-        homeManagerModules.default = import ./nix/home-manager.nix self;
-        homeModules.default = homeManagerModules.default;
+        homeModules.default = import ./nix/home-manager.nix;
+        homeManagerModules.default = homeModules.default;
       };
 
       perSystem = {system, ...}: let
