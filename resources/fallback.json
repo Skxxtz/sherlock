@@ -1,16 +1,67 @@
 [
     {
-        "name": "Clipboard",
-        "type": "clipboard-execution",
-        "args": {},
+        "name": "Weather",
+        "type": "weather",
+        "args": {
+            "location": "berlin",
+            "update_interval": 60
+        },
+        "priority": 1,
+        "home": true,
+        "only_home": true,
+        "async": true,
+        "shortcut": false,
+        "spawn_focus": false
+    },
+    {
+        "name": "Teams Event",
+        "type": "teams_event",
+        "args": {
+            "event_date": "now",
+            "event_start": "-5 minutes",
+            "event_end": "+15 minutes"
+        },
         "priority": 1,
         "home": true
     },
     {
         "name": "Calculator",
         "type": "calculation",
-        "args": {},
+        "args": {
+            "capabilities": [
+                "calc.math",
+                "calc.units"
+            ]
+        },
         "priority": 1
+    },
+    {
+        "name": "Spotify",
+        "type": "audio_sink",
+        "args": {},
+        "async": true,
+        "priority": 1,
+        "home": true,
+        "only_home": true,
+        "spawn_focus": false
+    },
+    {
+        "name": "Clipboard",
+        "type": "clipboard-execution",
+        "args": {
+            "capabilities": [
+                "url",
+                "colors.hex",
+                "colors.rgb",
+                "colors.hsl",
+                "calc.math",
+                "calc.lengths",
+                "calc.weights",
+                "calc.temperatures"
+            ]
+        },
+        "priority": 1,
+        "home": true
     },
     {
         "name": "App Launcher",
@@ -21,24 +72,32 @@
         "home": true
     },
     {
-        "name": "Bookmarks",
-        "alias": "",
-        "type": "command",
+        "name": "Categories",
+        "alias": "cat",
+        "type": "categories",
         "args": {
-            "commands": {
-                "ChatGPT": {
-                    "icon": "chat-gpt",
-                    "exec": "xdg-open https://chatgpt.com &",
-                    "search_string": "chatgpt;ai;"
-                },
-                "Github": {
-                    "icon": "sherlock-github",
-                    "exec": "xdg-open https://github.com/skxxtz &",
-                    "search_string": "github;"
-                }
+            "Kill Processes": {
+                "icon": "sherlock-process",
+                "icon_class": "reactive",
+                "exec": "kill",
+                "search_string": "terminate;kill;process"
+            },
+            "Power Menu": {
+                "icon": "battery-full-symbolic",
+                "icon_class": "reactive",
+                "exec": "pm",
+                "search_string": "powermenu;"
             }
         },
-        "priority": 3
+        "priority": 3,
+        "home": true
+    },
+    {
+        "name": "Kill Process",
+        "alias": "kill",
+        "type": "process",
+        "args": {},
+        "priority": 0
     },
     {
         "name": "Power Management",
@@ -48,53 +107,33 @@
             "commands": {
                 "Shutdown": {
                     "icon": "system-shutdown",
+                    "icon_class": "reactive",
                     "exec": "systemctl poweroff",
                     "search_string": "Poweroff;Shutdown"
                 },
                 "Sleep": {
                     "icon": "system-suspend",
+                    "icon_class": "reactive",
                     "exec": "systemctl suspend",
                     "search_string": "Sleep;"
                 },
                 "Lock": {
                     "icon": "system-lock-screen",
+                    "icon_class": "reactive",
                     "exec": "systemctl suspend & swaylock",
                     "search_string": "Lock Screen;"
                 },
                 "Reboot": {
                     "icon": "system-reboot",
+                    "icon_class": "reactive",
                     "exec": "systemctl reboot",
-                    "search_string": "reboot"
-                }
-            }
-        },
-        "priority": 4
-    },
-    {
-        "name": "OBS Studio",
-        "alias": "",
-        "type": "command",
-        "args": {
-            "commands": {
-                "Start Recording": {
-                    "icon": "sherlock-record",
-                    "exec": "obs --startrecording &",
-                    "search_string": "recording;start recording;startrecording;obs studio;"
-                }
-            }
-        },
-        "priority": 5
-    },
-    {
-        "name": "Utilities",
-        "alias": "",
-        "type": "command",
-        "args": {
-            "commands": {
-                "Color Picker": {
-                    "icon": "colorgrab",
-                    "exec": "hyprpicker -a &",
-                    "search_string": "colorpicker"
+                    "search_string": "reboot;restart"
+                },
+                "Log Oout": {
+                    "icon": "system-log-out",
+                    "icon_class": "reactive",
+                    "exec": "hyprctl dispatch exit",
+                    "search_string": "logout;exit"
                 }
             }
         },
@@ -104,6 +143,7 @@
         "name": "Web Search",
         "display_name": "Google Search",
         "tag_start": "{keyword}",
+        "tag_end": "{keyword}",
         "alias": "gg",
         "type": "web_launcher",
         "args": {
@@ -113,15 +153,56 @@
         "priority": 100
     },
     {
-        "name": "YouTube Search",
-        "display_name": "Youtube Search",
-        "tag_start": "{keyword}",
-        "alias": "yt",
-        "type": "web_launcher",
+        "name": "Debug",
+        "type": "debug",
+        "alias": "debug",
         "args": {
-            "search_engine": "https://www.youtube.com/results?search_query={keyword}",
-            "icon": "sherlock-youtube"
+            "commands": {
+                "Show Errors": {
+                    "icon": "sherlock-process",
+                    "exec": "show_errors",
+                    "search_string": "debug;errors"
+                },
+                "Clear Cache": {
+                    "icon": "sherlock-process",
+                    "exec": "clear_cache",
+                    "search_string": "clear;cache;"
+                },
+                "Reset App Counts": {
+                    "icon": "sherlock-process",
+                    "exec": "reset_counts",
+                    "search_string": "reset;clear;counts;appcounts"
+                }
+            }
         },
         "priority": 0
+    },
+    {
+        "name": "Categories",
+        "alias": "cat",
+        "type": "categories",
+        "args": {
+            "categories": {
+                "Kill Processes": {
+                    "icon": "sherlock-process",
+                    "exec": "kill",
+                    "search_string": "terminate;kill;process"
+                },
+                "Power Menu": {
+                    "icon": "battery-full-symbolic",
+                    "icon_class": "reactive",
+                    "exec": "pm",
+                    "search_string": "powermenu;"
+                },
+                "Debug": {
+                    "icon": "tools-report-bug",
+                    "icon_class": "reactive",
+                    "exec": "debug",
+                    "search_string": "debug;error"
+                }
+            }
+        },
+        "priority": 3,
+        "home": true
     }
 ]

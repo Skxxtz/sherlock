@@ -1,11 +1,10 @@
-use crate::{
-    loader::util::{SherlockError, SherlockErrorType},
-    CONFIG,
-};
 use std::{
     os::unix::process::CommandExt,
     process::{Command, Stdio},
 };
+
+use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::CONFIG;
 
 pub fn teamslaunch(meeting_url: &str) -> Result<(), SherlockError> {
     if let Some(c) = CONFIG.get() {

@@ -3,10 +3,8 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::{
-    loader::util::{SherlockError, SherlockErrorType},
-    CONFIG,
-};
+use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::CONFIG;
 
 pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
     let config = CONFIG.get().ok_or(SherlockError {

@@ -2,8 +2,8 @@ use gtk4::gdk::Display;
 use gtk4::CssProvider;
 use std::path::Path;
 
-use super::util::{SherlockError, SherlockErrorType};
 use super::Loader;
+use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::CONFIG;
 
 impl Loader {

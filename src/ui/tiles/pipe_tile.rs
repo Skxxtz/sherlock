@@ -10,43 +10,78 @@ use gtk4::prelude::BoxExt;
 use gtk4::prelude::WidgetExt;
 use gtk4::Image;
 
-use super::util::SherlockSearch;
 use super::util::TileBuilder;
 use super::Tile;
 
 impl Tile {
-    pub fn pipe_data(lines: &Vec<PipeData>, method: &str, keyword: &str) -> Vec<SherlockRow> {
-        let mut results: Vec<SherlockRow> = Default::default();
+    pub fn pipe_data(lines: &Vec<PipeData>, method: &str) -> Vec<SherlockRow> {
+        let mut results: Vec<SherlockRow> = Vec::with_capacity(lines.len());
 
         for item in lines {
-            if item.fuzzy_match(keyword) || item.binary.is_some() {
+            let search = format!(
+                "{};{}",
+                item.title.as_deref().unwrap_or(""),
+                item.description.as_deref().unwrap_or("")
+            );
+            if search.as_str() != ";" || item.binary.is_some() {
                 let builder = TileBuilder::new("/dev/skxxtz/sherlock/ui/tile.ui");
-                builder.object.set_spawn_focus(true);
 
                 if let Some(title) = &item.title {
-                    builder.title.set_text(&title);
+                    builder
+                        .title
+                        .as_ref()
+                        .and_then(|tmp| tmp.upgrade())
+                        .map(|t| t.set_text(&title));
                 }
-                if let Some(desc) = &item.description {
-                    builder.category.set_text(&desc);
-                } else {
-                    builder.category.set_visible(false);
-                }
-                if let Some(icon) = &item.icon {
-                    builder.icon.set_icon_name(Some(&icon));
-                } else {
-                    builder.icon.set_visible(false);
-                }
+                builder
+                    .category
+                    .as_ref()
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|category| {
+                        if let Some(desc) = &item.description {
+                            category.set_text(&desc);
+                        } else {
+                            category.set_visible(false);
+                        }
+                    });
+
+                builder
+                    .icon
+                    .as_ref()
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|ico| {
+                        if let Some(icon) = &item.icon {
+                            if icon.starts_with("/") {
+                                ico.set_from_file(Some(&icon));
+                            } else {
+                                ico.set_icon_name(Some(&icon));
+                            }
+                        } else {
+                            ico.set_visible(false);
+                        }
+                    });
+
+                // Custom Image Data
                 if let Some(bin) = item.binary.clone() {
                     let cursor = Cursor::new(bin);
                     if let Some(pixbuf) = Pixbuf::from_read(cursor).ok() {
-                        let image = Image::from_pixbuf(Some(&pixbuf));
-                        builder.icon_holder.append(&image);
+                        let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
+                        let image = Image::from_paintable(Some(&texture));
+                        builder
+                            .icon_holder
+                            .as_ref()
+                            .and_then(|tmp| tmp.upgrade())
+                            .map(|holder| holder.append(&image));
                         if let Some(size) = &item.icon_size {
                             image.set_pixel_size(*size);
                         }
                     }
                 } else {
-                    builder.icon.set_visible(false);
+                    builder
+                        .icon
+                        .as_ref()
+                        .and_then(|tmp| tmp.upgrade())
+                        .map(|icon| icon.set_visible(false));
                 }
 
                 // Create attributes and enable action capability
@@ -56,7 +91,7 @@ impl Tile {
                     item.hidden.as_ref().map_or_else(Vec::new, |a| {
                         a.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect()
                     });
-                constructor.extend([("method", method), ("keyword", keyword)]);
+                constructor.extend([("method", method)]);
                 if let Some(result) = result {
                     constructor.push(("result", result))
                 }
@@ -65,9 +100,11 @@ impl Tile {
                 }
                 let attrs = get_attrs_map(constructor);
 
+                builder.object.set_spawn_focus(true);
+                builder.object.set_search(&search);
                 builder
                     .object
-                    .connect("row-should-activate", false, move |row| {
+                    .connect_local("row-should-activate", false, move |row| {
                         let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
                         execute_from_attrs(&row, &attrs);
                         None

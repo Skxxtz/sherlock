@@ -1,10 +1,20 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::env;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read};
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use serde::{
+    de::{DeserializeOwned, MapAccess, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+    fmt::Debug,
+    fs::{self, File},
+    hash::{Hash, Hasher},
+    path::PathBuf,
+};
+
+use crate::utils::{
+    errors::{SherlockError, SherlockErrorType},
+    files::{expand_path, home_dir},
+};
 
 #[derive(Deserialize, Debug)]
 pub struct RawLauncher {
@@ -31,10 +41,15 @@ pub struct RawLauncher {
     #[serde(default)]
     pub args: serde_json::Value,
 }
+fn default_true() -> bool {
+    true
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AppData {
-    pub icon: String,
+    #[serde(default)]
+    pub name: String,
+    pub icon: Option<String>,
     pub icon_class: Option<String>,
     pub exec: String,
     pub search_string: String,
@@ -44,21 +59,46 @@ pub struct AppData {
     #[serde(default)]
     pub priority: f32,
 }
+impl AppData {
+    pub fn with_priority(mut self, priority: f32) -> Self {
+        self.priority = priority;
+        self
+    }
+}
+impl Eq for AppData {}
+impl Hash for AppData {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Make more efficient and handle error using f32
+        self.exec.hash(state);
+        self.desktop_file.hash(state);
+    }
+}
 
-#[derive(Clone, Debug, Default)]
-pub struct SherlockFlags {
-    pub config: Option<PathBuf>,
-    pub fallback: Option<PathBuf>,
-    pub style: Option<PathBuf>,
-    pub ignore: Option<PathBuf>,
-    pub alias: Option<PathBuf>,
-    pub display_raw: bool,
-    pub center_raw: bool,
-    pub cache: Option<PathBuf>,
-    pub daemonize: bool,
-    pub method: Option<String>,
-    pub field: Option<String>,
-    pub time_inspect: bool,
+/// Custom deserializer to deserialize named json struct into a hashset instead of hashmap
+pub fn deserialize_named_appdata<'de, D>(deserializer: D) -> Result<HashSet<AppData>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct AppDataMapVisitor;
+    impl<'de> Visitor<'de> for AppDataMapVisitor {
+        type Value = HashSet<AppData>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a map of AppData keyed by 'name'")
+        }
+        fn visit_map<M>(self, mut map: M) -> Result<HashSet<AppData>, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            let mut set = HashSet::new();
+            while let Some((key, mut value)) = map.next_entry::<String, AppData>()? {
+                value.name = key;
+                set.insert(value);
+            }
+            Ok(set)
+        }
+    }
+    deserializer.deserialize_map(AppDataMapVisitor)
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -68,482 +108,68 @@ pub struct SherlockAlias {
     pub exec: Option<String>,
     pub keywords: Option<String>,
 }
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub enum SherlockErrorType {
-    EnvVarNotFoundError(String),
-    FileExistError(PathBuf),
-    FileWriteError(PathBuf),
-    FileReadError(PathBuf),
-    FileParseError(PathBuf),
-    DirReadError(String),
-    DirCreateError(String),
-    ResourceParseError,
-    ResourceLookupError(String),
-    DisplayError,
-    ConfigError(Option<String>),
-    FlagLoadError,
-    RegexError(String),
-    CommandExecutionError(String),
-    ClipboardError,
-    DBusConnectionError,
-    DBusMessageSendError(String),
-    DBusMessageConstructError(String),
-    HttpRequestError(String),
-    SocketRemoveError(String),
-    SocketConnectError(String),
-    SoecktWriteError(String),
-}
 
-impl SherlockErrorType {
-    pub fn get_message(&self) -> (String, String) {
-        match self {
-            SherlockErrorType::EnvVarNotFoundError(var) => (
-                "EnvVarNotFoundError".to_string(),
-                format!("Failed to unpack environment variable \"{}\"", var),
-            ),
-            SherlockErrorType::SocketRemoveError(socket) => (
-                "SocketRemoveError".to_string(),
-                format!("Failed to close socket at location \"{}\"", socket),
-            ),
-            SherlockErrorType::SocketConnectError(socket) => (
-                "SocketConnectError".to_string(),
-                format!("Failed to connect to socket at location \"{}\"", socket),
-            ),
-            SherlockErrorType::SoecktWriteError(socket) => (
-                "SoecktWriteError".to_string(),
-                format!(
-                    "Failed to send message to socket at location \"{}\"",
-                    socket
-                ),
-            ),
-            SherlockErrorType::FileExistError(file) => (
-                "FileExistError".to_string(),
-                format!("File \"{}\" does not exist", file.to_string_lossy()),
-            ),
-            SherlockErrorType::FileWriteError(file) => (
-                "FileWriteError".to_string(),
-                format!("Failed to write file \"{}\"", file.to_string_lossy()),
-            ),
-            SherlockErrorType::FileReadError(file) => (
-                "FileReadError".to_string(),
-                format!("Failed to read file \"{}\"", file.to_string_lossy()),
-            ),
-            SherlockErrorType::FileParseError(file) => (
-                "FileParseError".to_string(),
-                format!("Failed to parse file \"{}\"", file.to_string_lossy()),
-            ),
-            SherlockErrorType::DirReadError(file) => (
-                "DirReadError".to_string(),
-                format!("Failed to read/access dir \"{}\"", file),
-            ),
-            SherlockErrorType::DirCreateError(file) => (
-                "DirCreateError".to_string(),
-                format!("Failed to create parent dir \"{}\"", file),
-            ),
-            SherlockErrorType::ResourceParseError => (
-                "ResourceParseError".to_string(),
-                format!("Failed to parse resources"),
-            ),
-            SherlockErrorType::ResourceLookupError(resource) => (
-                "ResourceLookupError".to_string(),
-                format!("Failed to find resource \"{}\"", resource),
-            ),
-            SherlockErrorType::DisplayError => (
-                "DisplayError".to_string(),
-                "Could not connect to a display".to_string(),
-            ),
-            SherlockErrorType::ConfigError(val) => {
-                let message = if let Some(v) = val {
-                    format!("{}", v)
-                } else {
-                    "It should never come to this".to_string()
-                };
-                ("ConfigError".to_string(), message)
-            }
-            SherlockErrorType::FlagLoadError => {
-                (format!("FlagLoadError"), format!("Failed to load flags"))
-            }
-            SherlockErrorType::RegexError(key) => (
-                format!("RegexError"),
-                format!("Failed to compile the regular expression for \"{}\"", key),
-            ),
-            SherlockErrorType::CommandExecutionError(cmd) => (
-                format!("CommandExecutionError"),
-                format!("Failed to execute command \"{}\"", cmd),
-            ),
-            SherlockErrorType::ClipboardError => (
-                format!("ClipboardError"),
-                format!("Failed to get system clipboard"),
-            ),
-            SherlockErrorType::DBusConnectionError => (
-                format!("DBusConnectionError"),
-                format!("Failed to connect to system DBus"),
-            ),
-            SherlockErrorType::DBusMessageConstructError(message) => (
-                format!("DBusMessageConstructError"),
-                format!("Failed to construct Dbus message \"{}\"", message),
-            ),
-            SherlockErrorType::DBusMessageSendError(message) => (
-                format!("DBusConnectionError"),
-                format!("Failed to send Dbus message \"{}\"", message),
-            ),
-            SherlockErrorType::HttpRequestError(cmd) => (
-                format!("HttpRequestError"),
-                format!("Failed to get requested source \"{}\"", cmd),
-            ),
-        }
-    }
+pub struct CounterReader {
+    pub path: PathBuf,
 }
-#[derive(Clone, Debug)]
-pub struct SherlockError {
-    pub error: SherlockErrorType,
-    pub traceback: String,
-}
-
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct SherlockConfig {
-    #[serde(default)]
-    pub default_apps: ConfigDefaultApps,
-    #[serde(default)]
-    pub units: ConfigUnits,
-    #[serde(default)]
-    pub debug: ConfigDebug,
-    #[serde(default)]
-    pub appearance: ConfigAppearance,
-    #[serde(default)]
-    pub behavior: ConfigBehavior,
-    #[serde(default)]
-    pub binds: ConfigBinds,
-    #[serde(default)]
-    pub files: ConfigFiles,
-    #[serde(default)]
-    pub pipe: ConfigPipe,
-}
-impl SherlockConfig {
-    pub fn default() -> Self {
-        SherlockConfig {
-            default_apps: ConfigDefaultApps::default(),
-            units: ConfigUnits::default(),
-            debug: ConfigDebug::default(),
-            appearance: ConfigAppearance::default(),
-            behavior: ConfigBehavior::default(),
-            binds: ConfigBinds::default(),
-            files: ConfigFiles::default(),
-            pipe: ConfigPipe { method: None },
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct ConfigDefaultApps {
-    #[serde(default = "default_teams")]
-    pub teams: String,
-    #[serde(default = "default_calendar_client")]
-    pub calendar_client: String,
-    #[serde(default = "default_terminal")]
-    pub terminal: String,
-}
-impl Default for ConfigDefaultApps {
-    fn default() -> Self {
-        Self {
-            teams: default_teams(),
-            calendar_client: default_calendar_client(),
-            terminal: get_terminal().unwrap_or_default(), // Should never get to this...
-        }
-    }
-}
-#[derive(Deserialize, Debug, Clone)]
-pub struct ConfigUnits {
-    #[serde(default = "default_measurements")]
-    pub lengths: String,
-    #[serde(default = "default_weights")]
-    pub weights: String,
-    #[serde(default = "default_volumes")]
-    pub volumes: String,
-    #[serde(default = "default_temperatures")]
-    pub temperatures: String,
-    #[serde(default = "default_currency")]
-    pub _currency: String,
-}
-impl Default for ConfigUnits {
-    fn default() -> Self {
-        Self {
-            lengths: default_measurements(),
-            weights: default_weights(),
-            volumes: default_volumes(),
-            temperatures: default_temperatures(),
-            _currency: default_currency(),
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct ConfigDebug {
-    #[serde(default)]
-    pub try_suppress_errors: bool,
-    #[serde(default)]
-    pub try_suppress_warnings: bool,
-    #[serde(default)]
-    pub app_paths: HashSet<String>,
-}
-impl Default for ConfigDebug {
-    fn default() -> Self {
-        Self {
-            try_suppress_errors: false,
-            try_suppress_warnings: false,
-            app_paths: HashSet::new(),
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct ConfigAppearance {
-    #[serde(default)]
-    pub width: i32,
-    #[serde(default)]
-    pub height: i32,
-    #[serde(default)]
-    pub gsk_renderer: String,
-    #[serde(default)]
-    pub icon_paths: Vec<String>,
-    #[serde(default = "default_icon_size")]
-    pub icon_size: i32,
-    #[serde(default)]
-    pub search_icon: bool,
-    #[serde(default = "default_true")]
-    pub use_base_css: bool,
-    #[serde(default = "default_true")]
-    pub status_bar: bool,
-}
-impl Default for ConfigAppearance {
-    fn default() -> Self {
-        Self {
-            width: 900,
-            height: 593, // 617 with, 593 without notification bar
-            gsk_renderer: String::from("cairo"),
-            icon_paths: Default::default(),
-            icon_size: default_icon_size(),
-            search_icon: false,
-            use_base_css: true,
-            status_bar: true,
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct ConfigBehavior {
-    #[serde(default = "default_cache")]
-    pub cache: PathBuf,
-    #[serde(default = "default_true")]
-    pub caching: bool,
-    #[serde(default)]
-    pub daemonize: bool,
-    #[serde(default = "default_true")]
-    pub animate: bool,
-    #[serde(default)]
-    pub field: Option<String>,
-    pub global_prefix: Option<String>,
-    pub global_flags: Option<String>,
-}
-impl Default for ConfigBehavior {
-    fn default() -> Self {
-        Self {
-            cache: default_cache(),
-            caching: false,
-            daemonize: false,
-            animate: true,
-            field: None,
-            global_prefix: None,
-            global_flags: None,
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct ConfigFiles {
-    #[serde(default = "default_config")]
-    pub config: PathBuf,
-    #[serde(default = "default_css")]
-    pub css: PathBuf,
-    #[serde(default = "default_fallback")]
-    pub fallback: PathBuf,
-    #[serde(default = "default_alias")]
-    pub alias: PathBuf,
-    #[serde(default = "default_ignore")]
-    pub ignore: PathBuf,
-}
-impl Default for ConfigFiles {
-    fn default() -> Self {
-        Self {
-            config: default_config(),
-            css: default_css(),
-            fallback: default_fallback(),
-            alias: default_alias(),
-            ignore: default_ignore(),
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct ConfigBinds {
-    #[serde(default)]
-    pub prev: Option<String>,
-    #[serde(default)]
-    pub next: Option<String>,
-    #[serde(default)]
-    pub modifier: Option<String>,
-}
-
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct ConfigPipe {
-    #[serde(default)]
-    pub method: Option<String>,
-}
-
-pub fn read_file(file_path: &str) -> std::io::Result<String> {
-    let file = File::open(file_path)?;
-    let mut reader = BufReader::new(file);
-    let mut content = String::new();
-    reader.read_to_string(&mut content)?;
-    Ok(content)
-}
-
-pub fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where
-    P: AsRef<Path>,
-{
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
-}
-
-pub fn home_dir() -> Result<PathBuf, SherlockError> {
-    env::var("HOME")
-        .map_err(|e| SherlockError {
-            error: SherlockErrorType::EnvVarNotFoundError(String::from("HOME")),
+impl CounterReader {
+    pub fn new() -> Result<Self, SherlockError> {
+        let home = env::var("HOME").map_err(|e| SherlockError {
+            error: SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
             traceback: e.to_string(),
-        })
-        .map(|s| PathBuf::from(s))
-}
-pub fn parse_priority(priority: f32, count: f32, decimals: i32) -> f32 {
-    priority + 1.0 - count * 10f32.powi(-decimals)
-}
-
-pub fn expand_path(path: &Path, home: &Path) -> PathBuf {
-    let mut components = path.components();
-    if let Some(std::path::Component::Normal(first)) = components.next() {
-        if first == "~" {
-            return home.join(components.as_path());
+        })?;
+        let home_dir = PathBuf::from(home);
+        let path = home_dir.join(".sherlock/counts.json");
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| SherlockError {
+                error: SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                traceback: e.to_string(),
+            })?;
         }
+        Ok(CounterReader { path })
     }
-    path.to_path_buf()
-}
-
-// ====================
-// SECTION: DEFAULT GETTERS
-// ====================
-pub fn default_terminal() -> String {
-    get_terminal().unwrap_or_default()
-}
-pub fn default_teams() -> String {
-    String::from("teams-for-linux --enable-features=UseOzonePlatform --ozone-platform=wayland --url {meeting_url}")
-}
-pub fn default_calendar_client() -> String {
-    String::from("thunderbird")
-}
-pub fn default_measurements() -> String {
-    String::from("meters")
-}
-pub fn default_weights() -> String {
-    String::from("kg")
-}
-pub fn default_volumes() -> String {
-    String::from("l")
-}
-pub fn default_temperatures() -> String {
-    String::from("C")
-}
-pub fn default_currency() -> String {
-    String::from("eur")
-}
-
-pub fn default_cache() -> PathBuf {
-    PathBuf::from("~/.cache/sherlock/sherlock_desktop_cache.json")
-}
-pub fn default_config() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/config.toml")
-}
-pub fn default_fallback() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/fallback.json")
-}
-pub fn default_css() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/main.css")
-}
-pub fn default_alias() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/sherlock_alias.json")
-}
-pub fn default_ignore() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/sherlockignore")
-}
-
-pub fn default_true() -> bool {
-    true
-}
-pub fn default_icon_size() -> i32 {
-    22
-}
-pub fn get_terminal() -> Result<String, SherlockError> {
-    let mut terminal = None;
-
-    //Check if $TERMAINAL is set
-    if let Ok(term) = env::var("TERMINAL") {
-        if is_terminal_installed(&term) {
-            terminal = Some(term);
-        }
+    pub fn increment(&self, key: &str) -> Result<(), SherlockError> {
+        let mut content: HashMap<String, f32> = JsonCache::read(&self.path)?;
+        *content.entry(key.to_string()).or_insert(0.0) += 1.0;
+        JsonCache::write(&self.path, &content)?;
+        Ok(())
     }
-    // Try other terminals
-    if terminal.is_none() {
-        let terminals = [
-            "kitty",
-            "gnome-terminal",
-            "xterm",
-            "konsole",
-            "alacritty",
-            "urxvt",
-            "mate-terminal",
-            "terminator",
-            "sakura",
-            "terminology",
-            "st",
-            "xfce4-terminal",
-            "guake",
-            "x11-terminal",
-            "macos-terminal",
-            "iterm2",
-            "lxterminal",
-            "foot",
-            "wezterm",
-            "tilix",
-        ];
-        for t in terminals {
-            if is_terminal_installed(t) {
-                terminal = Some(t.to_string());
-                break;
+}
+
+pub struct JsonCache;
+impl JsonCache {
+    pub fn write<T>(path: &PathBuf, to: &T) -> Result<(), SherlockError>
+    where
+        T: serde::Serialize + ?Sized,
+    {
+        let tmp_path = path.with_extension(".tmp");
+        if let Ok(f) = File::create(&tmp_path) {
+            if let Ok(_) = simd_json::to_writer(f, to) {
+                let _ = fs::rename(&tmp_path, &path);
+            } else {
+                let _ = fs::remove_file(&tmp_path);
             }
         }
+        Ok(())
     }
-    if let Some(t) = terminal {
-        Ok(t)
-    } else {
-        Err(SherlockError{
-                error: SherlockErrorType::ConfigError(Some("Failed to get terminal".to_string())),
-                traceback: "Unable to locate or parse a valid terminal app. Ensure that the terminal app is correctly specified in the configuration file or environment variables.".to_string(),
-            })
+    pub fn read<T>(path: &PathBuf) -> Result<T, SherlockError>
+    where
+        T: DeserializeOwned + Default + Debug,
+    {
+        let home = home_dir()?;
+        let path = expand_path(path, &home);
+
+        let file = if path.exists() {
+            File::open(&path)
+        } else {
+            println!("{:?}", path);
+            File::create(&path)
+        }
+        .map_err(|e| SherlockError {
+            error: SherlockErrorType::FileExistError(path.clone()),
+            traceback: e.to_string(),
+        })?;
+        let res: Result<T, simd_json::Error> = simd_json::from_reader(file);
+        Ok(res.unwrap_or_default())
     }
-}
-fn is_terminal_installed(terminal: &str) -> bool {
-    Command::new(terminal)
-        .arg("--version") // You can adjust this if the terminal doesn't have a "--version" flag
-        .output()
-        .is_ok()
 }

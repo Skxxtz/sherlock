@@ -210,25 +210,14 @@ After the installation is completed, you can set up your configuration files. Th
 2. [**fallback.json**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/fallback.json): This file specifies the features your launcher should have. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/launchers.md).
 3. [**sherlock_alias.json**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/sherlock_alias.json): This file specifies aliases for applications. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/aliases.md).
 4. [**sherlockignore**](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/sherlockignore): This file specifies which applications to exclude from your search. Documentation [here](https://github.com/Skxxtz/sherlock/blob/main/docs/sherlockignore.md).
+5. [**main.css**](https://github.com/Skxxtz/sherlock/blob/main/resources/main.css)
+
+As of `version 0.1.11`, Sherlock comes with the `init` subcommand to automatically create your config. It will create versions of the files above, populated with the default values. Additionally, it will create the `icons/`, `scripts/`, and `themes/` subdirectories. All you have to do is run the following command:
 
 ```bash
-mkdir -p ~/.config/sherlock/
-touch ~/.config/sherlock/config.toml ~/.config/sherlock/sherlockignore
-echo [] > ~/.config/sherlock/fallback.json
-echo {} > ~/.config/sherlock/sherlock_alias.json
+sherlock init
 ```
-<br><br>
-**Alternatively**, you can use `curl -O` in the `~/.config/sherlock/` directory to load the [example configs](https://github.com/Skxxtz/sherlock/tree/main/docs/examples). This is **not good practice** and **not recommended**, especially if you don't know the source, as you could end up downloading **malware**! Nevertheless, here's how you can do that, if you prefer to be a risk-taker:
 
-> **🚨 Warning:** Only use `curl` with trusted sources to avoid downloading malicious content!
-```bash
-mkdir -p ~/.config/sherlock/
-cd ~/.config/sherlock/
-curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/config.toml
-curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/sherlockignore
-curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/fallback.json
-curl -O https://raw.githubusercontent.com/skxxtz/sherlock/main/docs/examples/sherlock_alias.json
-```
 #### Warnings after startup
 If you're getting warnings after startup, you can press `return` to access the main application. Alternatively you can set the `try_suppress_warnings` key in the config file to true. This will prevent any warnings to be shown. The same thing can be done for errors. However, if you suppress errors, the application might not work as expected.
 

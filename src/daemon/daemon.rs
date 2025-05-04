@@ -1,6 +1,6 @@
 use std::os::unix::net::UnixStream;
 
-use crate::loader::util::{SherlockError, SherlockErrorType};
+use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::SOCKET_PATH;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixListener;
@@ -54,7 +54,7 @@ impl SherlockDaemon {
             traceback: e.to_string(),
         })?;
         stream.write_all(b"show").map_err(|e| SherlockError {
-            error: SherlockErrorType::SoecktWriteError(SOCKET_PATH.to_string()),
+            error: SherlockErrorType::SocketWriteError(SOCKET_PATH.to_string()),
             traceback: e.to_string(),
         })?;
 

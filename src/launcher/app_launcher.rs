@@ -1,7 +1,7 @@
 use crate::loader::util::AppData;
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct App {
-    pub apps: HashMap<String, AppData>,
+pub struct AppLauncher {
+    pub apps: HashSet<AppData>,
 }

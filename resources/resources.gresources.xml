@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
     <gresource prefix="/dev/skxxtz/sherlock">
-        <file>main.css</file>
-        <file>fallback.json</file>
+        <file alias="main.css">main.css</file>
+        <file alias="fallback.json">fallback.json</file>
         <file alias="ui/tile.ui">ui/tile.ui</file>
         <file alias="ui/calc_tile.ui">ui/calc_tile.ui</file>
         <file alias="ui/bulk_text_tile.ui">ui/bulk_text_tile.ui</file>
@@ -19,6 +19,7 @@
     <gresource prefix="/org/gtk/libgtk/icons/">
         <file alias="google.svg">icons/google.svg</file>
         <file alias="sherlock-process.svg">icons/sherlock-process.svg</file>
+        <file alias="sherlock-bookmark.svg">icons/sherlock-bookmark.svg</file>
         <file alias="bing.svg">icons/bing.svg</file>
         <file alias="duckduckgo.svg">icons/duckduckgo.svg</file>
         <file alias="wikipedia.svg">icons/wikipedia.svg</file>

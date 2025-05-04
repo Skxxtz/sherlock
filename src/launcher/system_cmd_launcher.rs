@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 use crate::loader::util::AppData;
 
 #[derive(Clone, Debug)]
-pub struct SystemCommand {
-    pub commands: HashMap<String, AppData>,
+pub struct CommandLauncher {
+    pub commands: HashSet<AppData>,
 }

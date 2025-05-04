@@ -5,7 +5,7 @@ use tokio::process::Command;
 use tokio::time::{timeout, Duration};
 
 #[derive(Clone, Debug)]
-pub struct BulkText {
+pub struct BulkTextLauncher {
     pub icon: String,
     pub exec: String,
     pub args: String,
@@ -27,7 +27,7 @@ impl AsyncCommandResponse {
     }
 }
 
-impl BulkText {
+impl BulkTextLauncher {
     pub async fn get_result(&self, keyword: &str) -> Option<(String, String, Option<String>)> {
         if self.args.contains("{keyword}") && keyword.trim().is_empty() {
             return None;

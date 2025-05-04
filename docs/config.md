@@ -12,6 +12,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | `terminal`        | Automatically detected | May be required if the `TERMINAL` environment variable is not set. Specify the executable name of your terminal (e.g., `"gnome-terminal"`, `"konsole"`). |
 | `teams`        | `teams-for-linux --enable-features=UseOzonePlatform --ozone-platform=wayland --url {meeting_url}` | Only required for the teams-event tile to automatically enter a teams meeting. The `{meeting_url}` will be replaced by the actual teams meeting URL. |
 | `calendar_client`        | `thunderbird` | Sets your calendar client used in event tiles. Currently only thunderbird is supported. |
+| `mpris`        | `None` | Sets your preffered mpris device. When multiple devices are active, it will select `mpris`. Otherwise, it will select the first device. |
 
 ---
 ## Units Section `[units]`
@@ -35,8 +36,8 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 
 ## Appearance Section `[appearance]`
 
-| **Keyword**     | **Default** | **Explanation**                                                                                                                 |
-|-----------------|-------------|-------------------------------------------------------------------------------------------------------------------------------|
+| **Keyword**     | **Default** | **Explanation** |
+|-----------------|-------------|-------------------------------------------------------------|
 | `width`    | `900`        | Sets the width of the main window.|
 | `height`    | `593`        | Sets the height of the main window. | 
 | `gsk_renderer`  | `"cairo"`   | Specifies the renderer used to display the Sherlock application. During testing, `cairo` showed the fastest startup times. You can also use `ngl`, `gl`, or `vulkan` based on your system's performance. |
@@ -46,6 +47,9 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | `search_icon`    | `true`        | Enables or disables the use of the search icon |
 | `use_base_css`    | `true`        | Enables or disables the extension of Sherlock's default style sheet. |
 | `status_bar`    | `true`        | Enables or disables the status bar. |
+| `opacity` | `1.0` | Controls the opacity of the window. Allowed range: `0.1 - 1.0` |
+| `pub mod_key_ascii` | `["⇧", "⇧", "⌘", "⌘", "⎇", "✦", "✦", "⌘"]` | Sets the ascii character for: `Shift`, `Caps Lock`, `Control`, `Meta`, `Alt`, `Super`, `Hyper`, `Fallback` in that order. |
+
 
 ---
 ## Behavior Section `[behavior]`
@@ -55,7 +59,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | `caching` | `false`     | If set to `true`, Desktop file caching will be activated to either the specified or the default location `~/sherlock/.cache/sherlock/sherlock_desktop_cache.json`. |[Caching](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
 | `cache` | `~/.cache/sherlock/sherlock_desktop_cache.json`   | Overrides the default caching location. ||
 | `daemonize` | `false`     | If set to `true`, Sherlock will run in daemon mode. This will consume more memory because the rendered application will be kept in memory. Daemonizing will allow faster startup times. Send the `open` message to socket `/tmp/sherlock_daemon.socket` to open the window. |[Daemonizing](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
-| `animate` | `true`   | Sets if startup animation should play. (Only works on daemonize=false) ||
+| `animate` | `true`   | Sets if startup animation should play. (Temporarily deprecated) ||
 | `global_prefix` | `None`   | Prepends this to every command. ||
 | `global_flags` | `None`   | Appends these flags to every command. ||
 
@@ -97,7 +101,8 @@ The `[binds]` section allows you to configure additional keybindings for navigat
 
 ---
 ## Files Section `[files]`
-This section holds the location for the config files.
+This section holds the location for the config files.<br>
+> **💡 Note:** With Sherlock (> 0.1.11), you can use the `Sherlock init` subcommand to create the default versions for all of these files. To specify a custom location for your config files, you can then use the optional `location` suffix. E.g. `Sherlock init ~/sherlock-configs`
 
 | **Keyword**           | **Default** | **Explanation**|
 |-----------------------|-------------|-----------------------------------|
@@ -105,4 +110,5 @@ This section holds the location for the config files.
 | `css` | `~/.config/sherlock/main.css`     | Sets the location for the `main.css` file | 
 | `alias` | `~/.config/sherlock/sherlock_alias.json`     | Sets the location for the `sherlock_alias.json` file | 
 | `ignore` | `~/.config/sherlock/sherlockignore`     | Sets the location for the `sherlockignore` file | 
+| `actions` | `~/.config/sherlock/sherlock_actions.json`     | Sets the location for the `sherlock_actions` file | 
 ---

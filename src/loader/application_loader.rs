@@ -8,18 +8,21 @@ use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use super::util::{SherlockError, SherlockErrorType};
 use super::{util, Loader};
+use crate::utils::{
+    errors::{SherlockError, SherlockErrorType},
+    files::{read_file, read_lines},
+};
 use crate::CONFIG;
-use util::{parse_priority, read_file, read_lines, AppData, SherlockAlias};
+use util::{AppData, SherlockAlias};
 
 impl Loader {
     pub fn load_applications_from_disk(
         applications: Option<HashSet<PathBuf>>,
         priority: f32,
-        counts: HashMap<String, f32>,
+        counts: &HashMap<String, f32>,
         decimals: i32,
-    ) -> Result<HashMap<String, AppData>, SherlockError> {
+    ) -> Result<HashSet<AppData>, SherlockError> {
         let config = CONFIG.get().ok_or(SherlockError {
             error: SherlockErrorType::ConfigError(None),
             traceback: format!(""),
@@ -72,7 +75,7 @@ impl Loader {
         };
 
         // Parellize opening of all .desktop files and parsing them into AppData
-        let apps: HashMap<String, AppData> = desktop_files
+        let apps: HashSet<AppData> = desktop_files
             .into_par_iter()
             .filter_map(|entry| {
                 let r_path = entry.to_str()?;
@@ -133,19 +136,17 @@ impl Loader {
                         let priority = parse_priority(priority, *count, decimals);
 
                         // Return the processed app data
-                        Some((
+                        Some(AppData {
                             name,
-                            AppData {
-                                icon,
-                                icon_class: None,
-                                exec,
-                                search_string,
-                                tag_start: None,
-                                tag_end: None,
-                                desktop_file: desktop_file_path,
-                                priority,
-                            },
-                        ))
+                            icon: Some(icon),
+                            icon_class: None,
+                            exec,
+                            search_string,
+                            tag_start: None,
+                            tag_end: None,
+                            desktop_file: desktop_file_path,
+                            priority,
+                        })
                     }
                     Err(_) => None,
                 }
@@ -155,11 +156,11 @@ impl Loader {
     }
 
     fn get_new_applications(
-        mut apps: HashMap<String, AppData>,
+        mut apps: HashSet<AppData>,
         priority: f32,
-        counts: HashMap<String, f32>,
+        counts: &HashMap<String, f32>,
         decimals: i32,
-    ) -> Result<HashMap<String, AppData>, SherlockError> {
+    ) -> Result<HashSet<AppData>, SherlockError> {
         let system_apps = get_applications_dir();
 
         // get all desktop files
@@ -167,7 +168,7 @@ impl Loader {
 
         // remove if cached entry doesnt exist on device anympre
         let mut cached_paths = HashSet::with_capacity(apps.capacity());
-        apps.retain(|_, v| {
+        apps.retain(|v| {
             if let Some(path) = &v.desktop_file {
                 if desktop_files.contains(path) {
                     cached_paths.insert(path.clone());
@@ -190,7 +191,7 @@ impl Loader {
         return Ok(apps);
     }
 
-    fn write_cache<T: AsRef<Path>>(apps: &HashMap<String, AppData>, cache_loc: T) {
+    fn write_cache<T: AsRef<Path>>(apps: &HashSet<AppData>, cache_loc: T) {
         let path = cache_loc.as_ref();
         if let Some(parent) = path.parent() {
             let _ = fs::create_dir_all(parent);
@@ -208,9 +209,9 @@ impl Loader {
 
     pub fn load_applications(
         priority: f32,
-        counts: HashMap<String, f32>,
+        counts: &HashMap<String, f32>,
         decimals: i32,
-    ) -> Result<HashMap<String, AppData>, SherlockError> {
+    ) -> Result<HashSet<AppData>, SherlockError> {
         let config = CONFIG.get().ok_or_else(|| SherlockError {
             error: SherlockErrorType::ConfigError(None),
             traceback: String::new(),
@@ -225,25 +226,35 @@ impl Loader {
             || file_has_changed(&config_path, &cache_path);
 
         if !changed {
-            let cached_apps: Option<HashMap<String, AppData>> = File::open(&config.behavior.cache)
+            let cached_apps: Option<HashSet<AppData>> = File::open(&config.behavior.cache)
                 .ok()
                 .and_then(|f| simd_json::from_reader(f).ok());
 
             if let Some(mut apps) = cached_apps {
                 // apply the current counts
-                for (_, v) in apps.iter_mut() {
-                    let count = counts.get(&v.exec).unwrap_or(&0.0);
-                    let priority = parse_priority(priority, *count, decimals);
-                    v.priority = priority
-                }
+                apps = apps
+                    .drain()
+                    .map(|mut v| {
+                        let count = counts.get(&v.exec).unwrap_or(&0.0);
+                        let new_priority = parse_priority(priority, *count, decimals);
+                        v.priority = new_priority;
+                        v
+                    })
+                    .collect();
 
                 // Refresh cache in the background
                 let old_apps = apps.clone();
-                rayon::spawn_fifo(move || {
-                    if let Ok(new_apps) =
-                        Loader::get_new_applications(old_apps, priority, counts, decimals)
-                    {
-                        Loader::write_cache(&new_apps, &config.behavior.cache);
+                rayon::spawn_fifo({
+                    let counts_clone = counts.clone();
+                    move || {
+                        if let Ok(new_apps) = Loader::get_new_applications(
+                            old_apps,
+                            priority,
+                            &counts_clone,
+                            decimals,
+                        ) {
+                            Loader::write_cache(&new_apps, &config.behavior.cache);
+                        }
                     }
                 });
                 return Ok(apps);
@@ -262,10 +273,13 @@ fn should_ignore(ignore_apps: &Vec<Pattern>, app: &str) -> bool {
     let app_name = app.to_lowercase();
     ignore_apps.iter().any(|pattern| pattern.matches(&app_name))
 }
+pub fn parse_priority(priority: f32, count: f32, decimals: i32) -> f32 {
+    priority + 1.0 - count * 10f32.powi(-decimals)
+}
 
 fn get_regex_patterns() -> Result<(Regex, Regex, Regex, Regex, Regex, Regex), SherlockError> {
     fn construct_pattern(key: &str) -> Result<Regex, SherlockError> {
-        let pattern = format!(r"(?i)\n{}\s*=\s*(.*)\n", key);
+        let pattern = format!(r#"(?im)^{}\s*=\s*[\'\"]?(.*?)[\'\"]?\s*$"#, key);
         Regex::new(&pattern).map_err(|e| SherlockError {
             error: SherlockErrorType::RegexError(key.to_string()),
             traceback: e.to_string(),
@@ -369,4 +383,68 @@ fn test_get_applications_dir() {
 
     // Assert that the result matches the expected HashSet
     assert_eq!(res, expected_app_dirs);
+}
+#[test]
+fn test_desktop_file_entries() {
+    let test_cases = vec![
+        String::from("\ntest=1.0"),
+        String::from("\ntest='Application'"),
+        String::from("\ntest=Example App"),
+        String::from("\ntest=\"Sample Utility\""),
+        String::from("\ntest='This is an example application'"),
+        String::from("\ntest=\"/usr/bin/example-app --example-flag\""),
+        String::from("\ntest='/usr/bin/example-app'"),
+        String::from("\ntest=example-icon"),
+        String::from("\ntest=\"false\""),
+        String::from("\ntest='true'"),
+        String::from("\ntest=application/x-example;"),
+        String::from("\ntest=false"),
+        String::from("\ntest='false'"),
+        String::from("\ntest='/opt/example'"),
+        String::from("\nTest=example-app"),
+        String::from(
+            "[Desktop Entry]
+test=/usr/bin/bssh
+        ",
+        ),
+    ];
+
+    let expected_values: Vec<String> = vec![
+        String::from("1.0"),
+        String::from("Application"),
+        String::from("Example App"),
+        String::from("Sample Utility"),
+        String::from("This is an example application"),
+        String::from("/usr/bin/example-app --example-flag"),
+        String::from("/usr/bin/example-app"),
+        String::from("example-icon"),
+        String::from("false"),
+        String::from("true"),
+        String::from("application/x-example;"),
+        String::from("false"),
+        String::from("false"),
+        String::from("/opt/example"),
+        String::from("example-app"),
+        String::from("/usr/bin/bssh"),
+    ];
+
+    // Fixed regex pattern: simpler and correctly matching optional quotes
+    let pattern = format!(r#"(?im)^{}\s*=\s*[\'\"]?(.*?)[\'\"]?\s*$"#, "test");
+    let re = Regex::new(&pattern).expect("Failed to construct regex pattern");
+
+    // Iterate over the test cases and expected results
+    test_cases
+        .iter()
+        .zip(expected_values.iter())
+        .for_each(|(case, res)| {
+            let catch = re
+                .captures(case)
+                .expect(&format!("Didn't match the pattern. String: {}", case));
+            let group = catch
+                .get(1)
+                .expect("Group 1 is non-existent")
+                .as_str()
+                .to_string();
+            assert_eq!(group, *res);
+        });
 }

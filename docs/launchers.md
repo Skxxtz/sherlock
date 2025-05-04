@@ -11,10 +11,12 @@ The launcher can be of the following types:<br>
 
 - **[Category Launcher](#category-launcher):** Groups your launchers.
 - **[App Launcher](#app-launcher):** Launches your apps. 
+- **[Bookmark Launcher](#bookmark-launcher):** Finds and launches your browser bookmarks.
 - **[Web Launcher](#web-launcher):** Opens the ``{keyword}`` in your default web browser. The used search engine is configurable and the most common search engines are included. 
 - **[Calculator](#calculator):** Converts your input into a math equation and displays its result. On Return, it also copies the result into the clipboard.
 - **[Clipboard Launcher](#clipboard-launcher):** Checks if your clipboard currently holds a URL. On Return, it opens the URL in the default web browser. Also displays hex and rgb colors.
 - **[Command](#command-launcher):** This field can execute commands that do not rely on the ``{keyword}`` attribute (such as connecting to a specific wifi).
+- **[Debug](#debug-launcher):** This launcher allows you to run debug commands from within Sherlock. For example clearing the cache or app count.
 - **[Bulk Text](#bulk-text):** The Bulk Text is a way to launch a custom script/application in an async form and to display its result in a widget.
 - **[Teams Event Launcher](#teams-event):** This launcher is capable of joining Microsoft Teams meetings that are scheduled to begin between 5mins ago and in 15mins. 
 - **[Music Player Launcher](#music-player):** This launcher shows the currently playing song with artist and toggles playback on return.
@@ -24,23 +26,37 @@ The launcher can be of the following types:<br>
 ## Shared Launcher Attributes
 `[UI]` - used for UI <br>
 `[FC]` - used to specify behaviour <br>
+
+### Required
+
 | Attribute   | Type | Description |
 |-------------|------|-------------|
-| `name`      | `[UI]` (optional) | The name of the category the tiles belong to. This name will appear under the app’s name. It is required but can be left empty. |
-| `alias`     | `[FC]` (optional) | The command used to search within this category. |
-| `home`      | `[FC]` (optional) | Determines if the elements of this launcher are displayed at startup. |
-| `only_home`      | `[FC]` (optional) | Determines if the launcher should be included in searches or only be shown on startup. |
-| `type`      | `[FC]` (required) | Specifies the tile and functionality to be used for this Launcher. |
-| `args`      | `[FC]` (required) | Arguments specific to the `type`. Can be left empty. |
-| `priority`  | `[FC]` (required) | Defines the display order of launcher elements at startup. **A value of 0 means the launcher will only be shown if the `alias` is active.**|
-| `async`     | `[FC]` (optional) | Indicates whether the launcher should run asynchronously. This is used in `Bulk Text`. |
-| `on_return`     | `[FC]` (optional) | Specifies what to do if return is pressed on the tile. |
-| `spawn_focus`     | `[FC]` (optional) | Determines whether the tile should automatically gain focus when it appears as the first item in the list. |
-| `shortcut`     | `[FC]` (optional) | Determines whether the tile should have the shortcut indicator on the side. |
+| `type`      | `[FC]` | Specifies the tile and functionality to be used for this Launcher. |
+| `args`      | `[FC]` | Arguments specific to the `type`. Can be left empty. |
+| `priority`  | `[FC]` | Defines the display order of launcher elements at startup. **A value of 0 means the launcher will only be shown if the `alias` is active.**|
 
+### Optional
+
+| Attribute   | Type | Description |
+|-------------|------|-------------|
+| `name`      | `[UI]` | The name of the category the tiles belong to. This name will appear under the app’s name. It is required but can be left empty. |
+| `alias`     | `[FC]` | The command used to search within this category. |
+| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. |
+| `only_home`      | `[FC]` | Determines if the launcher should be included in searches or only be shown on startup. |
+| `async`     | `[FC]` | Indicates whether the launcher should run asynchronously. This is used in `Bulk Text`. |
+| `on_return`     | `[FC]` | Specifies what to do if return is pressed on the tile. |
+| `spawn_focus`     | `[FC]` | Determines whether the tile should automatically gain focus when it appears as the first item in the list. |
+| `shortcut`     | `[FC]` | Determines whether the tile should have the shortcut indicator on the side. |
 ---
-
 ## Category Launcher
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="category-launcher" width="100%" src="assets/CategoryTile.svg">
+  </picture>
+</div>
+<br>
+
 ```json
 {
     "name": "Categories",
@@ -81,6 +97,14 @@ The launcher can be of the following types:<br>
 ---
 
 ## App Launcher
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="app-launcher" width="100%" src="assets/AppTile.svg">
+  </picture>
+</div>
+<br>
+
 ```json
 {
     "name": "App Launcher",
@@ -92,7 +116,52 @@ The launcher can be of the following types:<br>
 }
 ```
 ---
+
+## Bookmark Launcher
+
+<div align="center">
+  <picture>
+    <img alt="web-launcher" width="100%" src="assets/BookmarkTile.svg">
+  </picture>
+</div>
+<br>
+
+```json
+{
+    "name": "Bookmarks",
+        "type": "bookmarks",
+        "args": {
+            "icon": "sherlock-bookmark",
+            "icon_class": "reactive"
+        },
+        "priority": 3,
+        "home": false
+}
+```
+
+### Supported Browsers
+Currently these are the supported launchers. It is beneficiary to set the `browser` key in the `default_apps`section.
+
+| Browser   | Name in `config.toml`                                      |
+|-----------------|------------------------------------------|
+| **Zen Browser**      | `zen`, `zen-browser`, `/opt/zen-browser-bin/zen-bin %u` |
+| **Brave**      | `brave`, `brave %u` |
+| **Firefox**      | `firefox`, `/usr/lib/firefox/firefox %u` |
+| **Chrome**      | `chrome`, `google-chrome`, `/usr/bin/google-chrome-stable %u` |
+| **Thorium**      | `thorium`, `/usr/bin/thorium-browser %u` |
+
+---
+
+
 ## Web Launcher
+
+<div align="center">
+  <picture>
+    <img alt="web-launcher" width="100%" src="assets/BrowserTile.svg">
+  </picture>
+</div>
+<br>
+
 ```json
 {
     "name": "Web Search",
@@ -126,11 +195,19 @@ Can be either of the following:
 | **Custom**      | `https://www.example.com/search={keyword}` |
 
 **`icon`** (required):<br>
-Sets the icon-name the launcher should show. For a guide on how to add your own icons see [!WARNING]
+Sets the icon-name the launcher should show.
 
 ---
 
 ## Calculator
+
+<div align="center">
+  <img alt="calc-launcher-math" width="100%" src="assets/CalcTile.svg">
+  <br />
+  <img alt="calc-launcher-unit" width="100%" src="assets/CalcTileUnit.svg">
+</div>
+<br>
+
 ```json
 {
     "name": "Calculator",
@@ -156,16 +233,33 @@ Specifies what the launcher should parse:
 
 ---
 ## Clipboard Launcher
+
+<div align="center">
+  <img alt="clipboard-launcher-url" width="100%" src="assets/ClipboardLink.svg" />
+  <br>
+  <img alt="clipboard-launcher-color" width="100%" src="assets/ClipboardColor.svg" />
+</div>
+<br>
+
 ```json
-    {
-        "name": "Clipboard",
+{
+    "name": "Clipboard",
         "type": "clipboard-execution",
         "args": {
-            "capabilities": ["url", "hex", "calc.math", "calc.lengths", "calc.weights"]
+            "capabilities": [
+                "url",
+                "colors.hex",
+                "colors.rgb",
+                "colors.hsl",
+                "calc.math",
+                "calc.lengths",
+                "calc.weights",
+                "calc.temperatures"
+            ]
         },
         "priority": 1,
         "home": true
-    }
+},
 ```
 ### Arguments (args):
 **`capabilities`** (optional):<br>
@@ -225,8 +319,53 @@ Has following fields of its own:
 7. `tag_end` / specifies what will be displayed in the end tag
 
 ---
+## Debug Launcher
+```json
+{
+    "name": "Debug",
+        "type": "debug",
+        "alias": "debug",
+        "args": {
+            "commands": {
+                "Clear Cache": {
+                    "icon": "sherlock-process",
+                    "exec": "clear_cache",
+                    "search_string": "clear;cache;"
+                },
+                "Reset App Counts": {
+                    "icon": "sherlock-process",
+                    "exec": "reset_counts",
+                    "search_string": "reset;clear;counts;appcounts"
+                }
+            }
+        },
+        "priority": 0
+}
+```
+### Arguments (args):
+**commands** (required):<br>
+Has following fields of its own:
+1. `name field` / the name of the application (is the field where command name is the value currently)
+2. `icon` / the icon-name for the icon to display 
+3. `icon_class` / Sets the css class for the icon to style it according to your theme
+4. `exec` / the command to execute
+5. `search_string` / the string to match on search
+6. `tag_start` / specifies what will be displayed in the start tag
+7. `tag_end` / specifies what will be displayed in the end tag
 
+### Available Debug Commands
+- `clear_cache`: Clears the files within the location set as cache.
+- `reset_counts`: Resets the execution counter – the counter responsible for sorting based on activity.
+---
 ## Bulk Text
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="bulk-text-launcher" width="100%" src="assets/BulkText.svg">
+  </picture>
+</div>
+<br>
+
 ```json
 {
     "name": "Wikipedia Search",
@@ -257,12 +396,21 @@ Specifies the arguments to pass along to the `exec` program.<br>
 --- 
 
 ## Teams Event
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="teams-event-launcher" width="100%" src="assets/TeamsTile.svg">
+  </picture>
+</div>
+<br>
+
 > **🚨 Warning:** Currently only supports Thunderbird calendar events
 ```json
 {
     "name": "Teams Event",
     "type": "teams_event",
     "args": {
+        "icon": "teams"
         "event_date": "now",
         "event_start": "-5 minutes",
         "event_end": "+15 minutes"
@@ -288,6 +436,14 @@ Specifies the second offset from the `date` parameter.<br>
 --- 
 
 ## Music Player
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="music-launcher" width="100%" src="assets/MprisTile.svg">
+  </picture>
+</div>
+<br>
+
 ```json
 {
     "name": "Spotify",
@@ -308,6 +464,14 @@ None
 --- 
 
 ## Process Terminator
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="process-terminator-launcher" width="100%" src="assets/ProcessTerminator.svg">
+  </picture>
+</div>
+<br>
+
 ```json
 {
     "name": "Kill Process",
@@ -326,6 +490,14 @@ None
 --- 
 
 ## Weather Launcher
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="weather-launcher" width="100%" src="assets/WeatherWidget.svg">
+  </picture>
+</div>
+<br>
+
 ```json
 {
     "name": "Weather",

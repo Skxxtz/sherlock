@@ -3,11 +3,13 @@ use regex::Regex;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct Calculator {
+pub struct CalculatorLauncher {
     pub capabilities: Option<HashSet<String>>,
 }
+
+pub struct Calculator;
 impl Calculator {
-    pub fn measurement(&self, keyword: &str, unit_str: &str) -> Option<String> {
+    pub fn measurement(keyword: &str, unit_str: &str) -> Option<(String, String)> {
         let full_pattern = r"(?i)(\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s*(in|to)\s*([a-zA-Z]+)";
         let full_re = Regex::new(full_pattern).unwrap();
         if let Some(caps) = full_re.captures(keyword) {
@@ -18,10 +20,10 @@ impl Calculator {
             let (factor_from, _) = Measurements::match_unit(&from, unit_str)?;
             let (factor_to, name) = Measurements::match_unit(&to, unit_str)?;
 
-            let base = self.to_basis(factor_from, value);
-            let res = self.to_unit(factor_to, base);
+            let base = Calculator::to_basis(factor_from, value);
+            let res = Calculator::to_unit(factor_to, base);
             let postfix = if res == 1.0 { "" } else { "s" };
-            return Some(format!("= {:.2} {}{}", res, name, postfix));
+            return Some((res.to_string(), format!("= {:.2} {}{}", res, name, postfix)));
         }
         // Support for partial ones
         let part_pattern = r"(?i)(\d+(?:\.\d+)?)\s*([a-zA-Z]+)";
@@ -39,14 +41,14 @@ impl Calculator {
             let (factor_from, _) = Measurements::match_unit(&from, unit_str)?;
             let (factor_to, name) = Measurements::match_unit(&to, unit_str)?;
 
-            let base = self.to_basis(factor_from, value);
-            let res = self.to_unit(factor_to, base);
+            let base = Calculator::to_basis(factor_from, value);
+            let res = Calculator::to_unit(factor_to, base);
             let postfix = if res == 1.0 { "" } else { "s" };
-            return Some(format!("= {:.2} {}{}", res, name, postfix));
+            return Some((res.to_string(), format!("= {:.2} {}{}", res, name, postfix)));
         }
         None
     }
-    pub fn temperature(&self, keyword: &str) -> Option<String> {
+    pub fn temperature(keyword: &str) -> Option<(String, String)> {
         let ctof = |c: f32| (c * 9.0 / 5.0) + 32.0;
         let ftoc = |f: f32| (f - 32.0) * 5.0 / 9.0;
         let parse_unit = |unit: &str| {
@@ -71,17 +73,23 @@ impl Calculator {
                         parse_unit(v.as_str())
                     });
                 match to {
-                    "C" => Some(format!("= {} °C", ftoc(value))),
-                    _ => Some(format!("= {} °F", ctof(value))),
+                    "C" => {
+                        let res = ftoc(value);
+                        Some((res.to_string(), format!("= {} °C", res)))
+                    }
+                    _ => {
+                        let res = ctof(value);
+                        Some((res.to_string(), format!("= {} °F", res)))
+                    }
                 }
             }
             _ => None,
         }
     }
-    fn to_basis(&self, factor: f32, value: f32) -> f32 {
+    fn to_basis(factor: f32, value: f32) -> f32 {
         value * factor
     }
-    fn to_unit(&self, factor: f32, value: f32) -> f32 {
+    fn to_unit(factor: f32, value: f32) -> f32 {
         value / factor
     }
 }

@@ -1,10 +1,8 @@
 use std::collections::HashMap;
-use std::process::Command;
-
-use crate::loader::application_loader::{get_applications_dir, get_desktop_files};
-use crate::loader::util::{read_lines, SherlockError, SherlockErrorType};
 
 use super::commandlaunch::command_launch;
+use super::util::parse_default_browser;
+use crate::utils::errors::SherlockError;
 
 pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
     let engines: HashMap<&str, &str> = HashMap::from([
@@ -29,46 +27,7 @@ pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
         engine
     };
 
-    // Find default browser desktop file
-    let output = Command::new("xdg-settings")
-        .arg("get")
-        .arg("default-web-browser")
-        .output()
-        .map_err(|e| SherlockError {
-            error: SherlockErrorType::EnvVarNotFoundError(String::from("default browser")),
-            traceback: e.to_string(),
-        })?;
-
-    let desktop_file: String = if output.status.success() {
-        String::from_utf8_lossy(&output.stdout).trim().to_string()
-    } else {
-        return Err(SherlockError {
-            error: SherlockErrorType::EnvVarNotFoundError("default browser".to_string()),
-            traceback: String::new(),
-        });
-    };
-    let desktop_dirs = get_applications_dir();
-    let desktop_files = get_desktop_files(desktop_dirs);
-    let browser_file = desktop_files
-        .iter()
-        .find(|f| f.ends_with(&desktop_file))
-        .ok_or_else(|| SherlockError {
-            error: SherlockErrorType::EnvVarNotFoundError("default browser".to_string()),
-            traceback: String::new(),
-        })?;
-    // read default browser desktop file
-    let mut browser = read_lines(browser_file)
-        .map_err(|e| SherlockError {
-            error: SherlockErrorType::FileReadError(browser_file.clone()),
-            traceback: e.to_string(),
-        })?
-        .filter_map(Result::ok)
-        .find(|line| line.starts_with("Exec="))
-        .and_then(|line| line.strip_prefix("Exec=").map(|l| l.to_string()))
-        .ok_or_else(|| SherlockError {
-            error: SherlockErrorType::FileParseError(browser_file.clone()),
-            traceback: String::new(),
-        })?;
+    let mut browser = parse_default_browser()?;
 
     let url = url_template.replace("{keyword}", &query.replace(" ", "+"));
     let command = if browser.contains("%u") {

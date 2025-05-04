@@ -5,9 +5,9 @@ use std::fs::{self, File};
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
-use crate::{loader::util::home_dir, CONFIG};
-
 use super::utils::to_title_case;
+use crate::utils::files::home_dir;
+use crate::CONFIG;
 
 #[derive(Clone, Debug)]
 pub struct WeatherLauncher {

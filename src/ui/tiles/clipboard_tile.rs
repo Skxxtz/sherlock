@@ -5,9 +5,9 @@ use std::collections::{HashMap, HashSet};
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::calc_launcher::Calculator;
+use crate::launcher::calc_launcher::CalculatorLauncher;
 use crate::launcher::clipboard_launcher::ClipboardLauncher;
-use crate::launcher::{Launcher, ResultItem};
+use crate::launcher::Launcher;
 
 use super::util::TileBuilder;
 use super::Tile;
@@ -91,10 +91,9 @@ impl Tile {
     pub fn clipboard_tile(
         launcher: &Launcher,
         clp: &ClipboardLauncher,
-        calc: &Calculator,
-        keyword: &str,
-    ) -> Vec<ResultItem> {
-        let mut results: Vec<ResultItem> = Vec::with_capacity(1);
+        calc: &CalculatorLauncher,
+    ) -> Vec<SherlockRow> {
+        let mut results: Vec<SherlockRow> = Vec::with_capacity(1);
         let mut is_valid = false;
         let clipboard_content = &clp.clipboard_content;
         let capabilities: HashSet<&str> = match &clp.capabilities {
@@ -103,7 +102,7 @@ impl Tile {
         };
 
         //TODO implement searchstring before clipboard content
-        if !clipboard_content.is_empty() && clipboard_content.contains(keyword) {
+        if !clipboard_content.is_empty() {
             let mut builder = TileBuilder::default();
             let name = "From Clipboard";
             let mut method = "";
@@ -184,8 +183,9 @@ impl Tile {
 
                     if let Some(rgb) = rgb {
                         builder = TileBuilder::new("/dev/skxxtz/sherlock/ui/tile.ui");
-                        builder.object.set_spawn_focus(launcher.spawn_focus);
-                        builder.object.set_shortcut(launcher.shortcut);
+                        builder.object.with_launcher(launcher);
+                        builder.object.set_search(clipboard_content);
+
                         let pix_buf = rgb.to_vec();
                         let image_buf = gdk::gdk_pixbuf::Pixbuf::from_bytes(
                             &Bytes::from_owned(pix_buf),
@@ -199,14 +199,25 @@ impl Tile {
                         if let Some(image_buf) =
                             image_buf.scale_simple(30, 30, gdk::gdk_pixbuf::InterpType::Nearest)
                         {
-                            let image = Image::from_pixbuf(Some(&image_buf));
-                            builder.icon_holder.append(&image);
+                            let texture = gtk4::gdk::Texture::for_pixbuf(&image_buf);
+                            let image = Image::from_paintable(Some(&texture));
                             image.set_widget_name("icon");
-                            builder.icon_holder.set_overflow(gtk4::Overflow::Hidden);
-                            builder.icon_holder.set_widget_name("color-icon-holder");
                             image.set_pixel_size(22);
-                            builder.icon.set_visible(false);
 
+                            builder
+                                .icon_holder
+                                .as_ref()
+                                .and_then(|tmp| tmp.upgrade())
+                                .map(|holder| {
+                                    holder.append(&image);
+                                    holder.set_overflow(gtk4::Overflow::Hidden);
+                                    holder.set_widget_name("color-icon-holder");
+                                });
+                            builder
+                                .icon
+                                .as_ref()
+                                .and_then(|tmp| tmp.upgrade())
+                                .map(|icon| icon.set_visible(false));
                             is_valid = true;
                         };
                     }
@@ -214,16 +225,41 @@ impl Tile {
             };
             if !is_valid {
                 // calc capabilities will be checked inside of calc tile
-                results.extend(Tile::calc_tile(launcher, calc, clipboard_content));
-            } else {
-                if name.is_empty() {
-                    builder.category.set_visible(false);
-                } else {
-                    builder.category.set_text(name);
+                let mut calc_tile = Tile::calc_tile(launcher, calc);
+                if calc_tile.len() >= 1 {
+                    let tile = calc_tile.remove(0);
+                    if tile.update(clipboard_content) {
+                        tile.set_only_home(true);
+                        results.push(tile)
+                    }
                 }
+            } else {
+                builder
+                    .category
+                    .as_ref()
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|category| {
+                        category.set_visible(!name.is_empty());
+                        category.set_text(name);
+                    });
 
-                builder.title.set_text(clipboard_content);
-                builder.icon.set_icon_name(Some(&icon));
+                builder
+                    .icon
+                    .as_ref()
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|ico| {
+                        if icon.starts_with("/") {
+                            ico.set_from_file(Some(&icon));
+                        } else {
+                            ico.set_icon_name(Some(&icon));
+                        }
+                        ico.set_pixel_size(15);
+                    });
+                builder
+                    .title
+                    .as_ref()
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|title| title.set_text(clipboard_content));
 
                 // Add action capabilities
                 let attrs = get_attrs_map(vec![
@@ -232,22 +268,21 @@ impl Tile {
                     ("engine", "plain"),
                 ]);
 
+                builder.object.with_launcher(&launcher);
                 builder
                     .object
-                    .connect("row-should-activate", false, move |row| {
+                    .connect_local("row-should-activate", false, move |row| {
                         let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
                         execute_from_attrs(&row, &attrs);
                         None
                     });
-                let shortcut_holder = match launcher.shortcut {
-                    true => builder.shortcut_holder,
-                    _ => None,
-                };
-                results.push(ResultItem {
-                    priority: launcher.priority as f32,
-                    row_item: builder.object,
-                    shortcut_holder,
-                });
+                let update_closure = |_: &str| -> bool { true };
+                builder.object.set_update(update_closure);
+
+                if launcher.shortcut {
+                    builder.object.set_shortcut_holder(builder.shortcut_holder);
+                }
+                results.push(builder.object);
             }
         }
 

@@ -1,9 +1,10 @@
 use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
 use procfs::process::{all_processes, Process};
+use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 
-use crate::loader::util::{SherlockError, SherlockErrorType};
+use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 #[derive(Clone, Debug)]
 pub struct ProcessLauncher {
@@ -46,42 +47,50 @@ fn get_all_processes() -> Option<HashMap<(i32, i32), String>> {
         Ok(procs) => {
             let user_processes: Vec<Process> = procs
                 .flatten()
+                .par_bridge()
                 .filter_map(|p| match p.uid() {
                     Ok(uid) if uid > 0 => Some(p),
                     _ => None,
                 })
                 .collect();
             let mut process_names: HashMap<i32, String> = user_processes
-                .iter()
-                .filter_map(|p| match p.exe() {
-                    Ok(path) => path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .map(|name| (p.pid, name.to_string())),
-                    _ => None,
+                .par_iter()
+                .filter_map(|p| {
+                    p.exe()
+                        .ok()
+                        .and_then(|path| path.file_name()?.to_str().map(|n| (p.pid, n.to_string())))
                 })
                 .collect();
 
-            let stats = user_processes.iter().filter_map(|p| p.stat().ok());
-            let mut collected: HashMap<(i32, i32), String> = HashMap::new();
+            let stats: Vec<_> = user_processes
+                .par_iter()
+                .filter_map(|p| p.stat().ok())
+                .collect();
             let mut tmp: HashMap<i32, i32> = HashMap::new();
-            for item in stats.rev() {
-                if item.ppid == 1 {
-                    let named_id = tmp.get(&item.pid).copied().unwrap_or(item.pid);
-                    if let Some(name) = process_names.remove(&named_id) {
-                        collected.insert((item.pid, named_id), name);
-                    }
-                } else if item.tty_nr != 0 {
-                    if let Some(r) = tmp.remove(&item.pid) {
-                        tmp.insert(item.ppid, r);
+            let collected: HashMap<(i32, i32), String> = stats
+                .into_iter()
+                .rev()
+                .filter_map(|item| {
+                    if item.ppid == 1 {
+                        let named_id = tmp.get(&item.pid).copied().unwrap_or(item.pid);
+                        process_names
+                            .remove(&named_id)
+                            .and_then(|name| Some(((item.pid, named_id), name)))
+                    } else if item.tty_nr != 0 {
+                        if let Some(r) = tmp.remove(&item.pid) {
+                            tmp.insert(item.ppid, r);
+                        } else if tmp.get(&item.ppid).is_none() {
+                            tmp.insert(item.ppid, item.pid);
+                        }
+                        None
                     } else if tmp.get(&item.ppid).is_none() {
                         tmp.insert(item.ppid, item.pid);
+                        None
+                    } else {
+                        None
                     }
-                } else if tmp.get(&item.ppid).is_none() {
-                    tmp.insert(item.ppid, item.pid);
-                }
-            }
-
+                })
+                .collect();
             Some(collected)
         }
         Err(_) => None,

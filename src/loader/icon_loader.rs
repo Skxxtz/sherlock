@@ -1,5 +1,5 @@
-use super::util::{SherlockError, SherlockErrorType};
 use super::Loader;
+use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::CONFIG;
 use gtk4::{gdk::Display, IconTheme};
 use std::env;
@@ -13,9 +13,7 @@ impl Loader {
             let home_dir = env::var("HOME")
                 .map_err(|e| {
                     non_breaking.push(SherlockError {
-                        error: super::util::SherlockErrorType::EnvVarNotFoundError(
-                            "HOME".to_string(),
-                        ),
+                        error: SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
                         traceback: e.to_string(),
                     });
                 })

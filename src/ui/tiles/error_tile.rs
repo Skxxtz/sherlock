@@ -1,7 +1,8 @@
 use gtk4::prelude::*;
 
 use super::{util::TileBuilder, Tile};
-use crate::{g_subclasses::sherlock_row::SherlockRow, loader::util::SherlockError};
+use crate::g_subclasses::sherlock_row::SherlockRow;
+use crate::utils::errors::SherlockError;
 
 impl Tile {
     pub fn error_tile(
@@ -25,9 +26,21 @@ impl Tile {
                 let (name, message) = e.error.get_message();
                 builder
                     .title
-                    .set_text(format!("{:5}{}:  {}", icon, tile_type, name).as_str());
-                builder.content_title.set_text(&message);
-                builder.content_body.set_text(&e.traceback.trim());
+                    .as_ref()
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|title| {
+                        title.set_text(format!("{:5}{}:  {}", icon, tile_type, name).as_str())
+                    });
+                builder
+                    .content_title
+                    .as_ref()
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|title| title.set_text(&message));
+                builder
+                    .content_body
+                    .as_ref()
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|body| body.set_text(&e.traceback.trim()));
                 builder.object
             })
             .collect();

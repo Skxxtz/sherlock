@@ -12,6 +12,20 @@
         "home": true
     },
     {
+        "name": "Weather",
+        "type": "weather",
+        "args": {
+            "location": "berlin",
+            "update_interval": 60
+        },
+        "priority": 1,
+        "home": true,
+        "only_home": true,
+        "async": true,
+        "shortcut": false,
+        "spawn_focus": false
+    },
+    {
         "name": "Clipboard",
         "type": "clipboard-execution",
         "args": {},
