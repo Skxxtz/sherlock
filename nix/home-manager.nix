@@ -44,7 +44,7 @@ in {
     settings = mkOption {
       description = "Sherlock settings, seperated by config file.";
       default = {};
-      type = nullOr submodule {
+      type = nullOr (submodule {
         options = {
           aliases = mkOption {
             description = ''
@@ -88,7 +88,7 @@ in {
             type = nullOr lines;
           };
         };
-      };
+      });
     };
   };
 
