@@ -30,7 +30,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
         - [Arch Linux](#arch-linux)
         - [From Source](#from-source)
         - [Debian](#build-debian-package)
-        - [Nix Flake](#nix-flake)
+        - [Nix](#nix)
     - [Post Installation](#3-post-installation)
         - [Config Setup](#config-setup)
         - [Keybind Setup](#keybind-setup)
@@ -175,7 +175,9 @@ Make sure you have the following dependencies installed:
     (Make sure to replace the filename if the version number is different.)
 <br><br>
 
-#### <ins>Nix Flake</ins>
+#### <ins>Nix</ins>
+
+Sherlock is available on `nixpkgs/unstable` as `sherlock-launcher`.
 
 Add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. Sherlock can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
 
