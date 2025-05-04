@@ -30,7 +30,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
         - [Arch Linux](#arch-linux)
         - [From Source](#from-source)
         - [Debian](#build-debian-package)
-        - [Nix Flake](#nix-flake)
+        - [Nix](#nix)
     - [Post Installation](#3-post-installation)
         - [Config Setup](#config-setup)
         - [Keybind Setup](#keybind-setup)
@@ -175,13 +175,15 @@ Make sure you have the following dependencies installed:
     (Make sure to replace the filename if the version number is different.)
 <br><br>
 
-#### <ins>Nix Flake</ins>
+#### <ins>Nix</ins>
 
-Add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. Sherlock can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
+Sherlock is available in `nixpkgs/unstable` as `sherlock-launcher`. If you're installing it as a standalone package you'll need to do the [config setup](#config-setup) yourself.
+
+If you're on a flakes-enabled nix system, you can add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
 
 To install the standalone package, add `sherlock.packages.${pkgs.system}.default` to `environment.systemPackages`. You will need to create the configuration files yourself, see below.
 
-For `home-manager` enabled systems, use the `sherlock.homeManagerModules.default` output of the imported flake. An example can be found [here](https://github.com/Vanta1/dots/blob/2888dd05bbba8866f77da4d6fbd9de0122ea7a2b/home/programs/sherlock.nix).
+For `home-manager` enabled systems, use the `sherlock.homeManagerModules.default`/`sherlock.homeModules.default` output of the imported flake. An example can be found [here](https://github.com/Vanta1/dots/blob/2888dd05bbba8866f77da4d6fbd9de0122ea7a2b/home/programs/sherlock.nix).
 
 ### 3. Post Installation
 
