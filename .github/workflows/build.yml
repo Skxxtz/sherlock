@@ -3,10 +3,13 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "resources/**"
+      - "**build.yml"
       - "**.md"
       - "**.markdown"
       - "**.rasi"
-      - "**build.yml"
       - "**.flake"
       - "**.json"
       - "**.png"

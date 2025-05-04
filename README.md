@@ -1,13 +1,13 @@
 <div align="center" style="text-align:center; border-radius:10px;">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/logo-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="images/logo-light.svg">
-    <img alt="sherlock logo" height="250" src="images/logo-light.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.svg">
+    <img alt="sherlock logo" height="250" src="assets/logo-light.svg">
   </picture>
 
   [![Discord](https://img.shields.io/discord/1357746313646833945.svg?color=7289da&&logo=discord)](https://discord.gg/AQ44g4Yp9q)
   <picture>
-    <img alt="application screenshot" width="100%" style="border-radius: 10px;" src="images/showcase.png">
+    <img alt="application screenshot" width="100%" style="border-radius: 10px;" src="assets/mockup.png">
   </picture>
 </div>
 
@@ -177,13 +177,13 @@ Make sure you have the following dependencies installed:
 
 #### <ins>Nix</ins>
 
-Sherlock is available on `nixpkgs/unstable` as `sherlock-launcher`.
+Sherlock is available in `nixpkgs/unstable` as `sherlock-launcher`. If you're installing it as a standalone package you'll need to do the [config setup](#config-setup) yourself.
 
-Add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. Sherlock can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
+If you're on a flakes-enabled nix system, you can add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
 
 To install the standalone package, add `sherlock.packages.${pkgs.system}.default` to `environment.systemPackages`. You will need to create the configuration files yourself, see below.
 
-For `home-manager` enabled systems, use the `sherlock.homeManagerModules.default` output of the imported flake. An example can be found [here](https://github.com/Vanta1/dots/blob/2888dd05bbba8866f77da4d6fbd9de0122ea7a2b/home/programs/sherlock.nix).
+For `home-manager` enabled systems, use the `sherlock.homeManagerModules.default`/`sherlock.homeModules.default` output of the imported flake. An example can be found [here](https://github.com/Vanta1/dots/blob/2888dd05bbba8866f77da4d6fbd9de0122ea7a2b/home/programs/sherlock.nix).
 
 ### 3. Post Installation
 

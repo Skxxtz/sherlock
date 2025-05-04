@@ -1,0 +1,23 @@
+bug:
+  - "(crash|bug|error|coredump|freeze|segfault|issue|problem|not working|isn't working|doesn't work|fails|failing)"
+
+feature request:
+  - "(feature|enhancement|improvement|request|suggestion|new feature)"
+
+documentation:
+  - "(documentation|docs|doc|documentation update|docs update|documentation improvement)"
+
+help-wanted:
+  - "(help wanted|extra attention|assistance needed|contributor wanted)"
+
+nix-os:
+  - "(nix|nixos|nix-os)"
+
+installation:
+  - "(package manager|dependency|install|installation|config)"
+
+question:
+  - "(question|help|how to|need help|issue details)"
+
+startup-delay:
+  - "(startup delay|slow startup|launch delay)"

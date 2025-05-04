@@ -14,12 +14,7 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    home-manager,
-    ...
-  } @ inputs:
+  outputs = {nixpkgs, ...} @ inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
       # sherlock currently only supports linux
       systems = [
@@ -27,13 +22,12 @@
         "aarch64-linux"
       ];
 
-      flake.homeManagerModules.default = import ./nix/home-manager.nix self;
+      flake = rec {
+        homeModules.default = import ./nix/home-manager.nix;
+        homeManagerModules.default = homeModules.default;
+      };
 
-      perSystem = {
-        system,
-        stdenv,
-        ...
-      }: let
+      perSystem = {system, ...}: let
         name = "sherlock";
         version = "0.1.10";
 
