@@ -33,9 +33,9 @@ self: {
 in {
   options.programs.sherlock = with types; {
     enable = lib.mkEnableOption "Manage sherlock & config files with home-manager module." // {default = false;};
-    package = lib.mkPackageOption null "sherlock" {
-      default = ["self.packages.${pkgs.system}.default"];
-      extraDescription = ''
+    package = mkOption {
+      default = [self.packages.${pkgs.system}.default];
+      description = ''
         Sherlock is currently only in `nixpkgs/unstable`. If your flake is not on that channel you can add it
         as an input and then set this option to, for example, `inputs.unstable.legacyPackages.\${pkgs.system}.sherlock`
       '';
