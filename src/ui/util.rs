@@ -188,3 +188,11 @@ impl SherlockNav for SingleSelection {
         }
     }
 }
+
+pub fn truncate_if_needed(s: String, max_len: usize) -> String {
+    if s.len() > max_len {
+        format!("{}...", &s[..max_len]) // IF TOO LONG
+    } else {
+        s.clone()
+    }
+}

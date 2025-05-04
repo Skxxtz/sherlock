@@ -5,6 +5,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::loader::util::{AppData, RawLauncher};
+use crate::ui::util::truncate_if_needed;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::files::home_dir;
 
@@ -13,9 +14,13 @@ pub struct BookmarkLauncher {
     pub bookmarks: HashSet<AppData>,
 }
 impl BookmarkLauncher {
-    pub fn find_bookmarks(browser: &str, raw: &RawLauncher) -> Result<HashSet<AppData>, SherlockError> {
-        match browser {
+    pub fn find_bookmarks(
+        browser: &str,
+        raw: &RawLauncher,
+    ) -> Result<HashSet<AppData>, SherlockError> {
+        match browser.to_lowercase().as_str() {
             "zen" | "zen-browser" | "/opt/zen-browser-bin/zen-bin %u" => BookmarkParser::zen(raw),
+            "brave" | "brave %u" => BookmarkParser::brave(raw),
             _ => {
                 // @BaxoPlenty you can check here what this ↑ should be.
                 println!("{:?}", browser);
@@ -26,7 +31,92 @@ impl BookmarkLauncher {
 }
 
 struct BookmarkParser;
+
 impl BookmarkParser {
+    fn chrome_internal(raw: &RawLauncher, data: String) -> Result<HashSet<AppData>, SherlockError> {
+        mod parser {
+            use std::collections::HashMap;
+
+            use serde::Deserialize;
+
+            #[derive(Deserialize)]
+            pub struct ChromeBookmark {
+                pub name: String,
+                pub r#type: String,
+                pub children: Option<Vec<ChromeBookmark>>,
+                pub url: Option<String>,
+            }
+
+            #[derive(Deserialize)]
+            pub struct ChromeFile {
+                pub roots: HashMap<String, ChromeBookmark>,
+            }
+        }
+
+        let mut bookmarks = HashSet::new();
+        let file =
+            serde_json::from_str::<parser::ChromeFile>(&data).map_err(|e| SherlockError {
+                error: SherlockErrorType::FlagLoadError,
+                traceback: format!("{}:{}\n{}", file!(), line!(), e.to_string()),
+            })?;
+
+        fn process_bookmark(
+            raw: &RawLauncher,
+            bookmarks: &mut HashSet<AppData>,
+            bookmark: parser::ChromeBookmark,
+        ) {
+            match bookmark.r#type.as_ref() {
+                "folder" => {
+                    if let Some(children) = bookmark.children {
+                        for child in children {
+                            process_bookmark(raw, bookmarks, child);
+                        }
+                    }
+                }
+                "url" => {
+                    if let Some(url) = bookmark.url {
+                        let name = truncate_if_needed(bookmark.name.clone(), 72);
+
+                        bookmarks.insert(AppData {
+                            name: name.clone(),
+                            icon: None,
+                            icon_class: raw
+                                .args
+                                .get("icon_class")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            exec: url.clone(),
+                            search_string: format!("{};{}", bookmark.name, url),
+                            tag_start: raw.tag_start.clone(),
+                            tag_end: raw.tag_end.clone(),
+                            desktop_file: None,
+                            priority: raw.priority,
+                        });
+                    }
+                }
+                _ => {}
+            };
+        }
+
+        for (_name, bookmark) in file.roots {
+            process_bookmark(raw, &mut bookmarks, bookmark);
+        }
+
+        Ok(bookmarks)
+    }
+
+    fn brave(raw: &RawLauncher) -> Result<HashSet<AppData>, SherlockError> {
+        let path = home_dir()
+            .unwrap_or("~/".into())
+            .join(".config/BraveSoftware/Brave-Browser/Default/Bookmarks");
+        let data = fs::read_to_string(&path).map_err(|e| SherlockError {
+            error: SherlockErrorType::FileReadError(path),
+            traceback: format!("{}:{}\n{}", file!(), line!(), e.to_string()),
+        })?;
+
+        Self::chrome_internal(raw, data)
+    }
+
     fn zen(raw: &RawLauncher) -> Result<HashSet<AppData>, SherlockError> {
         let path = get_path()?;
 
@@ -117,7 +207,11 @@ impl BookmarkParser {
             None
         }
 
-        fn extract_bookmarks(value: &serde_json::Value, out: &mut HashSet<AppData>, raw: &RawLauncher) {
+        fn extract_bookmarks(
+            value: &serde_json::Value,
+            out: &mut HashSet<AppData>,
+            raw: &RawLauncher,
+        ) {
             if let Some(children) = value["children"].as_array() {
                 for child in children {
                     if let Some((title, url)) = deserialize_bookmark(child) {
@@ -125,7 +219,11 @@ impl BookmarkParser {
                             let bookmark = AppData {
                                 name: title.to_string(),
                                 icon: None,
-                                icon_class: raw.args.get("icon_class").and_then(|v|v.as_str()).map(|s|s.to_string()),
+                                icon_class: raw
+                                    .args
+                                    .get("icon_class")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string()),
                                 exec: url,
                                 search_string: title,
                                 tag_start: raw.tag_start.clone(),
