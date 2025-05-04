@@ -177,13 +177,24 @@ Make sure you have the following dependencies installed:
 
 #### <ins>Nix</ins>
 
+##### Non-Flakes Systems
 Sherlock is available in `nixpkgs/unstable` as `sherlock-launcher`. If you're installing it as a standalone package you'll need to do the [config setup](#config-setup) yourself.
 
-If you're on a flakes-enabled nix system, you can add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
+##### Flakes & Home-Manager
+Add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
 
+For `home-manager` enabled systems, import the `homeManagerModules.default`/`homeModules.default` output of the flake. Then, set `programs.sherlock.enable = true;` to install and create default configuration files. home-manager will track all of the config files automatically, and they can be modified using nix syntax with `programs.sherlock.settings.<config-file>`. The config files and their associated names are:
+
+ - `config.json` (`config.toml`): `settings.config`
+ - `fallback.json`: `settings.launchers`
+ - `main.css`: `settings.style`
+ - `sherlock_alias.json`: `settings.aliases`
+ - `sherlockignore`: `settings.ignore`
+
+To stop home-manager from symlinking these files from the nix store (this can be useful if you're iterating a lot and don't want to rebuild your system), set the file's corresponding option to `null`. `programs.sherlock.settings = null;` will stop managing all sherlock-related config files.
+
+##### Flakes without Home-Manager
 To install the standalone package, add `sherlock.packages.${pkgs.system}.default` to `environment.systemPackages`. You will need to create the configuration files yourself, see below.
-
-For `home-manager` enabled systems, use the `sherlock.homeManagerModules.default`/`sherlock.homeModules.default` output of the imported flake. An example can be found [here](https://github.com/Vanta1/dots/blob/2888dd05bbba8866f77da4d6fbd9de0122ea7a2b/home/programs/sherlock.nix).
 
 ### 3. Post Installation
 
