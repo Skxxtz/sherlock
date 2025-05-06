@@ -185,7 +185,7 @@ Add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. T
 
 For `home-manager` enabled systems, import the `homeManagerModules.default`/`homeModules.default` output of the flake. Then, set `programs.sherlock.enable = true;` to install and create default configuration files. home-manager will track all of the config files automatically, and they can be modified using nix syntax with `programs.sherlock.settings.<config-file>`. The config files and their associated names are:
 
- - `config.json` (`config.toml`): `settings.config
+ - `config.json` (`config.toml`): `settings.config`
  - `fallback.json`: `settings.launchers`
  - `sherlock_alias.json`: `settings.aliases`
 
