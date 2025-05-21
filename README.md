@@ -112,6 +112,12 @@ If you're using Arch Linux, you can install the pre-built binary package with th
 yay -S sherlock-launcher-bin
 ```
 
+Or install the community-maintained git build with the following command:
+
+```bash
+yay -S sherlock-launcher-git
+```
+
 ### <ins>From Source</ins>
 
 To build Sherlock Launcher from source, follow these steps.<br>
