@@ -279,7 +279,7 @@ pub fn parse_priority(priority: f32, count: f32, decimals: i32) -> f32 {
 
 fn get_regex_patterns() -> Result<(Regex, Regex, Regex, Regex, Regex, Regex), SherlockError> {
     fn construct_pattern(key: &str) -> Result<Regex, SherlockError> {
-        let pattern = format!(r#"(?im)^{}\s*=\s*[\'\"]?(.*?)[\'\"]?\s*$"#, key);
+        let pattern = format!(r#"(?im)^{}\s*=\s*['"]?([^'"\n]+)"#, key);
         Regex::new(&pattern).map_err(|e| SherlockError {
             error: SherlockErrorType::RegexError(key.to_string()),
             traceback: e.to_string(),
@@ -393,6 +393,7 @@ fn test_desktop_file_entries() {
         String::from("\ntest=\"Sample Utility\""),
         String::from("\ntest='This is an example application'"),
         String::from("\ntest=\"/usr/bin/example-app --example-flag\""),
+        String::from("\ntest=\"/usr/bin/example-app\" %f"),
         String::from("\ntest='/usr/bin/example-app'"),
         String::from("\ntest=example-icon"),
         String::from("\ntest=\"false\""),
@@ -417,6 +418,7 @@ test=/usr/bin/bssh
         String::from("This is an example application"),
         String::from("/usr/bin/example-app --example-flag"),
         String::from("/usr/bin/example-app"),
+        String::from("/usr/bin/example-app"),
         String::from("example-icon"),
         String::from("false"),
         String::from("true"),
@@ -429,7 +431,7 @@ test=/usr/bin/bssh
     ];
 
     // Fixed regex pattern: simpler and correctly matching optional quotes
-    let pattern = format!(r#"(?im)^{}\s*=\s*[\'\"]?(.*?)[\'\"]?\s*$"#, "test");
+    let pattern = format!(r#"(?im)^{}\s*=\s*['"]?([^'"\n]+)"#, "test");
     let re = Regex::new(&pattern).expect("Failed to construct regex pattern");
 
     // Iterate over the test cases and expected results
