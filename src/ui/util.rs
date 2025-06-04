@@ -161,7 +161,7 @@ pub struct SherlockAction {
     pub on: u32,
     pub action: String,
 }
-pub struct SherlockCounter {
+pub struct Sherlocker {
     path: PathBuf,
 }
 impl SherlockCounter {
@@ -173,7 +173,7 @@ impl SherlockCounter {
             )
         })?;
         let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".sherlock/sherlock_count");
+        let path = home_dir.join(".cache/sherlock/sherlock_count");
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
