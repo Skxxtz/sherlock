@@ -51,7 +51,7 @@ pub fn clear_cached_files() -> Result<(), SherlockError> {
 
 pub fn reset_app_counter() -> Result<(), SherlockError> {
     let home = home_dir()?;
-    fs::remove_file(home.join(".sherlock/counts.json")).map_err(|e| {
+    fs::remove_file(home.join(".config/sherlock/counts.json")).map_err(|e| {
         sherlock_error!(
             SherlockErrorType::FileRemoveError(home.join(".sherlock/counts.json")),
             e.to_string()
