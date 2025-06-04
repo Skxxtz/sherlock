@@ -243,7 +243,7 @@ impl CounterReader {
             )
         })?;
         let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".sherlock/counts.json");
+        let path = home_dir.join(".cache/sherlock/counts.json");
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
