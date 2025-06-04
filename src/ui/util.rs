@@ -161,7 +161,7 @@ pub struct SherlockAction {
     pub on: u32,
     pub action: String,
 }
-pub struct Sherlocker {
+pub struct SherlockCounter {
     path: PathBuf,
 }
 impl SherlockCounter {
