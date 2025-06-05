@@ -166,18 +166,25 @@ pub struct SherlockCounter {
 }
 impl SherlockCounter {
     pub fn new() -> Result<Self, SherlockError> {
-        let home = std::env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
-        })?;
-        let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".cache/sherlock/sherlock_count");
+        let cache_home = std::env::var_os("XDG_CACHE_HOME")
+            .map(PathBuf::from)
+            .or_else(|| {
+                // Fallback to ~/.cache if XDG_CACHE_HOME is not set
+                std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache"))
+            })
+            .ok_or_else(|| {
+                sherlock_error!(
+                    SherlockErrorType::EnvVarNotFoundError("HOME or XDG_CACHE_HOME".to_string()),
+                    "Neither HOME nor XDG_CACHE_HOME environment variable found".to_string()
+                )
+            })?;
+
+        let path = cache_home.join("sherlock/sherlock_count");
+
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
-                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    SherlockErrorType::DirCreateError(parent.display().to_string()),
                     e.to_string()
                 )
             })?;
