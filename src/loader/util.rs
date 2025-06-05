@@ -16,7 +16,7 @@ use crate::{
     sherlock_error,
     utils::{
         errors::{SherlockError, SherlockErrorType},
-        files::{expand_path, home_dir},
+        files::{expand_path, home_dir}, // Assuming these are external utility functions
     },
 };
 
@@ -236,18 +236,25 @@ pub struct CounterReader {
 }
 impl CounterReader {
     pub fn new() -> Result<Self, SherlockError> {
-        let home = env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
-        })?;
-        let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".cache/sherlock/counts.json");
+        let cache_home = env::var_os("XDG_CACHE_HOME")
+            .map(PathBuf::from)
+            .or_else(|| {
+                // Fallback to ~/.cache if XDG_CACHE_HOME is not set
+                env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache"))
+            })
+            .ok_or_else(|| {
+                sherlock_error!(
+                    SherlockErrorType::EnvVarNotFoundError("HOME or XDG_CACHE_HOME".to_string()),
+                    "Neither HOME nor XDG_CACHE_HOME environment variable found".to_string()
+                )
+            })?;
+
+        let path = cache_home.join("sherlock/counts.json");
+
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
-                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    SherlockErrorType::DirCreateError(parent.display().to_string()), // Improved error message
                     e.to_string()
                 )
             })?;
@@ -282,12 +289,19 @@ impl JsonCache {
     where
         T: DeserializeOwned + Default + Debug,
     {
+        // The `home_dir()` and `expand_path()` utilities are used here.
+        // Assuming they correctly resolve the home directory and expand paths.
+        // For consistency with XDG, ensure that if path already respects XDG_CACHE_HOME,
+        // expand_path doesn't inadvertently re-base it to ~/.cache.
+        // If `path` is already derived from XDG_CACHE_HOME, `expand_path` might not be strictly needed here.
         let home = home_dir()?;
         let path = expand_path(path, &home);
 
         let file = if path.exists() {
             File::open(&path)
         } else {
+            // Note: Creating the file here might be premature if it's expected to be written to later.
+            // Consider if this `File::create` should only happen on `write` operations.
             println!("{:?}", path);
             File::create(&path)
         }

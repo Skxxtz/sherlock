@@ -1,4 +1,4 @@
-use std::{fs, process::Command};
+use std::{env, fs, path::PathBuf, process::Command}; // Added env and PathBuf for XDG paths
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 
@@ -11,6 +11,22 @@ use crate::{
 };
 use crate::{sherlock_error, CONFIG};
 
+fn get_sherlock_cache_dir() -> Result<PathBuf, SherlockError> {
+    let cache_home = env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .or_else(|| {
+            // Fallback to ~/.cache if XDG_CACHE_HOME is not set
+            env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache"))
+        })
+        .ok_or_else(|| {
+            sherlock_error!(
+                SherlockErrorType::EnvVarNotFoundError("HOME or XDG_CACHE_HOME".to_string()),
+                "Neither HOME nor XDG_CACHE_HOME environment variable found".to_string()
+            )
+        })?;
+    Ok(cache_home.join("sherlock"))
+}
+
 pub fn copy_to_clipboard(string: &str) -> Result<(), SherlockError> {
     let mut ctx = ClipboardContext::new()
         .map_err(|e| sherlock_error!(SherlockErrorType::ClipboardError, e.to_string()))?;
@@ -18,7 +34,7 @@ pub fn copy_to_clipboard(string: &str) -> Result<(), SherlockError> {
     let _ = ctx.set_contents(string.to_string());
     Ok(())
 }
-//TODO: takes 2.9ms/1.6ms - how to improve
+
 pub fn read_from_clipboard() -> Result<String, SherlockError> {
     let mut ctx = ClipboardContext::new()
         .map_err(|e| sherlock_error!(SherlockErrorType::ClipboardError, e.to_string()))?;
@@ -29,37 +45,33 @@ pub fn clear_cached_files() -> Result<(), SherlockError> {
     let config = CONFIG
         .get()
         .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
-    let home = home_dir()?;
-    // Clear sherlocks cache
-    fs::remove_dir_all(home.join(".cache/sherlock")).map_err(|e| {
+
+    let sherlock_cache_dir = get_sherlock_cache_dir()?;
+
+    fs::remove_dir_all(&sherlock_cache_dir).map_err(|e| {
         sherlock_error!(
-            SherlockErrorType::DirRemoveError(String::from("~/.cache/sherlock")),
+            SherlockErrorType::DirRemoveError(sherlock_cache_dir.display().to_string()),
             e.to_string()
         )
     })?;
 
-    // Clear app cache
-    fs::remove_file(&config.behavior.cache).map_err(|e| {
-        sherlock_error!(
-            SherlockErrorType::FileRemoveError(config.behavior.cache.clone()),
-            e.to_string()
-        )
-    })?;
 
     Ok(())
 }
 
 pub fn reset_app_counter() -> Result<(), SherlockError> {
-    let home = home_dir()?;
-    fs::remove_file(home.join(".cache/sherlock/counts.json")).map_err(|e| {
+    let sherlock_cache_dir = get_sherlock_cache_dir()?;
+    let counts_file_path = sherlock_cache_dir.join("counts.json");
+
+    fs::remove_file(&counts_file_path).map_err(|e| {
         sherlock_error!(
-            SherlockErrorType::FileRemoveError(home.join(".cache/sherlock/counts.json")),
+            SherlockErrorType::FileRemoveError(counts_file_path.clone()),
             e.to_string()
         )
     })
 }
+
 pub fn parse_default_browser() -> Result<String, SherlockError> {
-    // Find default browser desktop file
     let output = Command::new("xdg-settings")
         .arg("get")
         .arg("default-web-browser")
@@ -90,7 +102,6 @@ pub fn parse_default_browser() -> Result<String, SherlockError> {
                 ""
             )
         })?;
-    // read default browser desktop file
     let browser = read_lines(browser_file)
         .map_err(|e| {
             sherlock_error!(
