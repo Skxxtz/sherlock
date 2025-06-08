@@ -670,7 +670,7 @@ fn nav_event(
                         results.focus_first(Some(&context.model), Some(current_mode.clone()))
                     });
                 }
-                gdk::Key::Return => {
+                gdk::Key::Return | gdk::Key::KP_Enter => {
                     if context.open.get() {
                         // Activate action
                         if let Some(upgr) = context.view.upgrade() {
