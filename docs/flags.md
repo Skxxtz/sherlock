@@ -23,6 +23,7 @@
 | --daemonize      | Overrides the daemonizing value in `config.toml` | |
 | --time-inspect      | Prints startup time from 0 to content. Also prints the time it took to load the launchers.| (Removed) use `TIMING=true sherlock` instead.|
 | --sub-menu      | Launch Sherlock with a custom alias from the beginning. For example `sherlock --sub-menu pm`, where `pm` is an alias you defined in your fallbacks.| |
+| --photo | Launchers Sherlock with photo mode – Whenever focus is lost, it will not close ||
 
 ## Pipe Mode Flags
 | Flag         | Description | Note |

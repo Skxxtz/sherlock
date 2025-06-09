@@ -42,22 +42,26 @@ impl Tile {
             .and_then(|tmp| tmp.upgrade())
             .map(|end_time| end_time.set_text(format!(".. {}", event.end_time).as_str()));
 
-        let mut constructor: Vec<(&str, &str)> = vec![
-            ("method", &launcher.method),
-            ("meeting_url", &event.meeting_url),
-        ];
-        if let Some(next) = launcher.next_content.as_deref() {
-            constructor.push(("next_content", next));
-        }
-        let attrs = get_attrs_map(constructor);
+        let attrs = get_attrs_map(vec![
+            ("method", Some(&launcher.method)),
+            ("meeting_url", Some(&event.meeting_url)),
+            ("next_content", launcher.next_content.as_deref()),
+            ("exit", Some(&launcher.exit.to_string())),
+        ]);
 
         builder.object.add_css_class("event-tile");
         builder.object.with_launcher(launcher);
         builder
             .object
-            .connect_local("row-should-activate", false, move |row| {
-                let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
-                execute_from_attrs(&row, &attrs);
+            .connect_local("row-should-activate", false, move |args| {
+                let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+                let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                let param: Option<bool> = match param {
+                    1 => Some(false),
+                    2 => Some(true),
+                    _ => None,
+                };
+                execute_from_attrs(&row, &attrs, param);
                 None
             });
 

@@ -1,10 +1,29 @@
-use crate::CONFIG;
+use crate::{
+    sherlock_error,
+    utils::{
+        errors::{SherlockError, SherlockErrorType},
+        files::home_dir,
+    },
+    CONFIG,
+};
 use regex::Regex;
-use std::collections::HashSet;
+use serde::{Deserialize, Serialize};
+use simd_json::{
+    base::{ValueAsArray, ValueAsScalar},
+    derived::ValueObjectAccess,
+    OwnedValue,
+};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::{create_dir_all, File},
+    path::Path,
+    sync::OnceLock,
+    time::{Duration, SystemTime},
+};
 
 #[derive(Clone, Debug)]
 pub struct CalculatorLauncher {
-    pub capabilities: Option<HashSet<String>>,
+    pub capabilities: HashSet<String>,
 }
 
 pub struct Calculator;
@@ -22,7 +41,11 @@ impl Calculator {
 
             let base = Calculator::to_basis(factor_from, value);
             let res = Calculator::to_unit(factor_to, base);
-            let postfix = if res == 1.0 { "" } else { "s" };
+            let postfix = if res == 1.0 || unit_str == "currencies" {
+                ""
+            } else {
+                "s"
+            };
             return Some((res.to_string(), format!("= {:.2} {}{}", res, name, postfix)));
         }
         // Support for partial ones
@@ -35,6 +58,7 @@ impl Calculator {
             let to = match unit_str {
                 "weights" => config.units.weights.to_lowercase(),
                 "volumes" => config.units.volumes.to_lowercase(),
+                "currencies" => config.units.currency.to_lowercase(),
                 _ => config.units.lengths.to_lowercase(),
             };
 
@@ -43,7 +67,11 @@ impl Calculator {
 
             let base = Calculator::to_basis(factor_from, value);
             let res = Calculator::to_unit(factor_to, base);
-            let postfix = if res == 1.0 { "" } else { "s" };
+            let postfix = if res == 1.0 || unit_str == "currencies" {
+                ""
+            } else {
+                "s"
+            };
             return Some((res.to_string(), format!("= {:.2} {}{}", res, name, postfix)));
         }
         None
@@ -100,6 +128,13 @@ impl Measurements {
         match unit_str {
             "weights" => Weight::match_unit(unit),
             "volumes" => Volume::match_unit(unit),
+            "currencies" => {
+                if Currency::unit_exists(unit) {
+                    CURRENCIES.get()?.as_ref().and_then(|c| c.match_unit(unit))
+                } else {
+                    None
+                }
+            }
             _ => Length::match_unit(unit),
         }
     }
@@ -209,6 +244,212 @@ impl Volume {
             }
 
             _ => None,
+        }
+    }
+}
+
+pub static CURRENCIES: OnceLock<Option<Currency>> = OnceLock::new();
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Currency {
+    usd: f32, // US Dollar
+    eur: f32, // Euro
+    jpy: f32, // Japanese Yen
+    gbp: f32, // British Pound Sterling
+    aud: f32, // Australian Dollar
+    cad: f32, // Canadian Dollar
+    chf: f32, // Swiss Franc
+    cny: f32, // Chinese Yuan
+    nzd: f32, // New Zealand Dollar
+    sek: f32, // Swedish Krona
+    nok: f32, // Norwegian Krone
+    mxn: f32, // Mexican Peso
+    sgd: f32, // Singapore Dollar
+    hkd: f32, // Hong Kong Dollar
+    krw: f32, // South Korean Won
+}
+impl Currency {
+    pub fn from_map(mut map: HashMap<String, f32>) -> Option<Self> {
+        Some(Self {
+            usd: 1.0,
+            eur: map.remove("eur")?,
+            jpy: map.remove("jpy")?,
+            gbp: map.remove("gbp")?,
+            aud: map.remove("aud")?,
+            cad: map.remove("cad")?,
+            chf: map.remove("chf")?,
+            cny: map.remove("cny")?,
+            nzd: map.remove("nzd")?,
+            sek: map.remove("sek")?,
+            nok: map.remove("nok")?,
+            mxn: map.remove("mxn")?,
+            sgd: map.remove("sgd")?,
+            hkd: map.remove("hkd")?,
+            krw: map.remove("krw")?,
+        })
+    }
+    pub fn match_unit(&self, unit: &str) -> Option<(f32, String)> {
+        match unit.to_lowercase().trim() {
+            "usd" | "dollar" | "us dollar" | "bucks" => Some((self.usd, "$".to_string())),
+            "eur" | "euro" | "euros" | "european euro" => Some((self.eur, "€".to_string())),
+            "jpy" | "yen" | "japanese yen" => Some((self.jpy, "¥".to_string())),
+            "gbp" | "pound" | "british pound" | "pound sterling" => {
+                Some((self.gbp, "£".to_string()))
+            }
+            "aud" | "australian dollar" | "aussie dollar" | "aussie" => {
+                Some((self.aud, "A$".to_string()))
+            }
+            "cad" | "canadian dollar" | "loonie" => Some((self.cad, "C$".to_string())),
+            "chf" | "swiss franc" | "franc" => Some((self.chf, "CHF".to_string())),
+            "cny" | "chinese yuan" | "renminbi" | "yuan" => Some((self.cny, "¥".to_string())),
+            "nzd" | "new zealand dollar" | "kiwi" => Some((self.nzd, "NZ$".to_string())),
+            "sek" | "swedish krona" | "krona" => Some((self.sek, "kr".to_string())),
+            "nok" | "norwegian krone" | "krone" => Some((self.nok, "kr".to_string())),
+            "mxn" | "mexican peso" | "peso" => Some((self.mxn, "Mex$".to_string())),
+            "sgd" | "singapore dollar" => Some((self.sgd, "S$".to_string())),
+            "hkd" | "hong kong dollar" => Some((self.hkd, "HK$".to_string())),
+            "krw" | "south korean won" | "won" => Some((self.krw, "₩".to_string())),
+            _ => None,
+        }
+    }
+    pub fn unit_exists(unit: &str) -> bool {
+        let allowed = vec![
+            "usd", "eur", "jpy", "gbp", "aud", "cad", "chf", "cny", "nzd", "sek", "nok", "mxn",
+            "sgd", "hkd", "krw",
+        ];
+        allowed.contains(&unit.to_lowercase().as_str())
+    }
+
+    fn load_cached<P: AsRef<Path>>(loc: P, update_interval: u64) -> Option<Currency> {
+        let absolute = loc.as_ref();
+        if absolute.is_file() {
+            let mtime = absolute.metadata().ok()?.modified().ok()?;
+            let time_since = SystemTime::now().duration_since(mtime).ok()?;
+            // then was cached
+            if time_since < Duration::from_secs(60 * update_interval) {
+                File::open(&absolute)
+                    .ok()
+                    .and_then(|file| simd_json::from_reader(file).ok())?
+            }
+        }
+        None
+    }
+    fn cache<P: AsRef<Path>>(&self, loc: P) -> Result<(), SherlockError> {
+        let absolute = loc.as_ref();
+        if !absolute.is_file() {
+            if let Some(parents) = absolute.parent() {
+                create_dir_all(parents).map_err(|e| {
+                    sherlock_error!(
+                        SherlockErrorType::DirCreateError(String::from(
+                            "~/.cache/sherlock/currency/"
+                        )),
+                        e.to_string()
+                    )
+                })?;
+            }
+        }
+        let content = simd_json::to_string(self)
+            .map_err(|e| sherlock_error!(SherlockErrorType::SerializationError, e.to_string()))?;
+        std::fs::write(absolute, content).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileWriteError(absolute.to_path_buf()),
+                e.to_string()
+            )
+        })
+    }
+
+    pub async fn get_exchange(update_interval: u64) -> Result<Currency, SherlockError> {
+        let home = home_dir()?;
+        let absolute = home.join(".cache/sherlock/currency/currency.json");
+        match Currency::load_cached(&absolute, update_interval) {
+            Some(curr) => return Ok(curr),
+            _ => {}
+        };
+
+        let url = "https://scanner.tradingview.com/forex/scan?label-product=related-symbols";
+
+        let json_body = r#"{
+            "columns": [
+                "name",
+                "type",
+                "close"
+            ],
+            "ignore_unknown_fields": true,
+            "options": { "lang": "en" },
+            "range": [0,14],
+            "sort": {
+                "sortBy": "popularity_rank",
+                "sortOrder": "asc"
+            },
+            "filter2": {
+                "operator": "and",
+                "operands": [
+                    { "expression": { "left": "type", "operation": "equal", "right": "forex" } },
+                    { "expression": { "left": "exchange", "operation": "equal", "right": "FX_IDC" } },
+                    { "expression": { "left": "currency_id", "operation": "equal", "right": "USD" } },
+                    { "expression": { "left": "base_currency_id", "operation": "in_range", "right": ["EUR", "JPY", "GBP", "AUD", "CAD", "CHF", "CNY", "NZD", "SEK", "NOK", "MXN", "SGD", "HKD", "KRW"] } }
+                ]
+            }
+        }"#;
+
+        let client = reqwest::Client::new();
+        let res = client
+            .post(url)
+            .header("Content-Type", "text/plain;charset=UTF-8")
+            .header("Accept", "application/vnd.tv.rangedSelection.v1+json")
+            .header(
+                "User-Agent",
+                "Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0",
+            )
+            .header("Referer", "https://www.tradingview.com/")
+            .header("Accept-Language", "en-US,en;q=0.5")
+            .body(json_body)
+            .send()
+            .await
+            .map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::HttpRequestError(String::from(
+                        "GET tradingview.com || getting currencies"
+                    )),
+                    e.to_string()
+                )
+            })?;
+
+        let body = res
+            .text()
+            .await
+            .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))?;
+
+        // simd-json requires &mut str
+        let mut buf = body.into_bytes();
+        let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut buf)
+            .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))?;
+
+        let currencies: HashMap<String, f32> =
+            if let Some(array) = parsed.get("data").and_then(OwnedValue::as_array) {
+                array
+                    .iter()
+                    .filter_map(|item| {
+                        let symbol = item.get("s")?.as_str()?;
+                        let (_, pair) = symbol.split_once(":")?;
+                        let (to, _from) = pair.split_at(3);
+                        let price = item.get("d")?.as_array()?.get(2)?.as_f32()?;
+                        Some((to.to_lowercase(), price as f32))
+                    })
+                    .collect()
+            } else {
+                HashMap::new()
+            };
+
+        match Currency::from_map(currencies) {
+            Some(curr) => {
+                curr.cache(absolute)?;
+                Ok(curr)
+            }
+            _ => Err(sherlock_error!(
+                SherlockErrorType::DeserializationError,
+                String::from("Failed to deserialize currency map into 'Currency' object.")
+            )),
         }
     }
 }

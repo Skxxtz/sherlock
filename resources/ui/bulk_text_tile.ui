@@ -1,5 +1,5 @@
 <interface>
-    <object class="GtkBox" id="holder">
+    <template class="ApiTile" parent="GtkBox">
         <property name="orientation">vertical</property>
         <property name="hexpand">true</property> 
 
@@ -79,8 +79,5 @@
                 </child>
             </object>
         </child>
-
-
-
-    </object>
+    </template>
 </interface>

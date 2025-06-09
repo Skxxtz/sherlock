@@ -3,8 +3,11 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::CONFIG;
+use crate::{
+    sherlock_error,
+    utils::errors::{SherlockError, SherlockErrorType},
+};
 
 pub fn teamslaunch(meeting_url: &str) -> Result<(), SherlockError> {
     if let Some(c) = CONFIG.get() {
@@ -14,10 +17,10 @@ pub fn teamslaunch(meeting_url: &str) -> Result<(), SherlockError> {
         let parts: Vec<String> = exec.split_whitespace().map(String::from).collect();
 
         if parts.is_empty() {
-            return Err(SherlockError {
-                error: SherlockErrorType::CommandExecutionError(String::from("Teams Start")),
-                traceback: String::from("Command is empty."),
-            });
+            return Err(sherlock_error!(
+                SherlockErrorType::CommandExecutionError(String::from("Teams Start")),
+                "Command is empty"
+            ));
         }
 
         let mut command = Command::new(&parts[0]);
@@ -39,16 +42,18 @@ pub fn teamslaunch(meeting_url: &str) -> Result<(), SherlockError> {
                 });
         }
 
-        let _output = command.spawn().map_err(|e| SherlockError {
-            error: SherlockErrorType::CommandExecutionError(String::from("Teams Start")),
-            traceback: e.to_string(),
+        let _output = command.spawn().map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::CommandExecutionError(String::from("Teams Start")),
+                e.to_string()
+            )
         })?;
 
         Ok(())
     } else {
-        Err(SherlockError {
-            error: SherlockErrorType::ConfigError(None),
-            traceback: String::from("It should never get to this. Location: Teams Launch"),
-        })
+        Err(sherlock_error!(
+            SherlockErrorType::ConfigError(None),
+            "It should never get to this"
+        ))
     }
 }

@@ -24,8 +24,10 @@
     --weather-snow-scattered-storm: linear-gradient(45deg, #1A1C1F 0%, #242B35 100%);
     --weather-showers-scattered: linear-gradient(45deg, #73848C 0%, #374B54 100%);
 
-    --weather-none-available: 0, 0%, 50%;                /* Neutral placeholder gray */
+    --weather-none-available: 0, 0%, 50%;
+    /* Neutral placeholder gray */
 }
+
 /*
 --warning: 36, 89%, 52%;
 --error: 0, 89%, 59%;
@@ -50,6 +52,7 @@ overshoot:backdrop {
 }
 
 * {
+    all: unset;
     padding: 0px;
     margin: 0px;
     -gtk-secondary-caret-color: hsl(var(--background));
@@ -60,13 +63,20 @@ overshoot:backdrop {
     font-family: "Cantarell";
 }
 
-#overlay spinner{
+label {
     color: hsl(var(--text));
 }
+
+
+#overlay spinner {
+    color: hsl(var(--text));
+}
+
 row:selected,
 #overlay * {
     background: transparent;
 }
+
 .notifications {
     background: transparent;
 }
@@ -74,38 +84,24 @@ row:selected,
 scrolledwindow>viewport,
 scrolledwindow>viewport>*,
 listview,
+gridview,
 window {
     background: hsl(var(--background));
 }
 
-
-label {
-    color: hsl(var(--text));
+#backdrop {
+    background: black;
 }
 
 
-window {
+
+
+window:not(#backdrop) {
     color: hsl(var(--text));
     border-radius: 5px;
     border: 2px solid hsl(var(--border));
 }
 
-/* STATUS BAR */
-.status-bar {
-    background: hsla(var(--foreground), 0.2);
-    border-top: 1px solid hsl(var(--border));
-    padding: 4px 10px 4px 20px;
-}
-.status-bar label {
-    color: hsl(var(--text), 0.3);
-}
-.spinner-disappear {
-    animation: vanish-rotate 0.3s ease forwards;
-}
-.spinner-appear {
-    animation: ease-opacity 0.3s ease forwards;
-    animation: rotate 0.3s linear infinite;
-}
 
 
 /* SEARCH PAGE */
@@ -127,18 +123,22 @@ window {
 #search-icon-holder image {
     transition: 0.1s ease;
 }
-#search-icon-holder.search image:nth-child(1){
+
+#search-icon-holder.search image:nth-child(1) {
     transition-delay: 0.05s;
     opacity: 1;
 }
-#search-icon-holder.search image:nth-child(2){
+
+#search-icon-holder.search image:nth-child(2) {
     transform: rotate(-180deg);
     opacity: 0;
 }
-#search-icon-holder.back image:nth-child(1){
+
+#search-icon-holder.back image:nth-child(1) {
     opacity: 0;
 }
-#search-icon-holder.back image:nth-child(2){
+
+#search-icon-holder.back image:nth-child(2) {
     transition-delay: 0.05s;
     opacity: 1;
 }
@@ -193,27 +193,61 @@ image {
     min-height: 50px;
     padding: 0px 10px;
     margin-bottom: 5px;
+    border: 1px solid transparent;
     border-radius: 4px;
 }
+
 .tile:hover *,
-.tile:hover{
+.tile:hover {
     background: transparent;
 }
+
 .tile.animate {
-    transform: translateY(20px); 
+    transform: translateY(20px);
     opacity: 0;
     animation: fadeInUp 0.2s ease-out forwards;
 }
-.tile.animate:nth-child(1) { animation-delay: 0.05s; }
-.tile.animate:nth-child(2) { animation-delay: 0.1s; }
-.tile.animate:nth-child(3) { animation-delay: 0.15s; }
-.tile.animate:nth-child(4) { animation-delay: 0.2s; }
-.tile.animate:nth-child(5) { animation-delay: 0.25s; }
-.tile.animate:nth-child(6) { animation-delay: 0.3s; }
-.tile.animate:nth-child(7) { animation-delay: 0.35s; }
-.tile.animate:nth-child(8) { animation-delay: 0.4s; }
-.tile.animate:nth-child(9) { animation-delay: 0.45s; }
-.tile.animate:nth-child(10) { animation-delay: 0.5s; }
+
+row:nth-child(1) .tile.animate{
+    animation-delay: 0.05s;
+}
+
+row:nth-child(2) .tile.animate{
+    animation-delay: 0.1s;
+}
+
+
+row:nth-child(3) .tile.animate{
+    animation-delay: 0.15s;
+}
+
+row:nth-child(4) .tile.animate{
+    animation-delay: 0.2s;
+}
+
+row:nth-child(5) .tile.animate{
+    animation-delay: 0.25s;
+}
+
+row:nth-child(6) .tile.animate{
+    animation-delay: 0.3s;
+}
+
+row:nth-child(7) .tile.animate{
+    animation-delay: 0.35s;
+}
+
+row:nth-child(8) .tile.animate{
+    animation-delay: 0.4s;
+}
+
+row:nth-child(9) .tile.animate{
+    animation-delay: 0.45s;
+}
+
+row:nth-child(10) .tile.animate{
+    animation-delay: 0.5s;
+}
 
 @keyframes fadeInUp {
     from {
@@ -221,6 +255,7 @@ image {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         letter-spacing: 0px;
         opacity: 1;
@@ -238,11 +273,15 @@ image {
     padding: 0px;
 }
 
-row:selected .tile{
+row:selected .tile {
     background: hsla(var(--foreground), 1);
     background-color: hsla(var(--foreground), 1);
-    outline: none;
-    border: none;
+}
+row:selected .tile.multi-active,
+.tile.multi-active {
+    background: hsla(var(--foreground), 1);
+    background-color: hsla(var(--foreground), 1);
+    border: 1px solid hsla(var(--text), 1);
 }
 
 .tile:selected .tag,
@@ -251,7 +290,7 @@ row:selected .tile{
     border-radius: 3px;
     padding: 2px 8px;
     color: hsl(var(--tag-color));
-    box-shadow: 0px 0px 10px 0px rgba(2,2,2,0.4);
+    box-shadow: 0px 0px 10px 0px rgba(2, 2, 2, 0.4);
     border: 1px solid hsla(var(--text), 0.1);
     margin-left: 7px;
 }
@@ -275,7 +314,8 @@ row:selected .tile{
     color: hsla(var(--text), 0.4);
     margin-left: 0px;
 }
-#color-icon-holder{
+
+#color-icon-holder {
     border-radius: 50px;
 }
 
@@ -287,24 +327,26 @@ row:selected .tile{
     background: hsla(var(--foreground), 0.5);
     border-radius: 5px;
     border: 1px solid hsla(var(--text), 0.1);
-    box-shadow: 0px 0px 6px 0px rgba(15,15,15,1);
+    box-shadow: 0px 0px 6px 0px rgba(15, 15, 15, 1);
 }
 
 .tile:selected #shortcut-holder {
     background: hsla(var(--background), 0.5);
     background-color: hsla(var(--background), 0.5);
     color: hsla(var(--text), 0.5);
-    box-shadow: 0px 0px 6px 0px rgba(22,22,22,1);
+    box-shadow: 0px 0px 6px 0px rgba(22, 22, 22, 1);
 }
 
-#shortcut, #shortcut-modkey{
+#shortcut,
+#shortcut-modkey {
     background: hsla(var(--background), 0);
     background-color: hsla(var(--background), 0);
     font-size: 11px;
     font-weight: bold;
     color: hsla(var(--text), 0.5);
 }
-#shortcut-modkey{
+
+#shortcut-modkey {
     font-size: 13px;
 }
 
@@ -329,13 +371,16 @@ row:selected .tile{
 .tile.tile.event-tile {
     padding: 5px 10px;
 }
+
 .tile.event-tile #title-label {
     padding: 2px 0px 7px 5px;
     text-transform: capitalize;
 }
-.tile.event-tile #time-label{
+
+.tile.event-tile #time-label {
     font-size: 3rem;
 }
+
 #end-time-label {
     color: gray;
 }
@@ -374,19 +419,31 @@ row:selected .tile{
 
 
 /* MPRIS TILE*/
-#mpris-icon-holder{
+#mpris-icon-holder {
     border-radius: 5px;
 }
+
 /*Animation for replacing album covers*/
-.image-replace-overlay #album-cover{
+.image-replace-overlay #album-cover {
     opacity: 1;
     animation: ease-opacity 0.5s forwards;
 }
 
+/* EMOJI */
+gridview child {
+    padding: 5px;
+    background: transparent;
+}
 
+gridview child box {
+    background: hsl(var(--foreground));
+    border-radius: 5px;
+    border: 1px solid transparent;
+}
 
-
-
+gridview child:selected box {
+    border: 1px solid hsl(var(--tag-color));
+}
 
 
 /* NEXT PAGE */
@@ -394,12 +451,15 @@ row:selected .tile{
     color: hsl(var(--text));
     background: hsl(var(--background));
 }
+
 .next_tile #content-body {
     background: hsl(var(--background));
     padding: 10px;
     color: hsl(var(--text));
 }
-.raw_text, .next_tile #content-body {
+
+.raw_text,
+.next_tile #content-body {
     font-family: 'Fira Code', monospace;
     font-feature-settings: "kern" off;
     font-kerning: None;
@@ -455,27 +515,78 @@ row:selected .tile{
     color: gray;
 }
 
-
 /* STATUS BAR */
 .status-bar {
     background: hsla(var(--foreground), 0.2);
     border-top: 1px solid hsl(var(--border));
     padding: 4px 10px 4px 20px;
 }
+
 .status-bar label {
     color: hsl(var(--text), 0.3);
 }
 
-
-@keyframes slide {
-    from {
-        transform: translate(0px, 0px);
-    }
-
-    to {
-        transform: translate(-20px, 0px);
-    }
+.status-bar #shortcut-key,
+.status-bar #shortcut-modifier {
+    background: hsl(var(--foreground));
+    margin: 2px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 13px;
 }
+
+.status-bar #shortcut-description {
+    font-size: 13px;
+    margin-right: 10px;
+}
+
+.spinner-disappear {
+    animation: vanish-rotate 0.3s ease forwards;
+}
+
+.spinner-appear {
+    animation: ease-opacity 0.3s ease forwards;
+    animation: rotate 0.3s linear infinite;
+}
+
+.inactive {
+    opacity: 0;
+    transition: 0.1s ease;
+}
+
+.active {
+    opacity: 1;
+    transition: 0.1s ease;
+}
+
+/* CONTEXT MENU */
+#context-menu {
+    min-width: 50px;
+    padding: 5px;
+    margin: 4px;
+    margin-bottom: 35px;
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    border-radius: 5px;
+    box-shadow: unset;
+}
+
+#context-menu row {
+    color: hsla(var(--text), 0.8);
+    transition: 0.1s ease;
+    padding: 10px 20px;
+    border-radius: 5px;
+}
+
+#context-menu label {
+    color: hsla(var(--text), 0.8);
+    font-size: 13px;
+}
+
+#context-menu row:selected {
+    background: hsl(var(--foreground));
+}
+
 
 /* WEATHER TILE */
 .weather-tile {
@@ -483,124 +594,144 @@ row:selected .tile{
     background: darkgray;
     margin-bottom: 10px;
 }
-.tile.weather-tile #content-holder{
+
+.tile.weather-tile #content-holder {
     opacity: 0;
 }
+
 .tile.weather-tile.weather-animate #content-holder {
     animation: ease-opacity 0.3s forwards;
     transition: background 0.3s ease;
     opacity: 1;
 }
-.tile.weather-tile.weather-no-animate #content-holder{
+
+.tile.weather-tile.weather-no-animate #content-holder {
     opacity: 1;
 }
+
 .tile.weather-tile #location {
     margin-left: 5px;
     padding: 10px 0px;
     font-size: 10px;
 }
+
 .tile.weather-tile #temperature {
     font-size: 30px;
 }
+
 .tile.weather-tile #content-holder {
     margin-bottom: 15px;
 }
 
 
 
-
-
-
 /*WEATHER CLASSES*/
-.tile.weather-tile label
-{
-    color: hsl(var(--text));
-}
+/* Weather Types */
 .tile.weather-tile.weather-clear {
-    background: var(--weather-clear); /* Light sky blue */
+    background: var(--weather-clear);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-few-clouds {
-    background: var(--weather-few-clouds); /* Very light */
+    background: var(--weather-few-clouds);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-many-clouds {
-    background: var(--weather-many-clouds); /* Medium-light */
+    background: var(--weather-many-clouds);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-mist {
-    background: var(--weather-mist); /* Light beige */
+    background: var(--weather-mist);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-showers {
-    background: var(--weather-showers); /* Medium-dark blue */
+    background: var(--weather-showers);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-freezing-scattered-rain-storm {
     background: var(--weather-freezing-scattered-rain-storm);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-freezing-scattered-rain {
     background: var(--weather-freezing-scattered-rain);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-snow-scattered-day {
     background: var(--weather-snow-scattered-day);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-storm {
-    background: var(--weather-storm); /* Very dark */
+    background: var(--weather-storm);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-snow-storm {
-    background: var(--weather-snow-storm); /* Light */
+    background: var(--weather-snow-storm);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-snow-scattered-storm {
-    background: var(--weather-snow-scattered-storm); /* Still light */
+    background: var(--weather-snow-scattered-storm);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-showers-scattered {
     background: var(--weather-showers-scattered);
+    background-clip: padding-box;
 }
 
 .tile.weather-tile.weather-none-available {
-    background: hsl(var(--weather-none-available)); /* Neutral gray */
+    background: hsl(var(--weather-none-available));
+    background-clip: padding-box;
 }
+
 
 
 
 /*ANIMATIONS*/
-@keyframes vanish-rotate{
+@keyframes vanish-rotate {
     from {
         opacity: 1;
     }
+
     to {
         opacity: 0;
         transform: rotate(360deg);
     }
-    
+
 }
-@keyframes rotate{
+
+@keyframes rotate {
     from {
         transform: rotate(0deg);
         --start-rotation: 0deg;
     }
+
     to {
         transform: rotate(360deg);
         --start-rotation: 360deg;
     }
 
 }
+
 @keyframes ease-opacity {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
-    
+
 }
+
 @keyframes slide {
     from {
         transform: translate(0px, 0px);
@@ -611,3 +742,12 @@ row:selected .tile{
     }
 }
 
+@keyframes slide {
+    from {
+        transform: translate(0px, 0px);
+    }
+
+    to {
+        transform: translate(-20px, 0px);
+    }
+}

@@ -3,6 +3,7 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore:
+      - "cargo.**"
       - ".github/**"
       - "docs/**"
       - "resources/**"

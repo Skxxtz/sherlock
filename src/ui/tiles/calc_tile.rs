@@ -1,9 +1,3 @@
-use gio::glib::object::ObjectExt;
-use gtk4::prelude::WidgetExt;
-use meval::eval_str;
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
-
-use super::util::TileBuilder;
 use super::Tile;
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
@@ -13,89 +7,161 @@ use crate::{
         Launcher,
     },
 };
+use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gio::glib::object::ObjectExt;
+use gtk4::prelude::{BoxExt, WidgetExt};
+use meval::eval_str;
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 impl Tile {
     pub fn calc_tile(launcher: &Launcher, calc_launcher: &CalculatorLauncher) -> Vec<SherlockRow> {
-        let capabilities: HashSet<String> = match &calc_launcher.capabilities {
-            Some(c) => c.iter().map(|s| s.to_string()).collect(),
-            _ => HashSet::from([String::from("calc.math"), String::from("calc.units")]),
-        };
+        let capabilities: HashSet<String> = calc_launcher.capabilities.clone();
         let capability_rc = Rc::new(RefCell::new(capabilities));
 
-        let builder = TileBuilder::new("/dev/skxxtz/sherlock/ui/calc_tile.ui");
+        let tile = CalcTile::new();
+        let imp = tile.imp();
+        let object = SherlockRow::new();
+        object.append(&tile);
 
         // Add action capabilities
-        builder.object.add_css_class("calc-tile");
-        builder.object.with_launcher(launcher);
+        object.add_css_class("calc-tile");
+        object.with_launcher(launcher);
 
-        let method_clone = launcher.method.clone();
-        let object_weak = builder.object.downgrade();
-        let capability_clone = Rc::clone(&capability_rc);
-        let update_closure = move |search_query: &str| -> bool {
-            let mut result: Option<(String, String)> = None;
-            let capabilities = capability_clone.borrow();
-            if capabilities.contains("calc.math") {
-                let trimmed_keyword = search_query.trim();
-                if let Ok(r) = eval_str(trimmed_keyword) {
-                    let r = r.to_string();
-                    if &r != trimmed_keyword {
-                        result = Some((r.clone(), format!("= {}", r)));
+        let update_closure = {
+            let method_clone = launcher.method.clone();
+            let object_weak = object.downgrade();
+            let capability_clone = Rc::clone(&capability_rc);
+            let equation_holder = imp.equation_holder.downgrade();
+            let result_holder = imp.result_holder.downgrade();
+            let exit = launcher.exit.clone();
+
+            move |search_query: &str| -> bool {
+                let mut result: Option<(String, String)> = None;
+                let capabilities = capability_clone.borrow();
+                if capabilities.contains("calc.math") {
+                    let trimmed_keyword = search_query.trim();
+                    if let Ok(r) = eval_str(trimmed_keyword) {
+                        let r = r.to_string();
+                        if &r != trimmed_keyword {
+                            result = Some((r.clone(), format!("= {}", r)));
+                        }
                     }
                 }
-            }
 
-            if (capabilities.contains("calc.lengths") || capabilities.contains("calc.units"))
-                && result.is_none()
-            {
-                result = Calculator::measurement(&search_query, "lengths")
-            }
+                if (capabilities.contains("calc.lengths") || capabilities.contains("calc.units"))
+                    && result.is_none()
+                {
+                    result = Calculator::measurement(&search_query, "lengths")
+                }
 
-            if (capabilities.contains("calc.weights") || capabilities.contains("calc.units"))
-                && result.is_none()
-            {
-                result = Calculator::measurement(&search_query, "weights")
-            }
+                if (capabilities.contains("calc.weights") || capabilities.contains("calc.units"))
+                    && result.is_none()
+                {
+                    result = Calculator::measurement(&search_query, "weights")
+                }
 
-            if (capabilities.contains("calc.volumes") || capabilities.contains("calc.units"))
-                && result.is_none()
-            {
-                result = Calculator::measurement(&search_query, "volumes")
-            }
+                if (capabilities.contains("calc.volumes") || capabilities.contains("calc.units"))
+                    && result.is_none()
+                {
+                    result = Calculator::measurement(&search_query, "volumes")
+                }
 
-            if (capabilities.contains("calc.temperatures") || capabilities.contains("calc.units"))
-                && result.is_none()
-            {
-                result = Calculator::temperature(&search_query)
-            }
-            if let Some((num, result_text)) = result {
-                builder
-                    .equation_holder
-                    .as_ref()
-                    .and_then(|tmp| tmp.upgrade())
-                    .map(|eq| eq.set_text(&search_query));
-                builder
-                    .result_holder
-                    .as_ref()
-                    .and_then(|tmp| tmp.upgrade())
-                    .map(|result| result.set_text(&result_text));
-                let attrs = get_attrs_map(vec![("method", &method_clone), ("result", &num)]);
+                if (capabilities.contains("calc.temperatures")
+                    || capabilities.contains("calc.units"))
+                    && result.is_none()
+                {
+                    result = Calculator::temperature(&search_query)
+                }
 
-                object_weak.upgrade().map(|row| {
-                    let signal_id = row.connect_local("row-should-activate", false, move |row| {
-                        let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
-                        execute_from_attrs(&row, &attrs);
-                        None
+                if (capabilities.contains("calc.currencies") || capabilities.contains("calc.units"))
+                    && result.is_none()
+                {
+                    result = Calculator::measurement(&search_query, "currencies")
+                }
+                if let Some((num, result_text)) = result {
+                    equation_holder
+                        .upgrade()
+                        .map(|eq| eq.set_text(&search_query));
+                    result_holder
+                        .upgrade()
+                        .map(|result| result.set_text(&result_text));
+                    let attrs = get_attrs_map(vec![
+                        ("method", Some(&method_clone)),
+                        ("result", Some(&num)),
+                        ("exit", Some(&exit.to_string())),
+                    ]);
+
+                    object_weak.upgrade().map(|row| {
+                        let signal_id =
+                            row.connect_local("row-should-activate", false, move |args| {
+                                let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+                                let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                                let param: Option<bool> = match param {
+                                    1 => Some(false),
+                                    2 => Some(true),
+                                    _ => None,
+                                };
+                                execute_from_attrs(&row, &attrs, param);
+                                None
+                            });
+                        row.set_signal_id(signal_id);
                     });
-                    row.set_signal_id(signal_id);
-                });
-                return true;
+                    return true;
+                }
+                false
             }
-            false
         };
-        builder.object.set_update(update_closure);
-        if launcher.shortcut {
-            builder.object.set_shortcut_holder(builder.shortcut_holder);
+        object.set_update(update_closure);
+        vec![object]
+    }
+}
+
+mod imp {
+    use gtk4::glib;
+    use gtk4::subclass::prelude::*;
+    use gtk4::CompositeTemplate;
+    use gtk4::{Box as GtkBox, Label};
+
+    #[derive(CompositeTemplate, Default)]
+    #[template(resource = "/dev/skxxtz/sherlock/ui/calc_tile.ui")]
+    pub struct CalcTile {
+        #[template_child(id = "equation-holder")]
+        pub equation_holder: TemplateChild<Label>,
+
+        #[template_child(id = "result-holder")]
+        pub result_holder: TemplateChild<Label>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for CalcTile {
+        const NAME: &'static str = "CalcTile";
+        type Type = super::CalcTile;
+        type ParentType = GtkBox;
+
+        fn class_init(klass: &mut Self::Class) {
+            Self::bind_template(klass);
         }
-        vec![builder.object]
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for CalcTile {}
+    impl WidgetImpl for CalcTile {}
+    impl BoxImpl for CalcTile {}
+}
+
+use gtk4::glib;
+
+glib::wrapper! {
+    pub struct CalcTile(ObjectSubclass<imp::CalcTile>)
+        @extends gtk4::Widget, gtk4::Box,
+        @implements gtk4::Buildable;
+}
+
+impl CalcTile {
+    pub fn new() -> Self {
+        glib::Object::new::<Self>()
     }
 }

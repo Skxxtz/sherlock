@@ -1,19 +1,23 @@
+use async_std::sync::Mutex;
 use glob::Pattern;
 use rayon::prelude::*;
-use regex::Regex;
 use simd_json;
+use simd_json::prelude::ArrayTrait;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::SystemTime;
 
+use super::util::ApplicationAction;
 use super::{util, Loader};
+use crate::prelude::PathHelpers;
 use crate::utils::{
     errors::{SherlockError, SherlockErrorType},
-    files::{read_file, read_lines},
+    files::read_lines,
 };
-use crate::CONFIG;
+use crate::{sherlock_error, CONFIG};
 use util::{AppData, SherlockAlias};
 
 impl Loader {
@@ -23,24 +27,12 @@ impl Loader {
         counts: &HashMap<String, f32>,
         decimals: i32,
     ) -> Result<HashSet<AppData>, SherlockError> {
-        let config = CONFIG.get().ok_or(SherlockError {
-            error: SherlockErrorType::ConfigError(None),
-            traceback: format!(""),
-        })?;
+        let config = CONFIG
+            .get()
+            .ok_or(sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
 
         // Define required paths for application parsing
         let system_apps = get_applications_dir();
-
-        // Parse needed fields from the '.desktop'
-        let (name_re, icon_re, exec_re, display_re, terminal_re, keywords_re) =
-            get_regex_patterns().map_err(|e| return e)?;
-
-        let parse_field = |content: &str, regex: &Regex| {
-            regex
-                .captures(content)
-                .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-                .unwrap_or_default()
-        };
 
         // Parse user-specified 'sherlockignore' file
         let ignore_apps: Vec<Pattern> = match read_lines(&config.files.ignore) {
@@ -49,24 +41,27 @@ impl Loader {
                 .filter_map(|line| Pattern::new(&line.to_lowercase()).ok())
                 .collect(),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Default::default(),
-            Err(e) => Err(SherlockError {
-                error: SherlockErrorType::FileReadError(config.files.ignore.clone()),
-                traceback: e.to_string(),
-            })?,
+            Err(e) => Err(sherlock_error!(
+                SherlockErrorType::FileReadError(config.files.ignore.clone()),
+                e.to_string()
+            ))?,
         };
 
         // Parse user-specified 'sherlock_alias.json' file
         let aliases: HashMap<String, SherlockAlias> = match File::open(&config.files.alias) {
-            Ok(f) => simd_json::from_reader(f).map_err(|e| SherlockError {
-                error: SherlockErrorType::FileReadError(config.files.alias.clone()),
-                traceback: e.to_string(),
+            Ok(f) => simd_json::from_reader(f).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::FileReadError(config.files.alias.clone()),
+                    e.to_string()
+                )
             })?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Default::default(),
-            Err(e) => Err(SherlockError {
-                error: SherlockErrorType::FileReadError(config.files.alias.clone()),
-                traceback: e.to_string(),
-            })?,
+            Err(e) => Err(sherlock_error!(
+                SherlockErrorType::FileReadError(config.files.alias.clone()),
+                e.to_string()
+            ))?,
         };
+        let aliases = Arc::new(Mutex::new(aliases));
 
         // Gather '.desktop' files
         let desktop_files: HashSet<PathBuf> = match applications {
@@ -79,74 +74,87 @@ impl Loader {
             .into_par_iter()
             .filter_map(|entry| {
                 let r_path = entry.to_str()?;
-                match read_file(r_path) {
+                match read_lines(r_path) {
                     Ok(content) => {
-                        if parse_field(&content, &display_re) == "true" {
-                            return None;
-                        }
-
-                        // Extract keywords, icon, and name fields
-                        let mut keywords = parse_field(&content, &keywords_re);
-                        let mut icon = parse_field(&content, &icon_re);
-                        let mut name = parse_field(&content, &name_re);
-                        if name.is_empty() || should_ignore(&ignore_apps, &name) {
-                            return None; // Skip entries with empty names
-                        }
-
-                        // Construct the executable command
-                        let mut exec = config
-                            .behavior
-                            .global_prefix
-                            .as_ref()
-                            .map_or(String::new(), |pre| format!("{} ", pre));
-                        if parse_field(&content, &terminal_re) == "true" {
-                            exec.push_str(&config.default_apps.terminal);
-                            exec.push(' ');
-                        }
-                        exec.push_str(&parse_field(&content, &exec_re));
-                        if let Some(flag) = &config.behavior.global_flags {
-                            exec.push(' ');
-                            exec.push_str(&flag);
-                        }
-
-                        // apply aliases
-                        if let Some(alias) = aliases.get(&name) {
-                            if let Some(alias_name) = alias.name.as_ref() {
-                                name = alias_name.to_string();
+                        let mut data = AppData::new();
+                        let mut current_section = None;
+                        let mut current_action = ApplicationAction::new("app_launcher");
+                        data.desktop_file = Some(entry);
+                        for line in content.flatten() {
+                            let line = line.trim();
+                            // Skip useless lines
+                            if line.is_empty() || line.starts_with('#') {
+                                continue;
                             }
-                            if let Some(alias_icon) = alias.icon.as_ref() {
-                                icon = alias_icon.to_string();
+                            if line.starts_with('[') && line.ends_with(']') {
+                                current_section = Some(line[1..line.len() - 1].to_string());
+                                if current_action.is_valid() {
+                                    data.actions.push(current_action.clone())
+                                }
+                                current_action = ApplicationAction::new("app_launcher");
+                                continue;
                             }
-                            if let Some(alias_keywords) = alias.keywords.as_ref() {
-                                keywords = alias_keywords.to_string();
+                            if current_section.is_none() {
+                                continue;
                             }
-                            if let Some(alias_exec) = alias.exec.as_ref() {
-                                exec = alias_exec.to_string();
+                            if let Some((key, value)) = line.split_once('=') {
+                                let key = key.trim().to_ascii_lowercase();
+                                let value = value.trim();
+                                if current_section.as_deref().unwrap() == "Desktop Entry" {
+                                    match key.as_ref() {
+                                        "name" => {
+                                            data.name = {
+                                                if should_ignore(&ignore_apps, value) {
+                                                    return None;
+                                                }
+                                                value.to_string()
+                                            }
+                                        }
+                                        "icon" => data.icon = Some(value.to_string()),
+                                        "exec" => data.exec = Some(value.to_string()),
+                                        "nodisplay" if value.eq_ignore_ascii_case("true") => {
+                                            return None
+                                        }
+                                        "terminal" => {
+                                            data.terminal = value.eq_ignore_ascii_case("true");
+                                        }
+                                        "keywords" => data.search_string = value.to_string(),
+                                        _ => {}
+                                    }
+                                } else {
+                                    // Application Actions
+                                    match key.as_ref() {
+                                        "name" => current_action.name = Some(value.to_string()),
+                                        "exec" => current_action.exec = Some(value.to_string()),
+                                        "icon" => current_action.icon = Some(value.to_string()),
+                                        _ => {}
+                                    }
+                                    if current_action.is_full() {
+                                        data.actions.push(current_action.clone());
+                                        current_action = ApplicationAction::new("app_launcher");
+                                        current_section = None;
+                                    }
+                                }
                             }
+                        }
+                        data.actions
+                            .iter_mut()
+                            .filter(|action| action.icon.is_none())
+                            .for_each(|action| action.icon = data.icon.clone());
+                        let alias = {
+                            let mut aliases = aliases.lock_blocking();
+                            aliases.remove(&data.name)
                         };
-                        let search_string = format!("{};{}", name, keywords);
-
-                        let desktop_file_path = match config.behavior.caching {
-                            true => Some(entry),
-                            false => None,
-                        };
-
+                        data.apply_alias(alias);
                         // apply counts
-                        let count = counts.get(&exec).unwrap_or(&0.0);
+                        let count = data
+                            .exec
+                            .as_ref()
+                            .and_then(|exec| counts.get(exec))
+                            .unwrap_or(&0.0);
                         let priority = parse_priority(priority, *count, decimals);
-
-                        // Return the processed app data
-                        Some(AppData {
-                            name,
-                            icon: Some(icon),
-                            icon_class: None,
-                            exec,
-                            search_string,
-                            tag_start: None,
-                            tag_end: None,
-                            desktop_file: desktop_file_path,
-                            priority,
-                        })
+                        data.priority = priority;
+                        Some(data)
                     }
                     Err(_) => None,
                 }
@@ -160,6 +168,7 @@ impl Loader {
         priority: f32,
         counts: &HashMap<String, f32>,
         decimals: i32,
+        last_changed: Option<SystemTime>,
     ) -> Result<HashSet<AppData>, SherlockError> {
         let system_apps = get_applications_dir();
 
@@ -171,7 +180,15 @@ impl Loader {
         apps.retain(|v| {
             if let Some(path) = &v.desktop_file {
                 if desktop_files.contains(path) {
-                    cached_paths.insert(path.clone());
+                    // Do not flag files as cached that have been modified after the cache has last been
+                    // modified
+                    if let (Some(modtime), Some(last_changed)) = (path.modtime(), last_changed) {
+                        if modtime < last_changed {
+                            cached_paths.insert(path.clone());
+                        } else {
+                            return false;
+                        }
+                    }
                     return true;
                 }
             }
@@ -212,10 +229,9 @@ impl Loader {
         counts: &HashMap<String, f32>,
         decimals: i32,
     ) -> Result<HashSet<AppData>, SherlockError> {
-        let config = CONFIG.get().ok_or_else(|| SherlockError {
-            error: SherlockErrorType::ConfigError(None),
-            traceback: String::new(),
-        })?;
+        let config = CONFIG
+            .get()
+            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
         // check if sherlock_alias was modified
         let alias_path = Path::new(&config.files.alias);
         let ignore_path = Path::new(&config.files.ignore);
@@ -235,7 +251,11 @@ impl Loader {
                 apps = apps
                     .drain()
                     .map(|mut v| {
-                        let count = counts.get(&v.exec).unwrap_or(&0.0);
+                        let count = v
+                            .exec
+                            .as_ref()
+                            .and_then(|exec| counts.get(exec))
+                            .unwrap_or(&0.0);
                         let new_priority = parse_priority(priority, *count, decimals);
                         v.priority = new_priority;
                         v
@@ -244,6 +264,7 @@ impl Loader {
 
                 // Refresh cache in the background
                 let old_apps = apps.clone();
+                let last_changed = config.behavior.cache.modtime();
                 rayon::spawn_fifo({
                     let counts_clone = counts.clone();
                     move || {
@@ -252,6 +273,7 @@ impl Loader {
                             priority,
                             &counts_clone,
                             decimals,
+                            last_changed,
                         ) {
                             Loader::write_cache(&new_apps, &config.behavior.cache);
                         }
@@ -274,24 +296,11 @@ fn should_ignore(ignore_apps: &Vec<Pattern>, app: &str) -> bool {
     ignore_apps.iter().any(|pattern| pattern.matches(&app_name))
 }
 pub fn parse_priority(priority: f32, count: f32, decimals: i32) -> f32 {
-    priority + 1.0 - count * 10f32.powi(-decimals)
-}
-
-fn get_regex_patterns() -> Result<(Regex, Regex, Regex, Regex, Regex, Regex), SherlockError> {
-    fn construct_pattern(key: &str) -> Result<Regex, SherlockError> {
-        let pattern = format!(r#"(?im)^{}\s*=\s*[\'\"]?(.*?)[\'\"]?\s*$"#, key);
-        Regex::new(&pattern).map_err(|e| SherlockError {
-            error: SherlockErrorType::RegexError(key.to_string()),
-            traceback: e.to_string(),
-        })
+    if count == 0.0 {
+        priority + 1.0
+    } else {
+        priority + 1.0 - count * 10f32.powi(-decimals)
     }
-    let name = construct_pattern("Name")?;
-    let icon = construct_pattern("Icon")?;
-    let exec = construct_pattern("Exec")?;
-    let display = construct_pattern("NoDisplay")?;
-    let terminal = construct_pattern("Terminal")?;
-    let keywords = construct_pattern("Keywords")?;
-    return Ok((name, icon, exec, display, terminal, keywords));
 }
 
 pub fn get_applications_dir() -> HashSet<PathBuf> {
@@ -325,6 +334,7 @@ pub fn get_applications_dir() -> HashSet<PathBuf> {
 
 pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> HashSet<PathBuf> {
     dirs.into_par_iter()
+        .filter(|dir| dir.is_dir())
         .filter_map(|dir| {
             fs::read_dir(dir).ok().map(|entries| {
                 entries
@@ -345,14 +355,11 @@ pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> HashSet<PathBuf> {
         .collect::<HashSet<PathBuf>>()
 }
 pub fn file_has_changed(file_path: &Path, compare_to: &Path) -> bool {
-    fn modtime(path: &Path) -> Option<SystemTime> {
-        fs::metadata(path).ok().and_then(|m| m.modified().ok())
-    }
-    match (modtime(&file_path), modtime(&compare_to)) {
+    match (&file_path.modtime(), &compare_to.modtime()) {
         (Some(t1), Some(t2)) if t1 >= t2 => return true,
         _ => {}
     }
-    return false;
+    false
 }
 
 #[test]
@@ -384,67 +391,9 @@ fn test_get_applications_dir() {
     // Assert that the result matches the expected HashSet
     assert_eq!(res, expected_app_dirs);
 }
-#[test]
-fn test_desktop_file_entries() {
-    let test_cases = vec![
-        String::from("\ntest=1.0"),
-        String::from("\ntest='Application'"),
-        String::from("\ntest=Example App"),
-        String::from("\ntest=\"Sample Utility\""),
-        String::from("\ntest='This is an example application'"),
-        String::from("\ntest=\"/usr/bin/example-app --example-flag\""),
-        String::from("\ntest='/usr/bin/example-app'"),
-        String::from("\ntest=example-icon"),
-        String::from("\ntest=\"false\""),
-        String::from("\ntest='true'"),
-        String::from("\ntest=application/x-example;"),
-        String::from("\ntest=false"),
-        String::from("\ntest='false'"),
-        String::from("\ntest='/opt/example'"),
-        String::from("\nTest=example-app"),
-        String::from(
-            "[Desktop Entry]
-test=/usr/bin/bssh
-        ",
-        ),
-    ];
 
-    let expected_values: Vec<String> = vec![
-        String::from("1.0"),
-        String::from("Application"),
-        String::from("Example App"),
-        String::from("Sample Utility"),
-        String::from("This is an example application"),
-        String::from("/usr/bin/example-app --example-flag"),
-        String::from("/usr/bin/example-app"),
-        String::from("example-icon"),
-        String::from("false"),
-        String::from("true"),
-        String::from("application/x-example;"),
-        String::from("false"),
-        String::from("false"),
-        String::from("/opt/example"),
-        String::from("example-app"),
-        String::from("/usr/bin/bssh"),
-    ];
-
-    // Fixed regex pattern: simpler and correctly matching optional quotes
-    let pattern = format!(r#"(?im)^{}\s*=\s*[\'\"]?(.*?)[\'\"]?\s*$"#, "test");
-    let re = Regex::new(&pattern).expect("Failed to construct regex pattern");
-
-    // Iterate over the test cases and expected results
-    test_cases
-        .iter()
-        .zip(expected_values.iter())
-        .for_each(|(case, res)| {
-            let catch = re
-                .captures(case)
-                .expect(&format!("Didn't match the pattern. String: {}", case));
-            let group = catch
-                .get(1)
-                .expect("Group 1 is non-existent")
-                .as_str()
-                .to_string();
-            assert_eq!(group, *res);
-        });
+impl PathHelpers for Path {
+    fn modtime(&self) -> Option<SystemTime> {
+        self.metadata().ok().and_then(|m| m.modified().ok())
+    }
 }

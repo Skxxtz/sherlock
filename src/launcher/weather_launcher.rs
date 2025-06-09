@@ -31,7 +31,7 @@ impl WeatherLauncher {
 
         // Parse Temperature
         let temperature = match config.units.temperatures.as_str() {
-            "t" | "T" => format!("{}°F", current_condition["temp_F"].as_str()?),
+            "f" | "F" => format!("{}°F", current_condition["temp_F"].as_str()?),
             _ => format!("{}°C", current_condition["temp_C"].as_str()?),
         };
 

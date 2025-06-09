@@ -10,7 +10,7 @@ use super::{
     errors::{SherlockError, SherlockErrorType},
     files::{expand_path, home_dir},
 };
-use crate::{actions::util::parse_default_browser, loader::Loader};
+use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error};
 
 #[derive(Clone, Debug, Default)]
 pub struct SherlockFlags {
@@ -26,6 +26,8 @@ pub struct SherlockFlags {
     pub method: Option<String>,
     pub field: Option<String>,
     pub sub_menu: Option<String>,
+    pub multi: bool,
+    pub photo_mode: bool,
 }
 /// Configuration sections:
 ///
@@ -69,7 +71,15 @@ pub struct SherlockConfig {
 
     /// Internal settings for JSON piping (e.g., default return action)
     #[serde(default)]
-    pub pipe: ConfigPipe,
+    pub runtime: Runtime,
+
+    /// Configures expand feature
+    #[serde(default)]
+    pub expand: ConfigExpand,
+
+    /// Configures backdrop feature
+    #[serde(default)]
+    pub backdrop: ConfigBackdrop,
 }
 impl SherlockConfig {
     pub fn default() -> Self {
@@ -81,7 +91,15 @@ impl SherlockConfig {
             behavior: ConfigBehavior::default(),
             binds: ConfigBinds::default(),
             files: ConfigFiles::default(),
-            pipe: ConfigPipe { method: None },
+            runtime: Runtime {
+                method: None,
+                multi: false,
+                center: false,
+                photo_mode: false,
+                display_raw: false,
+            },
+            expand: ConfigExpand::default(),
+            backdrop: ConfigBackdrop::default(),
         }
     }
     pub fn with_root(root: &PathBuf) -> Self {
@@ -93,7 +111,15 @@ impl SherlockConfig {
             behavior: ConfigBehavior::default(),
             binds: ConfigBinds::default(),
             files: ConfigFiles::with_root(root),
-            pipe: ConfigPipe { method: None },
+            runtime: Runtime {
+                method: None,
+                multi: false,
+                center: false,
+                photo_mode: false,
+                display_raw: false,
+            },
+            expand: ConfigExpand::default(),
+            backdrop: ConfigBackdrop::default(),
         }
     }
     /// # Arguments
@@ -129,9 +155,8 @@ impl SherlockConfig {
         let write_file = |name: &str, content: &str| {
             let alias_path = path.join(name);
             if !alias_path.exists() {
-                if let Err(error) = fs::write(&alias_path, content).map_err(|e| SherlockError {
-                    error: SherlockErrorType::FileWriteError(alias_path),
-                    traceback: e.to_string(),
+                if let Err(error) = fs::write(&alias_path, content).map_err(|e| {
+                    sherlock_error!(SherlockErrorType::FileWriteError(alias_path), e.to_string())
                 }) {
                     error_message(name, error);
                 } else {
@@ -144,15 +169,19 @@ impl SherlockConfig {
 
         // build default config
         let config = SherlockConfig::with_root(&loc);
-        let toml_str = toml::to_string(&config).map_err(|e| SherlockError {
-            error: SherlockErrorType::FileWriteError(path.clone()),
-            traceback: e.to_string(),
+        let toml_str = toml::to_string(&config).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileWriteError(path.clone()),
+                e.to_string()
+            )
         })?;
 
         // mkdir -p
-        fs::create_dir_all(&path).map_err(|e| SherlockError {
-            error: SherlockErrorType::DirCreateError(format!("{:?}", path)),
-            traceback: e.to_string(),
+        fs::create_dir_all(&path).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::DirCreateError(format!("{:?}", path)),
+                e.to_string()
+            )
         })?;
         // create subdirs
         ensure_dir(&path.join("icons/"), "icons");
@@ -183,18 +212,24 @@ impl SherlockConfig {
                 "/dev/skxxtz/sherlock/fallback.json",
                 gio::ResourceLookupFlags::NONE,
             )
-            .map_err(|e| SherlockError {
-                error: SherlockErrorType::ResourceLookupError("fallback.json".to_string()),
-                traceback: e.to_string(),
+            .map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::ResourceLookupError("fallback.json".to_string()),
+                    e.to_string()
+                )
             })?;
 
-            let json_str = std::str::from_utf8(&data).map_err(|e| SherlockError {
-                error: SherlockErrorType::FileParseError(PathBuf::from("fallback.json")),
-                traceback: e.to_string(),
+            let json_str = std::str::from_utf8(&data).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::FileParseError(PathBuf::from("fallback.json")),
+                    e.to_string()
+                )
             })?;
-            if let Err(error) = fs::write(&fallback_path, json_str).map_err(|e| SherlockError {
-                error: SherlockErrorType::FileWriteError(fallback_path),
-                traceback: e.to_string(),
+            if let Err(error) = fs::write(&fallback_path, json_str).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::FileWriteError(fallback_path),
+                    e.to_string()
+                )
             }) {
                 error_message("fallback.json", error);
             } else {
@@ -246,13 +281,13 @@ impl SherlockConfig {
                 _ => {}
             }
         } else {
-            return Err(SherlockError {
-                error: SherlockErrorType::FileParseError(path.clone()),
-                traceback: format!(
+            return Err(sherlock_error!(
+                SherlockErrorType::FileParseError(path.clone()),
+                format!(
                     "The file \"{}\" is not in a valid format.",
                     &path.to_string_lossy()
-                ),
-            });
+                )
+            ));
         }
 
         match fs::read_to_string(&path) {
@@ -260,23 +295,27 @@ impl SherlockConfig {
                 let config_res: Result<SherlockConfig, SherlockError> = match filetype.as_str() {
                     "json" => {
                         let mut bytes = config_str.into_bytes();
-                        simd_json::from_slice(&mut bytes).map_err(|e| SherlockError {
-                            error: SherlockErrorType::FileParseError(path.clone()),
-                            traceback: e.to_string(),
+                        simd_json::from_slice(&mut bytes).map_err(|e| {
+                            sherlock_error!(
+                                SherlockErrorType::FileParseError(path.clone()),
+                                e.to_string()
+                            )
                         })
                     }
-                    "toml" => toml::de::from_str(&config_str).map_err(|e| SherlockError {
-                        error: SherlockErrorType::FileParseError(path.clone()),
-                        traceback: e.to_string(),
+                    "toml" => toml::de::from_str(&config_str).map_err(|e| {
+                        sherlock_error!(
+                            SherlockErrorType::FileParseError(path.clone()),
+                            e.to_string()
+                        )
                     }),
                     _ => {
-                        return Err(SherlockError {
-                            error: SherlockErrorType::FileParseError(path.clone()),
-                            traceback: format!(
+                        return Err(sherlock_error!(
+                            SherlockErrorType::FileParseError(path.clone()),
+                            format!(
                                 "The file \"{}\" is not in a valid format.",
                                 &path.to_string_lossy()
-                            ),
-                        })
+                            )
+                        ))
                     }
                 };
                 match config_res {
@@ -294,20 +333,18 @@ impl SherlockConfig {
             }
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => {
-                    let error = SherlockError {
-                        error: SherlockErrorType::FileExistError(path),
-                        traceback: e.to_string(),
-                    };
+                    let error =
+                        sherlock_error!(SherlockErrorType::FileExistError(path), e.to_string());
 
                     let mut config = SherlockConfig::default();
 
                     config = SherlockConfig::apply_flags(sherlock_flags, config);
                     Ok((config, vec![error]))
                 }
-                _ => Err(SherlockError {
-                    error: SherlockErrorType::FileReadError(path),
-                    traceback: e.to_string(),
-                })?,
+                _ => Err(sherlock_error!(
+                    SherlockErrorType::FileReadError(path),
+                    e.to_string()
+                ))?,
             },
         }
     }
@@ -362,7 +399,11 @@ impl SherlockConfig {
             &home,
         );
         config.behavior.sub_menu = sherlock_flags.sub_menu.clone();
-        config.pipe.method = sherlock_flags.method.clone();
+        config.runtime.method = sherlock_flags.method.clone();
+        config.runtime.center = sherlock_flags.center_raw.clone();
+        config.runtime.multi = sherlock_flags.multi;
+        config.runtime.display_raw = sherlock_flags.display_raw;
+        config.runtime.photo_mode = sherlock_flags.photo_mode;
         config.behavior.field = sherlock_flags.field.clone();
 
         if sherlock_flags.daemonize {
@@ -407,7 +448,7 @@ pub struct ConfigUnits {
     #[serde(default = "default_temperatures")]
     pub temperatures: String,
     #[serde(default = "default_currency")]
-    pub _currency: String,
+    pub currency: String,
 }
 impl Default for ConfigUnits {
     fn default() -> Self {
@@ -416,7 +457,7 @@ impl Default for ConfigUnits {
             weights: default_weights(),
             volumes: default_volumes(),
             temperatures: default_temperatures(),
-            _currency: default_currency(),
+            currency: default_currency(),
         }
     }
 }
@@ -462,6 +503,12 @@ pub struct ConfigAppearance {
     pub opacity: f64,
     #[serde(default = "default_modkey_ascii")]
     pub mod_key_ascii: Vec<String>,
+    #[serde(default = "default_search_icon")]
+    pub search_bar_icon: String,
+    #[serde(default = "default_search_icon_back")]
+    pub search_bar_icon_back: String,
+    #[serde(default = "default_icon_size")]
+    pub search_icon_size: i32,
 }
 impl ConfigAppearance {
     fn with_root(root: &PathBuf) -> Self {
@@ -485,18 +532,9 @@ impl ConfigAppearance {
             .into_iter()
             .filter_map(|s| use_root(root, s))
             .collect();
-        Self {
-            width: 900,
-            height: 593, // 617 with, 593 without notification bar
-            gsk_renderer: String::from("cairo"),
-            icon_paths,
-            icon_size: default_icon_size(),
-            search_icon: false,
-            use_base_css: true,
-            status_bar: true,
-            opacity: 1.0,
-            mod_key_ascii: default_modkey_ascii(),
-        }
+        let mut default = Self::default();
+        default.icon_paths = icon_paths;
+        default
     }
 }
 impl Default for ConfigAppearance {
@@ -512,6 +550,9 @@ impl Default for ConfigAppearance {
             status_bar: true,
             opacity: 1.0,
             mod_key_ascii: default_modkey_ascii(),
+            search_bar_icon: default_search_icon(),
+            search_bar_icon_back: default_search_icon_back(),
+            search_icon_size: default_icon_size(),
         }
     }
 }
@@ -528,8 +569,11 @@ pub struct ConfigBehavior {
     pub animate: bool,
     #[serde(default)]
     pub field: Option<String>,
+    #[serde(default)]
     pub global_prefix: Option<String>,
+    #[serde(default)]
     pub global_flags: Option<String>,
+    #[serde(default)]
     pub sub_menu: Option<String>,
 }
 impl Default for ConfigBehavior {
@@ -605,14 +649,68 @@ pub struct ConfigBinds {
     pub prev: Option<String>,
     #[serde(default)]
     pub next: Option<String>,
+    #[serde(default = "default_context")]
+    pub context: Option<String>,
     #[serde(default)]
     pub modifier: Option<String>,
+    #[serde(default)]
+    pub exec_inplace: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
-pub struct ConfigPipe {
+pub struct Runtime {
     #[serde(default)]
     pub method: Option<String>,
+
+    #[serde(default)]
+    pub multi: bool,
+
+    #[serde(default)]
+    pub center: bool,
+
+    #[serde(default)]
+    pub photo_mode: bool,
+
+    #[serde(default)]
+    pub display_raw: bool,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ConfigExpand {
+    #[serde(default)]
+    pub enable: bool,
+    #[serde(default = "default_backdrop_edge")]
+    pub edge: String,
+    #[serde(default)]
+    pub margin: i32,
+}
+impl Default for ConfigExpand {
+    fn default() -> Self {
+        Self {
+            enable: false,
+            edge: default_backdrop_edge(),
+            margin: 0,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ConfigBackdrop {
+    #[serde(default)]
+    pub enable: bool,
+    #[serde(default = "default_backdrop_opacity")]
+    pub opacity: f64,
+    #[serde(default = "default_backdrop_edge")]
+    pub edge: String,
+}
+impl Default for ConfigBackdrop {
+    fn default() -> Self {
+        Self {
+            enable: false,
+            opacity: default_backdrop_opacity(),
+            edge: default_backdrop_edge(),
+        }
+    }
 }
 
 // ====================
@@ -671,11 +769,23 @@ pub fn default_true() -> bool {
 pub fn default_1() -> f64 {
     1.0
 }
+pub fn default_backdrop_opacity() -> f64 {
+    0.6
+}
+pub fn default_backdrop_edge() -> String {
+    String::from("top")
+}
 pub fn default_icon_paths() -> Vec<String> {
     vec![String::from("~/.config/sherlock/icons/")]
 }
 pub fn default_icon_size() -> i32 {
     22
+}
+pub fn default_search_icon() -> String {
+    String::from("system-search-symbolic")
+}
+pub fn default_search_icon_back() -> String {
+    String::from("go-previous-symbolic")
 }
 pub fn default_modkey_ascii() -> Vec<String> {
     vec![
@@ -688,6 +798,9 @@ pub fn default_modkey_ascii() -> Vec<String> {
         String::from("✦"), // hyper
         String::from("⌘"), // default
     ]
+}
+pub fn default_context() -> Option<String> {
+    Some(String::from("control-l"))
 }
 pub fn get_terminal() -> Result<String, SherlockError> {
     let mut terminal = None;
@@ -732,10 +845,10 @@ pub fn get_terminal() -> Result<String, SherlockError> {
     if let Some(t) = terminal {
         Ok(t)
     } else {
-        Err(SherlockError{
-                error: SherlockErrorType::ConfigError(Some("Failed to get terminal".to_string())),
-                traceback: "Unable to locate or parse a valid terminal app. Ensure that the terminal app is correctly specified in the configuration file or environment variables.".to_string(),
-            })
+        Err(sherlock_error!(
+                SherlockErrorType::ConfigError(Some("Failed to get terminal".to_string())),
+                "Unable to locate or parse a valid terminal app. Ensure that the terminal app is correctly specified in the configuration file or environment variables."
+        ))
     }
 }
 fn is_terminal_installed(terminal: &str) -> bool {

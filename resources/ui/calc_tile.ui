@@ -1,5 +1,5 @@
 <interface>
-    <object class="GtkBox" id="holder">
+    <template parent="GtkBox" class="CalcTile">
         <property name="orientation">vertical</property>
         <property name="spacing">0</property>
         <property name="hexpand">true</property> 
@@ -16,5 +16,5 @@
             </object>
         </child>
 
-    </object>
+    </template>
 </interface>

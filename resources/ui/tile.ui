@@ -1,11 +1,11 @@
 <interface>
-    <object class="GtkBox" id="holder">
+    <template class="AppTile" parent="GtkBox">
         <property name="orientation">horizontal</property>
         <property name="spacing">20</property>
         <property name="hexpand">true</property> 
 
         <child>
-            <object class="GtkBox" id="app-icon-holder">
+            <object class="GtkBox" id="icon-holder">
                 <property name="valign">center</property>
                 <property name="name">icon-holder</property>
                 <child>
@@ -21,10 +21,9 @@
         <child>
             <object class="GtkBox" id="app-name-holder">
                 <property name="orientation">vertical</property>
-                <property name="spacing">5</property>
                 <property name="valign">center</property>
                 <property name="hexpand">true</property>
-
+                <property name="spacing">3</property>
 
                 <child>
                     <object class="GtkBox" id="app-name-inline">
@@ -35,6 +34,7 @@
                         <property name="name">test</property>
                         <child>
                             <object class="GtkLabel" id="app-name">
+                                <property name="single-line-mode">true</property>
                                 <property name="name">title</property>
                                 <property name="xalign">0</property>
                                 <property name="ellipsize">end</property>
@@ -48,6 +48,7 @@
                                     <class name="tag"/>
                                     <class name="tag-start"/>
                                 </style>
+                                <property name="single-line-mode">true</property>
                                 <property name="xalign">0</property>
                                 <property name="label">Example Tag</property>
                                 <property name="visible">false</property>
@@ -59,6 +60,7 @@
                                     <class name="tag"/>
                                     <class name="tag-end"/>
                                 </style>
+                                <property name="single-line-mode">true</property>
                                 <property name="halign">end</property>
                                 <property name="visible">false</property>
                                 <property name="label">End Tag</property>
@@ -68,6 +70,7 @@
                 </child>
                 <child>
                     <object class="GtkLabel" id="launcher-type">
+                        <property name="single-line-mode">true</property>
                         <property name="name">launcher-type</property>
                         <property name="xalign">0</property>
                         <property name="label"></property>
@@ -86,12 +89,14 @@
                 <property name="spacing">5</property>
                 <child>
                     <object class="GtkLabel">
+                        <property name="single-line-mode">true</property>
                         <property name="name">shortcut-modkey</property>
                         <property name="label"></property>   
                     </object>
                 </child>
                 <child>
                     <object class="GtkLabel">
+                        <property name="single-line-mode">true</property>
                         <property name="name">shortcut</property>
                         <property name="label"></property>   
                     </object>
@@ -100,7 +105,7 @@
         </child>
 
 
-    </object>
+    </template>
 
 
 </interface>

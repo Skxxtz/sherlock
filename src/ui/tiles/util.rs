@@ -1,17 +1,16 @@
-use crate::{g_subclasses::sherlock_row::SherlockRow, loader::pipe_loader::PipeData, CONFIG};
+use crate::{g_subclasses::sherlock_row::SherlockRow, CONFIG};
 use gio::glib::WeakRef;
 use gtk4::{prelude::*, Box, Builder, Image, Label, Overlay, Spinner, TextView};
-use std::{collections::HashSet, fmt::Debug};
 
 #[derive(Default)]
 pub struct TextViewTileBuilder {
-    pub object: Option<WeakRef<Box>>,
+    pub object: Option<Box>,
     pub content: Option<WeakRef<TextView>>,
 }
 impl TextViewTileBuilder {
     pub fn new(resource: &str) -> Self {
         let builder = Builder::from_resource(resource);
-        let object = builder.object::<Box>("next_tile").map(|w| w.downgrade());
+        let object = builder.object::<Box>("next_tile");
         let content = builder.object::<TextView>("content").map(|w| w.downgrade());
         TextViewTileBuilder { object, content }
     }
@@ -55,95 +54,6 @@ impl EventTileBuilder {
             end_time,
             icon,
             shortcut_holder,
-        }
-    }
-}
-
-#[derive(Clone, Default)]
-pub struct TileBuilder {
-    pub object: SherlockRow,
-    pub icon: Option<WeakRef<Image>>,
-    pub icon_holder: Option<WeakRef<Box>>,
-    pub title: Option<WeakRef<Label>>,
-    pub category: Option<WeakRef<Label>>,
-    pub tag_start: Option<WeakRef<Label>>,
-    pub tag_end: Option<WeakRef<Label>>,
-    pub shortcut_holder: Option<WeakRef<Box>>,
-
-    // Specific to 'bulk_text_tile'
-    pub content_title: Option<WeakRef<Label>>,
-    pub content_body: Option<WeakRef<Label>>,
-    // Specific to 'calc_tile'
-    pub equation_holder: Option<WeakRef<Label>>,
-    pub result_holder: Option<WeakRef<Label>>,
-}
-
-impl TileBuilder {
-    pub fn new(resource: &str) -> Self {
-        let builder = Builder::from_resource(resource);
-        let holder: Box = builder.object("holder").unwrap_or_default();
-        let icon = builder.object::<Image>("icon-name").map(|w| w.downgrade());
-        let title = builder.object::<Label>("app-name").map(|w| w.downgrade());
-        let category = builder
-            .object::<Label>("launcher-type")
-            .map(|w| w.downgrade());
-        let icon_holder = builder
-            .object::<Box>("app-icon-holder")
-            .map(|w| w.downgrade());
-        let tag_start = builder
-            .object::<Label>("app-name-tag-start")
-            .map(|w| w.downgrade());
-        let tag_end = builder
-            .object::<Label>("app-name-tag-end")
-            .map(|w| w.downgrade());
-
-        // Append content to the sherlock row
-        let object = SherlockRow::new();
-        object.append(&holder);
-        object.set_css_classes(&vec!["tile"]);
-
-        // Specific to 'bulk_text_tile' and 'error_tile'
-        let content_title = builder
-            .object::<Label>("content-title")
-            .map(|w| w.downgrade());
-        let content_body = builder
-            .object::<Label>("content-body")
-            .map(|w| w.downgrade());
-
-        // Specific to 'calc_tile'
-        let equation_holder = builder
-            .object::<Label>("equation-holder")
-            .map(|w| w.downgrade());
-        let result_holder = builder
-            .object::<Label>("result-holder")
-            .map(|w| w.downgrade());
-
-        let shortcut_holder = builder
-            .object::<Box>("shortcut-holder")
-            .map(|w| w.downgrade());
-
-        // Set the icon size to the user-specified one
-        if let Some(c) = CONFIG.get() {
-            icon.as_ref()
-                .and_then(|icon| icon.upgrade())
-                .map(|icon| icon.set_pixel_size(c.appearance.icon_size));
-        }
-        drop(builder);
-        TileBuilder {
-            object,
-            icon,
-            icon_holder,
-            title,
-            category,
-            tag_start,
-            tag_end,
-            shortcut_holder,
-
-            content_body,
-            content_title,
-
-            equation_holder,
-            result_holder,
         }
     }
 }
@@ -200,60 +110,21 @@ impl WeatherTileBuilder {
     }
 }
 
-pub trait SherlockSearch {
-    fn fuzzy_match<T: AsRef<str> + Debug>(&self, substring: T) -> bool;
-}
-
-impl SherlockSearch for String {
-    fn fuzzy_match<T>(&self, substring: T) -> bool
-    where
-        Self: AsRef<str>,
-        T: AsRef<str> + Debug,
-    {
-        let lowercase = substring.as_ref().to_lowercase();
-        let char_pattern: HashSet<char> = lowercase.chars().collect();
-        let concat_str: String = self
-            .to_lowercase()
-            .chars()
-            .filter(|s| char_pattern.contains(s))
-            .collect();
-        concat_str.contains(&lowercase)
-    }
-}
-impl SherlockSearch for PipeData {
-    fn fuzzy_match<T>(&self, substring: T) -> bool
-    where
-        T: AsRef<str>,
-    {
-        // check which value to use
-        let search_in = match self.title {
-            Some(_) => &self.title,
-            None => &self.description,
-        };
-        if let Some(search_in) = search_in {
-            let lowercase = substring.as_ref().to_lowercase();
-            let char_pattern: HashSet<char> = lowercase.chars().collect();
-            let concat_str: String = search_in
-                .to_lowercase()
-                .chars()
-                .filter(|s| char_pattern.contains(s))
-                .collect();
-            return concat_str.contains(&lowercase);
-        }
-        return false;
-    }
-}
-
 /// Used to update tag_start or tag_end
 /// * **label**: The UI label holding the result
 /// * **content**: The content for the label, as specified by the user
 /// * **keyword**: The current keyword of the search
-pub fn update_tag(label: &WeakRef<Label>, content: &Option<String>, keyword: &str) {
+pub fn update_tag(label: &WeakRef<Label>, content: &Option<String>, keyword: &str) -> Option<()> {
     if let Some(content) = &content {
+        let label = label.upgrade()?;
+
         let content = content.replace("{keyword}", keyword);
-        label.upgrade().map(|label| {
-            label.set_text(&content);
-            label.set_visible(true);
-        });
+        if keyword.is_empty() {
+            label.set_visible(false);
+            return None;
+        }
+        label.set_text(&content);
+        label.set_visible(true);
     }
+    None
 }

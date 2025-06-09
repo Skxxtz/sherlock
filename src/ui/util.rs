@@ -1,49 +1,46 @@
+use futures::future::join_all;
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
+use std::fs::{self, File};
+use std::io::{BufWriter, Read, Write};
+use std::path::PathBuf;
+use std::rc::Rc;
 use std::u32;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gio::glib::{self, WeakRef};
+use gio::ListStore;
 use gtk4::gdk::{Key, ModifierType};
-use gtk4::{prelude::*, Box as HVBox, Label, SingleSelection};
+use gtk4::{
+    prelude::*, Box as GtkBox, CustomFilter, CustomSorter, Entry, Justification, Label, ListView,
+    ScrolledWindow, Spinner,
+};
+use serde::Deserialize;
 
 use crate::g_subclasses::sherlock_row::SherlockRow;
+use crate::loader::Loader;
 use crate::utils::config::default_modkey_ascii;
-use crate::CONFIG;
+use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::{sherlock_error, CONFIG};
 
-pub trait ShortCut {
-    fn apply_shortcut(&self, index: i32, mod_str: &str) -> i32;
-    fn remove_shortcut(&self) -> i32;
-}
-impl ShortCut for HVBox {
-    fn apply_shortcut(&self, index: i32, mod_str: &str) -> i32 {
-        if index < 6 {
-            if let Some(child) = self.first_child() {
-                if let Some(label) = child.downcast_ref::<Label>() {
-                    self.set_visible(true);
-                    label.set_text(&format!("{}", mod_str));
-                }
-            }
-            if let Some(child) = self.last_child() {
-                if let Some(label) = child.downcast_ref::<Label>() {
-                    self.set_visible(true);
-                    label.set_text(&format!("{}", index));
-                    return 1;
-                }
-            }
-        }
-        return 0;
-    }
-    fn remove_shortcut(&self) -> i32 {
-        let r = if self.is_visible() { 1 } else { 0 };
-        self.set_visible(false);
-        r
-    }
-}
+use super::tiles::util::TextViewTileBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConfKeys {
+    // Next
     pub next: Option<Key>,
     pub next_mod: Option<ModifierType>,
+    // Previous
     pub prev: Option<Key>,
     pub prev_mod: Option<ModifierType>,
+    // Inplace execution
+    pub exec_inplace: Option<Key>,
+    pub exec_inplace_mod: Option<ModifierType>,
+    // ContextMenu
+    pub context: Option<Key>,
+    pub context_mod: Option<ModifierType>,
+    pub context_str: Option<String>,
+    pub context_mod_str: String,
+    // Shortcuts
     pub shortcut_modifier: Option<ModifierType>,
     pub shortcut_modifier_str: String,
 }
@@ -52,22 +49,37 @@ impl ConfKeys {
         if let Some(c) = CONFIG.get() {
             let (prev_mod, prev) = match &c.binds.prev {
                 Some(prev) => ConfKeys::eval_bind_combination(prev),
-                _ => (None, None),
+                _ => (None, (None, None)),
             };
             let (next_mod, next) = match &c.binds.next {
                 Some(next) => ConfKeys::eval_bind_combination(next),
-                _ => (None, None),
+                _ => (None, (None, None)),
+            };
+            let (exec_inplace_mod, inplace) = match &c.binds.exec_inplace {
+                Some(inplace) => ConfKeys::eval_bind_combination(inplace),
+                _ => (None, (None, None)),
+            };
+            let (context_mod, context) = match &c.binds.context {
+                Some(context) => ConfKeys::eval_bind_combination(context),
+                _ => (None, (None, None)),
             };
             let shortcut_modifier = match &c.binds.modifier {
                 Some(shortcut) => ConfKeys::eval_mod(shortcut),
                 _ => Some(ModifierType::CONTROL_MASK),
             };
             let shortcut_modifier_str = ConfKeys::get_mod_str(&shortcut_modifier);
+            let context_mod_str = ConfKeys::get_mod_str(&context_mod);
             return ConfKeys {
-                next,
+                next: next.0,
                 next_mod,
-                prev,
+                prev: prev.0,
                 prev_mod,
+                exec_inplace: inplace.0,
+                exec_inplace_mod,
+                context: context.0,
+                context_mod,
+                context_str: context.1,
+                context_mod_str,
                 shortcut_modifier,
                 shortcut_modifier_str,
             };
@@ -80,32 +92,40 @@ impl ConfKeys {
             next_mod: None,
             prev: None,
             prev_mod: None,
+            exec_inplace: None,
+            exec_inplace_mod: None,
+            context: None,
+            context_mod: None,
+            context_mod_str: String::new(),
+            context_str: None,
             shortcut_modifier: None,
             shortcut_modifier_str: String::new(),
         }
     }
-    fn eval_bind_combination<T: AsRef<str>>(key: T) -> (Option<ModifierType>, Option<Key>) {
-        let key_str = key.as_ref();
-        match key_str.split("-").collect::<Vec<&str>>().as_slice() {
+    fn eval_bind_combination(key: &str) -> (Option<ModifierType>, (Option<Key>, Option<String>)) {
+        match key.split("-").collect::<Vec<&str>>().as_slice() {
             [modifier, key, ..] => (ConfKeys::eval_mod(modifier), ConfKeys::eval_key(key)),
             [key, ..] => (None, ConfKeys::eval_key(key)),
-            _ => (None, None),
+            _ => (None, (None, None)),
         }
     }
-    fn eval_key<T: AsRef<str>>(key: T) -> Option<Key> {
+    fn eval_key<T: AsRef<str>>(key: T) -> (Option<Key>, Option<String>) {
         match key.as_ref().to_ascii_lowercase().as_ref() {
-            "tab" => Some(Key::Tab),
-            "up" => Some(Key::Up),
-            "down" => Some(Key::Down),
-            "left" => Some(Key::Left),
-            "right" => Some(Key::Right),
-            "pgup" => Some(Key::Page_Up),
-            "pgdown" => Some(Key::Page_Down),
-            "end" => Some(Key::End),
-            "home" => Some(Key::Home),
+            "tab" => (Some(Key::Tab), Some(String::from("⇥"))),
+            "up" => (Some(Key::Up), Some(String::from("↑"))),
+            "down" => (Some(Key::Down), Some(String::from("↓"))),
+            "left" => (Some(Key::Left), Some(String::from("←"))),
+            "right" => (Some(Key::Right), Some(String::from("→"))),
+            "pgup" => (Some(Key::Page_Up), Some(String::from("⇞"))),
+            "pgdown" => (Some(Key::Page_Down), Some(String::from("⇟"))),
+            "end" => (Some(Key::End), Some(String::from("End"))),
+            "home" => (Some(Key::Home), Some(String::from("Home"))),
+            "return" => (Some(Key::Return), Some(String::from("↩"))),
             // Alphabet
-            k if k.len() == 1 && k.chars().all(|c| c.is_ascii_alphabetic()) => Key::from_name(k),
-            _ => None,
+            k if k.len() == 1 && k.chars().all(|c| c.is_ascii_alphabetic()) => {
+                (Key::from_name(k), Some(k.to_uppercase()))
+            }
+            _ => (None, None),
         }
     }
     fn eval_mod(key: &str) -> Option<ModifierType> {
@@ -147,60 +167,247 @@ impl ConfKeys {
     }
 }
 
-pub trait SherlockNav {
-    fn focus_next(&self) -> (u32, u32);
-    fn focus_prev(&self) -> (u32, u32);
-    fn focus_first(&self) -> (u32, u32);
-    fn execute_by_index(&self, index: u32);
+#[derive(Debug, Deserialize)]
+pub struct SherlockAction {
+    pub on: u32,
+    pub action: String,
+    pub exec: Option<String>,
 }
-impl SherlockNav for SingleSelection {
-    fn focus_next(&self) -> (u32, u32) {
-        let index = self.selected();
-        if index == u32::MAX {
-            return (index, 0);
+pub struct SherlockCounter {
+    path: PathBuf,
+}
+impl SherlockCounter {
+    pub fn new() -> Result<Self, SherlockError> {
+        let home = std::env::var("HOME").map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
+                e.to_string()
+            )
+        })?;
+        let home_dir = PathBuf::from(home);
+        let path = home_dir.join(".cache/sherlock/sherlock_count");
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    e.to_string()
+                )
+            })?;
         }
-        let new_index = index + 1;
-        let n_items = self.n_items();
-        if new_index < n_items {
-            self.set_selected(new_index);
-            return (new_index, n_items);
-        }
-        (index, n_items)
+        Ok(Self { path })
     }
-    fn focus_prev(&self) -> (u32, u32) {
-        let index = self.selected();
-        let n_items = self.n_items();
-        if index > 0 {
-            self.set_selected(index - 1);
-            return (index - 1, n_items);
-        }
-        (index, n_items)
+    pub fn increment(&self) -> Result<u32, SherlockError> {
+        let content = self.read()?.saturating_add(1);
+        self.write(content)?;
+        Ok(content)
     }
-    fn focus_first(&self) -> (u32, u32) {
-        let mut i = 0;
-        let current_index = self.selected();
-        let n_items = self.n_items();
-        while i < n_items {
-            if let Some(item) = self.item(i).and_downcast::<SherlockRow>() {
-                if item.imp().spawn_focus.get() {
-                    self.set_selected(i);
-                    return (i, n_items);
-                } else {
-                    i += 1;
-                }
+    pub fn read(&self) -> Result<u32, SherlockError> {
+        let mut file = match File::open(&self.path) {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(0);
             }
-        }
-        self.set_selected(current_index);
-        (current_index, n_items)
-    }
-    fn execute_by_index(&self, index: u32) {
-        for item in index..self.n_items() {
-            if let Some(row) = self.item(item).and_downcast::<SherlockRow>() {
-                if row.imp().shortcut.get() {
-                    row.emit_by_name::<()>("row-should-activate", &[]);
-                    break;
-                }
+            Err(e) => {
+                return Err(sherlock_error!(
+                    SherlockErrorType::FileReadError(self.path.clone()),
+                    e.to_string()
+                ));
             }
+        };
+        let mut buf = [0u8; 4];
+
+        file.read_exact(&mut buf).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileReadError(self.path.clone()),
+                e.to_string()
+            )
+        })?;
+        Ok(u32::from_le_bytes(buf))
+    }
+    pub fn write(&self, count: u32) -> Result<(), SherlockError> {
+        let file = File::create(self.path.clone()).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileWriteError(self.path.clone()),
+                e.to_string()
+            )
+        })?;
+
+        let mut writer = BufWriter::new(file);
+        writer.write_all(&count.to_le_bytes()).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileWriteError(self.path.clone()),
+                e.to_string()
+            )
+        })?;
+
+        Ok(())
+    }
+}
+#[derive(Clone, Debug)]
+pub struct SearchHandler {
+    pub model: Option<WeakRef<ListStore>>,
+    pub modes: Rc<RefCell<HashMap<String, Option<String>>>>,
+    pub task: Rc<RefCell<Option<glib::JoinHandle<()>>>>,
+    pub error_model: WeakRef<ListStore>,
+    pub filter: WeakRef<CustomFilter>,
+    pub sorter: WeakRef<CustomSorter>,
+    pub binds: ConfKeys,
+    pub first_iter: Cell<bool>,
+}
+impl SearchHandler {
+    pub fn new(
+        model: WeakRef<ListStore>,
+        error_model: WeakRef<ListStore>,
+        filter: WeakRef<CustomFilter>,
+        sorter: WeakRef<CustomSorter>,
+        binds: ConfKeys,
+        first_iter: Cell<bool>,
+    ) -> Self {
+        Self {
+            model: Some(model),
+            modes: Rc::new(RefCell::new(HashMap::new())),
+            task: Rc::new(RefCell::new(None)),
+            error_model,
+            filter,
+            sorter,
+            binds,
+            first_iter,
         }
     }
+    pub fn clear(&self) {
+        if let Some(model) = self.model.as_ref().and_then(|m| m.upgrade()) {
+            model.remove_all();
+        }
+    }
+
+    pub fn populate(&self) {
+        // clear potentially stuck rows
+        self.clear();
+        self.first_iter.set(true);
+
+        // load launchers
+        let (launchers, n) = match Loader::load_launchers().map_err(|e| e.tile("ERROR")) {
+            Ok(r) => r,
+            Err(e) => {
+                if let Some(model) = self.error_model.upgrade() {
+                    model.append(&e);
+                }
+                return;
+            }
+        };
+        if let Some(model) = self.error_model.upgrade() {
+            n.into_iter()
+                .map(|n| n.tile("WARNING"))
+                .for_each(|row| model.append(&row));
+        }
+
+        if let Some(model) = self.model.as_ref().and_then(|m| m.upgrade()) {
+            let mut holder: HashMap<String, Option<String>> = HashMap::new();
+            let rows: Vec<SherlockRow> = launchers
+                .into_iter()
+                .map(|mut launcher| {
+                    let patch = launcher.get_patch();
+                    if let Some(alias) = &launcher.alias {
+                        holder.insert(format!("{} ", alias), launcher.name);
+                    }
+                    patch
+                })
+                .flatten()
+                .collect();
+            model.splice(0, model.n_items(), &rows);
+            let weaks: Vec<WeakRef<SherlockRow>> =
+                rows.into_iter().map(|row| row.downgrade()).collect();
+            update_async(weaks, &self.task, String::new());
+            *self.modes.borrow_mut() = holder;
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ContextUI {
+    pub model: WeakRef<ListStore>,
+    pub view: WeakRef<ListView>,
+    pub open: Rc<Cell<bool>>,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct SearchUI {
+    pub all: WeakRef<GtkBox>,
+    pub result_viewport: WeakRef<ScrolledWindow>,
+    pub results: WeakRef<ListView>,
+    // will be later used for split view to display information about apps/commands
+    pub preview_box: WeakRef<GtkBox>,
+    pub status_bar: WeakRef<GtkBox>,
+    pub search_bar: WeakRef<Entry>,
+    pub search_icon_holder: WeakRef<GtkBox>,
+    pub mode_title_holder: WeakRef<GtkBox>,
+    pub mode_title: WeakRef<Label>,
+    pub spinner: WeakRef<Spinner>,
+    pub filter: WeakRef<CustomFilter>,
+    pub sorter: WeakRef<CustomSorter>,
+    pub binds: ConfKeys,
+    pub context_menu_desc: WeakRef<Label>,
+    pub context_menu_first: WeakRef<Label>,
+    pub context_menu_second: WeakRef<Label>,
+}
+pub fn update_async(
+    update_tiles: Vec<WeakRef<SherlockRow>>,
+    current_task: &Rc<RefCell<Option<glib::JoinHandle<()>>>>,
+    keyword: String,
+) {
+    let current_task_clone = Rc::clone(current_task);
+    if let Some(t) = current_task.borrow_mut().take() {
+        t.abort();
+    };
+    let task = glib::MainContext::default().spawn_local({
+        async move {
+            // Set spinner active
+            let spinner_row = update_tiles.get(0).cloned();
+            if let Some(row) = spinner_row.as_ref().and_then(|row| row.upgrade()) {
+                let _ = row.activate_action("win.spinner-mode", Some(&true.to_variant()));
+            }
+            // Make async tiles update concurrently
+            let futures: Vec<_> = update_tiles
+                .into_iter()
+                .map(|row| {
+                    let current_text = keyword.clone();
+                    async move {
+                        // Process text tile
+                        if let Some(row) = row.upgrade() {
+                            row.async_update(&current_text).await
+                        }
+                    }
+                })
+                .collect();
+
+            let _ = join_all(futures).await;
+            // Set spinner inactive
+            if let Some(row) = spinner_row.as_ref().and_then(|row| row.upgrade()) {
+                let _ = row.activate_action("win.spinner-mode", Some(&false.to_variant()));
+            }
+            *current_task_clone.borrow_mut() = None;
+        }
+    });
+    *current_task.borrow_mut() = Some(task);
+}
+
+pub fn display_raw<T: AsRef<str>>(content: T, center: bool) -> GtkBox {
+    let builder = TextViewTileBuilder::new("/dev/skxxtz/sherlock/ui/text_view_tile.ui");
+    builder
+        .content
+        .as_ref()
+        .and_then(|tmp| tmp.upgrade())
+        .map(|ctx| {
+            let buffer = ctx.buffer();
+            ctx.add_css_class("raw_text");
+            ctx.set_monospace(true);
+            let sanitized: String = content.as_ref().chars().filter(|&c| c != '\0').collect();
+            buffer.set_text(&sanitized);
+            if center {
+                ctx.set_justification(Justification::Center);
+            }
+        });
+    let row = builder.object.unwrap_or_default();
+    row
 }

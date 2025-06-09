@@ -2,11 +2,11 @@ use rusqlite::Connection;
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
-use std::time::SystemTime;
 
 use crate::loader::util::{AppData, RawLauncher};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::files::home_dir;
+use crate::{sher_log, sherlock_error};
 
 #[derive(Clone, Debug)]
 pub struct BookmarkLauncher {
@@ -26,8 +26,18 @@ impl BookmarkLauncher {
             }
             "thorium" | "/usr/bin/thorium-browser %u" => BookmarkParser::thorium(raw),
             _ => {
-                println!("{:?}", browser);
-                Ok(HashSet::new())
+                sher_log!(format!(
+                    r#"Failed to gather bookmarks for browser: "{}""#,
+                    browser
+                ));
+                Err(sherlock_error!(
+                    SherlockErrorType::UnsupportedBrowser(browser.to_string()),
+                    format!("The browser \"<i>{}</i>\" is either not supported or not recognized.\n\
+                        Check the \
+                        <span foreground=\"#247BA0\"><u><a href=\"https://github.com/Skxxtz/sherlock/blob/main/docs/launchers.md#bookmark-launcher\">documentation</a></u></span> \
+                        for more information.\n\
+                        ", browser)
+                ))
             }
         }
     }
@@ -37,27 +47,21 @@ struct BookmarkParser;
 impl BookmarkParser {
     fn brave(raw: &RawLauncher) -> Result<HashSet<AppData>, SherlockError> {
         let path = home_dir()?.join(".config/BraveSoftware/Brave-Browser/Default/Bookmarks");
-        let data = fs::read_to_string(&path).map_err(|e| SherlockError {
-            error: SherlockErrorType::FileReadError(path),
-            traceback: format!("{}:{}\n{}", file!(), line!(), e.to_string()),
-        })?;
+        let data = fs::read_to_string(&path)
+            .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
 
         ChromeParser::parse(raw, data)
     }
     fn thorium(raw: &RawLauncher) -> Result<HashSet<AppData>, SherlockError> {
         let path = home_dir()?.join(".config/thorium/Default/Bookmarks");
-        let data = fs::read_to_string(&path).map_err(|e| SherlockError {
-            error: SherlockErrorType::FileReadError(path),
-            traceback: format!("{}:{}\n{}", file!(), line!(), e.to_string()),
-        })?;
+        let data = fs::read_to_string(&path)
+            .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
         ChromeParser::parse(raw, data)
     }
     fn chrome(raw: &RawLauncher) -> Result<HashSet<AppData>, SherlockError> {
         let path = home_dir()?.join(".config/google-chrome/Default/Bookmarks");
-        let data = fs::read_to_string(&path).map_err(|e| SherlockError {
-            error: SherlockErrorType::FileReadError(path),
-            traceback: format!("{}:{}\n{}", file!(), line!(), e.to_string()),
-        })?;
+        let data = fs::read_to_string(&path)
+            .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
         ChromeParser::parse(raw, data)
     }
 
@@ -76,9 +80,11 @@ impl BookmarkParser {
                 })
                 .next()
         }
-        let path = get_path().ok_or_else(|| SherlockError {
-            error: SherlockErrorType::FileExistError(PathBuf::from("~/.zen/../places.sqlite")),
-            traceback: format!("{}:{}\nFile does not exist.", file!(), line!()),
+        let path = get_path().ok_or_else(|| {
+            sherlock_error!(
+                SherlockErrorType::FileExistError(PathBuf::from("~/.zen/../places.sqlite")),
+                "File does not exist"
+            )
         })?;
         let parser = MozillaSqliteParser::new(path, "zen");
         parser.read(raw)
@@ -98,11 +104,13 @@ impl BookmarkParser {
                 })
                 .next()
         }
-        let path = get_path().ok_or_else(|| SherlockError {
-            error: SherlockErrorType::FileExistError(PathBuf::from(
-                "~/.mozilla/firefox//../places.sqlite",
-            )),
-            traceback: format!("{}:{}\nFile does not exist.", file!(), line!()),
+        let path = get_path().ok_or_else(|| {
+            sherlock_error!(
+                SherlockErrorType::FileExistError(PathBuf::from(
+                    "~/.mozilla/firefox//../places.sqlite",
+                )),
+                "File does not exist"
+            )
         })?;
         let parser = MozillaSqliteParser::new(path, "firefox");
         parser.read(raw)
@@ -135,10 +143,8 @@ impl MozillaSqliteParser {
             AND p.url IS NOT NULL
             AND b.parent != 7;
             ";
-        let conn = Connection::open(&self.path).map_err(|e| SherlockError {
-            error: SherlockErrorType::SqlConnectionError(),
-            traceback: format!("{}:{}\n{}", file!(), line!(), e.to_string()),
-        })?;
+        let conn = Connection::open(&self.path)
+            .map_err(|e| sherlock_error!(SherlockErrorType::SqlConnectionError(), e.to_string()))?;
 
         if let Ok(mut stmt) = conn.prepare(query) {
             let event_iter = stmt.query_map([], |row| {
@@ -158,12 +164,14 @@ impl MozillaSqliteParser {
                             .get("icon_class")
                             .and_then(|v| v.as_str())
                             .map(|s| s.to_string()),
-                        exec: row.1,
+                        exec: Some(row.1),
                         search_string: row.0,
                         tag_start: raw.tag_start.clone(),
                         tag_end: raw.tag_end.clone(),
                         desktop_file: None,
-                        priority: raw.priority,
+                        priority: raw.priority + 1.0,
+                        actions: vec![],
+                        terminal: false,
                     };
                     res.insert(bookmark);
                 }
@@ -171,22 +179,25 @@ impl MozillaSqliteParser {
         }
         Ok(res)
     }
-    fn should_update_cache(path: &PathBuf) -> bool {
-        if !path.exists() {
+    fn should_update_cache(dest: &PathBuf, source: &PathBuf) -> bool {
+        if !dest.exists() {
             return true;
         }
 
-        if let Ok(metadata) = fs::metadata(path) {
-            if let Ok(mod_time) = metadata.modified() {
-                if let Ok(age) = SystemTime::now().duration_since(mod_time) {
-                    return age.as_secs() > 1 * 24 * 60 * 60; // older than 2 days
-                }
-            }
+        let source_mod = fs::metadata(source)
+            .ok()
+            .and_then(|meta| meta.modified().ok());
+        let dest_mod = fs::metadata(dest)
+            .ok()
+            .and_then(|meta| meta.modified().ok());
+
+        if let (Some(source), Some(dest)) = (source_mod, dest_mod) {
+            return source > dest;
         }
         true
     }
     fn copy_if_needed(src: &PathBuf, dst: &PathBuf) {
-        if Self::should_update_cache(dst) {
+        if Self::should_update_cache(dst, src) {
             if let Some(parent) = dst.parent() {
                 let _ = fs::create_dir_all(parent);
             }
@@ -217,11 +228,8 @@ impl ChromeParser {
         }
 
         let mut bookmarks = HashSet::new();
-        let file =
-            serde_json::from_str::<parser::ChromeFile>(&data).map_err(|e| SherlockError {
-                error: SherlockErrorType::FlagLoadError,
-                traceback: format!("{}:{}\n{}", file!(), line!(), e.to_string()),
-            })?;
+        let file = serde_json::from_str::<parser::ChromeFile>(&data)
+            .map_err(|e| sherlock_error!(SherlockErrorType::FlagLoadError, e.to_string()))?;
 
         fn process_bookmark(
             raw: &RawLauncher,
@@ -246,12 +254,14 @@ impl ChromeParser {
                                 .get("icon_class")
                                 .and_then(|v| v.as_str())
                                 .map(|s| s.to_string()),
-                            exec: url.clone(),
+                            exec: Some(url.clone()),
                             search_string: format!("{};{}", bookmark.name, url),
                             tag_start: raw.tag_start.clone(),
                             tag_end: raw.tag_end.clone(),
                             desktop_file: None,
-                            priority: raw.priority,
+                            priority: raw.priority + 1.0,
+                            actions: vec![],
+                            terminal: false,
                         });
                     }
                 }

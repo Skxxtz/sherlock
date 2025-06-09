@@ -1,27 +1,30 @@
-// CRATES
-use gio::glib::MainContext;
+use api::call::ApiCall;
 use gio::prelude::*;
-use gtk4::prelude::{GtkApplicationExt, WidgetExt};
-use gtk4::Application;
+use gtk4::prelude::GtkApplicationExt;
+use gtk4::{glib, Application};
+use loader::pipe_loader::PipedData;
+use std::cell::RefCell;
+use std::collections::HashSet;
+use std::rc::Rc;
 use std::sync::OnceLock;
 use std::time::Instant;
-use std::{env, process, thread};
+use std::{env, process};
 use utils::config::SherlockFlags;
 
-// MODS
 mod actions;
+mod api;
 mod application;
 mod daemon;
 mod g_subclasses;
 mod launcher;
 mod loader;
+pub mod prelude;
 mod ui;
 mod utils;
 
-// IMPORTS
+use api::api::SherlockModes;
+use api::server::SherlockServer;
 use application::lock::{self, LockFile};
-use daemon::daemon::SherlockDaemon;
-use loader::pipe_loader::deserialize_pipe;
 use loader::Loader;
 use utils::{
     config::SherlockConfig,
@@ -29,6 +32,7 @@ use utils::{
 };
 
 const SOCKET_PATH: &str = "/tmp/sherlock_daemon.socket";
+const SOCKET_DIR: &str = "/tmp/";
 const LOCK_FILE: &str = "/tmp/sherlock.lock";
 
 static CONFIG: OnceLock<SherlockConfig> = OnceLock::new();
@@ -39,6 +43,7 @@ async fn main() {
         startup_loading();
     let t0 = Instant::now();
     application.connect_activate(move |app| {
+        let sherlock = Rc::new(RefCell::new(api::api::SherlockAPI::new(app)));
         let t1 = Instant::now();
         if let Ok(timing_enabled) = std::env::var("TIMING") {
             if timing_enabled == "true" {
@@ -59,100 +64,128 @@ async fn main() {
         non_breaking.extend(n);
 
         // Main logic for the Search-View
-        let (window, stack, current_stack_page) = ui::window::window(app);
+        let (window, stack, current_stack_page, open_win) = ui::window::window(app);
+        {
+            let mut sherlock = sherlock.borrow_mut();
+            sherlock.window = Some(window.downgrade());
+            sherlock.stack = Some(stack.downgrade());
+        }
 
         // Add closing logic
-        app.set_accels_for_action("win.close", &["<Ctrl>W", "Escape"]);
+        app.set_accels_for_action("win.close", &["<Ctrl>W"]);
 
         // Significantly better id done here
-        let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.open", None);
+        if let Some(window) = open_win.upgrade(){
+            let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.open", None);
+        }
 
-        // Either show user-specified content or show normal search
-        let (error_stack, error_model) = ui::error_view::errors(&error_list, &non_breaking, &current_stack_page);
-        let pipe = Loader::load_pipe_args();
-        let (search_stack, handler) = if pipe.is_empty() {
-            ui::search::search(&window, &current_stack_page, error_model)
-        } else {
-            if sherlock_flags.display_raw {
-                let pipe = String::from_utf8_lossy(&pipe);
-                ui::user::display_raw(pipe, sherlock_flags.center_raw, error_model)
-            } else {
-                let parsed = deserialize_pipe(pipe);
+        // Print messages if icon parsers aren't installed
+        let types: HashSet<String> = gdk_pixbuf::Pixbuf::formats().into_iter().filter_map(|f| f.name()).map(|s|s.to_string()).collect();
+        if !types.contains("svg") {
+            non_breaking.push(sherlock_error!(
+                SherlockErrorType::MissingIconParser(String::from("svg")),
+                format!("Icon parser for svg not found.\n\
+                This could hinder Sherlock from rendering .svg icons.\n\
+                Please ensure that \"librsvg\" is installed correctly.")
+            ));
+        }
+        if !types.contains("png") {
+            non_breaking.push(sherlock_error!(
+                SherlockErrorType::MissingIconParser(String::from("png")),
+                format!("Icon parser for png not found.\n\
+                This could hinder Sherlock from rendering .png icons.\n\
+                Please ensure that \"gdk-pixbuf2\" is installed correctly.")
+            ));
+        }
+
+        glib::MainContext::default().spawn_local({
+            let sherlock = Rc::clone(&sherlock);
+            async move {
+                // Either show user-specified content or show normal search
+                let (error_stack, error_model) = ui::error_view::errors(&error_list, &non_breaking, &current_stack_page, Rc::clone(&sherlock));
+                let (search_frame, _handler) = match ui::search::search(&window, &current_stack_page, error_model.clone(), Rc::clone(&sherlock)) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        error_model.upgrade().map(|stack| stack.append(&e.tile("ERROR")));
+                        return
+                    }
+                };
+                stack.add_named(&search_frame, Some("search-page"));
+                stack.add_named(&error_stack, Some("error-page"));
+
+
+                // Notify the user about the value not having any effect to avoid confusion
                 if let Some(c) = CONFIG.get() {
-                    let method: &str = c.pipe.method.as_deref().unwrap_or("print");
-                    ui::user::display_pipe(&window, parsed, method, error_model)
+                    let opacity = c.appearance.opacity;
+                    if !(0.1..=1.0).contains(&opacity) {
+                        non_breaking.push(sherlock_error!(
+                            SherlockErrorType::ConfigError(Some(format!(
+                                "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
+                                opacity,
+                                opacity.clamp(0.1, 1.0)
+                            ))),
+                            ""
+                        ));
+                    }
+                }
+
+                // Mode switching
+                // Logic for the Error-View
+                let error_view_active = if !app_config.debug.try_suppress_errors {
+                    let show_errors = !error_list.is_empty();
+                    let show_warnings = !app_config.debug.try_suppress_warnings && !non_breaking.is_empty();
+                    show_errors || show_warnings
                 } else {
-                    return;
+                    false
+                };
+                {
+                    let mut sherlock = sherlock.borrow_mut();
+                    let pipe = Loader::load_pipe_args();
+                    let mut mode: Option<SherlockModes> = None;
+                    if !pipe.is_empty() {
+                        if sherlock_flags.display_raw {
+                            let pipe = String::from_utf8_lossy(&pipe).to_string();
+                            mode = Some(SherlockModes::DisplayRaw(pipe));
+                        } else if let Some(mut data) = PipedData::new(&pipe){
+                            if let Some(settings) = data.settings.take(){
+                                settings.into_iter().for_each(|request| {
+                                    sherlock.await_request(request);
+                                });
+                            }
+                            mode = data.elements.take().map(|elements| SherlockModes::Pipe(elements));
+                        }
+                    };
+                    if let Some(mode) = mode {
+                        let request = ApiCall::SwitchMode(mode);
+                        sherlock.await_request(request);
+                    } else {
+                        let mode = SherlockModes::Search;
+                        let request = ApiCall::SwitchMode(mode);
+                        sherlock.await_request(request);
+                    }
+                    if error_view_active {
+                        let mode = SherlockModes::Error;
+                        let request = ApiCall::SwitchMode(mode);
+                        sherlock.await_request(request);
+                    }
+                    sherlock.flush();
                 }
             }
-        };
-        stack.add_named(&search_stack, Some("search-page"));
-
-        // Notify the user about the value not having any effect to avoid confusion
-        if let Some(c) = CONFIG.get() {
-            let opacity = c.appearance.opacity;
-
-            if !(0.1..=1.0).contains(&opacity) {
-                non_breaking.push(SherlockError {
-                    error: SherlockErrorType::ConfigError(Some(format!(
-                        "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
-                        opacity,
-                        opacity.clamp(0.1, 1.0)
-                    ))),
-                    traceback: String::new(),
-                });
-            }
-        }
-
-        // Logic for the Error-View
-        stack.add_named(&error_stack, Some("error-page"));
-        if !app_config.debug.try_suppress_errors {
-            let show_errors = !error_list.is_empty();
-            let show_warnings = !app_config.debug.try_suppress_warnings && !non_breaking.is_empty();
-            if show_errors || show_warnings {
-                let _ = gtk4::prelude::WidgetExt::activate_action(
-                    &window,
-                    "win.switch-page",
-                    Some(&String::from("->error-page").to_variant()),
-                );
-            } else {
-                let _ = gtk4::prelude::WidgetExt::activate_action(
-                    &window,
-                    "win.switch-page",
-                    Some(&String::from("->search-page").to_variant()),
-                );
-            }
-        }
+        });
 
         // Logic for handling the daemonization
-        if let Some(c) = CONFIG.get() {
-            if c.behavior.daemonize {
-                // Used to cache render
+        if app_config.behavior.daemonize {
+            // Used to cache render
+            if let Some(window) = open_win.upgrade() {
                 let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.open", None);
                 let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
-
-                window.connect_show({
-                    move |_window|{
-                    handler.populate();
-                }});
-                // Create async pipeline
-                let (sender, receiver) = async_channel::bounded(1);
-                thread::spawn(move || {
-                    async_std::task::block_on(async {
-                        let _daemon = SherlockDaemon::new(sender).await;
-                    });
-                });
-
-                // Handle receiving using pipline
-                MainContext::default().spawn_local(async move {
-                    while let Ok(_msg) = receiver.recv().await {
-                        let _ = gtk4::prelude::WidgetExt::activate_action(
-                            &window, "win.open", None,
-                        );
-                    }
-                });
             }
         }
+
+        // Spawn api listener
+        let _server = SherlockServer::listen(sherlock);
+
+        // Print Timing
         if let Ok(timing_enabled) = std::env::var("TIMING") {
             if timing_enabled == "true" {
                 println!("Window creation took {:?}", t1.elapsed());
@@ -176,8 +209,7 @@ fn startup_loading() -> (
     let mut startup_errors: Vec<SherlockError> = Vec::new();
 
     // Check for '.lock'-file to only start a single instance
-    let lock = lock::ensure_single_instance(LOCK_FILE).unwrap_or_else(|e| {
-        eprintln!("{}", e);
+    let lock = lock::ensure_single_instance(LOCK_FILE).unwrap_or_else(|_| {
         process::exit(1);
     });
 
@@ -202,10 +234,7 @@ fn startup_loading() -> (
     CONFIG
         .set(app_config.clone())
         .map_err(|_| {
-            startup_errors.push(SherlockError {
-                error: SherlockErrorType::ConfigError(None),
-                traceback: String::new(),
-            });
+            startup_errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
         })
         .ok();
 
@@ -215,10 +244,10 @@ fn startup_loading() -> (
         .ok();
 
     // Initialize application
-    let application = Application::new(
-        Some("dev.skxxtz.sherlock"),
-        gio::ApplicationFlags::HANDLES_COMMAND_LINE,
-    );
+    let application = Application::builder()
+        .application_id("dev.skxxtz.sherlock")
+        .flags(gio::ApplicationFlags::NON_UNIQUE | gio::ApplicationFlags::HANDLES_COMMAND_LINE)
+        .build();
 
     if let Some(config) = CONFIG.get() {
         env::set_var("GSK_RENDERER", &config.appearance.gsk_renderer);

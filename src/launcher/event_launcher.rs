@@ -1,12 +1,14 @@
 use chrono::{DateTime, Local, Utc};
 use rusqlite::Connection;
+use std::fs::create_dir_all;
 use std::{
     collections::HashMap,
-    env, fs,
+    env::{self, home_dir},
+    fs,
     path::{Path, PathBuf},
 };
 
-use crate::CONFIG;
+use crate::{loader::application_loader::file_has_changed, CONFIG};
 
 #[derive(Clone, Debug)]
 pub struct TeamsEvent {
@@ -27,7 +29,7 @@ impl EventLauncher {
         let calendar_client = CONFIG.get()?.default_apps.calendar_client.as_ref();
         match calendar_client {
             "thunderbird" => {
-                let thunderbird_manager = ThunderBirdEventManager::new();
+                let thunderbird_manager = ThunderBirdEventManager::new()?;
                 if let Some(path) = &thunderbird_manager.database_path {
                     match Connection::open(Path::new(path)) {
                         Ok(conn) => {
@@ -64,7 +66,7 @@ struct ThunderBirdEventManager {
     database_path: Option<PathBuf>,
 }
 impl ThunderBirdEventManager {
-    pub fn new() -> Self {
+    pub fn new() -> Option<Self> {
         let home = env::var("HOME").ok().map(PathBuf::from);
         if let Some(home) = home {
             let thunderbird_dir = home.join(".thunderbird");
@@ -79,22 +81,39 @@ impl ThunderBirdEventManager {
                                 .map(|n| n.ends_with(".default-release"))
                                 .unwrap_or(false)
                         {
-                            let database_path =
-                                Some(path.join("calendar-data").join("cache.sqlite"));
-                            return ThunderBirdEventManager { database_path };
+                            let database_path = path.join("calendar-data").join("cache.sqlite");
+                            // check if cached database exists
+                            let cached_path =
+                                home_dir()?.join(".cache/sherlock/calendar/cache.sqlite");
+                            // check if cached database was modified later than the uncached one
+                            let changed = if !cached_path.exists() {
+                                if let Some(parent) = cached_path.parent() {
+                                    let _ = create_dir_all(parent);
+                                }
+                                true
+                            } else {
+                                file_has_changed(&database_path, &cached_path)
+                            };
+                            if changed {
+                                let _ = std::fs::copy(database_path, &cached_path);
+                            }
+
+                            return Some(Self {
+                                database_path: Some(cached_path),
+                            });
                         }
                     }
                 }
                 Err(_) => {
-                    return ThunderBirdEventManager {
+                    return Some(Self {
                         database_path: None,
-                    }
+                    })
                 }
             }
         }
-        ThunderBirdEventManager {
+        Some(Self {
             database_path: None,
-        }
+        })
     }
 
     pub fn get_all_teams_events(

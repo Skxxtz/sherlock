@@ -7,25 +7,35 @@ pub mod bulk_text_launcher;
 pub mod calc_launcher;
 pub mod category_launcher;
 pub mod clipboard_launcher;
+pub mod emoji_picker;
 pub mod event_launcher;
+pub mod file_launcher;
 pub mod process_launcher;
 pub mod system_cmd_launcher;
+pub mod theme_picker;
 mod utils;
 pub mod weather_launcher;
 pub mod web_launcher;
 
-use crate::{g_subclasses::sherlock_row::SherlockRow, loader::util::RawLauncher, ui::tiles::Tile};
+use crate::{
+    g_subclasses::sherlock_row::SherlockRow,
+    loader::util::{ApplicationAction, RawLauncher},
+    ui::tiles::Tile,
+};
 
 use app_launcher::AppLauncher;
 use audio_launcher::MusicPlayerLauncher;
 use bookmark_launcher::BookmarkLauncher;
-use bulk_text_launcher::BulkTextLauncher;
+use bulk_text_launcher::{AsyncCommandResponse, BulkTextLauncher};
 use calc_launcher::CalculatorLauncher;
 use category_launcher::CategoryLauncher;
 use clipboard_launcher::ClipboardLauncher;
+use emoji_picker::EmojiPicker;
 use event_launcher::EventLauncher;
+use file_launcher::FileLauncher;
 use process_launcher::ProcessLauncher;
 use system_cmd_launcher::CommandLauncher;
+use theme_picker::ThemePicker;
 use weather_launcher::{WeatherData, WeatherLauncher};
 use web_launcher::WebLauncher;
 
@@ -38,9 +48,12 @@ pub enum LauncherType {
     Category(CategoryLauncher),
     Clipboard((ClipboardLauncher, CalculatorLauncher)),
     Command(CommandLauncher),
+    Emoji(EmojiPicker),
     Event(EventLauncher),
+    File(FileLauncher),
     MusicPlayer(MusicPlayerLauncher),
     Process(ProcessLauncher),
+    Theme(ThemePicker),
     Weather(WeatherLauncher),
     Web(WebLauncher),
     Empty,
@@ -72,6 +85,7 @@ pub struct Launcher {
     pub tag_start: Option<String>,
     pub tag_end: Option<String>,
     pub method: String,
+    pub exit: bool,
     pub next_content: Option<String>,
     pub priority: u32,
     pub r#async: bool,
@@ -80,6 +94,8 @@ pub struct Launcher {
     pub shortcut: bool,
     pub spawn_focus: bool,
     pub only_home: bool,
+    pub actions: Option<Vec<ApplicationAction>>,
+    pub add_actions: Option<Vec<ApplicationAction>>,
 }
 impl Launcher {
     pub fn from_raw(
@@ -95,6 +111,7 @@ impl Launcher {
             tag_start: raw.tag_start,
             tag_end: raw.tag_end,
             method,
+            exit: raw.exit,
             next_content: raw.next_content,
             priority: raw.priority as u32,
             r#async: raw.r#async,
@@ -103,13 +120,15 @@ impl Launcher {
             launcher_type,
             shortcut: raw.shortcut,
             spawn_focus: raw.spawn_focus,
+            actions: raw.actions,
+            add_actions: raw.add_actions,
         }
     }
 }
 
 impl Launcher {
     // TODO: tile method recreates already stored data...
-    pub fn get_patch(&self) -> Vec<SherlockRow> {
+    pub fn get_patch(&mut self) -> Vec<SherlockRow> {
         match &self.launcher_type {
             LauncherType::App(app) => Tile::app_tile(self, &app.apps),
             LauncherType::Bookmark(bmk) => Tile::app_tile(self, &bmk.bookmarks),
@@ -118,6 +137,9 @@ impl Launcher {
             LauncherType::Clipboard((clp, calc)) => Tile::clipboard_tile(self, &clp, &calc),
             LauncherType::Command(cmd) => Tile::app_tile(self, &cmd.commands),
             LauncherType::Event(evl) => Tile::event_tile(self, evl),
+            LauncherType::Emoji(emj) => Tile::app_tile(self, &emj.data),
+            LauncherType::File(f) => Tile::app_tile(self, &f.data),
+            LauncherType::Theme(thm) => Tile::app_tile(self, &thm.themes),
             LauncherType::Process(proc) => Tile::process_tile(self, &proc),
             LauncherType::Web(web) => Tile::web_tile(self, &web),
 
@@ -132,7 +154,8 @@ impl Launcher {
         // NOTE: make a function to check for exec changes in the caching algorithm
         match &self.launcher_type {
             LauncherType::App(app) => {
-                let execs: HashSet<String> = app.apps.iter().map(|v| v.exec.to_string()).collect();
+                let execs: HashSet<String> =
+                    app.apps.iter().filter_map(|v| v.exec.clone()).collect();
                 Some(execs)
             }
             LauncherType::Web(web) => {
@@ -142,12 +165,15 @@ impl Launcher {
             }
             LauncherType::Command(cmd) => {
                 let execs: HashSet<String> =
-                    cmd.commands.iter().map(|v| v.exec.to_string()).collect();
+                    cmd.commands.iter().filter_map(|v| v.exec.clone()).collect();
                 Some(execs)
             }
             LauncherType::Category(ctg) => {
-                let execs: HashSet<String> =
-                    ctg.categories.iter().map(|v| v.exec.to_string()).collect();
+                let execs: HashSet<String> = ctg
+                    .categories
+                    .iter()
+                    .filter_map(|v| v.exec.clone())
+                    .collect();
                 Some(execs)
             }
 
@@ -159,7 +185,7 @@ impl Launcher {
             _ => None,
         }
     }
-    pub async fn get_result(&self, keyword: &str) -> Option<(String, String, Option<String>)> {
+    pub async fn get_result(&self, keyword: &str) -> Option<AsyncCommandResponse> {
         match &self.launcher_type {
             LauncherType::BulkText(bulk_text) => bulk_text.get_result(keyword).await,
             _ => None,

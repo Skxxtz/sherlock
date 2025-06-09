@@ -3,8 +3,26 @@ use std::{
     process::{Command, Stdio},
 };
 
-pub fn applaunch(exec: &str) -> Option<()> {
-    let mut parts = exec
+use crate::CONFIG;
+
+pub fn applaunch(exec: &str, terminal: bool) -> Option<()> {
+    let config = CONFIG.get()?;
+    let mut parts = Vec::new();
+
+    if let Some(pre) = &config.behavior.global_prefix {
+        parts.push(pre.to_string());
+    }
+    if terminal {
+        parts.push(config.default_apps.terminal.clone());
+    }
+    parts.push(exec.to_string());
+    if let Some(flag) = &config.behavior.global_flags {
+        parts.push(flag.to_string());
+    }
+
+    let cmd = parts.join(" ").replace('"', "");
+
+    let mut parts = cmd
         .trim()
         .split_whitespace()
         .filter(|s| !s.starts_with("%"));

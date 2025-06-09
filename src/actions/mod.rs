@@ -1,13 +1,20 @@
-use std::collections::HashMap;
-
 use gio::glib::{object::IsA, variant::ToVariant};
 use gtk4::{prelude::WidgetExt, Widget};
+use std::collections::HashMap;
+use std::fs::File;
 use teamslaunch::teamslaunch;
 use util::{clear_cached_files, reset_app_counter};
 
 use crate::{
-    launcher::{audio_launcher::MusicPlayerLauncher, process_launcher::ProcessLauncher},
+    daemon::daemon::print_reponse,
+    launcher::{
+        audio_launcher::MusicPlayerLauncher, process_launcher::ProcessLauncher,
+        theme_picker::ThemePicker,
+    },
     loader::util::CounterReader,
+    sherlock_error,
+    utils::{errors::SherlockErrorType, files::home_dir},
+    CONFIG,
 };
 
 pub mod applaunch;
@@ -16,7 +23,11 @@ pub mod teamslaunch;
 pub mod util;
 pub mod websearch;
 
-pub fn execute_from_attrs<T: IsA<Widget>>(row: &T, attrs: &HashMap<String, String>) {
+pub fn execute_from_attrs<T: IsA<Widget>>(
+    row: &T,
+    attrs: &HashMap<String, String>,
+    do_exit: Option<bool>,
+) {
     //construct HashMap
     let attrs: HashMap<String, String> = attrs
         .into_iter()
@@ -24,58 +35,71 @@ pub fn execute_from_attrs<T: IsA<Widget>>(row: &T, attrs: &HashMap<String, Strin
         .collect();
 
     if let Some(method) = attrs.get("method") {
+        let mut exit = attrs.get("exit").map_or(true, |s| s == "true");
+
         match method.as_str() {
             "categories" => {
+                exit = false;
                 attrs.get("exec").map(|mode| {
                     let _ = row.activate_action("win.switch-mode", Some(&mode.to_variant()));
+                    let _ = row.activate_action("win.clear-search", None);
                 });
             }
             "app_launcher" => {
                 let exec = attrs.get("exec").map_or("", |s| s.as_str());
-                applaunch::applaunch(exec);
+                let term = attrs.get("term").map_or(false, |s| s.as_str() == "true");
+                applaunch::applaunch(exec, term);
                 increment(&exec);
-                eval_close(row);
             }
-            "bookmarks" => {
-                let query = attrs.get("exec").map_or("", |s| s.as_str());
+            "web_launcher" | "bookmarks" => {
                 let engine = attrs.get("engine").map_or("plain", |s| s.as_str());
-                let _ = websearch::websearch(engine, query);
-                eval_close(row);
-            }
-            "web_launcher" => {
-                let query = attrs.get("keyword").map_or("", |s| s.as_str());
-                let engine = attrs.get("engine").map_or("", |s| s.as_str());
-                let _ = websearch::websearch(engine, query);
-                let exec = format!("websearch-{}", engine);
-                increment(&exec);
-                eval_close(row);
+                let query = if let Some(query) = attrs.get("exec") {
+                    query.as_str()
+                } else if let Some(query) = attrs.get("keyword") {
+                    let exec = format!("websearch-{}", engine);
+                    increment(&exec);
+                    query.as_str()
+                } else {
+                    ""
+                };
+                if let Err(error) = websearch::websearch(engine, query) {
+                    exit = false;
+                    let _result = error.insert();
+                }
             }
             "command" => {
                 let exec = attrs.get("exec").map_or("", |s| s.as_str());
                 let keyword = attrs.get("keyword").map_or("", |s| s.as_str());
-                let _ = commandlaunch::command_launch(exec, keyword);
-                increment(&exec);
-                eval_close(row);
+                if let Err(error) = commandlaunch::command_launch(exec, keyword) {
+                    exit = false;
+                    let _result = error.insert();
+                } else {
+                    increment(&exec);
+                }
             }
             "copy" => {
-                if let Some(field) = attrs.get("field") {
+                let field = attrs
+                    .get("field")
+                    .or(CONFIG.get().and_then(|c| c.behavior.field.as_ref()));
+                if let Some(field) = field {
                     if let Some(output) = attrs.get(field) {
                         let _ = util::copy_to_clipboard(output.as_str());
                     }
-                } else if let Some(result) = attrs.get("result") {
-                    let _ = util::copy_to_clipboard(result.as_str());
+                } else if let Some(output) = attrs.get("result").or(attrs.get("exec")) {
+                    if let Err(err) = util::copy_to_clipboard(output.as_str()) {
+                        exit = false;
+                        let _result = err.insert();
+                    }
                 }
-                eval_close(row);
             }
             "print" => {
                 if let Some(field) = attrs.get("field") {
                     if let Some(output) = attrs.get(field) {
-                        print!("{}", output);
+                        let _result = print_reponse(output);
                     }
-                } else if let Some(result) = attrs.get("result") {
-                    print!("{}", result);
+                } else if let Some(output) = attrs.get("result").or(attrs.get("exec")) {
+                    let _result = print_reponse(output);
                 }
-                eval_close(row);
             }
             "teams_event" => {
                 if let Some(meeting) = attrs.get("meeting_url") {
@@ -92,7 +116,26 @@ pub fn execute_from_attrs<T: IsA<Widget>>(row: &T, attrs: &HashMap<String, Strin
                     }
                 }
             }
+            "emoji_picker" => {
+                exit = false;
+                let _ = row.activate_action("win.emoji-page", None);
+                let _ = row.activate_action(
+                    "win.switch-page",
+                    Some(&String::from("search-page->emoji-page").to_variant()),
+                );
+            }
+            "theme_picker" => {
+                if let Some(theme) = attrs.get("result").or(attrs.get("exec")) {
+                    if let Err(error) = ThemePicker::select_theme(theme) {
+                        exit = false;
+                        let _result = error.insert();
+                    }
+                } else {
+                    exit = false;
+                }
+            }
             "next" => {
+                exit = false;
                 let next_content = attrs
                     .get("next_content")
                     .map_or("No next_content provided...", |s| s.trim());
@@ -101,37 +144,73 @@ pub fn execute_from_attrs<T: IsA<Widget>>(row: &T, attrs: &HashMap<String, Strin
                     .activate_action("win.add-page", Some(&next_content.to_string().to_variant()));
             }
             "play-pause" | "audio_sink" => {
-                attrs
-                    .get("player")
-                    .map(|player| MusicPlayerLauncher::playpause(player));
+                if let Some(player) = attrs.get("player") {
+                    if let Err(error) = MusicPlayerLauncher::playpause(player) {
+                        exit = false;
+                        let _result = error.insert();
+                    }
+                }
             }
             "kill-process" => {
-                let _ = attrs
+                if let Some((ppid, cpid)) = attrs
                     .get("parent-pid")
                     .and_then(|p| p.parse::<i32>().ok())
                     .zip(attrs.get("child-pid").and_then(|c| c.parse::<i32>().ok()))
-                    .map(|(ppid, cpid)| ProcessLauncher::kill((ppid, cpid)));
-                eval_close(row);
+                {
+                    if let Err(error) = ProcessLauncher::kill((ppid, cpid)) {
+                        let _result = error.insert();
+                    }
+                };
             }
             "debug" => {
                 let exec = attrs.get("exec").map_or("", |s| s.as_str());
                 match exec {
                     "show_errors" => {
-                        let _result = row.activate_action(
+                        exit = false;
+                        if let Ok(_) = row.activate_action(
                             "win.switch-page",
                             Some(&String::from("search-page->error-page").to_variant()),
-                        );
-                        increment("debug.show_errors");
+                        ) {
+                            increment("debug.show_errors");
+                        }
                     }
                     "clear_cache" => {
-                        let _result = clear_cached_files();
-                        increment("debug.clear_cache");
-                        eval_close(row);
+                        if let Err(error) = clear_cached_files() {
+                            let _result = error.insert();
+                        } else {
+                            increment("debug.clear_cache");
+                        }
                     }
                     "reset_counts" => {
-                        let _result = reset_app_counter();
-                        eval_close(row);
-                        increment("debug.reset_counts");
+                        if let Err(error) = reset_app_counter() {
+                            let _result = error.insert();
+                        } else {
+                            increment("debug.reset_counts");
+                        }
+                    }
+                    "reset_log" => {
+                        if let Ok(home) = home_dir() {
+                            let file = home.join(".sherlock/sherlock.log");
+                            if file.is_file() {
+                                if let Err(err) = File::create(&file).map_err(|e| {
+                                    sherlock_error!(
+                                        SherlockErrorType::FileWriteError(file.clone()),
+                                        e.to_string()
+                                    )
+                                }) {
+                                    exit = false;
+                                    let _result = err.insert();
+                                }
+                            }
+                        }
+                    }
+                    "test_error" => {
+                        exit = false;
+                        let err = sherlock_error!(
+                            SherlockErrorType::DebugError(String::from("Test Error")),
+                            format!("This is a test error message, it can be disregarded.")
+                        );
+                        let _result = err.insert();
                     }
                     _ => {}
                 }
@@ -141,19 +220,30 @@ pub fn execute_from_attrs<T: IsA<Widget>>(row: &T, attrs: &HashMap<String, Strin
             }
             _ => {
                 if let Some(out) = attrs.get("result") {
-                    print!("{}", out);
+                    let _result = print_reponse(out);
                 } else {
-                    println!("Return method \"{}\" not recognized", method);
+                    let out = format!("Return method \"{}\" not recognized", method);
+                    let _result = print_reponse(out);
                 }
-                eval_close(row);
             }
+        }
+
+        exit = do_exit.unwrap_or(exit);
+        if exit {
+            eval_close(row);
         }
     }
 }
-pub fn get_attrs_map(in_attrs: Vec<(&str, &str)>) -> HashMap<String, String> {
+pub fn get_attrs_map(in_attrs: Vec<(&str, Option<&str>)>) -> HashMap<String, String> {
     in_attrs
         .into_iter()
-        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .filter_map(|(k, v)| {
+            if let (k, Some(v)) = (k, v) {
+                Some((k.to_string(), v.to_string()))
+            } else {
+                None
+            }
+        })
         .collect()
 }
 fn increment(key: &str) {

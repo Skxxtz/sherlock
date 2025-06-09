@@ -1,3 +1,4 @@
+use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::Bytes;
 use gtk4::{gdk, prelude::*, Image};
 use regex::Regex;
@@ -8,8 +9,9 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::calc_launcher::CalculatorLauncher;
 use crate::launcher::clipboard_launcher::ClipboardLauncher;
 use crate::launcher::Launcher;
+use crate::prelude::IconComp;
 
-use super::util::TileBuilder;
+use super::app_tile::AppTile;
 use super::Tile;
 
 struct RGB {
@@ -94,8 +96,7 @@ impl Tile {
         calc: &CalculatorLauncher,
     ) -> Vec<SherlockRow> {
         let mut results: Vec<SherlockRow> = Vec::with_capacity(1);
-        let mut is_valid = false;
-        let clipboard_content = &clp.clipboard_content;
+        let mut clipboard_content: String = clp.clipboard_content.clone();
         let capabilities: HashSet<&str> = match &clp.capabilities {
             Some(c) => c.iter().map(|s| s.as_str()).collect(),
             _ => HashSet::from(["url", "calc.math", "calc.units", "colors.all"]),
@@ -103,7 +104,8 @@ impl Tile {
 
         //TODO implement searchstring before clipboard content
         if !clipboard_content.is_empty() {
-            let mut builder = TileBuilder::default();
+            let mut app_tile: Option<AppTile> = None;
+            let mut row: Option<SherlockRow> = None;
             let name = "From Clipboard";
             let mut method = "";
             let mut icon = "";
@@ -120,28 +122,37 @@ impl Tile {
             let url_re = Regex::new(url_raw).unwrap();
             let color_re = Regex::new(color_raw).unwrap();
             if capabilities.contains("url") {
-                if let Some(captures) = url_re.captures(clipboard_content) {
+                if let Some(captures) = url_re.captures(&clipboard_content) {
                     if let Some(main_domain) = captures.get(3) {
                         // setting up builder
-                        builder = TileBuilder::new("/dev/skxxtz/sherlock/ui/tile.ui");
-                        builder.object.set_spawn_focus(launcher.spawn_focus);
-                        builder.object.set_shortcut(launcher.shortcut);
+                        let tile = AppTile::new();
+                        let object = SherlockRow::new();
+                        object.append(&tile);
 
-                        is_valid = true;
+                        object.with_launcher(launcher);
+                        object.set_search(&clipboard_content);
+
                         method = "web_launcher";
                         let main_domain = main_domain.as_str();
                         icon = known_pages.get(main_domain).map_or("sherlock-link", |m| m);
+                        app_tile = Some(tile);
+                        row = Some(object);
                     }
                 };
             };
-            if !is_valid {
-                if let Some(captures) = color_re.captures(clipboard_content) {
+            if app_tile.is_none() {
+                if let Some(captures) = color_re.captures(&clipboard_content) {
                     // Groups: 2: RGB, 3: HSL, 4: HEX
-                    let rgb = if let Some(rgb) = captures.get(2) {
+                    let rgb = if clipboard_content.len() > 20 {
+                        None
+                    } else if let Some(rgb) = captures.get(2) {
                         if capabilities.contains("colors.rgb")
                             || capabilities.contains("colors.all")
                         {
-                            Some(RGB::from_str(rgb.as_str()))
+                            Some((
+                                RGB::from_str(rgb.as_str()),
+                                format!("rbg({})", rgb.as_str().trim()),
+                            ))
                         } else {
                             None
                         }
@@ -165,7 +176,7 @@ impl Tile {
                                         tmp = 0;
                                     }
                                 });
-                            Some(RGB::from_hsl(res))
+                            Some((RGB::from_hsl(res), format!("hsl({})", hsl.as_str().trim())))
                         } else {
                             None
                         }
@@ -173,7 +184,10 @@ impl Tile {
                         if capabilities.contains("colors.hex")
                             || capabilities.contains("colors.all")
                         {
-                            Some(RGB::from_hex(hex.as_str()))
+                            Some((
+                                RGB::from_hex(hex.as_str()),
+                                format!("#{}", hex.as_str().trim()),
+                            ))
                         } else {
                             None
                         }
@@ -181,10 +195,17 @@ impl Tile {
                         None
                     };
 
-                    if let Some(rgb) = rgb {
-                        builder = TileBuilder::new("/dev/skxxtz/sherlock/ui/tile.ui");
-                        builder.object.with_launcher(launcher);
-                        builder.object.set_search(clipboard_content);
+                    if let Some((rgb, raw)) = rgb {
+                        let tile = AppTile::new();
+                        let imp = tile.imp();
+                        let object = SherlockRow::new();
+                        object.append(&tile);
+
+                        object.with_launcher(launcher);
+                        object.set_spawn_focus(false);
+                        object.set_search(&raw);
+
+                        clipboard_content = raw;
 
                         let pix_buf = rgb.to_vec();
                         let image_buf = gdk::gdk_pixbuf::Pixbuf::from_bytes(
@@ -204,85 +225,64 @@ impl Tile {
                             image.set_widget_name("icon");
                             image.set_pixel_size(22);
 
-                            builder
-                                .icon_holder
-                                .as_ref()
-                                .and_then(|tmp| tmp.upgrade())
-                                .map(|holder| {
-                                    holder.append(&image);
-                                    holder.set_overflow(gtk4::Overflow::Hidden);
-                                    holder.set_widget_name("color-icon-holder");
-                                });
-                            builder
-                                .icon
-                                .as_ref()
-                                .and_then(|tmp| tmp.upgrade())
-                                .map(|icon| icon.set_visible(false));
-                            is_valid = true;
+                            let holder = &imp.icon_holder;
+                            holder.append(&image);
+                            holder.set_overflow(gtk4::Overflow::Hidden);
+                            holder.set_widget_name("color-icon-holder");
+
+                            imp.icon.set_visible(false);
+
+                            app_tile = Some(tile);
+                            row = Some(object)
                         };
                     }
                 }
             };
-            if !is_valid {
+            if let (Some(tile), Some(object)) = (app_tile, row) {
+                let imp = tile.imp();
+                imp.category.set_visible(!name.is_empty());
+                imp.category.set_text(name);
+
+                imp.title.set_text(&clipboard_content);
+
+                imp.icon.set_icon(Some(icon), None, None);
+                imp.icon.set_pixel_size(15);
+
+                // Add action capabilities
+                let attrs = get_attrs_map(vec![
+                    ("method", Some(method)),
+                    ("keyword", Some(&clipboard_content)),
+                    ("engine", Some("plain")),
+                ]);
+
+                object.connect_local("row-should-activate", false, move |args| {
+                    let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+                    let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                    let param: Option<bool> = match param {
+                        1 => Some(false),
+                        2 => Some(true),
+                        _ => None,
+                    };
+                    execute_from_attrs(&row, &attrs, param);
+                    None
+                });
+
+                if launcher.shortcut {
+                    object.set_shortcut_holder(Some(imp.shortcut_holder.downgrade()));
+                }
+                results.push(object);
+            } else {
                 // calc capabilities will be checked inside of calc tile
                 let mut calc_tile = Tile::calc_tile(launcher, calc);
                 if calc_tile.len() >= 1 {
                     let tile = calc_tile.remove(0);
-                    if tile.update(clipboard_content) {
+                    // first update checks if the content is valid. then unsets
+                    if tile.update(&clipboard_content) {
                         tile.set_only_home(true);
+                        tile.set_update(|_| false);
                         results.push(tile)
                     }
                 }
-            } else {
-                builder
-                    .category
-                    .as_ref()
-                    .and_then(|tmp| tmp.upgrade())
-                    .map(|category| {
-                        category.set_visible(!name.is_empty());
-                        category.set_text(name);
-                    });
-
-                builder
-                    .icon
-                    .as_ref()
-                    .and_then(|tmp| tmp.upgrade())
-                    .map(|ico| {
-                        if icon.starts_with("/") {
-                            ico.set_from_file(Some(&icon));
-                        } else {
-                            ico.set_icon_name(Some(&icon));
-                        }
-                        ico.set_pixel_size(15);
-                    });
-                builder
-                    .title
-                    .as_ref()
-                    .and_then(|tmp| tmp.upgrade())
-                    .map(|title| title.set_text(clipboard_content));
-
-                // Add action capabilities
-                let attrs = get_attrs_map(vec![
-                    ("method", method),
-                    ("keyword", clipboard_content),
-                    ("engine", "plain"),
-                ]);
-
-                builder.object.with_launcher(&launcher);
-                builder
-                    .object
-                    .connect_local("row-should-activate", false, move |row| {
-                        let row = row.first().map(|f| f.get::<SherlockRow>().ok())??;
-                        execute_from_attrs(&row, &attrs);
-                        None
-                    });
-                let update_closure = |_: &str| -> bool { true };
-                builder.object.set_update(update_closure);
-
-                if launcher.shortcut {
-                    builder.object.set_shortcut_holder(builder.shortcut_holder);
-                }
-                results.push(builder.object);
             }
         }
 

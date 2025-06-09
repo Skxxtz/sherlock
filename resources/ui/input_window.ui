@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="InputWindow" parent="GtkApplicationWindow">
+        <property name="default-width">500</property>
+        <property name="default-height">50</property>
+        <child>
+            <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                    <object class="GtkEntry" id="input">
+                        <property name="vexpand">true</property>
+                        <property name="hexpand">true</property>
+                        <property name="margin-start">10</property>
+                        <property name="margin-end">10</property>
+                    </object>
+                </child>
+            </object>
+        </child>
+    </template>
+</interface>
+

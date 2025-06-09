@@ -1,19 +1,13 @@
 use std::{
     env,
     fs::File,
-    io::{self, BufRead, BufReader, Read},
+    io::{self, BufRead},
     path::{Path, PathBuf},
 };
 
-use super::errors::{SherlockError, SherlockErrorType};
+use crate::sherlock_error;
 
-pub fn read_file(file_path: &str) -> std::io::Result<String> {
-    let file = File::open(file_path)?;
-    let mut reader = BufReader::new(file);
-    let mut content = String::new();
-    reader.read_to_string(&mut content)?;
-    Ok(content)
-}
+use super::errors::{SherlockError, SherlockErrorType};
 
 pub fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
@@ -33,9 +27,11 @@ pub fn expand_path(path: &Path, home: &Path) -> PathBuf {
 }
 pub fn home_dir() -> Result<PathBuf, SherlockError> {
     env::var("HOME")
-        .map_err(|e| SherlockError {
-            error: SherlockErrorType::EnvVarNotFoundError(String::from("HOME")),
-            traceback: e.to_string(),
+        .map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::EnvVarNotFoundError(String::from("HOME")),
+                e.to_string()
+            )
         })
         .map(PathBuf::from)
 }

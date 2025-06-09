@@ -2,8 +2,10 @@ use serde::{
     de::{DeserializeOwned, MapAccess, Visitor},
     Deserialize, Deserializer, Serialize,
 };
+use serde_json::Value;
 use std::{
-    collections::{HashMap, HashSet},
+    borrow::Cow,
+    collections::{BTreeSet, HashMap, HashSet},
     env,
     fmt::Debug,
     fs::{self, File},
@@ -11,9 +13,12 @@ use std::{
     path::PathBuf,
 };
 
-use crate::utils::{
-    errors::{SherlockError, SherlockErrorType},
-    files::{expand_path, home_dir},
+use crate::{
+    sherlock_error,
+    utils::{
+        errors::{SherlockError, SherlockErrorType},
+        files::{expand_path, home_dir},
+    },
 };
 
 #[derive(Deserialize, Debug)]
@@ -29,6 +34,8 @@ pub struct RawLauncher {
     pub priority: f32,
 
     #[serde(default = "default_true")]
+    pub exit: bool,
+    #[serde(default = "default_true")]
     pub shortcut: bool,
     #[serde(default = "default_true")]
     pub spawn_focus: bool,
@@ -40,29 +47,167 @@ pub struct RawLauncher {
     pub only_home: bool,
     #[serde(default)]
     pub args: serde_json::Value,
+    #[serde(default)]
+    pub actions: Option<Vec<ApplicationAction>>,
+    #[serde(default)]
+    pub add_actions: Option<Vec<ApplicationAction>>,
 }
 fn default_true() -> bool {
     true
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ApplicationAction {
+    pub name: Option<String>,
+    pub exec: Option<String>,
+    pub icon: Option<String>,
+    pub method: String,
+    #[serde(default = "default_true")]
+    pub exit: bool,
+}
+impl ApplicationAction {
+    pub fn new(method: &str) -> Self {
+        Self {
+            name: None,
+            exec: None,
+            icon: None,
+            method: method.to_string(),
+            exit: true,
+        }
+    }
+    pub fn is_valid(&self) -> bool {
+        self.name.is_some() && self.exec.is_some()
+    }
+    pub fn is_full(&self) -> bool {
+        self.name.is_some() && self.exec.is_some() && self.icon.is_some()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AppData {
     #[serde(default)]
     pub name: String,
+    pub exec: Option<String>,
+    pub search_string: String,
+    #[serde(default)]
+    pub priority: f32,
     pub icon: Option<String>,
     pub icon_class: Option<String>,
-    pub exec: String,
-    pub search_string: String,
     pub tag_start: Option<String>,
     pub tag_end: Option<String>,
     pub desktop_file: Option<PathBuf>,
     #[serde(default)]
-    pub priority: f32,
+    pub actions: Vec<ApplicationAction>,
+    #[serde(default)]
+    pub terminal: bool,
 }
 impl AppData {
+    pub fn new() -> Self {
+        Self {
+            name: String::new(),
+            exec: None,
+            search_string: String::new(),
+            priority: 0.0,
+            icon: None,
+            icon_class: None,
+            tag_start: None,
+            tag_end: None,
+            desktop_file: None,
+            actions: vec![],
+            terminal: false,
+        }
+    }
+    pub fn new_for_theme<'a, T, S>(name: T, path: Option<S>, priority: f32) -> Self
+    where
+        T: Into<Cow<'a, str>>,
+        S: Into<Cow<'a, str>>,
+    {
+        let name: Cow<'a, str> = name.into();
+        let path = path.map(|s| s.into().into_owned());
+        let name_string = name.into_owned();
+        Self {
+            name: name_string.clone(),
+            exec: path,
+            search_string: name_string,
+            priority,
+            icon: Some(String::from("sherlock-devtools")),
+            icon_class: None,
+            tag_start: None,
+            tag_end: None,
+            desktop_file: None,
+            actions: vec![],
+            terminal: false,
+        }
+    }
+    pub fn from_raw_launcher(raw: &RawLauncher) -> Self {
+        let mut data = Self::new();
+        data.priority = raw.priority;
+        data.name = raw.name.as_deref().unwrap_or("").to_string();
+        data.icon = raw
+            .args
+            .get("icon")
+            .and_then(Value::as_str)
+            .map(|s| s.to_string());
+        data.icon_class = raw
+            .args
+            .get("icon_class")
+            .and_then(Value::as_str)
+            .map(|s| s.to_string());
+        data.tag_start = raw.tag_start.clone();
+        data.tag_end = raw.tag_end.clone();
+        data.actions = raw.actions.clone().unwrap_or(vec![]);
+        let search = format!(
+            "{};{}",
+            raw.name.as_deref().unwrap_or(""),
+            raw.args
+                .get("search_string")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+        );
+        data.search_string = search;
+        data
+    }
     pub fn with_priority(mut self, priority: f32) -> Self {
         self.priority = priority;
         self
+    }
+    pub fn apply_alias(&mut self, alias: Option<SherlockAlias>) {
+        if let Some(alias) = alias {
+            if let Some(alias_name) = alias.name.as_ref() {
+                self.name = alias_name.to_string();
+            }
+            if let Some(alias_icon) = alias.icon.as_ref() {
+                self.icon = Some(alias_icon.to_string());
+            }
+            if let Some(alias_keywords) = alias.keywords.as_ref() {
+                self.search_string = format!("{};{}", self.name, alias_keywords)
+            } else {
+                self.search_string = format!("{};{}", self.name, self.search_string);
+            }
+            if let Some(alias_exec) = alias.exec.as_ref() {
+                self.exec = Some(alias_exec.to_string());
+            }
+            if let Some(add_actions) = alias.add_actions {
+                add_actions.into_iter().for_each(|mut a| {
+                    if a.icon.is_none() {
+                        a.icon = self.icon.clone();
+                    }
+                    self.actions.push(a);
+                });
+            }
+            if let Some(actions) = alias.actions {
+                self.actions = actions
+                    .into_iter()
+                    .map(|mut a| {
+                        if a.icon.is_none() {
+                            a.icon = self.icon.clone();
+                        }
+                        a
+                    })
+                    .collect();
+            }
+        } else {
+            self.search_string = format!("{};{}", self.name, self.search_string);
+        }
     }
 }
 impl Eq for AppData {}
@@ -107,6 +252,8 @@ pub struct SherlockAlias {
     pub icon: Option<String>,
     pub exec: Option<String>,
     pub keywords: Option<String>,
+    pub actions: Option<Vec<ApplicationAction>>,
+    pub add_actions: Option<Vec<ApplicationAction>>,
 }
 
 pub struct CounterReader {
@@ -114,23 +261,42 @@ pub struct CounterReader {
 }
 impl CounterReader {
     pub fn new() -> Result<Self, SherlockError> {
-        let home = env::var("HOME").map_err(|e| SherlockError {
-            error: SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-            traceback: e.to_string(),
+        let home = env::var("HOME").map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
+                e.to_string()
+            )
         })?;
         let home_dir = PathBuf::from(home);
         let path = home_dir.join(".sherlock/counts.json");
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).map_err(|e| SherlockError {
-                error: SherlockErrorType::DirCreateError(".sherlock".to_string()),
-                traceback: e.to_string(),
+            fs::create_dir_all(parent).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    e.to_string()
+                )
             })?;
         }
         Ok(CounterReader { path })
     }
     pub fn increment(&self, key: &str) -> Result<(), SherlockError> {
-        let mut content: HashMap<String, f32> = JsonCache::read(&self.path)?;
-        *content.entry(key.to_string()).or_insert(0.0) += 1.0;
+        let mut content: HashMap<String, u32> = JsonCache::read(&self.path)?;
+        let unique_values: HashMap<u32, u32> = content
+            .values()
+            .copied()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .enumerate()
+            .map(|(i, v)| (v, (i + 1) as u32))
+            .collect();
+
+        content.iter_mut().for_each(|(_, v)| {
+            if let Some(new) = unique_values.get(v) {
+                *v = new.clone();
+            }
+        });
+
+        *content.entry(key.to_string()).or_insert(0) += 1;
         JsonCache::write(&self.path, &content)?;
         Ok(())
     }
@@ -159,17 +325,13 @@ impl JsonCache {
         let home = home_dir()?;
         let path = expand_path(path, &home);
 
-        let file = if path.exists() {
-            File::open(&path)
-        } else {
-            println!("{:?}", path);
-            File::create(&path)
-        }
-        .map_err(|e| SherlockError {
-            error: SherlockErrorType::FileExistError(path.clone()),
-            traceback: e.to_string(),
+        let file = File::open(&path).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileExistError(path.clone()),
+                e.to_string()
+            )
         })?;
-        let res: Result<T, simd_json::Error> = simd_json::from_reader(file);
-        Ok(res.unwrap_or_default())
+        simd_json::from_reader(file)
+            .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))
     }
 }

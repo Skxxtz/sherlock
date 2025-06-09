@@ -1,23 +1,23 @@
 use gtk4::gdk::Display;
 use gtk4::CssProvider;
-use std::path::Path;
+use std::fs::read_to_string;
+use std::path::{Path, PathBuf};
 
 use super::Loader;
+use crate::launcher::theme_picker::ThemePicker;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::CONFIG;
+use crate::{sherlock_error, CONFIG};
 
 impl Loader {
     pub fn load_css() -> Result<Vec<SherlockError>, SherlockError> {
         let mut non_breaking: Vec<SherlockError> = Vec::new();
         let provider = CssProvider::new();
 
-        let config = CONFIG.get().ok_or_else(|| SherlockError {
-            error: SherlockErrorType::ConfigError(None),
-            traceback: String::new(),
-        })?;
-        let display = Display::default().ok_or_else(|| SherlockError {
-            error: SherlockErrorType::DisplayError,
-            traceback: "No display available".to_string(),
+        let config = CONFIG
+            .get()
+            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+        let display = Display::default().ok_or_else(|| {
+            sherlock_error!(SherlockErrorType::DisplayError, "No display available")
         })?;
 
         // Load the base line css
@@ -31,19 +31,24 @@ impl Loader {
         }
 
         // Load the user css
-        if Path::new(&config.files.css).exists() {
+        let theme = match ThemePicker::get_cached() {
+            Ok(loc) => read_to_string(loc).map(|s| PathBuf::from(s.trim())).ok(),
+            _ => None,
+        }
+        .unwrap_or(config.files.css.clone());
+        if Path::new(&theme).exists() {
             let usr_provider = CssProvider::new();
-            usr_provider.load_from_path(&config.files.css);
+            usr_provider.load_from_path(&theme);
             gtk4::style_context_add_provider_for_display(
                 &display,
                 &usr_provider,
                 gtk4::STYLE_PROVIDER_PRIORITY_USER,
             );
         } else {
-            non_breaking.push(SherlockError {
-                error: SherlockErrorType::FileExistError(config.files.css.clone()),
-                traceback: String::from("Using default css"),
-            });
+            non_breaking.push(sherlock_error!(
+                SherlockErrorType::FileExistError(config.files.css.clone()),
+                "Using default css"
+            ));
         }
 
         drop(provider);

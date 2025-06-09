@@ -1,50 +1,77 @@
-use std::{fmt::Debug, path::PathBuf};
+use std::{fmt::Debug, os::unix::net::UnixStream, path::PathBuf};
 
-use gtk4::prelude::WidgetExt;
+use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::prelude::{BoxExt, WidgetExt};
+use serde::{Deserialize, Serialize};
 
-use crate::{g_subclasses::sherlock_row::SherlockRow, ui::tiles::util::TileBuilder};
+use crate::{
+    api::call::ApiCall, daemon::daemon::SizedMessage, g_subclasses::sherlock_row::SherlockRow,
+    ui::tiles::error_tile::ErrorTile, SOCKET_PATH,
+};
 
-#[derive(Clone, Debug)]
+#[macro_export]
+macro_rules! sherlock_error {
+    ($errtype:expr, $source:expr) => {
+        $crate::SherlockError::new($errtype, $source, file!(), line!())
+    };
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SherlockError {
     pub error: SherlockErrorType,
     pub traceback: String,
 }
 impl SherlockError {
+    pub fn new<T: AsRef<str>>(error: SherlockErrorType, source: T, file: &str, line: u32) -> Self {
+        Self {
+            error,
+            traceback: format!(
+                "Location: {}:{}\n─────────────────────────\n{}",
+                file,
+                line,
+                source.as_ref()
+            ),
+        }
+    }
     pub fn tile(&self, tile_type: &str) -> SherlockRow {
-        let builder = TileBuilder::new("/dev/skxxtz/sherlock/ui/error_tile.ui");
+        let tile = ErrorTile::new();
+        let imp = tile.imp();
+        let object = SherlockRow::new();
+        object.append(&tile);
 
         if let Some((class, icon)) = match tile_type {
             "ERROR" => Some(("error", "🚨")),
             "WARNING" => Some(("warning", "⚠️")),
             _ => None,
         } {
-            builder.object.set_css_classes(&["error-tile", class]);
+            object.set_css_classes(&["error-tile", class]);
             let (name, message) = self.error.get_message();
-            builder
-                .title
-                .as_ref()
-                .and_then(|tmp| tmp.upgrade())
-                .map(|title| {
-                    title.set_text(format!("{:5}{}:  {}", icon, tile_type, name).as_str())
-                });
-            builder
-                .content_title
-                .as_ref()
-                .and_then(|tmp| tmp.upgrade())
-                .map(|title| title.set_text(&message));
-            builder
-                .content_body
-                .as_ref()
-                .and_then(|tmp| tmp.upgrade())
-                .map(|body| body.set_text(self.traceback.trim()));
+            imp.title
+                .set_text(format!("{:5}{}:  {}", icon, tile_type, name).as_str());
+            imp.content_title.set_text(&message);
+            imp.content_body.set_text(self.traceback.trim());
         }
-        builder.object
+        object
+    }
+    pub fn insert(self) -> Result<(), SherlockError> {
+        let mut stream = UnixStream::connect(SOCKET_PATH).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::SocketConnectError(SOCKET_PATH.to_string()),
+                e.to_string()
+            )
+        })?;
+        let err = ApiCall::SherlockError(self);
+        let msg = serde_json::to_string(&err)
+            .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))?;
+        stream.write_sized(msg.as_bytes())?;
+        Ok(())
     }
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SherlockErrorType {
+    // Debug
+    DebugError(String),
     // Environment
     EnvVarNotFoundError(String),
 
@@ -93,6 +120,16 @@ pub enum SherlockErrorType {
 
     // Sqlite
     SqlConnectionError(),
+
+    // (De-) Serialization
+    SerializationError,
+    DeserializationError,
+
+    // Apps
+    UnsupportedBrowser(String),
+
+    // Icons
+    MissingIconParser(String),
 }
 impl std::fmt::Display for SherlockError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -119,6 +156,8 @@ impl SherlockErrorType {
             format!("Failed to {} socket at location \"{}\"", action, socket)
         }
         let message = match self {
+            // Debug
+            SherlockErrorType::DebugError(msg) => msg.to_string(),
             // Environment
             SherlockErrorType::EnvVarNotFoundError(var) => {
                 format!("Failed to unpack environment variable \"{}\"", var)
@@ -187,7 +226,30 @@ impl SherlockErrorType {
             SherlockErrorType::SqlConnectionError() => {
                 format!("Failed to estblish database connection.")
             }
+
+            // (De-) Serialization
+            SherlockErrorType::SerializationError => {
+                format!("Failed to serialize content.")
+            }
+            SherlockErrorType::DeserializationError => {
+                format!("Failed to deserialize content.")
+            }
+
+            // Apps
+            SherlockErrorType::UnsupportedBrowser(browser) => {
+                format!(r#"Unsupported Broser: {}"#, browser)
+            }
+
+            // Icon Parsers
+            SherlockErrorType::MissingIconParser(parser) => {
+                format!(r#"Missing Icon Parser for <i>"{}"</i>"#, parser)
+            }
         };
         (variant_name(self), message)
+    }
+}
+impl AsRef<SherlockError> for SherlockError {
+    fn as_ref(&self) -> &SherlockError {
+        self
     }
 }

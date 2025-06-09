@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <object class="GtkBox" id="vbox">
+    <template class="SearchUI" parent="GtkBox">
         <property name="orientation">vertical</property>
 
         <child>
@@ -9,6 +9,32 @@
                 <child>
                     <object class="GtkBox" id="search-icon-holder">
                         <property name="name">search-icon-holder</property>
+                        <child>
+                            <object class="GtkOverlay" id="search-icon-overlay">
+
+                                <child>
+                                    <object class="GtkImage" id="search-icon">
+                                        <property name="name">search-icon</property>
+                                        <property name="valign">center</property>
+                                        <property name="halign">end</property>
+                                        <property name="pixel-size">22</property>
+                                        <property name="icon-name">system-search-symbolic</property>
+                                    </object>
+                                </child>
+
+                                <child type="overlay">
+                                    <object class="GtkImage" id="search-icon-back">
+                                        <property name="name">search-icon-back</property>
+                                        <property name="valign">center</property>
+                                        <property name="halign">end</property>
+                                        <property name="pixel-size">22</property>
+                                        <property name="icon-name">sherlock-back</property>
+                                    </object>
+                                </child>
+                            
+                            </object>
+
+                        </child>
                     </object>
                 </child>
                 <child>
@@ -36,9 +62,10 @@
 
 
         <child>
-            <object class="GtkBox" id="split_view">
+            <object class="GtkBox" id="split-view">
                 <property name="orientation">horizontal</property>
                 <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
                 <child>
                     <object class="GtkScrolledWindow" id="scrolled-window">
                         <style>
@@ -51,10 +78,8 @@
                         <child>
                             <object class="GtkListView" id="result-frame">
                                 <property name="name">list_box</property>
-
                                 <child>
                                 </child>
-
                             </object>
                         </child>
                     </object>
@@ -86,6 +111,39 @@
                     </object>
                 </child>
                 <child>
+                    <object class="GtkLabel" id="context-menu-desc">
+                        <style>
+                            <class name="inactive"/>
+                        </style>
+                        <property name="name">shortcut-description</property>
+                        <property name="hexpand">false</property>
+                        <property name="label">Additional actions</property>
+                        <property name="xalign">0.0</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel" id="context-menu-first">
+                        <style>
+                            <class name="inactive"/>
+                        </style>
+                        <property name="name">shortcut-modifier</property>
+                        <property name="hexpand">false</property>
+                        <property name="label">⌘</property>
+                        <property name="xalign">0.0</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel" id="context-menu-second">
+                        <style>
+                            <class name="inactive"/>
+                        </style>
+                        <property name="name">shortcut-key</property>
+                        <property name="hexpand">false</property>
+                        <property name="label">L</property>
+                        <property name="xalign">0.0</property>
+                    </object>
+                </child>
+                <child>
                     <object class="GtkSpinner" id="status-bar-spinner">
                         <property name="name">spinner</property>
                         <property name="spinning">false</property>
@@ -95,7 +153,7 @@
         </child>
 
 
-    </object>
+    </template>
 
 </interface>
 

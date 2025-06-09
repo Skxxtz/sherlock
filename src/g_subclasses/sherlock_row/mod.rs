@@ -1,13 +1,16 @@
 mod imp;
 
-use std::{future::Future, pin::Pin};
+use std::{cell::Ref, future::Future, pin::Pin};
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::ObjectExt, SignalHandlerId, WeakRef};
+use gio::glib::{object::ObjectExt, GString, SignalHandlerId, WeakRef};
 use glib::Object;
 use gtk4::{glib, prelude::WidgetExt};
 
-use crate::launcher::Launcher;
+use crate::{
+    launcher::Launcher,
+    loader::util::{AppData, ApplicationAction},
+};
 
 glib::wrapper! {
     pub struct SherlockRow(ObjectSubclass<imp::SherlockRow>)
@@ -16,7 +19,23 @@ glib::wrapper! {
 
 impl SherlockRow {
     pub fn new() -> Self {
-        Object::builder().build()
+        let myself: Self = Object::builder().build();
+        myself.add_css_class("tile");
+        myself
+    }
+    pub fn show(&self) {
+        let imp = self.imp();
+        let search = imp.search.borrow().to_string();
+        let prio = imp.priority.get();
+        let home = imp.home.get();
+        let spawn = imp.spawn_focus.get();
+        let alias = imp.alias.borrow().to_string();
+
+        println!("Search: {:?}", search);
+        println!("Prio: {:?}", prio);
+        println!("Home: {:?}", home);
+        println!("Spawn: {:?}", spawn);
+        println!("Alias: {:?}", alias);
     }
     // setters
     pub fn set_spawn_focus(&self, focus: bool) {
@@ -24,6 +43,16 @@ impl SherlockRow {
     }
     pub fn set_shortcut(&self, shortcut: bool) {
         self.imp().shortcut.set(shortcut);
+    }
+    pub fn set_active(&self, active: bool) {
+        self.imp().active.set(active);
+        let class_name = GString::from("multi-active");
+        let class_exists = self.css_classes().contains(&class_name);
+        if class_exists && !active {
+            self.remove_css_class("multi-active");
+        } else if !class_exists && active {
+            self.add_css_class("multi-active");
+        }
     }
     pub fn set_search(&self, search: &str) {
         *self.imp().search.borrow_mut() = search.to_lowercase();
@@ -69,6 +98,24 @@ impl SherlockRow {
     pub fn set_keyword_aware(&self, state: bool) {
         self.imp().keyword_aware.set(state);
     }
+    pub fn set_actions(&self, actions: Vec<ApplicationAction>) {
+        self.imp().num_actions.set(actions.len());
+        *self.imp().actions.borrow_mut() = actions;
+    }
+    pub fn add_actions(&self, actions: &Option<Vec<ApplicationAction>>) {
+        if let Some(actions) = actions {
+            self.imp().actions.borrow_mut().extend(actions.clone());
+        }
+        self.imp()
+            .num_actions
+            .set(self.imp().actions.borrow().len());
+    }
+    pub fn set_num_actions(&self, num: usize) {
+        self.imp().num_actions.set(num);
+    }
+    pub fn set_terminal(&self, term: bool) {
+        self.imp().terminal.set(term);
+    }
 
     // getters
     pub fn shortcut_holder(&self) -> Option<gtk4::Box> {
@@ -106,6 +153,18 @@ impl SherlockRow {
     pub fn is_keyword_aware(&self) -> bool {
         self.imp().keyword_aware.get()
     }
+    pub fn actions(&self) -> Ref<Vec<ApplicationAction>> {
+        self.imp().actions.borrow()
+    }
+    pub fn active(&self) -> bool {
+        self.imp().active.get()
+    }
+    pub fn num_actions(&self) -> usize {
+        self.imp().num_actions.get()
+    }
+    pub fn terminal(&self) -> bool {
+        self.imp().terminal.get()
+    }
     /// Sets shared values from a launcher to the SherlockRow
     /// * only_home
     /// * home
@@ -117,10 +176,24 @@ impl SherlockRow {
         self.set_home(launcher.home);
         self.set_shortcut(launcher.shortcut);
         self.set_spawn_focus(launcher.spawn_focus);
-        self.set_priority(launcher.priority as f32);
+        self.set_priority((launcher.priority + 1) as f32);
         if let Some(alias) = &launcher.alias {
             self.set_alias(alias);
         }
+        if let Some(actions) = &launcher.actions {
+            self.set_actions(actions.clone());
+        }
+        if !launcher.exit {
+            self.add_css_class("exec-inplace");
+        }
+    }
+    pub fn with_appdata(&self, data: &AppData) {
+        self.set_search(&data.search_string);
+        self.set_priority(data.priority);
+        if !data.actions.is_empty() {
+            self.set_actions(data.actions.clone());
+        }
+        self.set_terminal(data.terminal);
     }
 }
 

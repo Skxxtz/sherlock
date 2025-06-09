@@ -14,8 +14,7 @@ pub fn ensure_single_instance(lock_file: &str) -> Result<LockFile, String> {
             if let Some(pid) = content.parse::<i32>().ok() {
                 match Process::new(pid) {
                     Ok(_) => {
-                        let _ = SherlockDaemon::open();
-                        std::process::exit(0)
+                        let _ = SherlockDaemon::instance();
                     }
                     Err(_) => {
                         let _ = fs::remove_file(lock_file);
