@@ -1,28 +1,41 @@
 use std::io::Write;
-use std::{env::home_dir, fs::OpenOptions, sync::Mutex};
+use std::{fs, fs::OpenOptions, sync::Mutex};
 
 use chrono::Local;
 use once_cell::sync::Lazy;
 
-static LOG_FILE: Lazy<Mutex<std::fs::File>> = Lazy::new(|| {
-    let home = home_dir().expect(&format!(
-        "{}:{} - Failed to find home directory.",
-        file!(),
-        line!()
-    ));
-    let location = home.join(".sherlock/sherlock.log");
+use crate::sherlock_error;
+use crate::utils::{errors::SherlockError, errors::SherlockErrorType, files::home_dir};
+
+static LOG_FILE: Lazy<Result<Mutex<std::fs::File>, SherlockError>> = Lazy::new(|| {
+    let sherlock_dir = home_dir()?.join(".sherlock/");
+    fs::create_dir_all(&sherlock_dir).map_err(|e| {
+        sherlock_error!(
+            SherlockErrorType::DirCreateError(sherlock_dir.display().to_string()),
+            e.to_string()
+        )
+    })?;
+
+    let location = sherlock_dir.join("sherlock.log");
+
     let file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(location)
-        .expect(&format!("{}:{} - Failed to open logfile", file!(), line!()));
-    Mutex::new(file)
+        .open(&location)
+        .map_err(|e| sherlock_error!(SherlockErrorType::FileWriteError(location), e.to_string()))?;
+
+    Ok(Mutex::new(file))
 });
 
-pub fn write_log<T: AsRef<str>>(message: T, file: &str, line: u32) {
+pub fn write_log<T: AsRef<str>>(message: T, file: &str, line: u32) -> Result<(), SherlockError> {
     let message = message.as_ref();
     let now = Local::now().format("%Y-%m-%d %H:%M:%S");
-    let mut log_file = LOG_FILE.lock().expect("Failed to lock LOG_FILE..");
+    let mut log_file = LOG_FILE
+        .as_ref()
+        .map_err(|e| e.clone())?
+        .lock()
+        .expect("Failed to lock LOG_FILE..");
+
     message
         .split("\n")
         .map(|s| s.trim())
@@ -31,6 +44,8 @@ pub fn write_log<T: AsRef<str>>(message: T, file: &str, line: u32) {
             writeln!(log_file, "[{}] {}:{} - {}", now, file, line, msg)
                 .expect("Failed to write to log file");
         });
+
+    Ok(())
 }
 
 #[macro_export]

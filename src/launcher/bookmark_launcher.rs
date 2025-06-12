@@ -29,7 +29,7 @@ impl BookmarkLauncher {
                 sher_log!(format!(
                     r#"Failed to gather bookmarks for browser: "{}""#,
                     browser
-                ));
+                ))?;
                 Err(sherlock_error!(
                     SherlockErrorType::UnsupportedBrowser(browser.to_string()),
                     format!("The browser \"<i>{}</i>\" is either not supported or not recognized.\n\
