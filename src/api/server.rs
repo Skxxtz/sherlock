@@ -27,7 +27,7 @@ impl SherlockServer {
             async move {
                 while let Ok(msg) = receiver.recv().await {
                     if let Ok(cmd) = serde_json::from_str::<ApiCall>(&msg) {
-                        sher_log!(format!("Incoming api request: {}", cmd));
+                        let _ = sher_log!(format!("Incoming api request: {}", cmd));
                         api.borrow_mut().await_request(cmd);
                     } else if let Some(mut data) = PipedData::new(&msg) {
                         if let Some(settings) = data.settings.take() {
@@ -46,7 +46,7 @@ impl SherlockServer {
                             api.borrow_mut().await_request(request);
                         }
                     } else {
-                        sher_log!(format!("Failed to deserialize api call(s): {}", msg));
+                        let _ = sher_log!(format!("Failed to deserialize api call(s): {}", msg));
                     }
                     api.borrow_mut().flush();
                 }

@@ -31,7 +31,7 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
 
 pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<(), SherlockError> {
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
-    sher_log!(format!(r#"Spawning command "{}""#, raw_command));
+    sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
     let mut command = Command::new("sh");
     command.arg("-c").arg(raw_command.clone());
@@ -43,7 +43,7 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
 
     // Move command string into task
     let child = command.spawn().map_err(|e| {
-        sher_log!(format!(
+        let _ = sher_log!(format!(
             "Failed to spawn command: {}\nError: {}",
             raw_command, e
         ));
@@ -57,11 +57,11 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
         let result = match child.wait_with_output() {
             Ok(output) => {
                 if output.status.success() {
-                    sher_log!(format!("Command succeeded: {}", raw_command));
+                    let _ = sher_log!(format!("Command succeeded: {}", raw_command));
                     Ok(())
                 } else {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    sher_log!(format!(
+                    let _ = sher_log!(format!(
                         "Command failed: {}\nStderr: {}",
                         raw_command, stderr
                     ));
@@ -72,7 +72,7 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
                 }
             }
             Err(e) => {
-                sher_log!(format!(
+                let _ = sher_log!(format!(
                     "Failed to wait for command: {}\nError: {}",
                     raw_command, e
                 ));

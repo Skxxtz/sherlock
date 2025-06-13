@@ -67,7 +67,7 @@ impl SherlockAPI {
         }
         if !self.queue.is_empty() {
             self.queue.iter().for_each(|wait| {
-                sher_log!(format!("Action {} stays in queue", wait));
+                let _ = sher_log!(format!("Action {} stays in queue", wait));
             });
         }
     }

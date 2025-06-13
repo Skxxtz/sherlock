@@ -35,7 +35,7 @@ impl Loader {
         })?;
 
         if let Some(current_provider) = get_provider() {
-            sher_log!("Removed current style provider");
+            sher_log!("Removed current style provider")?;
             gtk4::style_context_remove_provider_for_display(&display, &current_provider);
         }
 
@@ -64,7 +64,7 @@ impl Loader {
                 gtk4::STYLE_PROVIDER_PRIORITY_USER,
             );
             set_provider(usr_provider.downgrade());
-            sher_log!("Added new user style provider");
+            sher_log!("Added new user style provider")?;
         } else {
             let _result = sherlock_error!(
                 SherlockErrorType::FileExistError(config.files.css.clone()),
