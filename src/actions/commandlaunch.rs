@@ -52,8 +52,6 @@ pub fn asynchronous_execution(
             if let Some(err) = child.stderr.take() {
                 sher_log!(format!(r#"Detached process {} erred: {:?}"#, raw_command, err));
             }
-            // We detach by simply dropping _child without waiting
-
             Ok(())
         }
         Err(e) => {
