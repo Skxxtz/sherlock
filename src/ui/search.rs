@@ -232,17 +232,25 @@ pub fn search(
         })
         .build();
 
-    let search_bar = imp.search_bar.downgrade();
     let action_clear_win = ActionEntry::builder("clear-search")
-        .activate(move |_: &ApplicationWindow, _, _| {
-            let search_bar = search_bar.clone();
-            glib::idle_add_local(move || {
-                if let Some(entry) = search_bar.upgrade() {
-                    entry.set_text("");
+        .parameter_type(Some(&bool::static_variant_type()))
+        .activate({
+            let search_bar = imp.search_bar.downgrade();
+            let mode = Rc::clone(&mode);
+            move |_: &ApplicationWindow, _, parameter| {
+                let clear_mode = parameter.and_then(|p| p.get::<bool>()).unwrap_or_default();
+                if clear_mode {
+                    *mode.borrow_mut() = "all".to_string();
                 }
-                glib::ControlFlow::Break
-            });
-        })
+                let search_bar = search_bar.clone();
+                glib::idle_add_local(move || {
+                    if let Some(entry) = search_bar.upgrade() {
+                        entry.set_text("");
+                    }
+                    glib::ControlFlow::Break
+                });
+            }}
+        )
         .build();
     window.add_action_entries([
         mode_action,
@@ -659,7 +667,7 @@ fn change_event(
             if !trimmed.is_empty() && modes.borrow().contains_key(&current_text) {
                 // Logic to apply modes
                 let _ = search_bar.activate_action("win.switch-mode", Some(&trimmed.to_variant()));
-                let _ = search_bar.activate_action("win.clear-search", None);
+                let _ = search_bar.activate_action("win.clear-search", Some(&false.to_variant()));
                 current_text.clear();
             }
             *search_query_clone.borrow_mut() = current_text.clone();
