@@ -700,13 +700,17 @@ gridview child:selected box {
     background: transparent;
 }
 #timer-count {
-    font-size: 3em;
+    font-size: 2.5em;
+    padding: 1.25em;
 }
 #timer-title {
     color: hsla(var(--text), 0.7);
     font-size: 11px;
 }
-
+#timer-image {
+    /* -gtk-icon-filter: brightness(10) saturate(100%) contrast(100%); /1* white *1/ */
+    filter: brightness(10) saturate(100%) contrast(100%); /* black */
+}
 
 /*ANIMATIONS*/
 @keyframes vanish-rotate {
