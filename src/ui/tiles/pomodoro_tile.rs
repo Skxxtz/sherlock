@@ -107,7 +107,6 @@ impl PomodoroInterface{
 
         let response = stream.read_sized().ok()?;
         if let Ok(raw) = serde_json::from_slice::<RawTimer>(&response) {
-            println!("{:?}", raw);
             return Some(Timer::from(raw))
         }
         None
