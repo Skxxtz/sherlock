@@ -95,6 +95,11 @@ impl SherlockRow {
         }
         *self.imp().signal_id.borrow_mut() = Some(signal);
     }
+    pub fn clear_signal_id(&self){
+        if let Some(old) = self.imp().signal_id.borrow_mut().take(){
+            self.disconnect(old);
+        }
+    }
     pub fn set_keyword_aware(&self, state: bool) {
         self.imp().keyword_aware.set(state);
     }
