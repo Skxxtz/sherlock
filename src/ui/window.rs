@@ -128,7 +128,7 @@ pub fn window(
                         let _ = gtk4::prelude::WidgetExt::activate_action(
                             window,
                             "win.clear-search",
-                            None,
+                            Some(&true.to_variant()),
                         );
                     }
                     false => window.destroy(),

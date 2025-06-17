@@ -42,7 +42,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 exit = false;
                 attrs.get("exec").map(|mode| {
                     let _ = row.activate_action("win.switch-mode", Some(&mode.to_variant()));
-                    let _ = row.activate_action("win.clear-search", None);
+                    let _ = row.activate_action("win.clear-search", Some(&false.to_variant()));
                 });
             }
             "app_launcher" => {
