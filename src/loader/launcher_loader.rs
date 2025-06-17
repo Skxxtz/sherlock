@@ -2,7 +2,6 @@ use serde::de::IntoDeserializer;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
-use std::env::home_dir;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -14,6 +13,7 @@ use crate::launcher::category_launcher::CategoryLauncher;
 use crate::launcher::emoji_picker::EmojiPicker;
 use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::file_launcher::FileLauncher;
+use crate::launcher::pomodoro_launcher::Pomodoro;
 use crate::launcher::process_launcher::ProcessLauncher;
 use crate::launcher::theme_picker::ThemePicker;
 use crate::launcher::weather_launcher::WeatherLauncher;
@@ -24,6 +24,7 @@ use crate::launcher::{
 use crate::loader::util::{CounterReader, JsonCache};
 use crate::utils::errors::SherlockError;
 use crate::utils::errors::SherlockErrorType;
+use crate::utils::files::{expand_path, home_dir};
 
 use app_launcher::AppLauncher;
 use bulk_text_launcher::BulkTextLauncher;
@@ -79,6 +80,7 @@ impl Loader {
                     "teams_event" => parse_event_launcher(&raw),
                     "theme_picker" => parse_theme_launcher(&raw),
                     "process" => parse_process_launcher(&raw),
+                    "pomodoro" => parse_pomodoro(&raw),
                     "weather" => parse_weather_launcher(&raw),
                     "web_launcher" => parse_web_launcher(&raw),
                     _ => LauncherType::Empty,
@@ -296,6 +298,25 @@ fn parse_command_launcher(
     let commands = parse_appdata(value, prio, counts, max_decimals);
     LauncherType::Command(CommandLauncher { commands })
 }
+
+#[sherlock_macro::timing(level = "launchers")]
+fn parse_pomodoro(
+    raw: &RawLauncher,
+) -> LauncherType {
+    let home = match home_dir() {
+        Ok(dir) => dir,
+        Err(_) => return LauncherType::Empty
+    };
+    let program_raw = raw.args.get("program").and_then(Value::as_str).unwrap_or("");
+    let program = expand_path(program_raw, &home);
+    let socket = PathBuf::from(raw.args.get("socket").and_then(Value::as_str).unwrap_or(""));
+    LauncherType::Pomodoro(
+        Pomodoro {
+            program,
+            socket
+        }
+    )
+}
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_debug_launcher(
     raw: &RawLauncher,
@@ -356,8 +377,8 @@ fn parse_theme_launcher(raw: &RawLauncher) -> LauncherType {
         .unwrap_or("~/.config/sherlock/themes/");
     let relative = relative.strip_prefix("~/").unwrap_or(relative);
     let home = match home_dir() {
-        Some(dir) => dir,
-        _ => return LauncherType::Empty,
+        Ok(dir) => dir,
+        Err(_) => return LauncherType::Empty,
     };
     let absolute = home.join(relative);
     ThemePicker::new(absolute, raw.priority)

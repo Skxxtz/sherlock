@@ -13,6 +13,7 @@ pub mod file_launcher;
 pub mod process_launcher;
 pub mod system_cmd_launcher;
 pub mod theme_picker;
+pub mod pomodoro_launcher;
 mod utils;
 pub mod weather_launcher;
 pub mod web_launcher;
@@ -30,6 +31,7 @@ use bulk_text_launcher::{AsyncCommandResponse, BulkTextLauncher};
 use calc_launcher::CalculatorLauncher;
 use category_launcher::CategoryLauncher;
 use clipboard_launcher::ClipboardLauncher;
+use pomodoro_launcher::Pomodoro;
 use emoji_picker::EmojiPicker;
 use event_launcher::EventLauncher;
 use file_launcher::FileLauncher;
@@ -52,6 +54,7 @@ pub enum LauncherType {
     Event(EventLauncher),
     File(FileLauncher),
     MusicPlayer(MusicPlayerLauncher),
+    Pomodoro(Pomodoro),
     Process(ProcessLauncher),
     Theme(ThemePicker),
     Weather(WeatherLauncher),
@@ -141,6 +144,7 @@ impl Launcher {
             LauncherType::File(f) => Tile::app_tile(self, &f.data),
             LauncherType::Theme(thm) => Tile::app_tile(self, &thm.themes),
             LauncherType::Process(proc) => Tile::process_tile(self, proc),
+            LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(self, pmd),
             LauncherType::Web(web) => Tile::web_tile(self, &web),
 
             // Async tiles

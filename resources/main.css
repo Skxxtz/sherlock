@@ -1,5 +1,6 @@
 :root {
     --background: 0, 0%, 9%;
+    --background2: 0, 0%, 20%;
     --foreground: 0, 0%, 15%;
     --text: 53, 100%, 97%;
     --border: 0, 0%, 19%;
@@ -692,7 +693,19 @@ gridview child:selected box {
     background-clip: padding-box;
 }
 
-
+/* TIMER TILE */
+.tile.timer-tile {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background: hsl(var(--background2));
+}
+#timer-count {
+    font-size: 3em;
+}
+#timer-title {
+    color: hsla(var(--text), 0.7);
+    font-size: 11px;
+}
 
 
 /*ANIMATIONS*/
