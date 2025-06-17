@@ -1,0 +1,34 @@
+<interface>
+    <template class="TimerTile" parent="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
+        <property name="hexpand">true</property> 
+        <child>
+            <object class="GtkLabel" id="timer_title">
+                <property name="hexpand">true</property> 
+                <property name="halign">start</property> 
+                <property name="name">timer-title</property> 
+            </object>
+        </child>
+
+        <child>
+            <object class="GtkBox" id="content_holder">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">10</property>
+                <property name="hexpand">true</property> 
+
+                <child>
+                    <object class="GtkLabel" id="remaining_time">
+                        <property name="hexpand">true</property> 
+                        <property name="vexpand">true</property> 
+                        <property name="halign">start</property> 
+                        <property name="name">timer-count</property> 
+                    </object>
+                </child>
+
+            </object>
+        </child>
+
+
+    </template>
+</interface>
