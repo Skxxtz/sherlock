@@ -130,6 +130,11 @@ pub fn window(
                             "win.clear-search",
                             Some(&true.to_variant()),
                         );
+                        let _ = gtk4::prelude::WidgetExt::activate_action(
+                            window,
+                            "win.switch-page",
+                            Some(&"->search-page".to_variant()),
+                        );
                     }
                     false => window.destroy(),
                 }
