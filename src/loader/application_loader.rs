@@ -17,7 +17,7 @@ use crate::utils::{
     errors::{SherlockError, SherlockErrorType},
     files::read_lines,
 };
-use crate::{sherlock_error, CONFIG};
+use crate::{sher_log, sherlock_error, CONFIG};
 use util::{AppData, SherlockAlias};
 
 impl Loader {
@@ -233,15 +233,12 @@ impl Loader {
             .get()
             .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
         // check if sherlock_alias was modified
-        let alias_path = Path::new(&config.files.alias);
-        let ignore_path = Path::new(&config.files.ignore);
-        let config_path = Path::new(&config.files.config);
-        let cache_path = Path::new(&config.behavior.cache);
-        let changed = file_has_changed(&alias_path, &cache_path)
-            || file_has_changed(&ignore_path, &cache_path)
-            || file_has_changed(&config_path, &cache_path);
+        let changed = file_has_changed(&config.files.alias, &config.behavior.cache)
+            || file_has_changed(&config.files.ignore, &config.behavior.cache)
+            || file_has_changed(&config.files.config, &config.behavior.cache);
 
         if !changed {
+            let _ = sher_log!("Loading cached apps");
             let cached_apps: Option<HashSet<AppData>> = File::open(&config.behavior.cache)
                 .ok()
                 .and_then(|f| simd_json::from_reader(f).ok());
@@ -283,6 +280,7 @@ impl Loader {
             }
         }
 
+        let _ = sher_log!("Updating cached apps");
         let apps = Loader::load_applications_from_disk(None, priority, counts, decimals)?;
         // Write the cache in the background
         let app_clone = apps.clone();
