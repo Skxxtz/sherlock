@@ -40,6 +40,10 @@ static CONFIG: OnceLock<SherlockConfig> = OnceLock::new();
 #[tokio::main]
 async fn main() {
     let t0 = Instant::now();
+    // Save original GSK_RENDERER to ORIGINAL_GSK_RENDERER as a temporary variable
+    let original_gsk_renderer = env::var("GSK_RENDERER").unwrap_or_default();
+    env::set_var("ORIGINAL_GSK_RENDERER", original_gsk_renderer);
+
     let (application, startup_errors, non_breaking, sherlock_flags, app_config, lock) =
         startup_loading().await;
     let t01 = Instant::now();
@@ -71,6 +75,11 @@ async fn main() {
                     println!("Window shown after {:?}", t0.elapsed());
                 }
             }
+            // Restore original GSK_RENDERER from temporary variable
+            let original_gsk_renderer = env::var("ORIGINAL_GSK_RENDERER").unwrap_or_default();
+            env::set_var("GSK_RENDERER", original_gsk_renderer);
+            // Remove temporary variable
+            env::remove_var("ORIGINAL_GSK_RENDERER");
         }});
 
         // Add closing logic

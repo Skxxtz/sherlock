@@ -249,8 +249,8 @@ pub fn search(
                     }
                     glib::ControlFlow::Break
                 });
-            }}
-        )
+            }
+        })
         .build();
     window.add_action_entries([
         mode_action,
