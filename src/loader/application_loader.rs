@@ -352,12 +352,13 @@ pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> HashSet<PathBuf> {
         .flatten()
         .collect::<HashSet<PathBuf>>()
 }
+
 pub fn file_has_changed(file_path: &Path, compare_to: &Path) -> bool {
     match (&file_path.modtime(), &compare_to.modtime()) {
-        (Some(t1), Some(t2)) if t1 >= t2 => return true,
-        _ => {}
+        (Some(t1), Some(t2)) if t1 > t2 => true, // t1 is newer than t2
+        (Some(t1), Some(t2)) if t1 < t2 => false, // t1 is older than t2
+        _ => true // if there is a modtime missing
     }
-    false
 }
 
 #[test]
