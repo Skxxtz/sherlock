@@ -29,11 +29,7 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
     Ok(())
 }
 
-pub fn asynchronous_execution(
-    cmd: &str,
-    prefix: &str,
-    flags: &str,
-) -> Result<(), SherlockError> {
+pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<(), SherlockError> {
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
     sher_log!(format!(r#"Spawning command "{}""#, raw_command));
 
@@ -42,15 +38,18 @@ pub fn asynchronous_execution(
     command
         .arg("-c")
         .arg(raw_command.clone())
-        .stdout(Stdio::null()) 
-        .stderr(Stdio::piped()) 
-        .stdin(Stdio::piped()) ;
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::piped());
 
     match command.spawn() {
         Ok(mut child) => {
             sher_log!(format!("Detached process started: {}.", raw_command));
             if let Some(err) = child.stderr.take() {
-                sher_log!(format!(r#"Detached process {} erred: {:?}"#, raw_command, err));
+                sher_log!(format!(
+                    r#"Detached process {} erred: {:?}"#,
+                    raw_command, err
+                ));
             }
             Ok(())
         }
@@ -67,4 +66,3 @@ pub fn asynchronous_execution(
         }
     }
 }
-

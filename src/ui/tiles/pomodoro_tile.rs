@@ -1,11 +1,24 @@
-use crate::{actions::commandlaunch::command_launch, daemon::daemon::SizedMessage, g_subclasses::sherlock_row::SherlockRow, launcher::{pomodoro_launcher::Pomodoro, Launcher}, sherlock_error, utils::errors::{SherlockError, SherlockErrorType}};
-use std::{cell::RefCell, io::Write, path::PathBuf, rc::Rc, time::{Duration, SystemTime, UNIX_EPOCH}};
+use crate::{
+    actions::commandlaunch::command_launch,
+    daemon::daemon::SizedMessage,
+    g_subclasses::sherlock_row::SherlockRow,
+    launcher::{pomodoro_launcher::Pomodoro, Launcher},
+    sherlock_error,
+    utils::errors::{SherlockError, SherlockErrorType},
+};
 use std::os::unix::net::UnixStream;
+use std::{
+    cell::RefCell,
+    io::Write,
+    path::PathBuf,
+    rc::Rc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use super::Tile;
 
 impl Tile {
-    pub fn pomodoro_tile(launcher: &Launcher, pomodoro: &Pomodoro)->Vec<SherlockRow> {
+    pub fn pomodoro_tile(launcher: &Launcher, pomodoro: &Pomodoro) -> Vec<SherlockRow> {
         let object = SherlockRow::new();
         let tile = TimerTile::new(object.downgrade());
         let imp = tile.imp();
@@ -13,11 +26,13 @@ impl Tile {
         object.set_css_classes(&vec!["tile", "timer-tile"]);
         object.with_launcher(launcher);
 
-
         if let Some(title) = &launcher.name {
             imp.timer_title.set_text(title);
         }
-        let pomodoro_api = Rc::new(RefCell::new(PomodoroInterface::new(pomodoro, imp.remaining_label.downgrade())));
+        let pomodoro_api = Rc::new(RefCell::new(PomodoroInterface::new(
+            pomodoro,
+            imp.remaining_label.downgrade(),
+        )));
         pomodoro_api.borrow_mut().update_ui();
         // initialize view
         // gather result from pomodoro tile
@@ -33,35 +48,39 @@ impl Tile {
     }
 }
 
-struct PomodoroInterface{
+struct PomodoroInterface {
     socket: PathBuf,
     exec: PathBuf,
     update_field: WeakRef<Label>,
     handle: Option<SourceId>,
     running: bool,
 }
-impl PomodoroInterface{
-    fn new(pomodoro: &Pomodoro, label: WeakRef<Label>)->Self{
+impl PomodoroInterface {
+    fn new(pomodoro: &Pomodoro, label: WeakRef<Label>) -> Self {
         Self {
             socket: pomodoro.socket.clone(),
             exec: pomodoro.program.clone(),
             update_field: label,
             handle: None,
-            running: false
+            running: false,
         }
     }
-    fn send_message(&self, message: &str)->Result<(), SherlockError>{
-        let mut stream = UnixStream::connect(&self.socket).map_err(|e| sherlock_error!(
+    fn send_message(&self, message: &str) -> Result<(), SherlockError> {
+        let mut stream = UnixStream::connect(&self.socket).map_err(|e| {
+            sherlock_error!(
                 SherlockErrorType::SocketConnectError(self.socket.display().to_string()),
                 e.to_string()
-        ))?;
-        stream.write_all(message.as_bytes()).map_err(|e| sherlock_error!(
+            )
+        })?;
+        stream.write_all(message.as_bytes()).map_err(|e| {
+            sherlock_error!(
                 SherlockErrorType::SocketWriteError(self.socket.display().to_string()),
                 e.to_string()
-        ))?;
+            )
+        })?;
         Ok(())
     }
-    fn toggle(&mut self){
+    fn toggle(&mut self) {
         if self.running {
             self.stop();
         } else {
@@ -69,7 +88,7 @@ impl PomodoroInterface{
         }
         self.update_ui();
     }
-    fn start(&mut self){
+    fn start(&mut self) {
         match self.send_message("start") {
             Ok(_) => {
                 self.running = true;
@@ -77,11 +96,11 @@ impl PomodoroInterface{
             Err(e) if matches!(e.error, SherlockErrorType::SocketConnectError(_)) => {
                 // start pomodoro service
                 let exec = self.exec.display().to_string();
-                if let Err(e) = command_launch(&exec, ""){
+                if let Err(e) = command_launch(&exec, "") {
                     let _result = e.insert(false);
                 }
                 // start timer
-                if let Err(e) = self.send_message("start"){
+                if let Err(e) = self.send_message("start") {
                     let _result = e.insert(false);
                 } else {
                     self.running = true;
@@ -92,26 +111,26 @@ impl PomodoroInterface{
             }
         }
     }
-    fn stop(&mut self){
-        if let Err(e) = self.send_message("stop"){
+    fn stop(&mut self) {
+        if let Err(e) = self.send_message("stop") {
             let _result = e.insert(false);
         }
-        if let Some(handle) = self.handle.take(){
+        if let Some(handle) = self.handle.take() {
             handle.remove();
         }
         self.running = false;
     }
-    fn get_timer(&self)->Option<Timer>{
+    fn get_timer(&self) -> Option<Timer> {
         let mut stream = UnixStream::connect(&self.socket).ok()?;
         stream.write_all(b"show").ok();
 
         let response = stream.read_sized().ok()?;
         if let Ok(raw) = serde_json::from_slice::<RawTimer>(&response) {
-            return Some(Timer::from(raw))
+            return Some(Timer::from(raw));
         }
         None
     }
-    fn update_ui(&mut self){
+    fn update_ui(&mut self) {
         if let Some(handle) = self.handle.take() {
             handle.remove();
         }
@@ -128,7 +147,7 @@ impl PomodoroInterface{
             let mut remaining = timer.remaining().as_secs();
             update_label(remaining);
             if timer.active {
-                let handle = glib::timeout_add_local(Duration::new(1,0), {
+                let handle = glib::timeout_add_local(Duration::new(1, 0), {
                     move || {
                         while remaining > 0 {
                             remaining -= 1;
@@ -155,12 +174,14 @@ struct RawTimer {
 struct Timer {
     end: Option<SystemTime>,
     remaining: Option<Duration>,
-    active: bool
+    active: bool,
 }
 impl Timer {
     fn remaining(&self) -> Duration {
         if self.active {
-            self.end.and_then(|end| end.duration_since(SystemTime::now()).ok()).unwrap_or_default()
+            self.end
+                .and_then(|end| end.duration_since(SystemTime::now()).ok())
+                .unwrap_or_default()
         } else {
             self.remaining.unwrap_or_default()
         }
@@ -168,12 +189,8 @@ impl Timer {
 }
 impl From<RawTimer> for Timer {
     fn from(value: RawTimer) -> Self {
-        let end = value.end.map(|end| {
-            UNIX_EPOCH + Duration::from_secs(end)
-        });
-        let remaining = value.remaining.map(|rem| {
-            Duration::from_secs(rem)
-        });
+        let end = value.end.map(|end| UNIX_EPOCH + Duration::from_secs(end));
+        let remaining = value.remaining.map(|rem| Duration::from_secs(rem));
         Self {
             end,
             remaining,
@@ -198,7 +215,7 @@ mod imp {
     pub struct TimerTile {
         #[template_child(id = "timer_title")]
         pub timer_title: TemplateChild<Label>,
-        
+
         #[template_child(id = "remaining_time")]
         pub remaining_label: TemplateChild<Label>,
 
@@ -229,7 +246,11 @@ mod imp {
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, SourceId, WeakRef};
-use gtk4::{glib, prelude::{BoxExt, WidgetExt}, Label};
+use gtk4::{
+    glib,
+    prelude::{BoxExt, WidgetExt},
+    Label,
+};
 use serde::Deserialize;
 
 glib::wrapper! {
@@ -244,13 +265,13 @@ impl TimerTile {
         *obj.imp().parent.borrow_mut() = parent;
         obj
     }
-    pub fn clear_timeout(&self){
+    pub fn clear_timeout(&self) {
         let imp = self.imp();
-        if let Some(handle) = imp.time_out_handle.borrow_mut().take(){
+        if let Some(handle) = imp.time_out_handle.borrow_mut().take() {
             handle.remove();
         }
     }
-    pub fn clear_action(&self){
+    pub fn clear_action(&self) {
         let imp = self.imp();
         if let Some(parent) = imp.parent.borrow().upgrade() {
             parent.clear_signal_id();

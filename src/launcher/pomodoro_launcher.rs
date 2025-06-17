@@ -5,4 +5,3 @@ pub struct Pomodoro {
     pub program: PathBuf,
     pub socket: PathBuf,
 }
-

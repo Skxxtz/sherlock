@@ -300,22 +300,19 @@ fn parse_command_launcher(
 }
 
 #[sherlock_macro::timing(level = "launchers")]
-fn parse_pomodoro(
-    raw: &RawLauncher,
-) -> LauncherType {
+fn parse_pomodoro(raw: &RawLauncher) -> LauncherType {
     let home = match home_dir() {
         Ok(dir) => dir,
-        Err(_) => return LauncherType::Empty
+        Err(_) => return LauncherType::Empty,
     };
-    let program_raw = raw.args.get("program").and_then(Value::as_str).unwrap_or("");
+    let program_raw = raw
+        .args
+        .get("program")
+        .and_then(Value::as_str)
+        .unwrap_or("");
     let program = expand_path(program_raw, &home);
     let socket = PathBuf::from(raw.args.get("socket").and_then(Value::as_str).unwrap_or(""));
-    LauncherType::Pomodoro(
-        Pomodoro {
-            program,
-            socket
-        }
-    )
+    LauncherType::Pomodoro(Pomodoro { program, socket })
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_debug_launcher(
