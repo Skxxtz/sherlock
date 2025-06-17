@@ -41,8 +41,8 @@ static CONFIG: OnceLock<SherlockConfig> = OnceLock::new();
 async fn main() {
     let t0 = Instant::now();
     // Save original GSK_RENDERER to ORIGINAL_GSK_RENDERER as a temporary variable
-    let original_gsk_renderer = env::var("GSK_RENDERER").ok();
-    env::set_var("ORIGINAL_GSK_RENDERER", original_gsk_renderer.unwrap_or_default().to_string());
+    let original_gsk_renderer = env::var("GSK_RENDERER").unwrap_or_default();
+    env::set_var("ORIGINAL_GSK_RENDERER", original_gsk_renderer.to_string());
 
     let (application, startup_errors, non_breaking, sherlock_flags, app_config, lock) =
         startup_loading().await;
@@ -76,8 +76,8 @@ async fn main() {
                 }
             }
             // Restore original GSK_RENDERER from temporary variable
-            let original_gsk_renderer = env::var("ORIGINAL_GSK_RENDERER").ok();
-            env::set_var("GSK_RENDERER", original_gsk_renderer.unwrap_or_default());
+            let original_gsk_renderer = env::var("ORIGINAL_GSK_RENDERER").unwrap_or_default();
+            env::set_var("GSK_RENDERER", original_gsk_renderer);
             // Remove temporary variable
             env::remove_var("ORIGINAL_GSK_RENDERER");
         }});
