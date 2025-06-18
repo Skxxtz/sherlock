@@ -41,9 +41,6 @@ impl SherlockRow {
     pub fn set_spawn_focus(&self, focus: bool) {
         self.imp().spawn_focus.set(focus);
     }
-    pub fn set_shortcut(&self, shortcut: bool) {
-        self.imp().shortcut.set(shortcut);
-    }
     pub fn set_active(&self, active: bool) {
         self.imp().active.set(active);
         let class_name = GString::from("multi-active");
@@ -173,7 +170,6 @@ impl SherlockRow {
     /// * alias
     pub fn with_launcher(&self, launcher: &Launcher) {
         self.set_home(launcher.home);
-        self.set_shortcut(launcher.shortcut);
         self.set_spawn_focus(launcher.spawn_focus);
         self.set_priority((launcher.priority + 1) as f32);
         if let Some(alias) = &launcher.alias {

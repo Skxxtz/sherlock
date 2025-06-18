@@ -36,9 +36,6 @@ pub struct SherlockRow {
     /// Whether the tile should receive focus when Sherlock starts  
     pub spawn_focus: Cell<bool>,
 
-    /// Whether the tile can display `modkey + number` shortcuts  
-    pub shortcut: Cell<bool>,
-
     /// Whether the row should be shown as active in multi selection
     pub active: Cell<bool>,
 

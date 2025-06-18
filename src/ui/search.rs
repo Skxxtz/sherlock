@@ -346,14 +346,12 @@ fn construct_window(
                     } else {
                         item.remove_css_class("animate");
                     }
-                    if item.imp().shortcut.get() {
-                        if let Some(shortcut_holder) = item.shortcut_holder() {
-                            if added_index < 5 {
-                                added_index +=
-                                    shortcut_holder.apply_shortcut(added_index + 1, &mod_str);
-                            } else {
-                                shortcut_holder.remove_shortcut();
-                            }
+                    if let Some(shortcut_holder) = item.shortcut_holder() {
+                        if added_index < 5 {
+                            added_index +=
+                                shortcut_holder.apply_shortcut(added_index + 1, &mod_str);
+                        } else {
+                            shortcut_holder.remove_shortcut();
                         }
                     }
                 }
