@@ -28,8 +28,8 @@ impl EmojiObject {
     pub fn set_parent(&self, parent: WeakRef<Box>) {
         let imp = self.imp();
         if let Some(gesture) = imp.gesture.get() {
-            if let Some(parent) = imp.parent.borrow().as_ref().and_then(|tmp| tmp.upgrade()) {
-                parent.remove_controller(gesture);
+            if let Some(old_parent) = imp.parent.borrow().as_ref().and_then(|tmp| tmp.upgrade()) {
+                old_parent.remove_controller(gesture);
             }
             parent
                 .upgrade()

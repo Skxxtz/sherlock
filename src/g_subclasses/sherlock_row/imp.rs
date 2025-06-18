@@ -16,7 +16,6 @@ use crate::loader::util::ApplicationAction;
 
 /// ## Fields:
 /// * **spawn_focus**: Whether the tile should receive focus when Sherlock starts.
-/// * **shortcut**: Whether the tile can display `modkey + number` shortcuts.
 /// * **active**: Whether the row should be shown as active in multi selection
 /// * **gesture**: State to hold and replace double-click gestures.
 /// * **shortcut_holder**: A `GtkBox` widget that holds the `modkey + number` shortcut indicators.
@@ -24,7 +23,6 @@ use crate::loader::util::ApplicationAction;
 /// * **search**: The string used to compute Levenshtein distance for this tile.
 /// * **alias**: The display mode in which this tile should appear.
 /// * **home**: Whether the tile should appear on the home screen (i.e., when the search entry is empty and mode is `all`).
-/// * **only_home**: Whether the tile should **only** appear on the home screen (i.e., when the search entry is empty and mode is `all`).
 /// * **disable**: Whether the tile be forced to not show.
 /// * **update**: The function used to update ui elements (i.e. calculator results or bulk text results)
 /// * **keyword_aware**: Whether the tile shuold take the keyword as context
