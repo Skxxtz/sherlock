@@ -50,7 +50,7 @@ impl Tile {
     }
 }
 
-struct PomodoroInterface{
+struct PomodoroInterface {
     socket: PathBuf,
     exec: PathBuf,
     update_field: WeakRef<Label>,
@@ -75,7 +75,7 @@ impl PomodoroInterface {
             Err(e) if matches!(e.error, SherlockErrorType::SocketConnectError(_)) => {
                 // start pomodoro service
                 let exec = instance.exec.display().to_string();
-                if let Err(e) = command_launch(&exec, ""){
+                if let Err(e) = command_launch(&exec, "") {
                     let _result = e.insert(false);
                 }
             }
@@ -136,7 +136,7 @@ impl PomodoroInterface {
         self.update_ui();
     }
     fn start(&mut self) {
-        if let Err(e) = self.send_message("start"){
+        if let Err(e) = self.send_message("start") {
             let _result = e.insert(false);
         }
     }
@@ -189,7 +189,8 @@ impl PomodoroInterface {
                 move || {
                     if let Some(image) = animation.upgrade() {
                         let curr = current_frame.get();
-                        if let Some(pix) = frames.get(curr.checked_sub(1).unwrap_or(curr) as usize) {
+                        if let Some(pix) = frames.get(curr.checked_sub(1).unwrap_or(curr) as usize)
+                        {
                             let paintable = Texture::for_pixbuf(pix);
                             image.set_paintable(Some(&paintable));
                         }
