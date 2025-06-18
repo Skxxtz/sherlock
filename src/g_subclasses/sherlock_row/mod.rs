@@ -86,14 +86,14 @@ impl SherlockRow {
     }
     pub fn set_signal_id(&self, signal: SignalHandlerId) {
         // Take the previous signal if it exists and disconnect it
-        if let Some(old_id) = self.imp().signal_id.borrow_mut().take() {
+        if let Some(old_id) = self.imp().signal_id.take() {
             self.disconnect(old_id);
             // Store the new signal
         }
-        *self.imp().signal_id.borrow_mut() = Some(signal);
+        self.imp().signal_id.set(Some(signal));
     }
     pub fn clear_signal_id(&self) {
-        if let Some(old) = self.imp().signal_id.borrow_mut().take() {
+        if let Some(old) = self.imp().signal_id.take() {
             self.disconnect(old);
         }
     }
