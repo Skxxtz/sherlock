@@ -11,6 +11,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::OnceLock;
 
+use crate::launcher::utils::HomeType;
 use crate::loader::util::ApplicationAction;
 
 /// ## Fields:
@@ -61,11 +62,7 @@ pub struct SherlockRow {
 
     /// Whether the tile should appear on the home screen  
     ///             (i.e. when the search entry is empty and mode is `all`)  
-    pub home: Cell<bool>,
-
-    /// Whether the tile should **only** appear on the home screen  
-    ///             (i.e. when the search entry is empty and mode is `all`)
-    pub only_home: Cell<bool>,
+    pub home: RefCell<HomeType>,
 
     // The function used to update ui elements
     //              (i.e. calculator results)

@@ -14,7 +14,7 @@ pub mod pomodoro_launcher;
 pub mod process_launcher;
 pub mod system_cmd_launcher;
 pub mod theme_picker;
-mod utils;
+pub mod utils;
 pub mod weather_launcher;
 pub mod web_launcher;
 
@@ -38,6 +38,7 @@ use pomodoro_launcher::Pomodoro;
 use process_launcher::ProcessLauncher;
 use system_cmd_launcher::CommandLauncher;
 use theme_picker::ThemePicker;
+use utils::HomeType;
 use weather_launcher::{WeatherData, WeatherLauncher};
 use web_launcher::WebLauncher;
 
@@ -78,7 +79,6 @@ pub enum LauncherType {
 /// - **launcher_type:** Used to specify the kind of launcher and subsequently its children
 /// - **shortcut:** Specifies whether the child tile should show `modekey + number` shortcuts
 /// - **spawn_focus:** Specifies whether the tile should have focus whenever Sherlock launches
-/// - **only_home:** Specifies whether the children should **only** show on the `home` mode (empty
 /// search entry & mode == `all`)
 #[derive(Clone, Debug)]
 pub struct Launcher {
@@ -92,11 +92,10 @@ pub struct Launcher {
     pub next_content: Option<String>,
     pub priority: u32,
     pub r#async: bool,
-    pub home: bool,
+    pub home: HomeType,
     pub launcher_type: LauncherType,
     pub shortcut: bool,
     pub spawn_focus: bool,
-    pub only_home: bool,
     pub actions: Option<Vec<ApplicationAction>>,
     pub add_actions: Option<Vec<ApplicationAction>>,
 }
@@ -119,7 +118,6 @@ impl Launcher {
             priority: raw.priority as u32,
             r#async: raw.r#async,
             home: raw.home,
-            only_home: raw.only_home,
             launcher_type,
             shortcut: raw.shortcut,
             spawn_focus: raw.spawn_focus,

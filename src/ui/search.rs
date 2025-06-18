@@ -18,6 +18,7 @@ use super::util::*;
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
     g_subclasses::sherlock_row::SherlockRow,
+    launcher::utils::HomeType,
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
     utils::config::{default_search_icon, default_search_icon_back},
@@ -422,7 +423,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
         let search_mode = Rc::clone(mode);
         move |entry| {
             let item = entry.downcast_ref::<SherlockRow>().unwrap();
-            let (home, only_home) = item.home();
+            let home = item.home();
 
             let mode = search_mode.borrow().trim().to_string();
             let current_text = search_text.borrow().clone();
@@ -431,7 +432,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             let update_res = item.update(&current_text);
 
             if is_home {
-                if home || only_home {
+                if home != HomeType::Search {
                     return true;
                 }
                 return false;
@@ -439,7 +440,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
                 let alias = item.alias();
                 let priority = item.priority();
                 if mode != "all" {
-                    if only_home || mode != alias {
+                    if home == HomeType::OnlyHome || mode != alias {
                         return false;
                     }
                     if current_text.is_empty() {

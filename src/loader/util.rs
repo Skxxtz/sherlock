@@ -14,6 +14,7 @@ use std::{
 };
 
 use crate::{
+    launcher::utils::HomeType,
     sherlock_error,
     utils::{
         errors::{SherlockError, SherlockErrorType},
@@ -42,9 +43,7 @@ pub struct RawLauncher {
     #[serde(default)]
     pub r#async: bool,
     #[serde(default)]
-    pub home: bool,
-    #[serde(default)]
-    pub only_home: bool,
+    pub home: HomeType,
     #[serde(default)]
     pub args: serde_json::Value,
     #[serde(default)]

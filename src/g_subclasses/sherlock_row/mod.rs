@@ -8,7 +8,7 @@ use glib::Object;
 use gtk4::{glib, prelude::WidgetExt};
 
 use crate::{
-    launcher::Launcher,
+    launcher::{utils::HomeType, Launcher},
     loader::util::{AppData, ApplicationAction},
 };
 
@@ -27,7 +27,7 @@ impl SherlockRow {
         let imp = self.imp();
         let search = imp.search.borrow().to_string();
         let prio = imp.priority.get();
-        let home = imp.home.get();
+        let home = imp.home.borrow();
         let spawn = imp.spawn_focus.get();
         let alias = imp.alias.borrow().to_string();
 
@@ -63,11 +63,8 @@ impl SherlockRow {
     pub fn set_alias(&self, mode: &str) {
         *self.imp().alias.borrow_mut() = mode.to_string();
     }
-    pub fn set_home(&self, home: bool) {
-        self.imp().home.set(home);
-    }
-    pub fn set_only_home(&self, home: bool) {
-        self.imp().only_home.set(home);
+    pub fn set_home(&self, home: HomeType) {
+        *self.imp().home.borrow_mut() = home;
     }
     pub fn set_shortcut_holder(&self, holder: Option<WeakRef<gtk4::Box>>) {
         let _ = self.imp().shortcut_holder.set(holder);
@@ -138,10 +135,8 @@ impl SherlockRow {
     pub fn priority(&self) -> f32 {
         self.imp().priority.get()
     }
-    pub fn home(&self) -> (bool, bool) {
-        let only_home = self.imp().only_home.get();
-        let home = self.imp().home.get();
-        (home, only_home)
+    pub fn home(&self) -> HomeType {
+        self.imp().home.borrow().clone()
     }
     pub fn update(&self, keyword: &str) -> bool {
         if let Some(callback) = &*self.imp().update.borrow() {
@@ -177,7 +172,6 @@ impl SherlockRow {
     /// * priority
     /// * alias
     pub fn with_launcher(&self, launcher: &Launcher) {
-        self.set_only_home(launcher.only_home);
         self.set_home(launcher.home);
         self.set_shortcut(launcher.shortcut);
         self.set_spawn_focus(launcher.spawn_focus);
