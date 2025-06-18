@@ -61,7 +61,7 @@ pub struct SherlockRow {
 
     /// Whether the tile should appear on the home screen  
     ///             (i.e. when the search entry is empty and mode is `all`)  
-    pub home: RefCell<HomeType>,
+    pub home: Cell<HomeType>,
 
     // The function used to update ui elements
     //              (i.e. calculator results)

@@ -27,7 +27,7 @@ impl SherlockRow {
         let imp = self.imp();
         let search = imp.search.borrow().to_string();
         let prio = imp.priority.get();
-        let home = imp.home.borrow();
+        let home = imp.home.get();
         let spawn = imp.spawn_focus.get();
         let alias = imp.alias.borrow().to_string();
 
@@ -64,7 +64,7 @@ impl SherlockRow {
         *self.imp().alias.borrow_mut() = mode.to_string();
     }
     pub fn set_home(&self, home: HomeType) {
-        *self.imp().home.borrow_mut() = home;
+        self.imp().home.set(home);
     }
     pub fn set_shortcut_holder(&self, holder: Option<WeakRef<gtk4::Box>>) {
         let _ = self.imp().shortcut_holder.set(holder);
@@ -136,7 +136,7 @@ impl SherlockRow {
         self.imp().priority.get()
     }
     pub fn home(&self) -> HomeType {
-        self.imp().home.borrow().clone()
+        self.imp().home.get()
     }
     pub fn update(&self, keyword: &str) -> bool {
         if let Some(callback) = &*self.imp().update.borrow() {
