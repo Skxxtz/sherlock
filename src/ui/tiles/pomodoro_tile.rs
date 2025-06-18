@@ -188,7 +188,7 @@ impl PomodoroInterface {
             };
             let update_anim = move || {
                 if let Some(image) = animation.upgrade() {
-                    if let Some(pix) = frames.get(current_frame as usize) {
+                    if let Some(pix) = frames.get((current_frame - 1) as usize) {
                         let paintable = Texture::for_pixbuf(pix);
                         image.set_paintable(Some(&paintable));
                     }
