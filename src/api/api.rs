@@ -1,5 +1,5 @@
 use std::{fmt::Display, sync::RwLock};
-
+use once_cell::sync::Lazy;
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::{
     glib::{object::ObjectExt, variant::ToVariant, WeakRef},
@@ -9,9 +9,7 @@ use gtk4::{
     prelude::{EntryExt, GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, Stack,
 };
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use simd_json::prelude::ArrayTrait;
 
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
@@ -283,3 +281,37 @@ impl Display for SherlockModes {
         }
     }
 }
+
+// POSSIBLE SOLUTION FOR API CALL DISPATCHER
+// use std::{sync::{Mutex, Arc}, collections::HashMap};
+// use serde_json::Value;
+// type CommandHandler = Box<dyn Fn(Value) + Send + Sync>;
+// struct ApiFunctionispatcher {
+//     handlers: HashMap<String, CommandHandler>,
+// }
+// impl ApiFunctionispatcher {
+//     fn new() -> Self {
+//         Self { handlers: HashMap::new() }
+//     }
+//     fn register<F>(&mut self, name: &str, handler: F)
+//         where F: Fn(Value) + Send + Sync + 'static,
+//     {
+//         self.handlers.insert(name.to_string(), Box::new(handler));
+//     }
+//     fn execute(&self, name: &str, args: &str) {
+//         match serde_json::from_str::<Value>(args){
+//             Ok(val) => {
+//                 if let Some(func) = self.handlers.get(name){
+//                     func(val)
+//                 }
+//             }, 
+//             _ => {}
+//         }
+
+//     }
+// }
+// pub static DISPATCHER: Lazy<Arc<Mutex<ApiFunctionispatcher>>> = Lazy::new(|| {
+//     Arc::new(Mutex::new(ApiFunctionispatcher::new()))
+// });
+
+
