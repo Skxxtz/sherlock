@@ -16,7 +16,12 @@ use std::rc::Rc;
 use super::context::make_context;
 use super::util::*;
 use crate::{
-    api::{api::SherlockAPI, call::ApiCall, server::SherlockServer}, g_subclasses::sherlock_row::SherlockRow, launcher::utils::HomeType, prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut}, ui::key_actions::KeyActions, utils::config::{default_search_icon, default_search_icon_back}
+    api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
+    g_subclasses::sherlock_row::SherlockRow,
+    launcher::utils::HomeType,
+    prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
+    ui::key_actions::KeyActions,
+    utils::config::{default_search_icon, default_search_icon_back},
 };
 use crate::{
     sherlock_error,

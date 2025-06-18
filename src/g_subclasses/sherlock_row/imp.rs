@@ -24,6 +24,7 @@ use crate::loader::util::ApplicationAction;
 /// * **search**: The string used to compute Levenshtein distance for this tile.
 /// * **alias**: The display mode in which this tile should appear.
 /// * **home**: Whether the tile should appear on the home screen (i.e., when the search entry is empty and mode is `all`).
+/// * **only_home**: Whether the tile should **only** appear on the home screen (i.e., when the search entry is empty and mode is `all`).
 /// * **disable**: Whether the tile be forced to not show.
 /// * **update**: The function used to update ui elements (i.e. calculator results or bulk text results)
 /// * **keyword_aware**: Whether the tile shuold take the keyword as context
@@ -45,7 +46,7 @@ pub struct SherlockRow {
     pub gesture: OnceCell<GestureClick>,
 
     /// State to hold and replace activate signale
-    pub signal_id: Cell<Option<SignalHandlerId>>,
+    pub signal_id: RefCell<Option<SignalHandlerId>>,
 
     /// A `GtkBox` widget that holds the `modkey + number` shortcut indicators  
     pub shortcut_holder: OnceCell<Option<WeakRef<gtk4::Box>>>,
