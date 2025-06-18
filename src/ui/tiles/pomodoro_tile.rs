@@ -61,7 +61,7 @@ struct PomodoroInterface{
 }
 impl PomodoroInterface {
     fn new(pomodoro: &Pomodoro, label: WeakRef<Label>, anim: WeakRef<Picture>) -> Self {
-        Self {
+        let instance = Self {
             socket: pomodoro.socket.clone(),
             exec: pomodoro.program.clone(),
             update_field: label,
@@ -69,7 +69,21 @@ impl PomodoroInterface {
             handle: None,
             running: Rc::new(Cell::new(false)),
             frames: Rc::new(Self::get_animation().unwrap_or_default()),
+        };
+        match instance.send_message("test") {
+            Ok(_) => {}
+            Err(e) if matches!(e.error, SherlockErrorType::SocketConnectError(_)) => {
+                // start pomodoro service
+                let exec = instance.exec.display().to_string();
+                if let Err(e) = command_launch(&exec, ""){
+                    let _result = e.insert(false);
+                }
+            }
+            Err(e) => {
+                let _result = e.insert(false);
+            }
         }
+        instance
     }
     fn send_message(&self, message: &str) -> Result<(), SherlockError> {
         let mut stream = UnixStream::connect(&self.socket).map_err(|e| {
@@ -122,24 +136,8 @@ impl PomodoroInterface {
         self.update_ui();
     }
     fn start(&mut self) {
-        match self.send_message("start") {
-            Ok(_) => {}
-            Err(e) if matches!(e.error, SherlockErrorType::SocketConnectError(_)) => {
-                // start pomodoro service
-                let exec = self.exec.display().to_string();
-                if let Err(e) = command_launch(&exec, "") {
-                    let _result = e.insert(false);
-                }
-                // start timer
-                if let Err(e) = self.send_message("start") {
-                    let _result = e.insert(false);
-                } else {
-                    self.running.set(true);
-                }
-            }
-            Err(e) => {
-                let _result = e.insert(false);
-            }
+        if let Err(e) = self.send_message("start"){
+            let _result = e.insert(false);
         }
     }
     fn stop(&mut self) {
@@ -178,7 +176,7 @@ impl PomodoroInterface {
             let length = self.frames.len() as u64;
             let frames = Rc::clone(&self.frames);
             let mut remaining = timer.remaining().as_secs();
-            let mut current_frame = length - length * remaining / 1500;
+            let current_frame = Rc::new(Cell::new(length - length * remaining / 1500));
             let update_label = move |time: u64| {
                 if let Some(label) = label.upgrade() {
                     let mins = time / 60;
@@ -186,11 +184,15 @@ impl PomodoroInterface {
                     label.set_text(&format!("{:0>2}:{:0>2}", mins, secs));
                 }
             };
-            let update_anim = move || {
-                if let Some(image) = animation.upgrade() {
-                    if let Some(pix) = frames.get((current_frame - 1) as usize) {
-                        let paintable = Texture::for_pixbuf(pix);
-                        image.set_paintable(Some(&paintable));
+            let update_anim = {
+                let current_frame = Rc::clone(&current_frame);
+                move || {
+                    if let Some(image) = animation.upgrade() {
+                        let curr = current_frame.get();
+                        if let Some(pix) = frames.get(curr.checked_sub(1).unwrap_or(curr) as usize) {
+                            let paintable = Texture::for_pixbuf(pix);
+                            image.set_paintable(Some(&paintable));
+                        }
                     }
                 }
             };
@@ -203,8 +205,8 @@ impl PomodoroInterface {
                         while remaining > 0 {
                             remaining -= 1;
                             let new_frame = length - length * remaining / 1500;
-                            if current_frame != new_frame {
-                                current_frame = new_frame;
+                            if current_frame.get() != new_frame {
+                                current_frame.set(new_frame);
                                 update_anim();
                             }
                             update_label(remaining);
