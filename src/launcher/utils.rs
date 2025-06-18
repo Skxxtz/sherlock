@@ -59,6 +59,6 @@ pub enum HomeType {
 }
 impl Default for HomeType {
     fn default() -> Self {
-        HomeType::Home
+        HomeType::Search
     }
 }
