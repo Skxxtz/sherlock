@@ -1,5 +1,3 @@
-use std::{fmt::Display, sync::RwLock};
-use once_cell::sync::Lazy;
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::{
     glib::{object::ObjectExt, variant::ToVariant, WeakRef},
@@ -9,7 +7,9 @@ use gtk4::{
     prelude::{EntryExt, GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, Stack,
 };
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::{fmt::Display, sync::RwLock};
 
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
@@ -304,7 +304,7 @@ impl Display for SherlockModes {
 //                 if let Some(func) = self.handlers.get(name){
 //                     func(val)
 //                 }
-//             }, 
+//             },
 //             _ => {}
 //         }
 
@@ -313,5 +313,3 @@ impl Display for SherlockModes {
 // pub static DISPATCHER: Lazy<Arc<Mutex<ApiFunctionispatcher>>> = Lazy::new(|| {
 //     Arc::new(Mutex::new(ApiFunctionispatcher::new()))
 // });
-
-
