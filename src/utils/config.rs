@@ -869,6 +869,7 @@ impl<'g> ConfigGuard {
             )
         })
     }
+
     fn get_read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
         Self::get_config()?.read().map_err(|_| {
             sherlock_error!(
@@ -877,6 +878,7 @@ impl<'g> ConfigGuard {
             )
         })
     }
+
     fn get_write() -> Result<RwLockWriteGuard<'g, SherlockConfig>, SherlockError> {
         Self::get_config()?.write().map_err(|_| {
             sherlock_error!(
@@ -885,16 +887,17 @@ impl<'g> ConfigGuard {
             )
         })
     }
+
     pub fn read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
         Self::get_read()
     }
 
-    pub fn write<F>(update_fn: F) -> Result<(), SherlockError>
+    pub fn write_key<F>(key_fn: F) -> Result<(), SherlockError>
     where
         F: FnOnce(&mut SherlockConfig),
     {
         let mut config = Self::get_write()?;
-        update_fn(&mut config);
+        key_fn(&mut config);
         Ok(())
     }
 }
