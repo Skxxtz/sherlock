@@ -123,6 +123,12 @@ impl SherlockAPI {
                 ]);
                 execute_from_attrs(&window, &attrs, None);
             });
+
+        // Refresh homescreen on show
+        if let Some(handler) = &self.search_handler {
+            handler.populate();
+        }
+
         open_window.present();
         Some(())
     }
