@@ -94,6 +94,7 @@ impl SherlockAPI {
             ApiCall::DisplayRaw(pipe) => self.display_raw(pipe),
             ApiCall::SwitchMode(mode) => self.switch_mode(mode),
             ApiCall::Socket(socket) => self.create_socket(socket.as_deref()),
+            ApiCall::SetConfigKey(_key, _value) => Some(()),
         }
     }
     pub fn open(&self) -> Option<()> {

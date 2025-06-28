@@ -20,6 +20,7 @@ pub enum ApiCall {
     Pipe(String),
     DisplayRaw(String),
     SwitchMode(SherlockModes),
+    SetConfigKey(String, String),
 }
 impl Display for ApiCall {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -37,6 +38,7 @@ impl Display for ApiCall {
             Self::Pipe(pipe) => write!(f, "action.ProcessPipe:{}", pipe),
             Self::DisplayRaw(pipe) => write!(f, "action.DisplayRaw:{}", pipe),
             Self::SwitchMode(mode) => write!(f, "action.SwitchMode:{}", mode),
+            Self::SetConfigKey(key, value) => write!(f, "action.SetConfigKey:{}:{}", key, value),
         }
     }
 }
