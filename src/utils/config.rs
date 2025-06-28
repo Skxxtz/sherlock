@@ -854,7 +854,7 @@ pub fn get_terminal() -> Result<String, SherlockError> {
 }
 fn is_terminal_installed(terminal: &str) -> bool {
     Command::new(terminal)
-        .arg("--version") // You can adjust this if the terminal doesn't have a "--version" flag
+        .arg("--version")
         .output()
         .is_ok()
 }
