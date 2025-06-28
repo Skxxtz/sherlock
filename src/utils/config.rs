@@ -4,7 +4,7 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
-    sync::RwLockWriteGuard,
+    sync::RwLockReadGuard,
 };
 
 use super::{
@@ -859,8 +859,29 @@ fn is_terminal_installed(terminal: &str) -> bool {
         .is_ok()
 }
 
-pub fn get_config() -> Result<RwLockWriteGuard<'static, SherlockConfig>, SherlockError> {
+pub fn get_config() -> Result<RwLockReadGuard<'static, SherlockConfig>, SherlockError> {
     CONFIG
+        .get()
+        .ok_or_else(|| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Config not initialized".to_string()
+            )
+        })?
+        .read()
+        .map_err(|_| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Failed to acquire write lock on config".to_string()
+            )
+        })
+}
+
+pub fn set_config<F>(update_fn: F) -> Result<(), SherlockError>
+where
+    F: FnOnce(&mut SherlockConfig),
+{
+    let mut cfg = CONFIG
         .get()
         .ok_or_else(|| {
             sherlock_error!(
@@ -874,5 +895,9 @@ pub fn get_config() -> Result<RwLockWriteGuard<'static, SherlockConfig>, Sherloc
                 SherlockErrorType::ConfigError(None),
                 "Failed to acquire write lock on config".to_string()
             )
-        })
+        })?;
+
+    update_fn(&mut cfg);
+
+    Ok(())
 }
