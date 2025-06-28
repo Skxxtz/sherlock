@@ -8,8 +8,9 @@ use std::path::{Path, PathBuf};
 
 use super::Loader;
 use crate::launcher::theme_picker::ThemePicker;
+use crate::utils::config::get_config;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{sher_log, sherlock_error, CONFIG};
+use crate::{sher_log, sherlock_error};
 
 thread_local! {
     static CURRENT_PROVIDER: RefCell<Option<WeakRef<CssProvider>>> = RefCell::new(None);
@@ -27,9 +28,7 @@ impl Loader {
     pub fn load_css(apply_base: bool) -> Result<(), SherlockError> {
         let provider = CssProvider::new();
 
-        let config = CONFIG
-            .get()
-            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+        let config = get_config()?;
         let display = Display::default().ok_or_else(|| {
             sherlock_error!(SherlockErrorType::DisplayError, "No display available")
         })?;

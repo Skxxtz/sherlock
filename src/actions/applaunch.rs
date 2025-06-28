@@ -3,10 +3,10 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::CONFIG;
+use crate::utils::config::get_config;
 
 pub fn applaunch(exec: &str, terminal: bool) -> Option<()> {
-    let config = CONFIG.get()?;
+    let config = get_config().ok()?;
     let mut parts = Vec::new();
 
     if let Some(pre) = &config.behavior.global_prefix {

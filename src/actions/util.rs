@@ -2,14 +2,15 @@ use std::{fs, process::Command};
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 
+use crate::sherlock_error;
 use crate::{
     loader::application_loader::{get_applications_dir, get_desktop_files},
     utils::{
+        config::get_config,
         errors::{SherlockError, SherlockErrorType},
         files::{home_dir, read_lines},
     },
 };
-use crate::{sherlock_error, CONFIG};
 
 pub fn copy_to_clipboard(string: &str) -> Result<(), SherlockError> {
     let mut ctx = ClipboardContext::new()
@@ -26,9 +27,7 @@ pub fn read_from_clipboard() -> Result<String, SherlockError> {
 }
 
 pub fn clear_cached_files() -> Result<(), SherlockError> {
-    let config = CONFIG
-        .get()
-        .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+    let config = get_config()?;
     let home = home_dir()?;
     // Clear sherlocks cache
     fs::remove_dir_all(home.join(".cache/sherlock")).map_err(|e| {

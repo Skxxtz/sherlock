@@ -1,4 +1,4 @@
-use crate::{g_subclasses::sherlock_row::SherlockRow, CONFIG};
+use crate::{g_subclasses::sherlock_row::SherlockRow, utils::config::get_config};
 use gio::glib::WeakRef;
 use gtk4::{prelude::*, Box, Builder, Image, Label, Overlay, Spinner, TextView};
 
@@ -94,7 +94,7 @@ impl WeatherTileBuilder {
         object.append(&overlay);
 
         // Set the icon size to the user-specified one
-        if let Some(c) = CONFIG.get() {
+        if let Ok(c) = get_config() {
             icon.as_ref()
                 .and_then(|tmp| tmp.upgrade())
                 .map(|icon| icon.set_pixel_size(c.appearance.icon_size));

@@ -22,6 +22,7 @@ use crate::launcher::{
     Launcher, LauncherType,
 };
 use crate::loader::util::{CounterReader, JsonCache};
+use crate::utils::config::get_config;
 use crate::utils::errors::SherlockError;
 use crate::utils::errors::SherlockErrorType;
 use crate::utils::files::{expand_path, home_dir};
@@ -39,14 +40,12 @@ use super::util::deserialize_named_appdata;
 use super::util::AppData;
 use super::util::RawLauncher;
 use super::Loader;
-use crate::{sherlock_error, CONFIG};
+use crate::sherlock_error;
 
 impl Loader {
     #[sherlock_macro::timing(name = "Loading launchers")]
     pub fn load_launchers() -> Result<(Vec<Launcher>, Vec<SherlockError>), SherlockError> {
-        let config = CONFIG
-            .get()
-            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+        let config = get_config()?;
 
         // Read fallback data here:
         let (raw_launchers, n) = parse_launcher_configs(&config.files.fallback)?;
@@ -145,7 +144,7 @@ fn parse_app_launcher(
     counts: &HashMap<String, f32>,
     max_decimals: i32,
 ) -> LauncherType {
-    let apps: HashSet<AppData> = CONFIG.get().map_or_else(
+    let apps: HashSet<AppData> = get_config().ok().map_or_else(
         || HashSet::new(),
         |config| {
             let prio = raw.priority;
@@ -172,8 +171,8 @@ fn parse_audio_sink_launcher() -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
-    if let Some(browser) = CONFIG
-        .get()
+    if let Some(browser) = get_config()
+        .ok()
         .and_then(|c| c.default_apps.browser.clone())
         .or_else(|| parse_default_browser().ok())
     {

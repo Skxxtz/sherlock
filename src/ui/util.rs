@@ -18,9 +18,9 @@ use serde::Deserialize;
 
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::loader::Loader;
-use crate::utils::config::default_modkey_ascii;
+use crate::sherlock_error;
+use crate::utils::config::{default_modkey_ascii, get_config};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{sherlock_error, CONFIG};
 
 use super::tiles::util::TextViewTileBuilder;
 
@@ -46,7 +46,7 @@ pub struct ConfKeys {
 }
 impl ConfKeys {
     pub fn new() -> Self {
-        if let Some(c) = CONFIG.get() {
+        if let Ok(c) = get_config() {
             let (prev_mod, prev) = match &c.binds.prev {
                 Some(prev) => ConfKeys::eval_bind_combination(prev),
                 _ => (None, (None, None)),
@@ -141,8 +141,8 @@ impl ConfKeys {
         }
     }
     fn get_mod_str(mod_key: &Option<ModifierType>) -> String {
-        let strings = CONFIG
-            .get()
+        let strings = get_config()
+            .ok()
             .and_then(|c| {
                 let s = &c.appearance.mod_key_ascii;
                 if s.len() == 8 {

@@ -4,13 +4,14 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
+    sync::RwLockWriteGuard,
 };
 
 use super::{
     errors::{SherlockError, SherlockErrorType},
     files::{expand_path, home_dir},
 };
-use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error};
+use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error, CONFIG};
 
 #[derive(Clone, Debug, Default)]
 pub struct SherlockFlags {
@@ -856,4 +857,22 @@ fn is_terminal_installed(terminal: &str) -> bool {
         .arg("--version") // You can adjust this if the terminal doesn't have a "--version" flag
         .output()
         .is_ok()
+}
+
+pub fn get_config() -> Result<RwLockWriteGuard<'static, SherlockConfig>, SherlockError> {
+    CONFIG
+        .get()
+        .ok_or_else(|| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Config not initialized".to_string()
+            )
+        })?
+        .write()
+        .map_err(|_| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Failed to acquire write lock on config".to_string()
+            )
+        })
 }

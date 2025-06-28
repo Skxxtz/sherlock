@@ -13,8 +13,7 @@ use crate::{
     },
     loader::util::CounterReader,
     sherlock_error,
-    utils::{errors::SherlockErrorType, files::home_dir},
-    CONFIG,
+    utils::{config::get_config, errors::SherlockErrorType, files::home_dir},
 };
 
 pub mod applaunch;
@@ -78,17 +77,17 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 }
             }
             "copy" => {
-                let field = attrs
-                    .get("field")
-                    .or(CONFIG.get().and_then(|c| c.behavior.field.as_ref()));
-                if let Some(field) = field {
-                    if let Some(output) = attrs.get(field) {
-                        let _ = util::copy_to_clipboard(output.as_str());
-                    }
-                } else if let Some(output) = attrs.get("result").or(attrs.get("exec")) {
-                    if let Err(err) = util::copy_to_clipboard(output.as_str()) {
-                        exit = false;
-                        let _result = err.insert(false);
+                if let Ok(config) = get_config() {
+                    let field = attrs.get("field").or(config.behavior.field.as_ref());
+                    if let Some(field) = field {
+                        if let Some(output) = attrs.get(field) {
+                            let _ = util::copy_to_clipboard(output.as_str());
+                        }
+                    } else if let Some(output) = attrs.get("result").or(attrs.get("exec")) {
+                        if let Err(err) = util::copy_to_clipboard(output.as_str()) {
+                            exit = false;
+                            let _result = err.insert(false);
+                        }
                     }
                 }
             }

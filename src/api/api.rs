@@ -25,8 +25,7 @@ use crate::{
         tiles::Tile,
         util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
     },
-    utils::errors::SherlockError,
-    CONFIG,
+    utils::{config::get_config, errors::SherlockError},
 };
 
 use super::call::ApiCall;
@@ -104,7 +103,7 @@ impl SherlockAPI {
             .and_then(|counter| counter.increment())
             .unwrap_or(0);
 
-        let config = CONFIG.get()?;
+        let config = get_config().ok()?;
 
         // parse sherlock actions
         let actions: Vec<SherlockAction> =
@@ -194,7 +193,7 @@ impl SherlockAPI {
         Some(())
     }
     fn display_raw<T: AsRef<str>>(&mut self, msg: T) -> Option<()> {
-        let config = CONFIG.get()?;
+        let config = get_config().ok()?;
         let stack = self.stack.as_ref().and_then(|tmp| tmp.upgrade())?;
         let message = msg.as_ref();
 

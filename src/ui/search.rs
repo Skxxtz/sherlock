@@ -15,18 +15,14 @@ use std::rc::Rc;
 
 use super::context::make_context;
 use super::util::*;
+use crate::utils::errors::SherlockError;
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
     g_subclasses::sherlock_row::SherlockRow,
     launcher::utils::HomeType,
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
-    utils::config::{default_search_icon, default_search_icon_back},
-};
-use crate::{
-    sherlock_error,
-    utils::errors::{SherlockError, SherlockErrorType},
-    CONFIG,
+    utils::config::{default_search_icon, default_search_icon_back, get_config},
 };
 
 #[sherlock_macro::timing(name = "Search Window Creation")]
@@ -279,9 +275,7 @@ fn construct_window(
 > {
     // Collect Modes
     let custom_binds = ConfKeys::new();
-    let config = CONFIG
-        .get()
-        .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+    let config = get_config()?;
     let original_mode = config.behavior.sub_menu.as_deref().unwrap_or("all");
     let mode = Rc::new(RefCell::new(original_mode.to_string()));
     let search_text = Rc::new(RefCell::new(String::from("")));
@@ -330,15 +324,14 @@ fn construct_window(
         let mod_str = custom_binds.shortcut_modifier_str.clone();
         let search_text = Rc::clone(&search_text);
         let first_iter = Cell::clone(&first_iter);
+        let animate = config.behavior.animate;
         move |myself, _, removed, added| {
             // Early exit if nothing changed
             if added == 0 && removed == 0 {
                 return;
             }
             let mut added_index = 0;
-            let apply_css = search_text.borrow().trim().is_empty()
-                && config.behavior.animate
-                && first_iter.get();
+            let apply_css = search_text.borrow().trim().is_empty() && animate && first_iter.get();
             for i in 0..myself.n_items() {
                 if let Some(item) = myself.item(i).and_downcast::<SherlockRow>() {
                     if apply_css {
@@ -513,7 +506,7 @@ fn nav_event(
 ) {
     let event_controller = EventControllerKey::new();
     let stack_page = Rc::clone(stack_page);
-    let multi = CONFIG.get().map_or(false, |c| c.runtime.multi);
+    let multi = get_config().map_or(false, |c| c.runtime.multi);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         let search_bar = search_bar.clone();

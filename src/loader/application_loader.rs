@@ -13,11 +13,12 @@ use std::time::SystemTime;
 use super::util::ApplicationAction;
 use super::{util, Loader};
 use crate::prelude::PathHelpers;
+use crate::utils::config::get_config;
 use crate::utils::{
     errors::{SherlockError, SherlockErrorType},
     files::read_lines,
 };
-use crate::{sher_log, sherlock_error, CONFIG};
+use crate::{sher_log, sherlock_error};
 use util::{AppData, SherlockAlias};
 
 impl Loader {
@@ -27,9 +28,7 @@ impl Loader {
         counts: &HashMap<String, f32>,
         decimals: i32,
     ) -> Result<HashSet<AppData>, SherlockError> {
-        let config = CONFIG
-            .get()
-            .ok_or(sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+        let config = get_config()?;
 
         // Define required paths for application parsing
         let system_apps = get_applications_dir();
@@ -229,9 +228,7 @@ impl Loader {
         counts: &HashMap<String, f32>,
         decimals: i32,
     ) -> Result<HashSet<AppData>, SherlockError> {
-        let config = CONFIG
-            .get()
-            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+        let config = get_config()?;
         // check if sherlock_alias was modified
         let changed = file_has_changed(&config.files.alias, &config.behavior.cache)
             || file_has_changed(&config.files.ignore, &config.behavior.cache)
@@ -262,6 +259,7 @@ impl Loader {
                 // Refresh cache in the background
                 let old_apps = apps.clone();
                 let last_changed = config.behavior.cache.modtime();
+                let cache = config.behavior.cache.clone();
                 rayon::spawn_fifo({
                     let counts_clone = counts.clone();
                     move || {
@@ -272,7 +270,7 @@ impl Loader {
                             decimals,
                             last_changed,
                         ) {
-                            Loader::write_cache(&new_apps, &config.behavior.cache);
+                            Loader::write_cache(&new_apps, cache);
                         }
                     }
                 });
@@ -284,7 +282,8 @@ impl Loader {
         let apps = Loader::load_applications_from_disk(None, priority, counts, decimals)?;
         // Write the cache in the background
         let app_clone = apps.clone();
-        rayon::spawn_fifo(move || Loader::write_cache(&app_clone, &config.behavior.cache));
+        let cache = config.behavior.cache.clone();
+        rayon::spawn_fifo(move || Loader::write_cache(&app_clone, cache));
         Ok(apps)
     }
 }
@@ -317,7 +316,7 @@ pub fn get_applications_dir() -> HashSet<PathBuf> {
         String::from("/usr/share/applications/"),
         String::from("~/.local/share/applications/"),
     ];
-    if let Some(c) = CONFIG.get() {
+    if let Ok(c) = get_config() {
         default_paths.extend(c.debug.app_paths.clone());
     };
 

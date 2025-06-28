@@ -3,10 +3,11 @@ use gio::prelude::*;
 use gtk4::prelude::{GtkApplicationExt, WidgetExt};
 use gtk4::{glib, Application};
 use loader::pipe_loader::PipedData;
+use once_cell::sync::OnceCell;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
-use std::sync::OnceLock;
+use std::sync::RwLock;
 use std::time::Instant;
 use std::{env, process};
 use utils::config::SherlockFlags;
@@ -31,11 +32,13 @@ use utils::{
     errors::{SherlockError, SherlockErrorType},
 };
 
+use crate::utils::config::get_config;
+
 const SOCKET_PATH: &str = "/tmp/sherlock_daemon.socket";
 const SOCKET_DIR: &str = "/tmp/";
 const LOCK_FILE: &str = "/tmp/sherlock.lock";
 
-static CONFIG: OnceLock<SherlockConfig> = OnceLock::new();
+static CONFIG: OnceCell<RwLock<SherlockConfig>> = OnceCell::new();
 
 #[tokio::main]
 async fn main() {
@@ -125,7 +128,7 @@ async fn main() {
 
 
                 // Notify the user about the value not having any effect to avoid confusion
-                if let Some(c) = CONFIG.get() {
+                if let Ok(c) = get_config() {
                     let opacity = c.appearance.opacity;
                     if !(0.1..=1.0).contains(&opacity) {
                         warnings.push(sherlock_error!(
@@ -266,19 +269,16 @@ async fn startup_loading() -> (
         },
     );
 
-    CONFIG
-        .set(app_config.clone())
-        .map_err(|_| {
-            startup_errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
-        })
-        .ok();
+    let _ = CONFIG.set(RwLock::new(app_config.clone())).map_err(|_| {
+        startup_errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
+    });
 
     // Load resources
     Loader::load_resources()
         .map_err(|e| startup_errors.push(e))
         .ok();
 
-    if let Some(config) = CONFIG.get() {
+    if let Ok(config) = get_config() {
         env::set_var("GSK_RENDERER", &config.appearance.gsk_renderer);
     }
 

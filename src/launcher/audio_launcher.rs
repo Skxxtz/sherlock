@@ -7,8 +7,9 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use zbus::blocking::{Connection, Proxy};
 
+use crate::sherlock_error;
+use crate::utils::config::get_config;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{sherlock_error, CONFIG};
 
 use super::utils::MprisData;
 
@@ -186,10 +187,12 @@ impl AudioLauncherFunctions {
         let mut names: Vec<String> = proxy.call("ListNames", &()).ok()?;
         names.retain(|n| n.starts_with("org.mpris.MediaPlayer2."));
         let first = names.first().cloned();
-        if let Some(m) = CONFIG.get().and_then(|c| c.default_apps.mpris.as_deref()) {
-            let preffered = names.into_iter().find(|name| name.contains(m));
-            if preffered.is_some() {
-                return preffered;
+        if let Ok(config) = get_config() {
+            if let Some(m) = config.default_apps.mpris.as_ref() {
+                let preferred = names.into_iter().find(|name| name.contains(m));
+                if preferred.is_some() {
+                    return preferred;
+                }
             }
         }
         first
