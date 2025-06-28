@@ -22,7 +22,7 @@ use crate::launcher::{
     Launcher, LauncherType,
 };
 use crate::loader::util::{CounterReader, JsonCache};
-use crate::utils::config::get_config;
+use crate::utils::config::ConfigGuard;
 use crate::utils::errors::SherlockError;
 use crate::utils::errors::SherlockErrorType;
 use crate::utils::files::{expand_path, home_dir};
@@ -45,7 +45,7 @@ use crate::sherlock_error;
 impl Loader {
     #[sherlock_macro::timing(name = "Loading launchers")]
     pub fn load_launchers() -> Result<(Vec<Launcher>, Vec<SherlockError>), SherlockError> {
-        let config = get_config()?;
+        let config = ConfigGuard::read()?;
 
         // Read fallback data here:
         let (raw_launchers, n) = parse_launcher_configs(&config.files.fallback)?;
@@ -144,7 +144,7 @@ fn parse_app_launcher(
     counts: &HashMap<String, f32>,
     max_decimals: i32,
 ) -> LauncherType {
-    let apps: HashSet<AppData> = get_config().ok().map_or_else(
+    let apps: HashSet<AppData> = ConfigGuard::read().ok().map_or_else(
         || HashSet::new(),
         |config| {
             let prio = raw.priority;
@@ -171,7 +171,7 @@ fn parse_audio_sink_launcher() -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
-    if let Some(browser) = get_config()
+    if let Some(browser) = ConfigGuard::read()
         .ok()
         .and_then(|c| c.default_apps.browser.clone())
         .or_else(|| parse_default_browser().ok())

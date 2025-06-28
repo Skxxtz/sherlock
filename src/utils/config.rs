@@ -4,7 +4,7 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
-    sync::RwLockReadGuard,
+    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
 use super::{
@@ -859,45 +859,42 @@ fn is_terminal_installed(terminal: &str) -> bool {
         .is_ok()
 }
 
-pub fn get_config() -> Result<RwLockReadGuard<'static, SherlockConfig>, SherlockError> {
-    CONFIG
-        .get()
-        .ok_or_else(|| {
+pub struct ConfigGuard;
+impl<'g> ConfigGuard {
+    fn get_config() -> Result<&'g RwLock<SherlockConfig>, SherlockError> {
+        CONFIG.get().ok_or_else(|| {
             sherlock_error!(
                 SherlockErrorType::ConfigError(None),
                 "Config not initialized".to_string()
             )
-        })?
-        .read()
-        .map_err(|_| {
+        })
+    }
+    fn get_read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_config()?.read().map_err(|_| {
             sherlock_error!(
                 SherlockErrorType::ConfigError(None),
                 "Failed to acquire write lock on config".to_string()
             )
         })
-}
-
-pub fn set_config<F>(update_fn: F) -> Result<(), SherlockError>
-where
-    F: FnOnce(&mut SherlockConfig),
-{
-    let mut cfg = CONFIG
-        .get()
-        .ok_or_else(|| {
-            sherlock_error!(
-                SherlockErrorType::ConfigError(None),
-                "Config not initialized".to_string()
-            )
-        })?
-        .write()
-        .map_err(|_| {
+    }
+    fn get_write() -> Result<RwLockWriteGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_config()?.write().map_err(|_| {
             sherlock_error!(
                 SherlockErrorType::ConfigError(None),
                 "Failed to acquire write lock on config".to_string()
             )
-        })?;
+        })
+    }
+    pub fn read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_read()
+    }
 
-    update_fn(&mut cfg);
-
-    Ok(())
+    pub fn write<F>(update_fn: F) -> Result<(), SherlockError>
+    where
+        F: FnOnce(&mut SherlockConfig),
+    {
+        let mut config = Self::get_write()?;
+        update_fn(&mut config);
+        Ok(())
+    }
 }

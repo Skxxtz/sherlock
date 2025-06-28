@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 use super::utils::to_title_case;
-use crate::utils::config::get_config;
+use crate::utils::config::ConfigGuard;
 use crate::utils::files::home_dir;
 
 #[derive(Clone, Debug)]
@@ -16,7 +16,7 @@ pub struct WeatherLauncher {
 }
 impl WeatherLauncher {
     pub async fn get_result(&self) -> Option<(WeatherData, bool)> {
-        let config = get_config().ok()?;
+        let config = ConfigGuard::read().ok()?;
         // try read cache
         if let Some(data) = WeatherData::from(&self) {
             return Some((data, false));

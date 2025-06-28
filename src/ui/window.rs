@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use crate::daemon::daemon::close_response;
 use crate::launcher::emoji_picker::emojies;
-use crate::utils::config::get_config;
+use crate::utils::config::ConfigGuard;
 
 use super::tiles::util::TextViewTileBuilder;
 
@@ -26,7 +26,7 @@ pub fn window(
     WeakRef<ApplicationWindow>,
 ) {
     // 617 with, 593 without notification bar
-    let config = get_config().map(|c| c.clone()).unwrap_or_default();
+    let config = ConfigGuard::read().map(|c| c.clone()).unwrap_or_default();
     let (width, height, opacity) = (
         config.appearance.width,
         config.appearance.height,
@@ -85,7 +85,7 @@ pub fn window(
     window.add_controller(key_controller);
 
     // Make backdrop if config key is set
-    let backdrop = if let Ok(c) = get_config() {
+    let backdrop = if let Ok(c) = ConfigGuard::read() {
         if c.backdrop.enable {
             let edge = match c.backdrop.edge.to_lowercase().as_str() {
                 "top" => Edge::Top,
@@ -117,7 +117,7 @@ pub fn window(
             // Send close message to possible instance
             let _result = close_response();
 
-            if let Ok(c) = get_config() {
+            if let Ok(c) = ConfigGuard::read() {
                 match c.behavior.daemonize {
                     true => {
                         window.set_visible(false);

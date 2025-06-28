@@ -6,7 +6,7 @@ use crate::{
     loader::pipe_loader::PipedData,
     sher_log, sherlock_error,
     utils::{
-        config::get_config,
+        config::ConfigGuard,
         errors::{SherlockError, SherlockErrorType},
     },
     SOCKET_PATH,
@@ -40,7 +40,7 @@ impl SherlockServer {
                             });
                         }
                         if let Some(elements) = data.elements.take() {
-                            let raw = get_config().map_or(false, |c| c.runtime.display_raw);
+                            let raw = ConfigGuard::read().map_or(false, |c| c.runtime.display_raw);
                             let request = if raw {
                                 ApiCall::DisplayRaw(elements)
                             } else {

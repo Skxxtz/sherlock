@@ -10,7 +10,7 @@ use simd_json::base::ValueTryAsMutObject;
 use simd_json::OwnedValue;
 
 use crate::api::call::ApiCall;
-use crate::utils::config::get_config;
+use crate::utils::config::ConfigGuard;
 
 use super::Loader;
 
@@ -111,7 +111,7 @@ impl PipedData {
         let elements_val = obj.remove("elements")?;
         let mut elements =
             simd_json::serde::from_owned_value::<Vec<PipedElements>>(elements_val).ok()?;
-        let config = get_config().ok()?;
+        let config = ConfigGuard::read().ok()?;
         for item in elements.iter_mut() {
             item.clean();
             if item.method.is_none() {
@@ -121,7 +121,7 @@ impl PipedData {
         Some(elements)
     }
     pub fn deserialize_pipe<T: AsRef<[u8]>>(buf: T) -> Option<Vec<PipedElements>> {
-        let config = get_config().ok()?;
+        let config = ConfigGuard::read().ok()?;
 
         let buf = buf.as_ref().to_vec();
 

@@ -13,7 +13,7 @@ use crate::{
     },
     loader::util::CounterReader,
     sherlock_error,
-    utils::{config::get_config, errors::SherlockErrorType, files::home_dir},
+    utils::{config::ConfigGuard, errors::SherlockErrorType, files::home_dir},
 };
 
 pub mod applaunch;
@@ -77,7 +77,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 }
             }
             "copy" => {
-                if let Ok(config) = get_config() {
+                if let Ok(config) = ConfigGuard::read() {
                     let field = attrs.get("field").or(config.behavior.field.as_ref());
                     if let Some(field) = field {
                         if let Some(output) = attrs.get(field) {

@@ -15,14 +15,14 @@ use std::rc::Rc;
 
 use super::context::make_context;
 use super::util::*;
-use crate::utils::errors::SherlockError;
+use crate::utils::{config::ConfigGuard, errors::SherlockError};
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
     g_subclasses::sherlock_row::SherlockRow,
     launcher::utils::HomeType,
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
-    utils::config::{default_search_icon, default_search_icon_back, get_config},
+    utils::config::{default_search_icon, default_search_icon_back},
 };
 
 #[sherlock_macro::timing(name = "Search Window Creation")]
@@ -275,7 +275,7 @@ fn construct_window(
 > {
     // Collect Modes
     let custom_binds = ConfKeys::new();
-    let config = get_config()?;
+    let config = ConfigGuard::read()?;
     let original_mode = config.behavior.sub_menu.as_deref().unwrap_or("all");
     let mode = Rc::new(RefCell::new(original_mode.to_string()));
     let search_text = Rc::new(RefCell::new(String::from("")));
@@ -506,7 +506,7 @@ fn nav_event(
 ) {
     let event_controller = EventControllerKey::new();
     let stack_page = Rc::clone(stack_page);
-    let multi = get_config().map_or(false, |c| c.runtime.multi);
+    let multi = ConfigGuard::read().map_or(false, |c| c.runtime.multi);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         let search_bar = search_bar.clone();

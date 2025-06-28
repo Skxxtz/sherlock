@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::loader::application_loader::file_has_changed;
-use crate::utils::config::get_config;
+use crate::utils::config::ConfigGuard;
 
 #[derive(Clone, Debug)]
 pub struct TeamsEvent {
@@ -27,7 +27,7 @@ pub struct EventLauncher {
 
 impl EventLauncher {
     pub fn get_event(date: &str, event_start: &str, event_end: &str) -> Option<TeamsEvent> {
-        let config = get_config().ok()?;
+        let config = ConfigGuard::read().ok()?;
         let calendar_client = config.default_apps.calendar_client.as_ref();
         match calendar_client {
             "thunderbird" => {

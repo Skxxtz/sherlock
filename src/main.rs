@@ -32,7 +32,7 @@ use utils::{
     errors::{SherlockError, SherlockErrorType},
 };
 
-use crate::utils::config::get_config;
+use crate::utils::config::ConfigGuard;
 
 const SOCKET_PATH: &str = "/tmp/sherlock_daemon.socket";
 const SOCKET_DIR: &str = "/tmp/";
@@ -128,7 +128,7 @@ async fn main() {
 
 
                 // Notify the user about the value not having any effect to avoid confusion
-                if let Ok(c) = get_config() {
+                if let Ok(c) = ConfigGuard::read() {
                     let opacity = c.appearance.opacity;
                     if !(0.1..=1.0).contains(&opacity) {
                         warnings.push(sherlock_error!(
@@ -278,7 +278,7 @@ async fn startup_loading() -> (
         .map_err(|e| startup_errors.push(e))
         .ok();
 
-    if let Ok(config) = get_config() {
+    if let Ok(config) = ConfigGuard::read() {
         env::set_var("GSK_RENDERER", &config.appearance.gsk_renderer);
     }
 

@@ -13,7 +13,7 @@ use std::time::SystemTime;
 use super::util::ApplicationAction;
 use super::{util, Loader};
 use crate::prelude::PathHelpers;
-use crate::utils::config::get_config;
+use crate::utils::config::ConfigGuard;
 use crate::utils::{
     errors::{SherlockError, SherlockErrorType},
     files::read_lines,
@@ -28,7 +28,7 @@ impl Loader {
         counts: &HashMap<String, f32>,
         decimals: i32,
     ) -> Result<HashSet<AppData>, SherlockError> {
-        let config = get_config()?;
+        let config = ConfigGuard::read()?;
 
         // Define required paths for application parsing
         let system_apps = get_applications_dir();
@@ -228,7 +228,7 @@ impl Loader {
         counts: &HashMap<String, f32>,
         decimals: i32,
     ) -> Result<HashSet<AppData>, SherlockError> {
-        let config = get_config()?;
+        let config = ConfigGuard::read()?;
         // check if sherlock_alias was modified
         let changed = file_has_changed(&config.files.alias, &config.behavior.cache)
             || file_has_changed(&config.files.ignore, &config.behavior.cache)
@@ -316,7 +316,7 @@ pub fn get_applications_dir() -> HashSet<PathBuf> {
         String::from("/usr/share/applications/"),
         String::from("~/.local/share/applications/"),
     ];
-    if let Ok(c) = get_config() {
+    if let Ok(c) = ConfigGuard::read() {
         default_paths.extend(c.debug.app_paths.clone());
     };
 

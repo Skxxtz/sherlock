@@ -1,7 +1,7 @@
 use crate::{
     sherlock_error,
     utils::{
-        config::get_config,
+        config::ConfigGuard,
         errors::{SherlockError, SherlockErrorType},
         files::home_dir,
     },
@@ -52,7 +52,7 @@ impl Calculator {
         let part_pattern = r"(?i)(\d+(?:\.\d+)?)\s*([a-zA-Z]+)";
         let part_re = Regex::new(part_pattern).unwrap();
         if let Some(caps) = part_re.captures(keyword) {
-            let config = get_config().ok()?;
+            let config = ConfigGuard::read().ok()?;
             let value: f32 = caps[1].parse().ok()?;
             let from = caps[2].to_lowercase();
             let to = match unit_str {

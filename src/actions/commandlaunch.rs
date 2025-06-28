@@ -1,13 +1,13 @@
 use std::process::{Command, Stdio};
 
 use crate::sher_log;
-use crate::utils::config::get_config;
+use crate::utils::config::ConfigGuard;
 use crate::{
     sherlock_error,
     utils::errors::{SherlockError, SherlockErrorType},
 };
 pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
-    let config = get_config()?;
+    let config = ConfigGuard::read()?;
     let prefix = config
         .behavior
         .global_prefix
