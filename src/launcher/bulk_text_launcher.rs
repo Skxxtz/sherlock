@@ -19,6 +19,7 @@ pub struct AsyncCommandResponse {
     pub title: Option<String>,
     pub content: Option<String>,
     pub next_content: Option<String>,
+    pub result: Option<String>,
     pub actions: Option<Vec<ApplicationAction>>,
 }
 impl AsyncCommandResponse {
@@ -28,17 +29,8 @@ impl AsyncCommandResponse {
             content: None,
             next_content: None,
             actions: None,
+            result: None,
         }
-    }
-    pub fn split_params(
-        self,
-    ) -> (
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<Vec<ApplicationAction>>,
-    ) {
-        (self.title, self.content, self.next_content, self.actions)
     }
 }
 

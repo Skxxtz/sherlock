@@ -6,7 +6,7 @@ use std::vec;
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::bulk_text_launcher::BulkTextLauncher;
+use crate::launcher::bulk_text_launcher::{AsyncCommandResponse, BulkTextLauncher};
 use crate::launcher::Launcher;
 use crate::prelude::IconComp;
 
@@ -56,7 +56,13 @@ impl Tile {
                     content_title.upgrade().map(|t| t.set_text(&keyword));
 
                     if let Some(response) = launcher.get_result(&keyword).await {
-                        let (title, content, next_content, actions) = response.split_params();
+                        let AsyncCommandResponse {
+                            title,
+                            content,
+                            next_content,
+                            actions,
+                            result,
+                        } = response;
                         if let Some(title) = title {
                             content_title.upgrade().map(|t| t.set_text(&title));
                         }
@@ -76,6 +82,8 @@ impl Tile {
                         if let Some(next_content) = next_content {
                             attrs.insert(String::from("next_content"), next_content.to_string());
                             attrs.insert(String::from("keyword"), keyword.to_string());
+                            result.map(|result| attrs.insert(String::from("result"), result));
+
                             row.upgrade().map(|row| {
                                 let signal_id =
                                     row.connect_local("row-should-activate", false, move |args| {
