@@ -655,6 +655,9 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
 }
 ```
 
+> [!WARNING]
+> This launcher depends on the [sherlock-pomodoro](https://github.com/Skxxtz/sherlock-pomodoro) project – a fast, and efficient pomodro client, built for Sherlock.
+
 ### Arguments (args)
 
 **`program`** (required):<br>
