@@ -630,6 +630,44 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
 
 <br>
 
+## Pomodoro Timer
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="pomorodo-launcher-minimal" width="100%" src="assets/PomodoroMinimal.svg">
+    <img alt="pomorodo-launcher-normal" width="100%" src="assets/PomodorNormal.svg">
+  </picture>
+</div>
+
+```json
+{
+    "name": "Pomodoro Timer",
+    "type": "pomodoro",
+    "args": {
+        "program": "~/.config/sherlock/scripts/sherlock-pomodoro",
+        "socket": "/tmp/sherlock-pomorodo.sock",
+        "style": "minimal"
+    },
+    "priority": 0,
+    "home": "Home",
+    "spawn_focus": false
+}
+```
+
+### Arguments (args)
+
+**`program`** (required):<br>
+Specifies the location of the pomodoro client
+
+**`socket`** (required):<br>
+Specifies the socket over which to communicate with the client. If the
+`sherlock-pomorodo` project is used, this location is the same as listed above.
+
+**`style`** (optional):<br>
+Specifies the style of the pomodoro timer. (1) Minimal, (2) Normal (default)
+
+<br>
+
 ## Weather Launcher
 
 <div align="center" style="text-align:center; border-radius:10px;">
