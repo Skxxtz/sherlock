@@ -1,14 +1,12 @@
 mod imp;
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::ObjectExt, variant::ToVariant, SignalHandlerId};
+use gio::glib::{object::ObjectExt, variant::ToVariant, SignalHandlerId, WeakRef};
 use glib::Object;
 use gtk4::{glib, prelude::WidgetExt};
 
 use crate::{
-    actions::{execute_from_attrs, get_attrs_map},
-    loader::util::ApplicationAction,
-    prelude::IconComp,
+    actions::{execute_from_attrs, get_attrs_map}, g_subclasses::sherlock_row::SherlockRow, loader::util::ApplicationAction, prelude::IconComp
 };
 
 glib::wrapper! {
@@ -24,9 +22,13 @@ impl ContextAction {
         }
         *self.imp().signal_id.borrow_mut() = Some(signal);
     }
-    pub fn new(mod_str: &str, action: &ApplicationAction, terminal: bool) -> Self {
+    pub fn get_row(&self) -> Option<&WeakRef<SherlockRow>> {
+        self.imp().parent.get()
+    }
+    pub fn new(mod_str: &str, action: &ApplicationAction, terminal: bool, parent: WeakRef<SherlockRow>) -> Self {
         let obj: Self = Object::builder().build();
         let imp = obj.imp();
+        let _ = imp.parent.set(parent);
         if let Some(modkey) = imp.modkey.get().and_then(|w| w.upgrade()) {
             modkey.set_text(mod_str);
         }

@@ -4,9 +4,11 @@ use gio::glib::{SignalHandlerId, WeakRef};
 use gtk4::prelude::{BoxExt, GestureSingleExt, WidgetExt};
 use gtk4::subclass::prelude::*;
 use gtk4::{glib, prelude::*, GestureClick, Image, Label};
-use once_cell::unsync::OnceCell;
+use once_cell::sync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
+
+use crate::g_subclasses::sherlock_row::SherlockRow;
 
 /// ## Fields:
 #[derive(Default)]
@@ -22,6 +24,8 @@ pub struct ContextAction {
     pub icon: OnceCell<WeakRef<Image>>,
     pub modkey: OnceCell<WeakRef<Label>>,
     pub title: OnceCell<WeakRef<Label>>,
+
+    pub parent: OnceCell<WeakRef<SherlockRow>>
 }
 
 // The central trait for subclassing a GObject

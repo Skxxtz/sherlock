@@ -106,7 +106,7 @@ impl KeyActions {
         context.remove_all();
         if row.num_actions() > 0 {
             for action in row.actions().iter() {
-                context.append(&ContextAction::new("", &action, row.terminal()))
+                context.append(&ContextAction::new("", &action, row.terminal(), row.downgrade()))
             }
             let context_selection = self.context.view.upgrade()?;
             context_selection.focus_first(None, None, None);

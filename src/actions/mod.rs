@@ -1,19 +1,15 @@
 use gio::glib::{object::IsA, variant::ToVariant};
-use gtk4::{prelude::WidgetExt, Widget};
+use gtk4::{prelude::*, Widget};
 use std::collections::HashMap;
 use std::fs::File;
 use teamslaunch::teamslaunch;
 use util::{clear_cached_files, reset_app_counter};
 
 use crate::{
-    daemon::daemon::print_reponse,
-    launcher::{
+    daemon::daemon::print_reponse, g_subclasses::action_entry::ContextAction, launcher::{
         audio_launcher::MusicPlayerLauncher, process_launcher::ProcessLauncher,
         theme_picker::ThemePicker,
-    },
-    loader::util::CounterReader,
-    sherlock_error,
-    utils::{config::ConfigGuard, errors::SherlockErrorType, files::home_dir},
+    }, loader::util::CounterReader, sherlock_error, utils::{config::ConfigGuard, errors::SherlockErrorType, files::home_dir}
 };
 
 pub mod applaunch;
@@ -216,6 +212,16 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             }
             "clear_cache" => {
                 let _result = clear_cached_files();
+            }
+            k if k.starts_with("inner.") => {
+                if let Some(callback) = k.strip_prefix("inner.") {
+                    if let Some(context) = row.dynamic_cast_ref::<ContextAction>() {
+                        if let Some(row) = context.get_row().and_then(|row| row.upgrade()) {
+                            let exit = exit as u8;
+                            row.emit_by_name::<()>("row-should-activate", &[&exit, &callback]);
+                        }
+                    }
+                }
             }
             _ => {
                 if let Some(out) = attrs.get("result") {

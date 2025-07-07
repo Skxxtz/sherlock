@@ -72,7 +72,8 @@ Actions are used to define entries within Sherlock's context menu. They are defi
     "name": "display name",
     "exec": "should be executed",
     "icon": "display icon",
-    "method": "some method"
+    "method": "some method",
+    "exit": false,
 }
 ```
 
@@ -82,6 +83,32 @@ Actions are used to define entries within Sherlock's context menu. They are defi
 - `icon`: Defines the icon to be shown in the context menu
 - `exec`: The argument to be processed by `method`. For instance, in case of `app_launcher`, this should be the app with its flags
 - `method`: The function to be executed whenever you activate this menu entry
+- `exit`: Whether sherlock should close after completing the action
+
+### Binds
+
+This feature allows for custom binds to be set to some launchers. The related
+functions are listed in the launcher description. Currently supported launchers
+are:
+
+- Pomodoro Timer
+
+Binds have the following structure:
+
+```json
+"binds": [
+    {"bind": "control+r", "callback": "reload"},
+    {"bind": "control+x", "callback": "example2"},
+    {"bind": "control+c", "callback": "example3"}
+]
+```
+
+**Arguments:**
+
+- **`bind`:** Defines the bind to be used with the specified action
+- **`callback`:** Defines the internal function to be executed. This function
+  depend on the launcher and is listed in the `Inner Function` section for available
+  launchers
 
 #### Available Methods
 
@@ -643,15 +670,37 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
 ```json
 {
     "name": "Pomodoro Timer",
-    "type": "pomodoro",
-    "args": {
-        "program": "~/.config/sherlock/scripts/sherlock-pomodoro",
-        "socket": "/tmp/sherlock-pomorodo.sock",
-        "style": "minimal"
-    },
-    "priority": 0,
-    "home": "Home",
-    "spawn_focus": false
+        "type": "pomodoro",
+        "args": {
+            "program": "~/.config/sherlock/scripts/sherlock-pomodoro",
+            "socket": "/tmp/sherlock-pomorodo.sock",
+            "style": "minimal"
+        },
+        "priority": 0,
+        "home": "Home",
+        "spawn_focus": false,
+        "binds": [
+        {
+            "bind": "control+r",
+            "callback": "reset"
+        }
+        ],
+        "actions": [
+        {
+            "name": "Reset",
+            "icon": "edit-undo",
+            "exec": "",
+            "method": "inner.reset",
+            "exit": false
+        },
+        {
+            "name": "Toggle",
+            "icon": "media-playback-start",
+            "exec": "",
+            "method": "inner.toggle",
+            "exit": false
+        }
+        ]
 }
 ```
 
@@ -669,6 +718,14 @@ Specifies the socket over which to communicate with the client. If the
 
 **`style`** (optional):<br>
 Specifies the style of the pomodoro timer. (1) Minimal, (2) Normal (default)
+
+### Inner Functions
+
+These functions can be called either using actions with the `inner.[function
+name]` method or by using bind callbacks `"callback": "[function name]"`.
+
+1. **`reset`:** resets the timer
+2. **`toggle`:** toggles the timer
 
 <br>
 
