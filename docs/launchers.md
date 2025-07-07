@@ -637,7 +637,7 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
   <picture>
     <img alt="pomorodo-launcher-minimal" width="100%" src="assets/PomodoroMinimal.svg">
     <br />
-    <img alt="pomorodo-launcher-normal" width="100%" src="assets/PomodorNormal.svg">
+    <img alt="pomorodo-launcher-normal" width="100%" src="assets/PomodoroNormal.svg">
   </picture>
 </div>
 
