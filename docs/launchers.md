@@ -53,8 +53,7 @@ The launcher can be of the following types:<br>
 |-------------|------|-------------|
 | `name`      | `[UI]` | The name of the category the tiles belong to. This name will appear under the app’s name. It is required but can be left empty. |
 | `alias`     | `[FC]` | The command used to search within this category. |
-| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. |
-| `only_home`      | `[FC]` | Determines if the launcher should be included in searches or only be shown on startup. |
+| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. Can be set to `Home`, `OnlyHome`, or `Search` (default)|
 | `async`     | `[FC]` | Indicates whether the launcher should run asynchronously. This is used in `Bulk Text`. |
 | `on_return`     | `[FC]` | Specifies what to do if return is pressed on the tile. |
 | `spawn_focus`     | `[FC]` | Determines whether the tile should automatically gain focus when it appears as the first item in the list. |
@@ -156,7 +155,7 @@ Binds have the following structure:
         }
     },
     "priority": 3,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -192,7 +191,7 @@ Binds have the following structure:
     "type": "app_launcher",
     "args": {},
     "priority": 2,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -216,7 +215,7 @@ Binds have the following structure:
         "icon_class": "reactive"
     },
     "priority": 3,
-    "home": false
+    "home": "Search"
 }
 ```
 
@@ -350,7 +349,7 @@ Specifies what the launcher should parse:
         ]
     },
     "priority": 1,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -490,7 +489,7 @@ Has following fields of its own:
     "type": "emoji_picker",
     "args": {},
     "priority": 4,
-    "home": false
+    "home": "Search"
 }
 ```
 
@@ -557,7 +556,7 @@ Specifies the arguments to pass along to the `exec` program.<br>
         "event_end": "+15 minutes"
     },
     "priority": 1,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -587,7 +586,7 @@ Specifies the second offset from the `date` parameter.<br>
         "location": "~/.config/sherlock/themes/"
     },
     "priority": 4,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -614,8 +613,7 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
     "args": {},
     "async": true,
     "priority": 1,
-    "home": true,
-    "only_home": true,
+    "home": "Home",
     "spawn_focus": false,
     "actions": [
         {
@@ -652,7 +650,7 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
     "type": "process",
     "args": {},
     "priority": 6,
-    "home": false
+    "home": "Search"
 }
 ```
 
@@ -747,8 +745,7 @@ name]` method or by using bind callbacks `"callback": "[function name]"`.
         "update_interval": 60
     },
     "priority": 1,
-    "home": true,
-    "only_home": true,
+    "home": "OnlyHome",
     "async": true,
     "shortcut": false,
     "spawn_focus": false
