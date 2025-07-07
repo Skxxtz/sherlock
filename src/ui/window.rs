@@ -1,6 +1,6 @@
 use gio::glib::WeakRef;
 use gio::ActionEntry;
-use gtk4::gdk::{Key, Monitor};
+use gtk4::gdk::Key;
 use gtk4::{
     prelude::*, Application, ApplicationWindow, EventControllerFocus, EventControllerKey,
     StackTransitionType,

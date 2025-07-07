@@ -2,7 +2,10 @@ use crate::{
     actions::commandlaunch::command_launch,
     daemon::daemon::SizedMessage,
     g_subclasses::sherlock_row::SherlockRow,
-    launcher::{pomodoro_launcher::Pomodoro, Launcher},
+    launcher::{
+        pomodoro_launcher::{Pomodoro, PomodoroStyle},
+        Launcher,
+    },
     sherlock_error,
     utils::errors::{SherlockError, SherlockErrorType},
 };
@@ -24,7 +27,13 @@ impl Tile {
         let tile = TimerTile::new(object.downgrade());
         let imp = tile.imp();
         object.append(&tile);
-        object.set_css_classes(&vec!["tile", "timer-tile"]);
+
+        let style = match pomodoro.style {
+            PomodoroStyle::Minimal => "minimal",
+            _ => "normal"
+        };
+
+        object.set_css_classes(&vec!["tile", "timer-tile", style]);
         object.with_launcher(launcher);
 
         if let Some(title) = &launcher.name {
@@ -57,7 +66,7 @@ struct PomodoroInterface {
     animation: WeakRef<Picture>,
     handle: Option<SourceId>,
     running: Rc<Cell<bool>>,
-    frames: Rc<Vec<Pixbuf>>,
+    frames: Rc<Option<Vec<Pixbuf>>>,
 }
 impl PomodoroInterface {
     fn new(pomodoro: &Pomodoro, label: WeakRef<Label>, anim: WeakRef<Picture>) -> Self {
@@ -68,8 +77,19 @@ impl PomodoroInterface {
             animation: anim,
             handle: None,
             running: Rc::new(Cell::new(false)),
-            frames: Rc::new(Self::get_animation().unwrap_or_default()),
+            frames: Rc::new(Self::get_animation(pomodoro.style.clone())),
         };
+        
+        match pomodoro.style {
+            PomodoroStyle::Minimal => {
+                if let Some(label) = instance.update_field.upgrade() {
+                    label.set_halign(gtk4::Align::Start);
+                    label.set_width_chars(0);
+                }
+            }
+            _ => {}
+        }
+
         match instance.send_message("test") {
             Ok(_) => {}
             Err(e) if matches!(e.error, SherlockErrorType::SocketConnectError(_)) => {
@@ -100,7 +120,10 @@ impl PomodoroInterface {
         })?;
         Ok(())
     }
-    fn get_animation() -> Option<Vec<Pixbuf>> {
+    fn get_animation(style: PomodoroStyle) -> Option<Vec<Pixbuf>> {
+        if style == PomodoroStyle::Minimal {
+            return None;
+        }
         let animation =
             gdk_pixbuf::PixbufAnimation::from_resource("/dev/skxxtz/sherlock/ui/timer.gif").ok()?;
         let mut frames: Vec<Pixbuf> = vec![];
@@ -173,7 +196,7 @@ impl PomodoroInterface {
             self.running.set(timer.active);
             let label = self.update_field.clone();
             let animation = self.animation.clone();
-            let length = self.frames.len() as u64;
+            let length = self.frames.as_deref().map_or(0, |f| f.len()) as u64;
             let frames = Rc::clone(&self.frames);
             let mut remaining = timer.remaining().as_secs();
             let current_frame = Rc::new(Cell::new(length - length * remaining / 1500));
@@ -189,7 +212,9 @@ impl PomodoroInterface {
                 move || {
                     if let Some(image) = animation.upgrade() {
                         let curr = current_frame.get();
-                        if let Some(pix) = frames.get(curr.checked_sub(1).unwrap_or(curr) as usize)
+                        if let Some(pix) = frames
+                            .as_deref()
+                            .and_then(|f| f.get(curr.checked_sub(1).unwrap_or(curr) as usize))
                         {
                             let paintable = Texture::for_pixbuf(pix);
                             image.set_paintable(Some(&paintable));
@@ -233,7 +258,7 @@ impl PomodoroInterface {
     }
     fn update_anim(&self, frame: usize) {
         if let Some(image) = self.animation.upgrade() {
-            if let Some(pix) = self.frames.get(frame) {
+            if let Some(pix) = self.frames.as_deref().and_then(|f| f.get(frame)) {
                 let paintable = Texture::for_pixbuf(pix);
                 image.set_paintable(Some(&paintable));
             }

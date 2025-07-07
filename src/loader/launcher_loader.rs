@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use std::fs::File;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use crate::actions::util::{parse_default_browser, read_from_clipboard};
 use crate::launcher::audio_launcher::AudioLauncherFunctions;
@@ -13,7 +14,7 @@ use crate::launcher::category_launcher::CategoryLauncher;
 use crate::launcher::emoji_picker::EmojiPicker;
 use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::file_launcher::FileLauncher;
-use crate::launcher::pomodoro_launcher::Pomodoro;
+use crate::launcher::pomodoro_launcher::{Pomodoro, PomodoroStyle};
 use crate::launcher::process_launcher::ProcessLauncher;
 use crate::launcher::theme_picker::ThemePicker;
 use crate::launcher::weather_launcher::WeatherLauncher;
@@ -311,7 +312,18 @@ fn parse_pomodoro(raw: &RawLauncher) -> LauncherType {
         .unwrap_or("");
     let program = expand_path(program_raw, &home);
     let socket = PathBuf::from(raw.args.get("socket").and_then(Value::as_str).unwrap_or(""));
-    LauncherType::Pomodoro(Pomodoro { program, socket })
+    let style_raw = raw
+        .args
+        .get("style")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_lowercase();
+    let style = PomodoroStyle::from_str(&style_raw).unwrap(); // cant panic
+    LauncherType::Pomodoro(Pomodoro {
+        program,
+        socket,
+        style,
+    })
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_debug_launcher(
