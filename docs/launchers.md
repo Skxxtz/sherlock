@@ -17,9 +17,9 @@ will be used.<br>
 
 The launcher can be of the following types:<br>
 
-- **[Category Launcher](#category-launcher):** Groups your launchers.
 - **[App Launcher](#app-launcher):** Launches your apps.
 - **[Bookmark Launcher](#bookmark-launcher):** Finds and launches your browser bookmarks.
+- **[Category Launcher](#category-launcher):** Groups your launchers.
 - **[Web Launcher](#web-launcher):** Opens the ``{keyword}`` in your default web browser. The used search engine is configurable and the most common search engines are included.
 - **[Calculator](#calculator):** Converts your input into a math equation and displays its result. On Return, it also copies the result into the clipboard.
 - **[Clipboard Launcher](#clipboard-launcher):** Checks if your clipboard currently holds a URL. On Return, it opens the URL in the default web browser. Also displays hex and rgb colors.
@@ -122,7 +122,49 @@ Binds have the following structure:
 
 ---
 
-## Category Launcher
+## App Launcher
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="app-launcher" width="100%" src="assets/AppTile.svg">
+  </picture>
+</div>
+<br>
+
+```json
+{
+    "name": "App Launcher",
+    "alias": "app",
+    "type": "app_launcher",
+    "args": {},
+    "priority": 2,
+    "home": "Home"
+}
+```
+
+<br>
+
+## Bookmark Launcher
+
+<div align="center">
+  <picture>
+    <img alt="web-launcher" width="100%" src="assets/BookmarkTile.svg">
+  </picture>
+</div>
+<br>
+
+```json
+{
+    "name": "Bookmarks",
+    "type": "bookmarks",
+    "args": {
+        "icon": "sherlock-bookmark",
+        "icon_class": "reactive"
+    },
+    "priority": 3,
+    "home": "Search"
+}
+```
 
 <br>
 
@@ -173,52 +215,6 @@ Binds have the following structure:
 1. `icon_class`: Sets the css class for the icon to style it according to your theme
 2. `search_string`: the string to match to on search
 3. `exec`: the alias of the launcher you want to execute. If left empty, will not do anything
-<br>
-
-## App Launcher
-
-<div align="center" style="text-align:center; border-radius:10px;">
-  <picture>
-    <img alt="app-launcher" width="100%" src="assets/AppTile.svg">
-  </picture>
-</div>
-<br>
-
-```json
-{
-    "name": "App Launcher",
-    "alias": "app",
-    "type": "app_launcher",
-    "args": {},
-    "priority": 2,
-    "home": "Home"
-}
-```
-
-<br>
-
-## Bookmark Launcher
-
-<div align="center">
-  <picture>
-    <img alt="web-launcher" width="100%" src="assets/BookmarkTile.svg">
-  </picture>
-</div>
-<br>
-
-```json
-{
-    "name": "Bookmarks",
-    "type": "bookmarks",
-    "args": {
-        "icon": "sherlock-bookmark",
-        "icon_class": "reactive"
-    },
-    "priority": 3,
-    "home": "Search"
-}
-```
-
 <br>
 
 ### Supported Browsers
