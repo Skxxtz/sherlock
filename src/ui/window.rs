@@ -1,6 +1,6 @@
 use gio::glib::WeakRef;
 use gio::ActionEntry;
-use gtk4::gdk::{Display, Key, Monitor};
+use gtk4::gdk::{Key, Monitor};
 use gtk4::{
     prelude::*, Application, ApplicationWindow, EventControllerFocus, EventControllerKey,
     StackTransitionType,
@@ -250,22 +250,30 @@ fn make_backdrop(
     opacity: f64,
     edge: Edge,
 ) -> Option<ApplicationWindow> {
-    let monitor = Display::default()
-        .map(|d| d.monitors())
-        .and_then(|m| m.item(0).and_downcast::<Monitor>())?;
-    let rect = monitor.geometry();
     let backdrop = ApplicationWindow::builder()
         .application(application)
         .decorated(false)
         .title("Backdrop")
+        .default_width(10)
+        .default_height(10)
         .opacity(opacity)
-        .default_width(rect.width()) // Adjust to your screen resolution or use monitor API
-        .default_height(rect.height())
         .resizable(false)
         .build();
+
+    backdrop.init_layer_shell();
+
+    // Set backdrop dimensions
+    backdrop.connect_realize(|window| {
+        if let Some(surf) = window.surface() {
+            if let Some(monitor) = surf.display().monitor_at_surface(&surf){
+                let rect = monitor.geometry();
+                window.set_default_size(rect.width(), rect.height());
+            }
+        }
+    });
+
     // Initialize layershell
     backdrop.set_widget_name("backdrop");
-    backdrop.init_layer_shell();
     backdrop.set_namespace("sherlock-backdrop");
     backdrop.set_exclusive_zone(0);
     backdrop.set_layer(gtk4_layer_shell::Layer::Overlay);
