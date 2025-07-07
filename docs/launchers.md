@@ -31,6 +31,7 @@ The launcher can be of the following types:<br>
 - **[Theme Picker](#theme-picjer):** This launcher shows available themes and sets them as your default.
 - **[Music Player Launcher](#music-player):** This launcher shows the currently playing song with artist and toggles playback on return.
 - **[Process Terminator](#process-terminator):** This utility shows user processes and terminates them on return.
+- **[Pomodoro Timer](#pomodoro-timer):** This utility shows a pomodoro-timer focus utility.
 - **[Weather Launcher](#weather-launcher):** It shows the current weather condition in your selected region or city.
 
 ## Shared Launcher Attributes
