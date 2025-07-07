@@ -853,10 +853,7 @@ pub fn get_terminal() -> Result<String, SherlockError> {
     }
 }
 fn is_terminal_installed(terminal: &str) -> bool {
-    Command::new(terminal)
-        .arg("--version")
-        .output()
-        .is_ok()
+    Command::new(terminal).arg("--version").output().is_ok()
 }
 
 pub struct ConfigGuard;

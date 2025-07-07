@@ -265,7 +265,7 @@ fn make_backdrop(
     // Set backdrop dimensions
     backdrop.connect_realize(|window| {
         if let Some(surf) = window.surface() {
-            if let Some(monitor) = surf.display().monitor_at_surface(&surf){
+            if let Some(monitor) = surf.display().monitor_at_surface(&surf) {
                 let rect = monitor.geometry();
                 window.set_default_size(rect.width(), rect.height());
             }

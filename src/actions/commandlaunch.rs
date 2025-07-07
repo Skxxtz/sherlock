@@ -45,10 +45,10 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
         Ok(mut _child) => {
             sher_log!(format!("Detached process started: {}.", raw_command));
             // if let Some(err) = child.stderr.take() {
-                // sher_log!(format!(
-                //     r#"Detached process {} erred: {:?}"#,
-                //     raw_command, err
-                // ));
+            // sher_log!(format!(
+            //     r#"Detached process {} erred: {:?}"#,
+            //     raw_command, err
+            // ));
             // }
             Ok(())
         }

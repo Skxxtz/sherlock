@@ -196,6 +196,9 @@ async fn main() {
             }
         });
 
+        // Spawn api listener
+        let _server = SherlockServer::listen(sherlock);
+
         // Logic for handling the daemonization
         if app_config.behavior.daemonize {
             // Used to cache render
@@ -205,8 +208,6 @@ async fn main() {
             }
         }
 
-        // Spawn api listener
-        let _server = SherlockServer::listen(sherlock);
 
         // Print Timing
         if let Ok(timing_enabled) = std::env::var("TIMING") {
