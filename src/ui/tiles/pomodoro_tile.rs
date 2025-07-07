@@ -30,7 +30,7 @@ impl Tile {
 
         let style = match pomodoro.style {
             PomodoroStyle::Minimal => "minimal",
-            _ => "normal"
+            _ => "normal",
         };
 
         object.set_css_classes(&vec!["tile", "timer-tile", style]);
@@ -48,8 +48,23 @@ impl Tile {
         // initialize view
         // gather result from pomodoro tile
         let signal_id = object.connect_local("row-should-activate", false, {
-            move |_args| {
-                pomodoro_api.borrow_mut().toggle();
+            move |args| {
+                let _ = args[1]
+                    .get::<u8>()
+                    .expect("Failed to get u8 from signal args");
+
+                let callback = args[2]
+                    .get::<String>()
+                    .expect("Failed to get String from signal args");
+
+                match callback.as_str() {
+                    "reset" => {
+                        pomodoro_api.borrow_mut().reset();
+                    }
+                    _ => {
+                        pomodoro_api.borrow_mut().toggle();
+                    }
+                }
                 None
             }
         });
@@ -79,7 +94,7 @@ impl PomodoroInterface {
             running: Rc::new(Cell::new(false)),
             frames: Rc::new(Self::get_animation(pomodoro.style.clone())),
         };
-        
+
         match pomodoro.style {
             PomodoroStyle::Minimal => {
                 if let Some(label) = instance.update_field.upgrade() {
@@ -158,6 +173,20 @@ impl PomodoroInterface {
         }
         self.update_ui();
     }
+    fn reset(&mut self) {
+        match self.send_message("reset") {
+            Ok(_) => {
+                if let Some(handle) = self.handle.take() {
+                    handle.remove();
+                }
+                self.running.set(false);
+                self.update_ui();
+            }
+            Err(e) => {
+                let _result = e.insert(false);
+            }
+        }
+    }
     fn start(&mut self) {
         if let Err(e) = self.send_message("start") {
             let _result = e.insert(false);
@@ -170,11 +199,12 @@ impl PomodoroInterface {
 
         if let Err(e) = self.send_message("stop") {
             let _result = e.insert(false);
+        } else {
+            if let Some(handle) = self.handle.take() {
+                handle.remove();
+            }
+            self.running.set(false);
         }
-        if let Some(handle) = self.handle.take() {
-            handle.remove();
-        }
-        self.running.set(false);
     }
     fn get_timer(&self) -> Option<Timer> {
         let mut stream = UnixStream::connect(&self.socket).ok()?;

@@ -79,7 +79,7 @@ impl ObjectImpl for ContextAction {
                 if n_clicks >= 2 {
                     if let Some(obj) = obj.upgrade() {
                         let exit: u8 = 0;
-                        obj.emit_by_name::<()>("context-action-should-activate", &[&exit]);
+                        obj.emit_by_name::<()>("context-action-should-activate", &[&exit, &""]);
                     }
                 }
             });

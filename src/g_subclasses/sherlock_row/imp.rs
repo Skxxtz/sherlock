@@ -9,8 +9,10 @@ use once_cell::unsync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::future::Future;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::sync::OnceLock;
 
+use crate::g_subclasses::sherlock_row::SherlockRowBind;
 use crate::launcher::utils::HomeType;
 use crate::loader::util::ApplicationAction;
 
@@ -79,6 +81,8 @@ pub struct SherlockRow {
 
     /// * **terminal**: If this tile should be executed using the terminal
     pub terminal: Cell<bool>,
+
+    pub binds: Rc<RefCell<Vec<SherlockRowBind>>>,
 }
 
 // The central trait for subclassing a GObject
@@ -104,7 +108,7 @@ impl ObjectImpl for SherlockRow {
                 if n_clicks >= 2 {
                     if let Some(obj) = obj.upgrade() {
                         let exit: u8 = 0;
-                        obj.emit_by_name::<()>("row-should-activate", &[&exit]);
+                        obj.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
                     }
                 }
             });
@@ -118,7 +122,7 @@ impl ObjectImpl for SherlockRow {
         // Signal used to activate actions connected to the SherlockRow
         SIGNALS.get_or_init(|| {
             vec![Signal::builder("row-should-activate")
-                .param_types([u8::static_type()])
+                .param_types([u8::static_type(), String::static_type()])
                 .build()]
         })
     }

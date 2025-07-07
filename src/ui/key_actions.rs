@@ -8,6 +8,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     g_subclasses::{action_entry::ContextAction, sherlock_row::SherlockRow},
     prelude::SherlockNav,
+    ui::search::UserBindHandler,
 };
 
 use super::util::ContextUI;
@@ -16,13 +17,20 @@ pub struct KeyActions {
     pub results: WeakRef<ListView>,
     pub search_bar: WeakRef<Entry>,
     pub context: ContextUI,
+    pub custom_handler: Rc<RefCell<UserBindHandler>>,
 }
 impl KeyActions {
-    pub fn new(results: WeakRef<ListView>, search_bar: WeakRef<Entry>, context: ContextUI) -> Self {
+    pub fn new(
+        results: WeakRef<ListView>,
+        search_bar: WeakRef<Entry>,
+        context: ContextUI,
+        custom_handler: Rc<RefCell<UserBindHandler>>,
+    ) -> Self {
         Self {
             results,
             search_bar,
             context,
+            custom_handler,
         }
     }
     pub fn on_multi_return(&self) {
@@ -38,7 +46,7 @@ impl KeyActions {
             let len = actives.len();
             actives.into_iter().enumerate().for_each(|(i, row)| {
                 let exit: u8 = if i < len - 1 { 1 } else { 0 };
-                row.emit_by_name::<()>("row-should-activate", &[&exit]);
+                row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
             });
         }
     }
@@ -59,7 +67,7 @@ impl KeyActions {
                 .and_then(|r| r.selected_item())
                 .and_downcast::<SherlockRow>()
             {
-                row.emit_by_name::<()>("row-should-activate", &[&exit]);
+                row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
             } else {
                 if let Some(current_text) = self.search_bar.upgrade().map(|s| s.text()) {
                     println!("{}", current_text);
@@ -101,7 +109,7 @@ impl KeyActions {
                 context.append(&ContextAction::new("", &action, row.terminal()))
             }
             let context_selection = self.context.view.upgrade()?;
-            context_selection.focus_first(None, None);
+            context_selection.focus_first(None, None, None);
             self.context.open.set(true);
         }
         Some(())
@@ -118,29 +126,33 @@ impl KeyActions {
     }
     pub fn focus_first(&self, current_mode: Rc<RefCell<String>>) -> Option<()> {
         let results = self.results.upgrade()?;
-        results.focus_first(Some(&self.context.model), Some(current_mode));
+        results.focus_first(
+            Some(&self.context.model),
+            Some(current_mode),
+            Some(self.custom_handler.clone()),
+        );
         Some(())
     }
 
     // ---- PRIVATES ----
     fn move_prev(&self) -> Option<()> {
         let results = self.results.upgrade()?;
-        results.focus_prev(Some(&self.context.model));
+        results.focus_prev(Some(&self.context.model), Some(self.custom_handler.clone()));
         None
     }
     fn move_next(&self) -> Option<()> {
         let results = self.results.upgrade()?;
-        results.focus_next(Some(&self.context.model));
+        results.focus_next(Some(&self.context.model), Some(self.custom_handler.clone()));
         None
     }
     fn move_next_context(&self) -> Option<()> {
         let model = self.context.view.upgrade()?;
-        let _ = model.focus_next(None);
+        let _ = model.focus_next(None, None);
         None
     }
     fn move_prev_context(&self) -> Option<()> {
         let model = self.context.view.upgrade()?;
-        let _ = model.focus_prev(None);
+        let _ = model.focus_prev(None, None);
         None
     }
 }

@@ -19,7 +19,7 @@ pub mod weather_launcher;
 pub mod web_launcher;
 
 use crate::{
-    g_subclasses::sherlock_row::SherlockRow,
+    g_subclasses::sherlock_row::{SherlockRow, SherlockRowBind},
     loader::util::{ApplicationAction, RawLauncher},
     ui::tiles::Tile,
 };
@@ -98,6 +98,7 @@ pub struct Launcher {
     pub spawn_focus: bool,
     pub actions: Option<Vec<ApplicationAction>>,
     pub add_actions: Option<Vec<ApplicationAction>>,
+    pub binds: Option<Vec<SherlockRowBind>>,
 }
 impl Launcher {
     pub fn from_raw(
@@ -123,6 +124,7 @@ impl Launcher {
             spawn_focus: raw.spawn_focus,
             actions: raw.actions,
             add_actions: raw.add_actions,
+            binds: raw.binds,
         }
     }
 }

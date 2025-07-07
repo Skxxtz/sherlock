@@ -14,6 +14,7 @@ use std::{
 };
 
 use crate::{
+    g_subclasses::sherlock_row::SherlockRowBind,
     launcher::utils::HomeType,
     sherlock_error,
     utils::{
@@ -46,6 +47,8 @@ pub struct RawLauncher {
     pub home: HomeType,
     #[serde(default)]
     pub args: serde_json::Value,
+    #[serde(default)]
+    pub binds: Option<Vec<SherlockRowBind>>,
     #[serde(default)]
     pub actions: Option<Vec<ApplicationAction>>,
     #[serde(default)]

@@ -1,5 +1,8 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::{glib::WeakRef, ActionEntry, ListStore};
+use gio::{
+    glib::{SignalHandlerId, WeakRef},
+    ActionEntry, ListStore,
+};
 use gtk4::{
     self,
     gdk::{Key, ModifierType},
@@ -9,13 +12,13 @@ use gtk4::{
 };
 use gtk4::{glib, ApplicationWindow, Entry};
 use levenshtein::levenshtein;
+use simd_json::prelude::ArrayTrait;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::context::make_context;
 use super::util::*;
-use crate::utils::{config::ConfigGuard, errors::SherlockError};
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
     g_subclasses::sherlock_row::SherlockRow,
@@ -23,6 +26,10 @@ use crate::{
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
     utils::config::{default_search_icon, default_search_icon_back},
+};
+use crate::{
+    g_subclasses::sherlock_row::SherlockRowBind,
+    utils::{config::ConfigGuard, errors::SherlockError},
 };
 
 #[sherlock_macro::timing(name = "Search Window Creation")]
@@ -37,6 +44,13 @@ pub fn search(
     let imp = ui.imp();
     imp.result_viewport
         .set_policy(gtk4::PolicyType::Automatic, gtk4::PolicyType::Automatic);
+
+    // Add support for custom binds
+    let custom_controller = EventControllerKey::new();
+    custom_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
+    let custom_handler = Rc::new(RefCell::new(UserBindHandler::new(
+        custom_controller.downgrade(),
+    )));
 
     {
         let mut sherlock = sherlock.borrow_mut();
@@ -62,14 +76,19 @@ pub fn search(
             let results = imp.results.downgrade();
             let context_model = context.model.clone();
             let current_mode = Rc::clone(&mode);
+            let custom_handler = Rc::clone(&custom_handler);
             move |_myself, _position, _removed, added| {
                 if added == 0 {
                     return;
                 }
                 // Show or hide context menu shortcuts whenever stack shows
-                results
-                    .upgrade()
-                    .map(|r| r.focus_first(Some(&context_model), Some(current_mode.clone())));
+                results.upgrade().map(|r| {
+                    r.focus_first(
+                        Some(&context_model),
+                        Some(current_mode.clone()),
+                        Some(custom_handler.clone()),
+                    )
+                });
             }
         });
     }
@@ -83,6 +102,7 @@ pub fn search(
         stack_page_ref,
         &mode,
         context.clone(),
+        Rc::clone(&custom_handler),
     );
     change_event(
         imp.search_bar.downgrade(),
@@ -154,6 +174,7 @@ pub fn search(
             let current_text = search_query.clone();
             let context_model = context.model.clone();
             let current_mode = Rc::clone(&mode);
+            let custom_handler = Rc::clone(&custom_handler);
             move |_: &ApplicationWindow, _, parameter| {
                 if let Some(focus_first) = parameter.and_then(|p| p.get::<bool>()) {
                     filter
@@ -165,7 +186,11 @@ pub fn search(
                     let weaks = results.get_weaks().unwrap_or(vec![]);
                     if focus_first {
                         if results
-                            .focus_first(Some(&context_model), Some(current_mode.clone()))
+                            .focus_first(
+                                Some(&context_model),
+                                Some(current_mode.clone()),
+                                Some(custom_handler.clone()),
+                            )
                             .is_some()
                         {
                             update_async(weaks, &current_task, current_text.borrow().clone());
@@ -503,15 +528,18 @@ fn nav_event(
     stack_page: &Rc<RefCell<String>>,
     current_mode: &Rc<RefCell<String>>,
     context: ContextUI,
+    custom_handler: Rc<RefCell<UserBindHandler>>,
 ) {
     let event_controller = EventControllerKey::new();
+    let custom_controller = custom_handler.borrow().get_controller();
     let stack_page = Rc::clone(stack_page);
     let multi = ConfigGuard::read().map_or(false, |c| c.runtime.multi);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         let search_bar = search_bar.clone();
         let current_mode = Rc::clone(current_mode);
-        let key_actions = KeyActions::new(results, search_bar, context);
+        let stack_page = Rc::clone(&stack_page);
+        let key_actions = KeyActions::new(results, search_bar, context, custom_handler);
         move |_, key, i, mods| {
             if stack_page.borrow().as_str() != "search-page" {
                 return false.into();
@@ -630,9 +658,12 @@ fn nav_event(
         }
     });
 
-    search_bar
-        .upgrade()
-        .map(|entry| entry.add_controller(event_controller));
+    if let Some(entry) = search_bar.upgrade() {
+        entry.add_controller(event_controller);
+        if let Some(custom_controller) = custom_controller {
+            entry.add_controller(custom_controller);
+        }
+    }
 }
 
 fn change_event(
@@ -761,5 +792,54 @@ impl SearchUiObj {
         imp.search_icon_holder.add_css_class("search");
         imp.results.set_focusable(false);
         ui
+    }
+}
+
+pub struct UserBindHandler {
+    signal_id: Option<SignalHandlerId>,
+    inner: WeakRef<EventControllerKey>,
+}
+impl UserBindHandler {
+    pub fn new(inner: WeakRef<EventControllerKey>) -> Self {
+        Self {
+            signal_id: None,
+            inner,
+        }
+    }
+    pub fn set_handler(&mut self, id: SignalHandlerId) {
+        if let Some(inner) = self.inner.upgrade() {
+            if let Some(id) = self.signal_id.replace(id) {
+                inner.disconnect(id);
+            }
+        }
+    }
+    pub fn set_binds(
+        &mut self,
+        binds: Rc<RefCell<Vec<SherlockRowBind>>>,
+        widget: WeakRef<SherlockRow>,
+    ) -> Option<SignalHandlerId> {
+        if binds.borrow().is_empty() {
+            return None;
+        }
+        let inner = self.inner.upgrade()?;
+
+        inner.connect_key_pressed({
+            move |_, key, _, mods| {
+                if let Some(bind) = binds
+                    .borrow()
+                    .iter()
+                    .find(|s| s.key == Some(key) && mods.contains(s.modifier))
+                {
+                    if let Some(row) = widget.upgrade() {
+                        row.emit_by_name::<()>("row-should-activate", &[&0u8, &bind.callback]);
+                    }
+                };
+                false.into()
+            }
+        });
+        None
+    }
+    pub fn get_controller(&self) -> Option<EventControllerKey> {
+        self.inner.upgrade()
     }
 }

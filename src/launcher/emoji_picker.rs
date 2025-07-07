@@ -104,10 +104,10 @@ fn nav_event(
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         fn move_prev(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| view.focus_prev(None));
+            view.upgrade().map(|view| view.focus_prev(None, None));
         }
         fn move_next(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| view.focus_next(None));
+            view.upgrade().map(|view| view.focus_next(None, None));
         }
         fn move_up(view: &WeakRef<GridView>) {
             view.upgrade().map(|view| {
@@ -322,7 +322,8 @@ fn change_event(
             filter
                 .upgrade()
                 .map(|filter| filter.changed(gtk4::FilterChange::Different));
-            view.upgrade().map(|view| view.focus_first(None, None));
+            view.upgrade()
+                .map(|view| view.focus_first(None, None, None));
         }
     });
     Some(())

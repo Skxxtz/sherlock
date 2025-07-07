@@ -1,11 +1,21 @@
 mod imp;
 
-use std::{cell::Ref, future::Future, pin::Pin};
+use std::{
+    cell::{Ref, RefCell},
+    future::Future,
+    pin::Pin,
+    rc::Rc,
+};
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, GString, SignalHandlerId, WeakRef};
 use glib::Object;
-use gtk4::{glib, prelude::WidgetExt};
+use gtk4::{
+    gdk::{Key, ModifierType},
+    glib,
+    prelude::WidgetExt,
+};
+use serde::{de, Deserialize, Deserializer};
 
 use crate::{
     launcher::{utils::HomeType, Launcher},
@@ -115,6 +125,9 @@ impl SherlockRow {
     pub fn set_terminal(&self, term: bool) {
         self.imp().terminal.set(term);
     }
+    pub fn set_binds(&self, binds: Vec<SherlockRowBind>) {
+        self.imp().binds.replace(binds);
+    }
 
     // getters
     pub fn shortcut_holder(&self) -> Option<gtk4::Box> {
@@ -162,6 +175,9 @@ impl SherlockRow {
     pub fn terminal(&self) -> bool {
         self.imp().terminal.get()
     }
+    pub fn binds(&self) -> Rc<RefCell<Vec<SherlockRowBind>>> {
+        self.imp().binds.clone()
+    }
     /// Sets shared values from a launcher to the SherlockRow
     /// * only_home
     /// * home
@@ -174,6 +190,9 @@ impl SherlockRow {
         self.set_priority((launcher.priority + 1) as f32);
         if let Some(alias) = &launcher.alias {
             self.set_alias(alias);
+        }
+        if let Some(binds) = &launcher.binds {
+            self.set_binds(binds.clone())
         }
         if let Some(actions) = &launcher.actions {
             self.set_actions(actions.clone());
@@ -198,5 +217,46 @@ impl Default for SherlockRow {
         row.set_spawn_focus(true);
         row.set_css_classes(&["tile"]);
         row
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SherlockRowBind {
+    pub key: Option<Key>,
+    pub modifier: ModifierType,
+    pub callback: String,
+}
+impl<'de> Deserialize<'de> for SherlockRowBind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Temp {
+            bind: String,
+            callback: String,
+        }
+
+        let temp = Temp::deserialize(deserializer)?;
+
+        // Parse bind string like "Ctrl+Shift+S"
+        let mut key: Option<Key> = None;
+        let mut modifier = ModifierType::empty();
+
+        for token in temp.bind.split('+') {
+            if let Some(m) = ModifierType::from_name(token) {
+                modifier |= m;
+            } else if key.is_none() {
+                key = Key::from_name(token);
+            } else {
+                return Err(de::Error::custom(format!("Unknown bind token: {}", token)));
+            }
+        }
+
+        Ok(SherlockRowBind {
+            key,
+            modifier,
+            callback: temp.callback,
+        })
     }
 }
