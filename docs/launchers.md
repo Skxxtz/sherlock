@@ -633,13 +633,12 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
 
 ## Pomodoro Timer
 
-<div align="center" style="text-align:center; border-radius:10px;">
-  <picture>
+<div align="center">
     <img alt="pomorodo-launcher-minimal" width="100%" src="assets/PomodoroMinimal.svg">
     <br />
     <img alt="pomorodo-launcher-normal" width="100%" src="assets/PomodoroNormal.svg">
-  </picture>
 </div>
+<br>
 
 ```json
 {
