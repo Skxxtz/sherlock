@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf};
+use std::{env, path::PathBuf, str::FromStr};
 
 use super::Loader;
 use crate::utils::{
@@ -27,27 +27,18 @@ impl Loader {
     }
 }
 impl SherlockFlags {
+    fn extract_flag_value<T: FromStr>(args: &[String], flag: &str) -> Option<T> {
+        args.iter()
+            .position(|arg| arg == flag)
+            .and_then(|i| args.get(i + 1))
+            .and_then(|val| val.parse::<T>().ok())
+    }
     fn new(args: Vec<String>) -> Result<Self, SherlockError> {
         // Helper closure to extract flag values
-        let extract_path_value = |flag: &str| {
-            args.iter()
-                .position(|arg| arg == flag)
-                .map_or(None, |index| args.get(index + 1))
-                .map(|s| PathBuf::from(s))
-        };
-        let check_flag_existance = |flag: &str| {
-            args.iter()
-                .position(|arg| arg == flag)
-                .map_or(false, |_| true)
-        };
-        let extract_flag_value = |flag: &str| {
-            args.iter()
-                .position(|arg| arg == flag)
-                .map_or(None, |i| args.get(i + 1))
-                .cloned()
-        };
+        let extract_path_value = |flag: &str| Self::extract_flag_value::<PathBuf>(&args, flag);
+        let check_flag_existence = |flag: &str| args.iter().any(|arg| arg == flag);
 
-        if check_flag_existance("init") {
+        if check_flag_existence("init") {
             let path = extract_path_value("init").unwrap_or(PathBuf::from("~/.config/sherlock/"));
             let x = SherlockConfig::to_file(path);
             println!("{:?}", x);
@@ -59,15 +50,16 @@ impl SherlockFlags {
             style: extract_path_value("--style"),
             ignore: extract_path_value("--ignore"),
             alias: extract_path_value("--alias"),
-            display_raw: check_flag_existance("--display-raw"),
-            center_raw: check_flag_existance("--center"),
+            display_raw: check_flag_existence("--display-raw"),
+            center_raw: check_flag_existence("--center"),
             cache: extract_path_value("--cache"),
-            daemonize: check_flag_existance("--daemonize"),
-            sub_menu: extract_flag_value("--sub-menu"),
-            method: extract_flag_value("--method"),
-            field: extract_flag_value("--field"),
-            multi: check_flag_existance("--multi"),
-            photo_mode: check_flag_existance("--photo"),
+            daemonize: check_flag_existence("--daemonize"),
+            sub_menu: Self::extract_flag_value::<String>(&args, "--sub-menu"),
+            method: Self::extract_flag_value::<String>(&args, "--method"),
+            field: Self::extract_flag_value::<String>(&args, "--field"),
+            multi: check_flag_existence("--multi"),
+            photo_mode: check_flag_existence("--photo"),
+            input: Self::extract_flag_value::<bool>(&args, "--input"),
         })
     }
 }

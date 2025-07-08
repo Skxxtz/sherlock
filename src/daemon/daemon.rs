@@ -54,11 +54,22 @@ impl SherlockDaemon {
         // Send pipe request
         let pipe = Loader::load_pipe_args();
         if pipe.is_empty() {
-            let submenu = Loader::load_flags()
-                .ok()
-                .and_then(|f| f.sub_menu)
-                .unwrap_or("all".to_string());
-            stream.write_sized(format!(r#"{{"Show":"{}"}}"#, submenu).as_bytes())?;
+            if let Some(flags) = Loader::load_flags().ok().as_ref() {
+                if let Some(submenu) = flags.sub_menu.as_deref() {
+                    return stream.write_sized(format!(r#"{{"Show":"{}"}}"#, submenu).as_bytes());
+                }
+                if let Some(input) = flags.input {
+                    println!(
+                        "{}",
+                        format!(r#"{{"SwitchMode": {{"Input": "{}"}}}}"#, input)
+                    );
+                    return stream.write_sized(
+                        format!(r#"{{"SwitchMode": {{"Input": {}}}}}"#, input).as_bytes(),
+                    );
+                }
+            } else {
+                stream.write_sized(br#"{"Show": "all"}"#)?;
+            }
         } else {
             // Send return pipe request
             let addr = format!("{}sherlock-pipe.socket", SOCKET_DIR);

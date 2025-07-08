@@ -89,7 +89,11 @@ async fn main() {
         app.set_accels_for_action("win.close", &["<Ctrl>W"]);
 
         // Significantly better id done here
-        sherlock.borrow_mut().request(ApiCall::Show("all".to_string()));
+        if let Some(obf) = app_config.runtime.input {
+            sherlock.borrow_mut().request(ApiCall::SwitchMode(SherlockModes::Input(obf)));
+        } else {
+            sherlock.borrow_mut().request(ApiCall::Show("all".to_string()));
+        }
 
         // Print messages if icon parsers aren't installed
         let types: HashSet<String> = gdk_pixbuf::Pixbuf::formats().into_iter().filter_map(|f| f.name()).map(|s|s.to_string()).collect();

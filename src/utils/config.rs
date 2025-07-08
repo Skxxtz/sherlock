@@ -29,6 +29,7 @@ pub struct SherlockFlags {
     pub sub_menu: Option<String>,
     pub multi: bool,
     pub photo_mode: bool,
+    pub input: Option<bool>,
 }
 /// Configuration sections:
 ///
@@ -98,6 +99,7 @@ impl SherlockConfig {
                 center: false,
                 photo_mode: false,
                 display_raw: false,
+                input: None,
             },
             expand: ConfigExpand::default(),
             backdrop: ConfigBackdrop::default(),
@@ -118,6 +120,7 @@ impl SherlockConfig {
                 center: false,
                 photo_mode: false,
                 display_raw: false,
+                input: None,
             },
             expand: ConfigExpand::default(),
             backdrop: ConfigBackdrop::default(),
@@ -401,6 +404,7 @@ impl SherlockConfig {
         );
         config.behavior.sub_menu = sherlock_flags.sub_menu.clone();
         config.runtime.method = sherlock_flags.method.clone();
+        config.runtime.input = sherlock_flags.input.clone();
         config.runtime.center = sherlock_flags.center_raw.clone();
         config.runtime.multi = sherlock_flags.multi;
         config.runtime.display_raw = sherlock_flags.display_raw;
@@ -674,6 +678,9 @@ pub struct Runtime {
 
     #[serde(default)]
     pub display_raw: bool,
+
+    #[serde(default)]
+    pub input: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
