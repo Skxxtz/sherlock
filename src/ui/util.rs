@@ -246,6 +246,7 @@ impl SherlockCounter {
 #[derive(Clone, Debug)]
 pub struct SearchHandler {
     pub model: Option<WeakRef<ListStore>>,
+    pub mode: Rc<RefCell<String>>,
     pub modes: Rc<RefCell<HashMap<String, Option<String>>>>,
     pub task: Rc<RefCell<Option<glib::JoinHandle<()>>>>,
     pub error_model: WeakRef<ListStore>,
@@ -257,6 +258,7 @@ pub struct SearchHandler {
 impl SearchHandler {
     pub fn new(
         model: WeakRef<ListStore>,
+        mode: Rc<RefCell<String>>,
         error_model: WeakRef<ListStore>,
         filter: WeakRef<CustomFilter>,
         sorter: WeakRef<CustomSorter>,
@@ -265,6 +267,7 @@ impl SearchHandler {
     ) -> Self {
         Self {
             model: Some(model),
+            mode,
             modes: Rc::new(RefCell::new(HashMap::new())),
             task: Rc::new(RefCell::new(None)),
             error_model,

@@ -698,6 +698,8 @@ gridview child:selected box {
     padding: 10px 15px;
     background: transparent;
 }
+
+
 .tile.timer-tile.normal #timer-count {
     font-size: 2.5em;
     padding: 1.25em;

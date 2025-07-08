@@ -229,6 +229,7 @@ fn construct() -> Result<(Rc<RefCell<String>>, GridSearchUi, SearchHandler), She
 
     let handler = SearchHandler::new(
         model_ref,
+        Rc::new(RefCell::new(String::new())),
         WeakRef::new(),
         filter.downgrade(),
         sorter.downgrade(),

@@ -40,7 +40,7 @@ pub fn search(
     sherlock: Rc<RefCell<SherlockAPI>>,
 ) -> Result<(Overlay, SearchHandler), SherlockError> {
     // Initialize the view to show all apps
-    let (search_query, mode, stack_page, ui, handler, context) = construct_window(error_model)?;
+    let (search_query, stack_page, ui, handler, context) = construct_window(error_model)?;
     let imp = ui.imp();
     imp.result_viewport
         .set_policy(gtk4::PolicyType::Automatic, gtk4::PolicyType::Automatic);
@@ -59,7 +59,7 @@ pub fn search(
     }
 
     // Mode setup - used to decide which tiles should be shown
-    let initial_mode = mode.borrow().clone();
+    let initial_mode = handler.mode.borrow().clone();
 
     // Initial setup on show
     stack_page.connect_map({
@@ -75,7 +75,7 @@ pub fn search(
         model.connect_items_changed({
             let results = imp.results.downgrade();
             let context_model = context.model.clone();
-            let current_mode = Rc::clone(&mode);
+            let current_mode = Rc::clone(&handler.mode);
             let custom_handler = Rc::clone(&custom_handler);
             move |_myself, _position, _removed, added| {
                 if added == 0 {
@@ -100,7 +100,7 @@ pub fn search(
         handler.sorter.clone(),
         handler.binds.clone(),
         stack_page_ref,
-        &mode,
+        &Rc::clone(&handler.mode),
         context.clone(),
         Rc::clone(&custom_handler),
     );
@@ -108,7 +108,7 @@ pub fn search(
         imp.search_bar.downgrade(),
         imp.results.downgrade(),
         Rc::clone(&handler.modes),
-        &mode,
+        &Rc::clone(&handler.mode),
         &search_query,
     );
 
@@ -117,7 +117,7 @@ pub fn search(
         .parameter_type(Some(&String::static_variant_type()))
         .state(initial_mode.to_variant())
         .activate({
-            let mode_clone = Rc::clone(&mode);
+            let mode_clone = Rc::clone(&handler.mode);
             let modes_clone = Rc::clone(&handler.modes);
             let ui = ui.downgrade();
             move |_, action, parameter| {
@@ -173,7 +173,7 @@ pub fn search(
             let current_task = handler.task.clone();
             let current_text = search_query.clone();
             let context_model = context.model.clone();
-            let current_mode = Rc::clone(&mode);
+            let current_mode = Rc::clone(&handler.mode);
             let custom_handler = Rc::clone(&custom_handler);
             move |_: &ApplicationWindow, _, parameter| {
                 if let Some(focus_first) = parameter.and_then(|p| p.get::<bool>()) {
@@ -258,7 +258,7 @@ pub fn search(
         .parameter_type(Some(&bool::static_variant_type()))
         .activate({
             let search_bar = imp.search_bar.downgrade();
-            let mode = Rc::clone(&mode);
+            let mode = Rc::clone(&handler.mode);
             move |_: &ApplicationWindow, _, parameter| {
                 let clear_mode = parameter.and_then(|p| p.get::<bool>()).unwrap_or_default();
                 if clear_mode {
@@ -289,7 +289,6 @@ fn construct_window(
     error_model: WeakRef<ListStore>,
 ) -> Result<
     (
-        Rc<RefCell<String>>,
         Rc<RefCell<String>>,
         Overlay,
         SearchUiObj,
@@ -395,6 +394,7 @@ fn construct_window(
 
     let handler = SearchHandler::new(
         model.downgrade(),
+        mode,
         error_model,
         filter.downgrade(),
         sorter.downgrade(),
@@ -416,7 +416,7 @@ fn construct_window(
     imp.search_icon_holder
         .set_visible(config.appearance.search_icon);
 
-    Ok((search_text, mode, main_overlay, ui, handler, context))
+    Ok((search_text, main_overlay, ui, handler, context))
 }
 fn make_factory() -> SignalListItemFactory {
     let factory = SignalListItemFactory::new();

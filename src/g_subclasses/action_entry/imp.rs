@@ -25,7 +25,7 @@ pub struct ContextAction {
     pub modkey: OnceCell<WeakRef<Label>>,
     pub title: OnceCell<WeakRef<Label>>,
 
-    pub parent: OnceCell<WeakRef<SherlockRow>>
+    pub parent: OnceCell<WeakRef<SherlockRow>>,
 }
 
 // The central trait for subclassing a GObject

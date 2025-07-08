@@ -92,16 +92,15 @@ impl SherlockAPI {
             ApiCall::SherlockError(err) => self.insert_msg(err, true),
             ApiCall::SherlockWarning(err) => self.insert_msg(err, false),
             ApiCall::InputOnly => self.show_raw(),
-            ApiCall::Show => self.open(),
+            ApiCall::Show(submenu) => self.open(submenu),
             ApiCall::ClearAwaiting => self.flush(),
             ApiCall::Pipe(pipe) => self.load_pipe_elements(pipe),
             ApiCall::DisplayRaw(pipe) => self.display_raw(pipe),
             ApiCall::SwitchMode(mode) => self.switch_mode(mode),
             ApiCall::Socket(socket) => self.create_socket(socket.as_deref()),
-            ApiCall::SetConfigKey(_key, _value) => Some(()),
         }
     }
-    pub fn open(&self) -> Option<()> {
+    pub fn open(&mut self, submenu: &str) -> Option<()> {
         let window = self.window.as_ref().and_then(|win| win.upgrade())?;
         let open_window = self.open_window.as_ref().and_then(|win| win.upgrade())?;
         let start_count = SherlockCounter::new()
@@ -110,6 +109,11 @@ impl SherlockAPI {
 
         let config = ConfigGuard::read().ok()?;
 
+        if let Some(ui) = self.search_ui.as_ref().and_then(|s| s.upgrade()) {
+            let bar = &ui.imp().search_bar;
+            let _ = bar.activate_action("win.switch-mode", Some(&submenu.to_variant()));
+            let _ = bar.activate_action("win.update-items", Some(&false.to_variant()));
+        }
         // parse sherlock actions
         let actions: Vec<SherlockAction> =
             JsonCache::read(&config.files.actions).unwrap_or_default();

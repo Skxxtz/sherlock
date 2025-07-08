@@ -54,7 +54,11 @@ impl SherlockDaemon {
         // Send pipe request
         let pipe = Loader::load_pipe_args();
         if pipe.is_empty() {
-            stream.write_sized(br#""Show""#)?;
+            let submenu = Loader::load_flags()
+                .ok()
+                .and_then(|f| f.sub_menu)
+                .unwrap_or("all".to_string());
+            stream.write_sized(format!(r#"{{"Show":"{}"}}"#, submenu).as_bytes())?;
         } else {
             // Send return pipe request
             let addr = format!("{}sherlock-pipe.socket", SOCKET_DIR);
@@ -74,7 +78,7 @@ impl SherlockDaemon {
 
             // Send piped content and show
             stream.write_sized(&pipe)?;
-            stream.write_sized(br#""Show""#)?;
+            stream.write_sized(br#"{"Show": "all"}"#)?;
 
             // Close so it wont block main
             drop(stream);

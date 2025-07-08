@@ -6,7 +6,10 @@ use glib::Object;
 use gtk4::{glib, prelude::WidgetExt};
 
 use crate::{
-    actions::{execute_from_attrs, get_attrs_map}, g_subclasses::sherlock_row::SherlockRow, loader::util::ApplicationAction, prelude::IconComp
+    actions::{execute_from_attrs, get_attrs_map},
+    g_subclasses::sherlock_row::SherlockRow,
+    loader::util::ApplicationAction,
+    prelude::IconComp,
 };
 
 glib::wrapper! {
@@ -25,7 +28,12 @@ impl ContextAction {
     pub fn get_row(&self) -> Option<&WeakRef<SherlockRow>> {
         self.imp().parent.get()
     }
-    pub fn new(mod_str: &str, action: &ApplicationAction, terminal: bool, parent: WeakRef<SherlockRow>) -> Self {
+    pub fn new(
+        mod_str: &str,
+        action: &ApplicationAction,
+        terminal: bool,
+        parent: WeakRef<SherlockRow>,
+    ) -> Self {
         let obj: Self = Object::builder().build();
         let imp = obj.imp();
         let _ = imp.parent.set(parent);
