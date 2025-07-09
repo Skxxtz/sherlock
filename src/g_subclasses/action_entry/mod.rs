@@ -49,27 +49,26 @@ impl ContextAction {
             .get()
             .and_then(|tmp| tmp.upgrade())
             .map(|icon| icon.set_icon(action.icon.as_deref(), None, None));
-        if let Some(exec) = &action.exec {
-            let signal_id = obj.connect_local("context-action-should-activate", false, {
-                let exec = exec.clone();
-                let method = action.method.clone();
-                let exit = action.exit.clone();
-                move |row| {
-                    let row = row.first().map(|f| f.get::<ContextAction>().ok())??;
-                    let attrs = get_attrs_map(vec![
-                        ("method", Some(&method)),
-                        ("exec", Some(&exec)),
-                        ("term", Some(&terminal.to_string())),
-                        ("exit", Some(&exit.to_string())),
-                    ]);
-                    execute_from_attrs(&row, &attrs, None);
-                    // To reload ui according to mode
-                    let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
-                    None
-                }
-            });
-            *imp.signal_id.borrow_mut() = Some(signal_id);
-        }
+
+        let signal_id = obj.connect_local("context-action-should-activate", false, {
+            let exec = action.exec.clone();
+            let method = action.method.clone();
+            let exit = action.exit.clone();
+            move |row| {
+                let row = row.first().map(|f| f.get::<ContextAction>().ok())??;
+                let attrs = get_attrs_map(vec![
+                    ("method", Some(&method)),
+                    ("exec", exec.as_deref()),
+                    ("term", Some(&terminal.to_string())),
+                    ("exit", Some(&exit.to_string())),
+                ]);
+                execute_from_attrs(&row, &attrs, None);
+                // To reload ui according to mode
+                let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
+                None
+            }
+        });
+        *imp.signal_id.borrow_mut() = Some(signal_id);
 
         obj
     }
