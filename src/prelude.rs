@@ -426,3 +426,11 @@ impl StackHelpers for Stack {
         pages
     }
 }
+
+
+/// Enables update funciton for SherlockLazyBox usage
+pub trait CanUpdate {
+    type UpdateArgs;
+    fn update(&self, args: Self::UpdateArgs);
+}
+

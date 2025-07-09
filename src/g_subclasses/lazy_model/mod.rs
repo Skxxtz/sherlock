@@ -9,13 +9,15 @@ use gtk4::{
 };
 use simd_json::prelude::ArrayTrait;
 
+use crate::prelude::CanUpdate;
+
 glib::wrapper! {
     pub struct SherlockLazyBox(ObjectSubclass<imp::SherlockLazyBox>)
-        @extends gtk4::Box, gtk4::Widget;
+        @extends gtk4::Box, Widget;
 }
 
 impl SherlockLazyBox {
-    pub fn new<T: IsA<gtk4::Widget> + Default>(max_items: usize) -> Self {
+    pub fn new<T: IsA<Widget> + Default>(max_items: usize) -> Self {
         let myself: Self = Object::builder().build();
         let imp = myself.imp();
 
@@ -23,7 +25,7 @@ impl SherlockLazyBox {
         imp.visible_children.set(0);
 
         // Initialize children
-        let children: Vec<WeakRef<gtk4::Widget>> = (0..max_items)
+        let children: Vec<WeakRef<Widget>> = (0..max_items)
             .map(|_| {
                 let wid = T::default().upcast::<Widget>();
                 wid.set_visible(false);
@@ -36,7 +38,7 @@ impl SherlockLazyBox {
         myself
     }
 
-    fn get_children<T: IsA<gtk4::Widget> + CanUpdate>(&self) -> Option<Vec<T>> {
+    fn get_children<T: IsA<Widget> + CanUpdate>(&self) -> Option<Vec<T>> {
         let imp = self.imp();
         let children: Vec<T> = imp.children.borrow().iter().filter_map(|c| c.upgrade().and_downcast::<T>()).collect();
         if children.is_empty() {
@@ -56,11 +58,6 @@ impl SherlockLazyBox {
             }
         }
     }
-}
-
-pub trait CanUpdate {
-    type UpdateArgs;
-    fn update(&self, args: Self::UpdateArgs);
 }
 
 fn drain_zip<T, U>(v1: &mut Vec<T>, v2: &mut Vec<U>) -> Vec<(T, U)> {
