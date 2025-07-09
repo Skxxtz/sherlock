@@ -60,7 +60,7 @@ impl Tile {
                 match callback.as_str() {
                     "reset" => {
                         pomodoro_api.borrow_mut().reset();
-                    },
+                    }
                     "unset" => return None,
                     _ => {
                         pomodoro_api.borrow_mut().toggle();
