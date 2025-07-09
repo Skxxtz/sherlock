@@ -830,8 +830,14 @@ impl UserBindHandler {
                     .iter()
                     .find(|s| s.key == Some(key) && mods.contains(s.modifier))
                 {
+
+                    let exit: u8 = match bind.exit {
+                        Some(false) => 1,
+                        Some(true) => 2,
+                        _ => 0,
+                    };
                     if let Some(row) = widget.upgrade() {
-                        row.emit_by_name::<()>("row-should-activate", &[&0u8, &bind.callback]);
+                        row.emit_by_name::<()>("row-should-activate", &[&exit, &bind.callback]);
                     }
                 };
                 false.into()

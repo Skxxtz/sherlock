@@ -225,6 +225,7 @@ pub struct SherlockRowBind {
     pub key: Option<Key>,
     pub modifier: ModifierType,
     pub callback: String,
+    pub exit: Option<bool>,
 }
 impl<'de> Deserialize<'de> for SherlockRowBind {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -235,6 +236,7 @@ impl<'de> Deserialize<'de> for SherlockRowBind {
         struct Temp {
             bind: String,
             callback: String,
+            exit: Option<bool>,
         }
 
         let temp = Temp::deserialize(deserializer)?;
@@ -257,6 +259,7 @@ impl<'de> Deserialize<'de> for SherlockRowBind {
             key,
             modifier,
             callback: temp.callback,
+            exit: temp.exit,
         })
     }
 }
