@@ -1,5 +1,7 @@
 mod imp;
 
+use std::marker::PhantomData;
+
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::{CastNone, IsA}, WeakRef};
 use glib::Object;
@@ -67,4 +69,32 @@ fn drain_zip<T, U>(v1: &mut Vec<T>, v2: &mut Vec<U>) -> Vec<(T, U)> {
     let drained2 = v2.drain(0..n);
 
     drained1.zip(drained2).collect()
+}
+
+
+/// Wrapper struct for SherlockLazyBox
+/// Parameter T is used to specify the target widget to be used in the LazyBox. It needs to
+/// implement the CanUpdate trait to enforce an underlying update function which is then used to
+/// update the ui element of said widget.
+pub struct LazyModel<T: CanUpdate + IsA<Widget> + Default> {
+    inner: SherlockLazyBox,
+    data: Vec<T::UpdateArgs>,
+    _phantom: PhantomData<T>
+}
+impl <T: CanUpdate + IsA<Widget> + Default> LazyModel<T>{
+    pub fn new(max_items: usize, data: Vec<T::UpdateArgs>) -> Self {
+        let inner = SherlockLazyBox::new::<T>(max_items);
+
+        Self {
+            inner,
+            data,
+            _phantom: PhantomData
+        }
+    }
+    pub fn get_children(&self) -> Option<Vec<T>> {
+        self.inner.get_children()
+    }
+    pub fn update_children(&self, args: Vec<T::UpdateArgs>) {
+        self.inner.update_children::<T>(args);
+    }
 }
