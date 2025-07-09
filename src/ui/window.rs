@@ -10,6 +10,7 @@ use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::api::server::SherlockServer;
 use crate::daemon::daemon::close_response;
 use crate::launcher::emoji_picker::emojies;
 use crate::utils::config::ConfigGuard;
@@ -58,11 +59,8 @@ pub fn window(
     if !config.runtime.photo_mode {
         let focus_controller = EventControllerFocus::new();
         focus_controller.connect_leave({
-            let window_ref = window.downgrade();
             move |_| {
-                if let Some(window) = window_ref.upgrade() {
-                    let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
-                }
+                let _ = SherlockServer::send_action(crate::api::call::ApiCall::Close);
             }
         });
         window.add_controller(focus_controller);
@@ -72,12 +70,9 @@ pub fn window(
     let key_controller = EventControllerKey::new();
     key_controller.set_propagation_phase(gtk4::PropagationPhase::Bubble);
     key_controller.connect_key_pressed({
-        let window_clone = window.downgrade();
         move |_, keyval, _, _| {
             if keyval == Key::Escape {
-                window_clone
-                    .upgrade()
-                    .map(|win| gtk4::prelude::WidgetExt::activate_action(&win, "win.close", None));
+                let _ = SherlockServer::send_action(crate::api::call::ApiCall::Close);
             }
             false.into()
         }

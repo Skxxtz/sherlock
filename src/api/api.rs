@@ -13,23 +13,20 @@ use simd_json::prelude::ArrayTrait;
 use std::{fmt::Display, sync::RwLock};
 
 use crate::{
-    actions::{execute_from_attrs, get_attrs_map},
+    actions::{commandlaunch::command_launch, execute_from_attrs, get_attrs_map},
     loader::{
         pipe_loader::{PipedData, PipedElements},
         util::JsonCache,
     },
     prelude::StackHelpers,
-    sher_log, sherlock_error,
+    sher_log,
     ui::{
         input_window::InputWindow,
         search::SearchUiObj,
         tiles::Tile,
         util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
     },
-    utils::{
-        config::ConfigGuard,
-        errors::{SherlockError, SherlockErrorType},
-    },
+    utils::{config::ConfigGuard, errors::SherlockError},
 };
 
 use super::call::ApiCall;
@@ -45,6 +42,7 @@ pub struct SherlockAPI {
     pub search_handler: Option<SearchHandler>,
     pub errors: Option<WeakRef<ListStore>>,
     pub queue: Vec<ApiCall>,
+    pub shutdown_queue: Vec<ApiCall>,
 }
 impl SherlockAPI {
     pub fn new(app: &Application) -> Self {
@@ -57,6 +55,7 @@ impl SherlockAPI {
             search_handler: None,
             errors: None,
             queue: vec![],
+            shutdown_queue: vec![],
         }
     }
 
@@ -97,12 +96,25 @@ impl SherlockAPI {
             ApiCall::SherlockWarning(err) => self.insert_msg(err, false),
             ApiCall::InputOnly => self.show_raw(),
             ApiCall::Show(submenu) => self.open(submenu),
+            ApiCall::Close => self.close(),
             ApiCall::ClearAwaiting => self.flush(),
             ApiCall::Pipe(pipe) => self.load_pipe_elements(pipe),
             ApiCall::DisplayRaw(pipe) => self.display_raw(pipe),
             ApiCall::SwitchMode(mode) => self.switch_mode(mode),
             ApiCall::Socket(socket) => self.create_socket(socket.as_deref()),
+            ApiCall::Method(meth) => self.call_method(meth),
         }
+    }
+    pub fn close(&mut self) -> Option<()> {
+        let calls: Vec<ApiCall> = self.shutdown_queue.drain(..).collect();
+        for call in calls {
+            if let ApiCall::Method(x) = call {
+                self.call_method(&x);
+            }
+        }
+        let window = self.window.as_ref().and_then(|win| win.upgrade())?;
+        let _ = window.activate_action("win.close", None);
+        Some(())
     }
     pub fn open(&mut self, submenu: &str) -> Option<()> {
         let window = self.window.as_ref().and_then(|win| win.upgrade())?;
@@ -121,27 +133,24 @@ impl SherlockAPI {
         }
         // parse sherlock actions
         let config = ConfigGuard::read().ok()?;
-        let actions: Vec<SherlockAction> =
+        let mut actions: Vec<SherlockAction> =
             JsonCache::read(&config.files.actions).unwrap_or_default();
 
         // activate sherlock actions
+        let pos = actions
+            .iter()
+            .position(|action| action.exec.as_deref() == Some("restart"));
+        if let Some(pos) = pos {
+            let removed = actions.remove(pos);
+            if removed.on > 2 && start_count % removed.on == 0 {
+                let call = ApiCall::Method("restart".to_string());
+                self.shutdown_queue.push(call);
+            }
+        }
+
         actions
             .into_iter()
-            .filter(|action| {
-                // Skip if exec == "restart" and on < 2
-                if action.exec.as_deref() == Some("restart") && action.on < 2 {
-                    self.await_request(ApiCall::SherlockWarning(sherlock_error!(
-                        SherlockErrorType::InvalidAction,
-                        format!(
-                            "debug.restart cannot be executed with an interval less than 2.\n{}",
-                            action
-                        )
-                    )));
-                    return false;
-                }
-                // Also require start_count % action.on == 0
-                start_count % action.on == 0
-            })
+            .filter(|action| start_count % action.on == 0)
             .for_each(|action| {
                 let attrs = get_attrs_map(vec![
                     ("method", Some(&action.action)),
@@ -150,6 +159,21 @@ impl SherlockAPI {
                 execute_from_attrs(&window, &attrs, None);
             });
         open_window.present();
+        Some(())
+    }
+    pub fn call_method(&self, method: &str) -> Option<()> {
+        match method {
+            "restart" => {
+                if let Ok(config) = ConfigGuard::read() {
+                    if config.behavior.daemonize {
+                        if let Err(err) = command_launch("sherlock --take-over --daemonize", "") {
+                            let _result = err.insert(true);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
         Some(())
     }
     pub fn obfuscate(&self, vis: bool) -> Option<()> {

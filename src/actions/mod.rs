@@ -7,6 +7,7 @@ use util::{clear_cached_files, reset_app_counter};
 
 use crate::{
     actions::commandlaunch::command_launch,
+    api::{call::ApiCall, server::SherlockServer},
     daemon::daemon::print_reponse,
     g_subclasses::action_entry::ContextAction,
     launcher::{process_launcher::ProcessLauncher, theme_picker::ThemePicker},
@@ -101,16 +102,11 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             }
             "teams_event" => {
                 if let Some(meeting) = attrs.get("meeting_url") {
-                    match teamslaunch(meeting) {
-                        Ok(_) => {
-                            let _ = row.activate_action("win.close", None);
-                        }
-                        Err(_) => {
-                            let _ = row.activate_action(
-                                "win.switch-page",
-                                Some(&String::from("search-page->error-page").to_variant()),
-                            );
-                        }
+                    if let Err(_) = teamslaunch(meeting) {
+                        let _ = row.activate_action(
+                            "win.switch-page",
+                            Some(&String::from("search-page->error-page").to_variant()),
+                        );
                     }
                 }
             }
@@ -242,7 +238,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
 
         exit = do_exit.unwrap_or(exit);
         if exit {
-            eval_close(row);
+            eval_close();
         }
     }
 }
@@ -263,6 +259,6 @@ fn increment(key: &str) {
         let _ = count_reader.increment(key);
     };
 }
-fn eval_close<T: IsA<Widget>>(row: &T) {
-    let _ = row.activate_action("win.close", None);
+fn eval_close() {
+    let _ = SherlockServer::send_action(ApiCall::Close);
 }
