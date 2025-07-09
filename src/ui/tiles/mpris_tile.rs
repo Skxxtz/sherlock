@@ -140,9 +140,7 @@ impl Tile {
         let signal_id = object.connect_local("row-should-activate", false, move |args| {
             let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
             let exit: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-            let mut callback: String = args
-                .get(2)
-                .and_then(|v| v.get::<String>().ok())?;
+            let mut callback: String = args.get(2).and_then(|v| v.get::<String>().ok())?;
             if callback.is_empty() {
                 callback = attrs.get("method")?.to_string();
             }
@@ -173,6 +171,7 @@ impl Tile {
                         let _result = error.insert(false);
                     }
                 }
+                "unbind" => return None,
                 _ => {
                     execute_from_attrs(&row, &attrs, exit);
                 }
