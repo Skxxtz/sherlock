@@ -896,7 +896,7 @@ impl<'g> ConfigGuard {
         Self::get_read()
     }
 
-    pub fn _write_key<F>(key_fn: F) -> Result<(), SherlockError>
+    pub fn write_key<F>(key_fn: F) -> Result<(), SherlockError>
     where
         F: FnOnce(&mut SherlockConfig),
     {

@@ -23,7 +23,7 @@ use crate::{
         input_window::InputWindow,
         search::SearchUiObj,
         tiles::Tile,
-        util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
+        util::{display_raw, SearchHandler, SherlockAction, SherlockCounter}, window::window,
     },
     utils::{config::ConfigGuard, errors::SherlockError},
 };
@@ -107,14 +107,16 @@ impl SherlockAPI {
             .and_then(|counter| counter.increment())
             .unwrap_or(0);
 
-        let config = ConfigGuard::read().ok()?;
 
         if let Some(ui) = self.search_ui.as_ref().and_then(|s| s.upgrade()) {
             let bar = &ui.imp().search_bar;
-            let _ = bar.activate_action("win.switch-mode", Some(&submenu.to_variant()));
+            if let Ok(_) = bar.activate_action("win.switch-mode", Some(&submenu.to_variant())){
+                let _ = ConfigGuard::write_key(|c| {c.behavior.sub_menu.replace(submenu.to_string());});
+            }
             let _ = bar.activate_action("win.update-items", Some(&false.to_variant()));
         }
         // parse sherlock actions
+        let config = ConfigGuard::read().ok()?;
         let actions: Vec<SherlockAction> =
             JsonCache::read(&config.files.actions).unwrap_or_default();
 
