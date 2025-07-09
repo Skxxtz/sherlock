@@ -167,7 +167,6 @@ impl Tile {
                     }
                 }
                 _ => {
-                    println!("{:?}", callback);
                     execute_from_attrs(&row, &attrs, exit);
                 }
             }
