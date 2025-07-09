@@ -34,7 +34,7 @@ use utils::{
 
 use crate::utils::config::ConfigGuard;
 
-const SOCKET_PATH: &str = "/tmp/sherlock_daemon.socket";
+const SOCKET_PATH: &str = "/tmp/sherlock_daemon.sock";
 const SOCKET_DIR: &str = "/tmp/";
 const LOCK_FILE: &str = "/tmp/sherlock.lock";
 
