@@ -653,6 +653,7 @@ name]` method or by using bind callbacks `"callback": "[function name]"`.
 1. **`playpause`:** toggles the playback
 2. **`next`:** moves to the next song
 3. **`previous`:** moves to the previous song
+4. **`unbind`:** unbinds the specified key. This can be useful if you want to unbind return
 
 <br>
 
@@ -746,6 +747,7 @@ name]` method or by using bind callbacks `"callback": "[function name]"`.
 
 1. **`reset`:** resets the timer
 2. **`toggle`:** toggles the timer
+3. **`unbind`:** unbinds the specified key. This can be useful if you want to unbind return
 
 <br>
 
