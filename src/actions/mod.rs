@@ -9,7 +9,7 @@ use crate::{
     daemon::daemon::print_reponse,
     g_subclasses::action_entry::ContextAction,
     launcher::{
-        audio_launcher::MusicPlayerLauncher, process_launcher::ProcessLauncher,
+        process_launcher::ProcessLauncher,
         theme_picker::ThemePicker,
     },
     loader::util::CounterReader,
@@ -142,14 +142,6 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
 
                 let _ = row
                     .activate_action("win.add-page", Some(&next_content.to_string().to_variant()));
-            }
-            "play-pause" | "audio_sink" => {
-                if let Some(player) = attrs.get("player") {
-                    if let Err(error) = MusicPlayerLauncher::playpause(player) {
-                        exit = false;
-                        let _result = error.insert(false);
-                    }
-                }
             }
             "kill-process" => {
                 if let Some((ppid, cpid)) = attrs
