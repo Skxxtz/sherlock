@@ -123,6 +123,7 @@ impl SherlockAPI {
         // activate sherlock actions
         actions
             .into_iter()
+            .filter(|action| !(action.on == 0 && &action.action == "restart"))
             .filter(|action| start_count % action.on == 0)
             .for_each(|action| {
                 let attrs = get_attrs_map(vec![
