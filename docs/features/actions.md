@@ -11,8 +11,8 @@ To use Sherlock actions, the `sherlock_actions.json` file is required. The file 
 ```json
 {
     "on": 100,
-    "action": "clear_cache"
-    "exec": ""
+    "action": "debug"
+    "exec": "clear_cache"
 }
 ```
 
