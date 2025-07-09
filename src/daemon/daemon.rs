@@ -59,20 +59,17 @@ impl SherlockDaemon {
                     return stream.write_sized(format!(r#"{{"Show":"{}"}}"#, submenu).as_bytes());
                 }
                 if let Some(input) = flags.input {
-                    println!(
-                        "{}",
-                        format!(r#"{{"SwitchMode": {{"Input": "{}"}}}}"#, input)
-                    );
                     return stream.write_sized(
                         format!(r#"{{"SwitchMode": {{"Input": {}}}}}"#, input).as_bytes(),
                     );
                 }
+                stream.write_sized(br#"{"Show": "all"}"#)?;
             } else {
                 stream.write_sized(br#"{"Show": "all"}"#)?;
             }
         } else {
             // Send return pipe request
-            let addr = format!("{}sherlock-pipe.socket", SOCKET_DIR);
+            let addr = format!("{}sherlock-pipe.sock", SOCKET_DIR);
 
             // remove existing socket
             let _ = remove_file(&addr);
