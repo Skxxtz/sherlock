@@ -107,6 +107,7 @@ impl SherlockAPI {
             .and_then(|counter| counter.increment())
             .unwrap_or(0);
 
+        // Switch mode to specified and assign config runtime parameter
         if let Some(ui) = self.search_ui.as_ref().and_then(|s| s.upgrade()) {
             let bar = &ui.imp().search_bar;
             if let Ok(_) = bar.activate_action("win.switch-mode", Some(&submenu.to_variant())) {
