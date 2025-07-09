@@ -148,19 +148,19 @@ impl Tile {
                 _ => None,
             };
             match callback.as_str() {
-                "inner.next" => {
+                "next" => {
                     let player = &mpris_rc.borrow().player;
                     if let Err(error) = MusicPlayerLauncher::next(player) {
                         let _result = error.insert(false);
                     }
                 }
-                "inner.previous" => {
+                "previous" => {
                     let player = &mpris_rc.borrow().player;
                     if let Err(error) = MusicPlayerLauncher::previous(player) {
                         let _result = error.insert(false);
                     }
                 }
-                "inner.playpause" => {
+                "playpause" => {
                     let player = &mpris_rc.borrow().player;
                     if let Err(error) = MusicPlayerLauncher::playpause(player) {
                         let _result = error.insert(false);
