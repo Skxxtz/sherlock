@@ -624,9 +624,35 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
             "exec": "playerctl previous",
             "method": "command"
         }
+    ],
+    "binds": [
+        {
+            "bind": "control+p",
+            "callback": "playpause",
+            "exit": false
+        },
+        {
+            "bind": "control+l",
+            "callback": "next",
+            "exit": false
+        },
+        {
+            "bind": "control+h",
+            "callback": "previous",
+            "exit": false
+        }
     ]
 }
 ```
+
+### Inner Functions
+
+These functions can be called either using actions with the `inner.[function
+name]` method or by using bind callbacks `"callback": "[function name]"`.
+
+1. **`playpause`:** toggles the playback
+2. **`next`:** moves to the next song
+3. **`previous`:** moves to the previous song
 
 <br>
 
