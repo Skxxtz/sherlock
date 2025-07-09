@@ -5,13 +5,12 @@ use gtk4::subclass::prelude::*;
 use gtk4::glib;
 use once_cell::sync::OnceCell;
 use std::cell::{Cell, RefCell};
-use std::rc::Rc;
 use std::sync::OnceLock;
 
 #[derive(Default)]
 pub struct SherlockLazyBox {
     /// Holds all child elements
-    pub children: Rc<RefCell<Vec<WeakRef<gtk4::Widget>>>>,
+    pub children: RefCell<Vec<WeakRef<gtk4::Widget>>>,
     /// Holds the capacity this object can hold
     pub max_items: OnceCell<usize>,
     /// Holds the number of visible children
@@ -44,3 +43,4 @@ impl ObjectImpl for SherlockLazyBox {
 // Make SherlockRow function with `IsA widget and ListBoxRow`
 impl WidgetImpl for SherlockLazyBox {}
 impl BoxImpl for SherlockLazyBox {}
+
