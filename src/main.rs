@@ -1,4 +1,5 @@
 use api::call::ApiCall;
+use futures::join;
 use gio::prelude::*;
 use gtk4::prelude::{GtkApplicationExt, WidgetExt};
 use gtk4::{glib, Application};
@@ -188,13 +189,18 @@ async fn main() {
                     sherlock.flush();
                 }
 
-                // Load Icon theme
-                if let Some(warning) = Loader::load_icon_theme() {
+                let (icon_response, css_response) = join!(
+                    // Load Icon theme
+                    Loader::load_icon_theme(),
+                    // Load CSS Stylesheet
+                    Loader::load_css(true)
+                );
+
+                // Handle Async Reponses
+                if let Some(warning) = icon_response {
                     let _result = warning.insert(false);
                 }
-
-                // Load CSS Stylesheet
-                if let Err(error) = Loader::load_css(true) {
+                if let Err(error) = css_response {
                     let _result = error.insert(false);
                 }
             }
@@ -234,43 +240,34 @@ async fn startup_loading() -> (
     LockFile,
 ) {
     let t0 = Instant::now();
-    let mut non_breaking: Vec<SherlockError> = Vec::new();
-    let mut startup_errors: Vec<SherlockError> = Vec::new();
+    let mut non_breaking = Vec::new();
+    let mut startup_errors = Vec::new();
 
-    // Check for '.lock'-file to only start a single instance
-    let lock = lock::ensure_single_instance(LOCK_FILE).unwrap_or_else(|_| {
-        process::exit(1);
-    });
+    let lock = lock::ensure_single_instance(LOCK_FILE).unwrap_or_else(|_| process::exit(1));
 
-    let app_future = async {
-        // Initialize application
-        let application = Application::builder()
-            // .application_id("dev.skxxtz.sherlock")
-            .flags(gio::ApplicationFlags::NON_UNIQUE | gio::ApplicationFlags::HANDLES_COMMAND_LINE)
-            .build();
-        // Needed in order start Sherlock without glib flag handling
-        application.connect_command_line(|app, _| {
-            app.activate();
-            0
-        });
-        application
-    };
+    let (flags_result, app_result, res_result) = join!(
+        async { Loader::load_flags() },
+        async {
+            let app = Application::builder()
+                .flags(gio::ApplicationFlags::NON_UNIQUE | gio::ApplicationFlags::HANDLES_COMMAND_LINE)
+                .build();
+            app.connect_command_line(|app, _| { app.activate(); 0 });
+            app
+        },
+        async { Loader::load_resources() },
+    );
 
-    // Setup flags
-    let sherlock_flags = Loader::load_flags()
-        .map_err(|e| startup_errors.push(e))
-        .unwrap_or_default();
+    let sherlock_flags = flags_result.map_err(|e| startup_errors.push(e)).unwrap_or_default();
 
-    // Parse configs from 'config.toml'
     let app_config = SherlockConfig::from_flags(&sherlock_flags).map_or_else(
         |e| {
             startup_errors.push(e);
-            let defaults = utils::config::SherlockConfig::default();
+            let defaults = SherlockConfig::default();
             SherlockConfig::apply_flags(&sherlock_flags, defaults)
         },
-        |(app_config, n)| {
-            non_breaking.extend(n);
-            app_config
+        |(cfg, non_crit)| {
+            non_breaking.extend(non_crit);
+            cfg
         },
     );
 
@@ -278,16 +275,14 @@ async fn startup_loading() -> (
         startup_errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
     });
 
-    // Load resources
-    Loader::load_resources()
-        .map_err(|e| startup_errors.push(e))
-        .ok();
-
+    // Set GSK_RENDERER
     if let Ok(config) = ConfigGuard::read() {
         env::set_var("GSK_RENDERER", &config.appearance.gsk_renderer);
     }
 
-    let application = app_future.await;
+    if let Err(e) = res_result {
+        startup_errors.push(e);
+    }
 
     if let Ok(timing_enabled) = std::env::var("TIMING") {
         if timing_enabled == "true" {
@@ -296,7 +291,7 @@ async fn startup_loading() -> (
     }
 
     (
-        application,
+        app_result,
         startup_errors,
         non_breaking,
         sherlock_flags,

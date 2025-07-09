@@ -24,8 +24,7 @@ fn set_provider(provider: WeakRef<CssProvider>) {
 }
 
 impl Loader {
-    #[sherlock_macro::timing(name = "Loading CSS", level = "setup")]
-    pub fn load_css(apply_base: bool) -> Result<(), SherlockError> {
+    pub async fn load_css(apply_base: bool) -> Result<(), SherlockError> {
         let provider = CssProvider::new();
 
         let config = ConfigGuard::read()?;

@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fs::write;
 use std::path::Path;
 use std::path::PathBuf;
+use gio::glib::MainContext;
 use tokio::fs::create_dir_all;
 
 use crate::loader::util::AppData;
@@ -66,9 +67,11 @@ impl ThemePicker {
         })?;
         println!("{:?}", exit);
         if !exit {
-            if let Err(error) = Loader::load_css(false) {
-                let _result = error.insert(false);
-            }
+            MainContext::default().block_on(async {
+                if let Err(error) = Loader::load_css(false).await {
+                    let _result = error.insert(false);
+                }
+            });
         }
         Ok(())
     }

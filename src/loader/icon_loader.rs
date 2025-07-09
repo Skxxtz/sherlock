@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 impl Loader {
     #[sherlock_macro::timing(name = "Loading Icon Theme", level = "setup")]
-    pub fn load_icon_theme() -> Option<SherlockError> {
+    pub async fn load_icon_theme() -> Option<SherlockError> {
         let config = match ConfigGuard::read() {
             Ok(c) => c,
             Err(e) => return Some(e),
