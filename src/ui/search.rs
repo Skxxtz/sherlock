@@ -830,7 +830,6 @@ impl UserBindHandler {
                     .iter()
                     .find(|s| s.key == Some(key) && mods.contains(s.modifier))
                 {
-
                     let exit: u8 = match bind.exit {
                         Some(false) => 1,
                         Some(true) => 2,

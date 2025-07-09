@@ -23,7 +23,7 @@ use crate::{
         input_window::InputWindow,
         search::SearchUiObj,
         tiles::Tile,
-        util::{display_raw, SearchHandler, SherlockAction, SherlockCounter}
+        util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
     },
     utils::{config::ConfigGuard, errors::SherlockError},
 };
