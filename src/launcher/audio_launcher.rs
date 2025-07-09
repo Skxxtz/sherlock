@@ -134,6 +134,15 @@ impl MusicPlayerLauncher {
         Ok(buffer.into())
     }
     pub fn playpause(player: &str) -> Result<(), SherlockError> {
+        Self::player_method(player, "PlayPause")
+    }
+    pub fn next(player: &str) -> Result<(), SherlockError> {
+        Self::player_method(player, "Next")
+    }
+    pub fn previous(player: &str) -> Result<(), SherlockError> {
+        Self::player_method(player, "Previous")
+    }
+    fn player_method(player: &str, method: &str) -> Result<(), SherlockError> {
         let conn = Connection::session()
             .map_err(|e| sherlock_error!(SherlockErrorType::DBusConnectionError, e.to_string()))?;
         let proxy = Proxy::new(
@@ -148,7 +157,7 @@ impl MusicPlayerLauncher {
                 e.to_string()
             )
         })?;
-        proxy.call_method("PlayPause", &()).map_err(|e| {
+        proxy.call_method(method, &()).map_err(|e| {
             sherlock_error!(
                 SherlockErrorType::DBusMessageSendError(format!("PlayPause to {}", player)),
                 e.to_string()
