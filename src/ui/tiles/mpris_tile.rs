@@ -10,7 +10,6 @@ use gio::glib::Bytes;
 use gio::prelude::ListModelExt;
 use gtk4::prelude::{BoxExt, WidgetExt};
 use gtk4::{gdk, Image, Overlay};
-use nix::NixPath;
 
 use super::Tile;
 use crate::actions::execute_from_attrs;
