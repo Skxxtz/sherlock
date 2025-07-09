@@ -1,12 +1,22 @@
 use gio::glib::subclass::Signal;
+use gio::glib::WeakRef;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 use gtk4::glib;
+use once_cell::sync::OnceCell;
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 use std::sync::OnceLock;
 
-
 #[derive(Default)]
-pub struct SherlockLazyBox { }
+pub struct SherlockLazyBox {
+    /// Holds all child elements
+    pub children: Rc<RefCell<Vec<WeakRef<gtk4::Widget>>>>,
+    /// Holds the capacity this object can hold
+    pub max_items: OnceCell<usize>,
+    /// Holds the number of visible children
+    pub visible_children: Cell<usize>
+}
 
 // The central trait for subclassing a GObject
 #[glib::object_subclass]
