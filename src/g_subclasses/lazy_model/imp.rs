@@ -11,7 +11,7 @@ pub struct SherlockLazyBox { }
 // The central trait for subclassing a GObject
 #[glib::object_subclass]
 impl ObjectSubclass for SherlockLazyBox {
-    const NAME: &'static str = "CustomSherlockRow";
+    const NAME: &'static str = "CustomSherlockLazyBox";
     type Type = super::SherlockLazyBox;
     type ParentType = gtk4::Box;
 }
