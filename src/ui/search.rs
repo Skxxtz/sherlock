@@ -837,6 +837,7 @@ impl UserBindHandler {
                     };
                     if let Some(row) = widget.upgrade() {
                         row.emit_by_name::<()>("row-should-activate", &[&exit, &bind.callback]);
+                        return true.into()
                     }
                 };
                 false.into()
