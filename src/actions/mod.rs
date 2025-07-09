@@ -8,10 +8,7 @@ use util::{clear_cached_files, reset_app_counter};
 use crate::{
     daemon::daemon::print_reponse,
     g_subclasses::action_entry::ContextAction,
-    launcher::{
-        process_launcher::ProcessLauncher,
-        theme_picker::ThemePicker,
-    },
+    launcher::{process_launcher::ProcessLauncher, theme_picker::ThemePicker},
     loader::util::CounterReader,
     sherlock_error,
     utils::{config::ConfigGuard, errors::SherlockErrorType, files::home_dir},
