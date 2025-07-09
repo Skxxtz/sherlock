@@ -1,6 +1,7 @@
 use futures::future::join_all;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::fs::{self, File};
 use std::io::{BufWriter, Read, Write};
 use std::path::PathBuf;
@@ -173,6 +174,21 @@ pub struct SherlockAction {
     pub action: String,
     pub exec: Option<String>,
 }
+impl Display for SherlockAction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            r#"{{"on": {}, "action": "{}", "exec": {} }}"#,
+            self.on,
+            self.action,
+            match &self.exec {
+                Some(s) => format!(r#""{}""#, s),
+                None => "null".to_string(),
+            }
+        )
+    }
+}
+
 pub struct SherlockCounter {
     path: PathBuf,
 }

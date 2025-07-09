@@ -6,7 +6,13 @@ use teamslaunch::teamslaunch;
 use util::{clear_cached_files, reset_app_counter};
 
 use crate::{
-    actions::{commandlaunch::command_launch}, daemon::daemon::print_reponse, g_subclasses::action_entry::ContextAction, launcher::{process_launcher::ProcessLauncher, theme_picker::ThemePicker}, loader::util::CounterReader, sherlock_error, utils::{config::ConfigGuard, errors::SherlockErrorType, files::home_dir}
+    actions::commandlaunch::command_launch,
+    daemon::daemon::print_reponse,
+    g_subclasses::action_entry::ContextAction,
+    launcher::{process_launcher::ProcessLauncher, theme_picker::ThemePicker},
+    loader::util::CounterReader,
+    sherlock_error,
+    utils::{config::ConfigGuard, errors::SherlockErrorType, files::home_dir},
 };
 
 pub mod applaunch;
@@ -200,7 +206,9 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                         // start new sherlock instance
                         if let Ok(config) = ConfigGuard::read() {
                             if config.behavior.daemonize {
-                                if let Err(err) = command_launch("sherlock --take-over --daemonize", ""){
+                                if let Err(err) =
+                                    command_launch("sherlock --take-over --daemonize", "")
+                                {
                                     let _result = err.insert(true);
                                 }
                             }

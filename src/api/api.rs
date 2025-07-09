@@ -9,6 +9,7 @@ use gtk4::{
 };
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use simd_json::prelude::ArrayTrait;
 use std::{fmt::Display, sync::RwLock};
 
 use crate::{
@@ -18,14 +19,17 @@ use crate::{
         util::JsonCache,
     },
     prelude::StackHelpers,
-    sher_log,
+    sher_log, sherlock_error,
     ui::{
         input_window::InputWindow,
         search::SearchUiObj,
         tiles::Tile,
         util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
     },
-    utils::{config::ConfigGuard, errors::SherlockError},
+    utils::{
+        config::ConfigGuard,
+        errors::{SherlockError, SherlockErrorType},
+    },
 };
 
 use super::call::ApiCall;
@@ -123,8 +127,21 @@ impl SherlockAPI {
         // activate sherlock actions
         actions
             .into_iter()
-            .filter(|action| !(action.on == 0 && &action.action == "restart"))
-            .filter(|action| start_count % action.on == 0)
+            .filter(|action| {
+                // Skip if exec == "restart" and on < 2
+                if action.exec.as_deref() == Some("restart") && action.on < 2 {
+                    self.await_request(ApiCall::SherlockWarning(sherlock_error!(
+                        SherlockErrorType::InvalidAction,
+                        format!(
+                            "debug.restart cannot be executed with an interval less than 2.\n{}",
+                            action
+                        )
+                    )));
+                    return false;
+                }
+                // Also require start_count % action.on == 0
+                start_count % action.on == 0
+            })
             .for_each(|action| {
                 let attrs = get_attrs_map(vec![
                     ("method", Some(&action.action)),
