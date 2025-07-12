@@ -2,6 +2,7 @@ use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::ObjectExt;
 use gtk4::prelude::*;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::vec;
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
@@ -13,7 +14,10 @@ use crate::prelude::IconComp;
 use super::Tile;
 
 impl Tile {
-    pub fn bulk_text_tile(launcher: &Launcher, bulk_text: &BulkTextLauncher) -> Vec<SherlockRow> {
+    pub async fn bulk_text_tile(
+        launcher: Rc<Launcher>,
+        bulk_text: &BulkTextLauncher,
+    ) -> Vec<SherlockRow> {
         let tile = ApiTile::new();
         let imp = tile.imp();
         let object = SherlockRow::new();
@@ -31,7 +35,7 @@ impl Tile {
         imp.icon.set_pixel_size(15);
 
         object.add_css_class("bulk-text");
-        object.with_launcher(&launcher);
+        object.with_launcher(launcher.clone());
         object.set_keyword_aware(true);
 
         let row_weak = object.downgrade();

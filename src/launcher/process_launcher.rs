@@ -36,7 +36,7 @@ impl ProcessLauncher {
             )
         })
     }
-    pub fn get_all_processes() -> Option<HashMap<(i32, i32), String>> {
+    pub async fn get_all_processes() -> Option<HashMap<(i32, i32), String>> {
         match all_processes() {
             Ok(procs) => {
                 let user_processes: Vec<Process> = procs

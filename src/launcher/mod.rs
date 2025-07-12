@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, rc::Rc};
 
 pub mod app_launcher;
 pub mod audio_launcher;
@@ -131,26 +131,29 @@ impl Launcher {
 
 impl Launcher {
     // TODO: tile method recreates already stored data...
-    pub fn get_patch(&mut self) -> Vec<SherlockRow> {
-        match &self.launcher_type {
-            LauncherType::App(app) => Tile::app_tile(self, &app.apps),
-            LauncherType::Bookmark(bmk) => Tile::app_tile(self, &bmk.bookmarks),
-            LauncherType::Calc(calc) => Tile::calc_tile(self, &calc),
-            LauncherType::Category(ctg) => Tile::app_tile(self, &ctg.categories),
-            LauncherType::Clipboard((clp, calc)) => Tile::clipboard_tile(self, &clp, &calc),
-            LauncherType::Command(cmd) => Tile::app_tile(self, &cmd.commands),
-            LauncherType::Event(evl) => Tile::event_tile(self, evl),
-            LauncherType::Emoji(emj) => Tile::app_tile(self, &emj.data),
-            LauncherType::File(f) => Tile::app_tile(self, &f.data),
-            LauncherType::Theme(thm) => Tile::app_tile(self, &thm.themes),
-            LauncherType::Process(proc) => Tile::process_tile(self, proc),
-            LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(self, pmd),
-            LauncherType::Web(web) => Tile::web_tile(self, &web),
+    pub async fn get_patch(launcher_instance: Rc<Self>) -> Vec<SherlockRow> {
+        let launcher = Rc::clone(&launcher_instance);
+        match &launcher_instance.launcher_type {
+            LauncherType::App(app) => Tile::app_tile(launcher, &app.apps).await,
+            LauncherType::Bookmark(bmk) => Tile::app_tile(launcher, &bmk.bookmarks).await,
+            LauncherType::Calc(calc) => Tile::calc_tile(launcher, &calc).await,
+            LauncherType::Category(ctg) => Tile::app_tile(launcher, &ctg.categories).await,
+            LauncherType::Clipboard((clp, calc)) => {
+                Tile::clipboard_tile(launcher, &clp, &calc).await
+            }
+            LauncherType::Command(cmd) => Tile::app_tile(launcher, &cmd.commands).await,
+            LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
+            LauncherType::Emoji(emj) => Tile::app_tile(launcher, &emj.data).await,
+            LauncherType::File(f) => Tile::app_tile(launcher, &f.data).await,
+            LauncherType::Theme(thm) => Tile::app_tile(launcher, &thm.themes).await,
+            LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
+            LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(launcher, &pmd).await,
+            LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
 
             // Async tiles
-            LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(self, &bulk_text),
-            LauncherType::MusicPlayer(mpris) => Tile::mpris_tile(self, &mpris),
-            LauncherType::Weather(_) => Tile::weather_tile_loader(self),
+            LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,
+            LauncherType::MusicPlayer(mpris) => Tile::mpris_tile(launcher, &mpris).await,
+            LauncherType::Weather(_) => Tile::weather_tile_loader(launcher).await,
             _ => Vec::new(),
         }
     }

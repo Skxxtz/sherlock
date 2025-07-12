@@ -1,6 +1,7 @@
 use gtk4::prelude::*;
 use std::collections::HashMap;
 use std::pin::Pin;
+use std::rc::Rc;
 
 use crate::actions::execute_from_attrs;
 use crate::g_subclasses::sherlock_row::SherlockRow;
@@ -10,10 +11,10 @@ use super::util::WeatherTileBuilder;
 use super::Tile;
 
 impl Tile {
-    pub fn weather_tile_loader(launcher: &Launcher) -> Vec<SherlockRow> {
+    pub async fn weather_tile_loader(launcher: Rc<Launcher>) -> Vec<SherlockRow> {
         let builder = WeatherTileBuilder::new("/dev/skxxtz/sherlock/ui/weather_tile.ui");
         builder.object.add_css_class("weather-tile");
-        builder.object.with_launcher(&launcher);
+        builder.object.with_launcher(launcher.clone());
 
         // Add attrs and implement double click capabilities
         let attrs: HashMap<String, String> = vec![("method", &launcher.method)]

@@ -93,11 +93,9 @@ impl SherlockRow {
     }
     pub fn set_signal_id(&self, signal: SignalHandlerId) {
         // Take the previous signal if it exists and disconnect it
-        if let Some(old_id) = self.imp().signal_id.borrow_mut().take() {
+        if let Some(old_id) = self.imp().signal_id.borrow_mut().replace(signal) {
             self.disconnect(old_id);
-            // Store the new signal
         }
-        *self.imp().signal_id.borrow_mut() = Some(signal);
     }
     pub fn clear_signal_id(&self) {
         if let Some(old) = self.imp().signal_id.borrow_mut().take() {
@@ -184,7 +182,7 @@ impl SherlockRow {
     /// * spawn_focus
     /// * priority
     /// * alias
-    pub fn with_launcher(&self, launcher: &Launcher) {
+    pub fn with_launcher(&self, launcher: Rc<Launcher>) {
         self.set_home(launcher.home);
         self.set_spawn_focus(launcher.spawn_focus);
         self.set_priority((launcher.priority + 1) as f32);

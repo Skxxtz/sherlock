@@ -1,6 +1,6 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::{
-    glib::{object::ObjectExt, variant::ToVariant, WeakRef},
+    glib::{object::ObjectExt, variant::ToVariant, MainContext, WeakRef},
     ListStore,
 };
 use gtk4::{
@@ -10,7 +10,7 @@ use gtk4::{
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
-use std::{fmt::Display, sync::RwLock};
+use std::{fmt::Display, sync::RwLock, time::Instant};
 
 use crate::{
     actions::{commandlaunch::command_launch, execute_from_attrs, get_attrs_map},
@@ -159,11 +159,6 @@ impl SherlockAPI {
                 execute_from_attrs(&window, &attrs, None);
             });
 
-        // Refresh homescreen on show
-        if let Some(handler) = &self.search_handler {
-            handler.populate();
-        }
-
         open_window.present();
         Some(())
     }
@@ -284,8 +279,21 @@ impl SherlockAPI {
     }
 
     fn search_view(&self) -> Option<()> {
-        let handler = self.search_handler.as_ref()?;
-        handler.populate();
+        let handler = self.search_handler.as_ref()?.clone();
+
+        MainContext::default().spawn_local(async move {
+            let start = Instant::now();
+
+            let _ = handler.populate().await;
+
+            let duration = start.elapsed();
+            if let Ok(timing_enabled) = std::env::var("TIMING") {
+                if timing_enabled == "true" {
+                    println!("Popuate {:?}", duration);
+                }
+            }
+        });
+
         Some(())
     }
 

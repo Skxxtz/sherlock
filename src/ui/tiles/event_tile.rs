@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::vec;
 
 use gio::glib::object::ObjectExt;
@@ -11,7 +12,10 @@ use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::Launcher;
 
 impl Tile {
-    pub fn event_tile(launcher: &Launcher, event_launcher: &EventLauncher) -> Vec<SherlockRow> {
+    pub async fn event_tile(
+        launcher: Rc<Launcher>,
+        event_launcher: &EventLauncher,
+    ) -> Vec<SherlockRow> {
         let event = match &event_launcher.event {
             Some(event) => event,
             None => return vec![],
@@ -50,7 +54,7 @@ impl Tile {
         ]);
 
         builder.object.add_css_class("event-tile");
-        builder.object.with_launcher(launcher);
+        builder.object.with_launcher(launcher.clone());
         builder
             .object
             .connect_local("row-should-activate", false, move |args| {

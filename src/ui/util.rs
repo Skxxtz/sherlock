@@ -1,4 +1,6 @@
 use futures::future::join_all;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -6,6 +8,7 @@ use std::fs::{self, File};
 use std::io::{BufWriter, Read, Write};
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::u32;
 
 use gio::glib::{self, WeakRef};
@@ -18,6 +21,7 @@ use gtk4::{
 use serde::Deserialize;
 
 use crate::g_subclasses::sherlock_row::SherlockRow;
+use crate::launcher::Launcher;
 use crate::loader::Loader;
 use crate::sherlock_error;
 use crate::utils::config::{default_modkey_ascii, ConfigGuard};
@@ -294,7 +298,7 @@ impl SearchHandler {
         }
     }
 
-    pub fn populate(&self) {
+    pub async fn populate(&self) {
         // clear potentially stuck rows
         self.clear();
         self.first_iter.set(true);
@@ -317,17 +321,27 @@ impl SearchHandler {
 
         if let Some(model) = self.model.as_ref().and_then(|m| m.upgrade()) {
             let mut holder: HashMap<String, Option<String>> = HashMap::new();
-            let rows: Vec<SherlockRow> = launchers
-                .into_iter()
-                .map(|mut launcher| {
-                    let patch = launcher.get_patch();
-                    if let Some(alias) = &launcher.alias {
-                        holder.insert(format!("{} ", alias), launcher.name);
-                    }
-                    patch
-                })
-                .flatten()
-                .collect();
+            let futures = launchers.into_iter().map(|launcher| {
+                let alias = launcher.alias.clone();
+                let name = launcher.name.clone();
+                let launcher = Rc::new(launcher);
+                async move {
+                    let patch = Launcher::get_patch(launcher).await;
+                    (alias, name, patch)
+                }
+            });
+            let patches = join_all(futures).await;
+
+            // Collect rows and holder
+            let mut rows: Vec<SherlockRow> = Vec::new();
+            for (alias, name, patch) in patches {
+                if let Some(alias) = alias {
+                    holder.insert(format!("{} ", alias), name);
+                }
+                rows.extend(patch);
+            }
+
+            let _freeze_guard = model.freeze_notify();
             model.splice(0, model.n_items(), &rows);
             let weaks: Vec<WeakRef<SherlockRow>> =
                 rows.into_iter().map(|row| row.downgrade()).collect();
@@ -370,34 +384,40 @@ pub fn update_async(
     current_task: &Rc<RefCell<Option<glib::JoinHandle<()>>>>,
     keyword: String,
 ) {
-    let current_task_clone = Rc::clone(current_task);
+    if update_tiles.is_empty() {
+        return;
+    }
+
+    // Cancel outstanding task
     if let Some(t) = current_task.borrow_mut().take() {
         t.abort();
     };
+
+    let current_task_clone = Rc::clone(current_task);
+    let keyword = Arc::new(keyword);
+    let spinner_row = update_tiles.get(0).and_then(|row| row.upgrade());
     let task = glib::MainContext::default().spawn_local({
         async move {
-            // Set spinner active
-            let spinner_row = update_tiles.get(0).cloned();
-            if let Some(row) = spinner_row.as_ref().and_then(|row| row.upgrade()) {
+            if let Some(row) = &spinner_row {
                 let _ = row.activate_action("win.spinner-mode", Some(&true.to_variant()));
             }
             // Make async tiles update concurrently
-            let futures: Vec<_> = update_tiles
+            let mut futures = update_tiles
                 .into_iter()
                 .map(|row| {
                     let current_text = keyword.clone();
                     async move {
                         // Process text tile
                         if let Some(row) = row.upgrade() {
-                            row.async_update(&current_text).await
+                            row.async_update(&current_text).await;
                         }
                     }
                 })
-                .collect();
+                .collect::<FuturesUnordered<_>>();
+            while futures.next().await.is_some() {}
 
-            let _ = join_all(futures).await;
             // Set spinner inactive
-            if let Some(row) = spinner_row.as_ref().and_then(|row| row.upgrade()) {
+            if let Some(row) = spinner_row {
                 let _ = row.activate_action("win.spinner-mode", Some(&false.to_variant()));
             }
             *current_task_clone.borrow_mut() = None;

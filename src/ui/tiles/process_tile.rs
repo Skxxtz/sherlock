@@ -14,8 +14,8 @@ use super::app_tile::AppTile;
 use super::Tile;
 
 impl Tile {
-    pub fn process_tile(launcher: &Launcher, proc: &ProcessLauncher) -> Vec<SherlockRow> {
-        let processes = ProcessLauncher::get_all_processes().unwrap_or_default();
+    pub async fn process_tile(launcher: Rc<Launcher>, proc: &ProcessLauncher) -> Vec<SherlockRow> {
+        let processes = ProcessLauncher::get_all_processes().await.unwrap_or_default();
 
         processes
             .into_iter()
@@ -80,7 +80,7 @@ impl Tile {
                 };
 
                 object.set_update(update_closure);
-                object.with_launcher(&launcher);
+                object.with_launcher(launcher.clone());
                 object.set_search(&value);
                 if launcher.shortcut {
                     object.set_shortcut_holder(Some(imp.shortcut_holder.downgrade()));

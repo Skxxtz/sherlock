@@ -64,7 +64,6 @@ impl ThemePicker {
                 e.to_string()
             )
         })?;
-        println!("{:?}", exit);
         if !exit {
             MainContext::default().block_on(async {
                 if let Err(error) = Loader::load_css(false).await {

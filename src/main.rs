@@ -60,7 +60,7 @@ async fn main() {
             }
         }
         let errors = startup_errors.clone();
-        let mut warnings = non_breaking.clone();
+        let warnings = non_breaking.clone();
 
 
         // Main logic for the Search-View
@@ -79,11 +79,7 @@ async fn main() {
                     println!("Window shown after {:?}", t0.elapsed());
                 }
             }
-            // Restore original GSK_RENDERER from temporary variable
-            let original_gsk_renderer = env::var("ORIGINAL_GSK_RENDERER").unwrap_or_default();
-            env::set_var("GSK_RENDERER", original_gsk_renderer);
-            // Remove temporary variable
-            env::remove_var("ORIGINAL_GSK_RENDERER");
+            post_startup();
         }});
 
         // Add closing logic
@@ -96,29 +92,9 @@ async fn main() {
             sherlock.borrow_mut().request(ApiCall::Show("all".to_string()));
         }
 
-        // Print messages if icon parsers aren't installed
-        let types: HashSet<String> = gdk_pixbuf::Pixbuf::formats().into_iter().filter_map(|f| f.name()).map(|s|s.to_string()).collect();
-        if !types.contains("svg") {
-            warnings.push(sherlock_error!(
-                SherlockErrorType::MissingIconParser(String::from("svg")),
-                format!("Icon parser for svg not found.\n\
-                This could hinder Sherlock from rendering .svg icons.\n\
-                Please ensure that \"librsvg\" is installed correctly.")
-            ));
-        }
-        if !types.contains("png") {
-            warnings.push(sherlock_error!(
-                SherlockErrorType::MissingIconParser(String::from("png")),
-                format!("Icon parser for png not found.\n\
-                This could hinder Sherlock from rendering .png icons.\n\
-                Please ensure that \"gdk-pixbuf2\" is installed correctly.")
-            ));
-        }
-
         glib::MainContext::default().spawn_local({
             let sherlock = Rc::clone(&sherlock);
             async move {
-
                 // Either show user-specified content or show normal search
                 let (error_stack, error_model) = ui::error_view::errors(&errors, &warnings, &current_stack_page, Rc::clone(&sherlock));
                 let (search_frame, _handler) = match ui::search::search(&window, &current_stack_page, error_model.clone(), Rc::clone(&sherlock)) {
@@ -130,22 +106,6 @@ async fn main() {
                 };
                 stack.add_named(&search_frame, Some("search-page"));
                 stack.add_named(&error_stack, Some("error-page"));
-
-
-                // Notify the user about the value not having any effect to avoid confusion
-                if let Ok(c) = ConfigGuard::read() {
-                    let opacity = c.appearance.opacity;
-                    if !(0.1..=1.0).contains(&opacity) {
-                        warnings.push(sherlock_error!(
-                            SherlockErrorType::ConfigError(Some(format!(
-                                "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
-                                opacity,
-                                opacity.clamp(0.1, 1.0)
-                            ))),
-                            ""
-                        ));
-                    }
-                }
 
                 // Mode switching
                 // Logic for the Error-View
@@ -305,4 +265,40 @@ async fn startup_loading() -> (
         app_config,
         lock,
     )
+}
+
+fn post_startup() {
+    // Restore original GSK_RENDERER from temporary variable
+    let original_gsk_renderer = env::var("ORIGINAL_GSK_RENDERER").unwrap_or_default();
+    env::set_var("GSK_RENDERER", original_gsk_renderer);
+    // Remove temporary variable
+    env::remove_var("ORIGINAL_GSK_RENDERER");
+
+    // Print messages if icon parsers aren't installed
+    let available: HashSet<String> = gdk_pixbuf::Pixbuf::formats().into_iter().filter_map(|f| f.name()).map(|s|s.to_string()).collect();
+    let required = vec![("svg", "librsvg"), ("png", "gdk-pixbuf2")];
+
+    required.into_iter().filter(|(t, _)| !available.contains(*t)).for_each(|(t, d)| {
+        let _ = sherlock_error!(
+            SherlockErrorType::MissingIconParser(t.to_string()),
+            format!("Icon parser for {} not found.\n\
+                This could hinder Sherlock from rendering .{} icons.\n\
+            Please ensure that \"{}\" is installed correctly.", t, t, d)
+        ).insert(false);
+    });
+
+    // Notify the user about the value not having any effect to avoid confusion
+    if let Ok(c) = ConfigGuard::read() {
+        let opacity = c.appearance.opacity;
+        if !(0.1..=1.0).contains(&opacity) {
+            let _ = sherlock_error!(
+                    SherlockErrorType::ConfigError(Some(format!(
+                                "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
+                                opacity,
+                                opacity.clamp(0.1, 1.0)
+                    ))),
+                    ""
+            ).insert(false);
+        }
+    }
 }

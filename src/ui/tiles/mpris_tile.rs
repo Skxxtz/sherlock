@@ -19,7 +19,10 @@ use crate::launcher::Launcher;
 use crate::ui::tiles::app_tile::AppTile;
 
 impl Tile {
-    pub fn mpris_tile(launcher: &Launcher, mpris: &MusicPlayerLauncher) -> Vec<SherlockRow> {
+    pub async fn mpris_tile(
+        launcher: Rc<Launcher>,
+        mpris: &MusicPlayerLauncher,
+    ) -> Vec<SherlockRow> {
         let tile = AppTile::new();
         let imp = tile.imp();
         let object = SherlockRow::new();
@@ -27,7 +30,7 @@ impl Tile {
 
         object.add_css_class("mpris-tile");
         object.set_overflow(gtk4::Overflow::Hidden);
-        object.with_launcher(&launcher);
+        object.with_launcher(launcher.clone());
 
         let overlay = Overlay::new();
 
