@@ -14,7 +14,10 @@ use meval::eval_str;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 impl Tile {
-    pub fn calc_tile(launcher: &Launcher, calc_launcher: &CalculatorLauncher) -> Vec<SherlockRow> {
+    pub async fn calc_tile(
+        launcher: Rc<Launcher>,
+        calc_launcher: &CalculatorLauncher,
+    ) -> Vec<SherlockRow> {
         let capabilities: HashSet<String> = calc_launcher.capabilities.clone();
         let capability_rc = Rc::new(RefCell::new(capabilities));
 
@@ -25,7 +28,7 @@ impl Tile {
 
         // Add action capabilities
         object.add_css_class("calc-tile");
-        object.with_launcher(launcher);
+        object.with_launcher(launcher.clone());
 
         let update_closure = {
             let method_clone = launcher.method.clone();

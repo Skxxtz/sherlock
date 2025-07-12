@@ -3,6 +3,7 @@ use gio::glib::Bytes;
 use gtk4::{gdk, prelude::*, Image};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
@@ -91,8 +92,8 @@ impl RGB {
 }
 
 impl Tile {
-    pub fn clipboard_tile(
-        launcher: &Launcher,
+    pub async fn clipboard_tile(
+        launcher: Rc<Launcher>,
         clp: &ClipboardLauncher,
         calc: &CalculatorLauncher,
     ) -> Vec<SherlockRow> {
@@ -130,7 +131,7 @@ impl Tile {
                         let object = SherlockRow::new();
                         object.append(&tile);
 
-                        object.with_launcher(launcher);
+                        object.with_launcher(launcher.clone());
                         object.set_search(&clipboard_content);
 
                         method = "web_launcher";
@@ -202,7 +203,7 @@ impl Tile {
                         let object = SherlockRow::new();
                         object.append(&tile);
 
-                        object.with_launcher(launcher);
+                        object.with_launcher(launcher.clone());
                         object.set_spawn_focus(false);
                         object.set_search(&raw);
 
@@ -274,7 +275,7 @@ impl Tile {
                 results.push(object);
             } else {
                 // calc capabilities will be checked inside of calc tile
-                let mut calc_tile = Tile::calc_tile(launcher, calc);
+                let mut calc_tile = Tile::calc_tile(launcher, calc).await;
                 if calc_tile.len() >= 1 {
                     let tile = calc_tile.remove(0);
                     // first update checks if the content is valid. then unsets

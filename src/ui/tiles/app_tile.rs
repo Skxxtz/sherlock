@@ -15,7 +15,7 @@ use super::util::update_tag;
 use super::Tile;
 
 impl Tile {
-    pub fn app_tile(launcher: &Launcher, commands: &HashSet<AppData>) -> Vec<SherlockRow> {
+    pub async fn app_tile(launcher: Rc<Launcher>, commands: &HashSet<AppData>) -> Vec<SherlockRow> {
         commands
             .into_iter()
             .map(|value| {
@@ -43,7 +43,7 @@ impl Tile {
                     let category = imp.category.downgrade();
                     let row_weak = object.downgrade();
 
-                    let launcher = launcher.clone();
+                    let launcher = Rc::clone(&launcher);
                     let attrs = get_attrs_map(vec![
                         ("method", Some(&launcher.method)),
                         ("exec", value.exec.as_deref()),
@@ -102,7 +102,7 @@ impl Tile {
                 };
 
                 object.set_update(update_closure);
-                object.with_launcher(launcher);
+                object.with_launcher(launcher.clone());
                 object.with_appdata(&value);
                 object.add_actions(&launcher.add_actions);
                 if launcher.shortcut {

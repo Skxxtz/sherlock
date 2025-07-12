@@ -22,7 +22,7 @@ use std::{
 use super::Tile;
 
 impl Tile {
-    pub fn pomodoro_tile(launcher: &Launcher, pomodoro: &Pomodoro) -> Vec<SherlockRow> {
+    pub async fn pomodoro_tile(launcher: Rc<Launcher>, pomodoro: &Pomodoro) -> Vec<SherlockRow> {
         let object = SherlockRow::new();
         let tile = TimerTile::new(object.downgrade());
         let imp = tile.imp();
@@ -34,7 +34,7 @@ impl Tile {
         };
 
         object.set_css_classes(&vec!["tile", "timer-tile", style]);
-        object.with_launcher(launcher);
+        object.with_launcher(launcher.clone());
 
         if let Some(title) = &launcher.name {
             imp.timer_title.set_text(title);

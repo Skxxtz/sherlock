@@ -15,7 +15,7 @@ use crate::launcher::Launcher;
 use crate::prelude::IconComp;
 
 impl Tile {
-    pub fn web_tile(launcher: &Launcher, web: &WebLauncher) -> Vec<SherlockRow> {
+    pub async fn web_tile(launcher: Rc<Launcher>, web: &WebLauncher) -> Vec<SherlockRow> {
         let tile = AppTile::new();
         let imp = tile.imp();
         let object = SherlockRow::new();
@@ -30,7 +30,7 @@ impl Tile {
         imp.icon.set_icon(Some(&web.icon), None, None);
 
         // Construct attrs and enable action capabilities
-        object.with_launcher(&launcher);
+        object.with_launcher(launcher.clone());
         object.set_keyword_aware(true);
 
         let update_closure = {
