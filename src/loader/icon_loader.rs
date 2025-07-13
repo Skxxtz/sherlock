@@ -1,7 +1,6 @@
 use super::Loader;
-use crate::utils::config::ConfigGuard;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::utils::files::{expand_path, home_dir};
+use crate::utils::files::home_dir;
 use crate::{sherlock_error, ICONS};
 use gtk4::{gdk::Display, IconTheme};
 use std::collections::HashMap;
@@ -14,59 +13,15 @@ impl Loader {
         let icon_theme = IconTheme::for_display(Display::default().as_ref().unwrap());
 
         // Build icon paths off main thread
-        let icon_paths = tokio::task::spawn_blocking(move || {
-            let mut paths = Vec::new();
-
-            if let Ok(paths_var) = env::var("XDG_DATA_DIRS") {
-                paths.extend(
-                    paths_var
-                        .split(':')
-                        .map(|p| PathBuf::from(p).join("icons"))
-                        .filter(|p| p.exists()),
-                );
-            }
-
-            let config = match ConfigGuard::read() {
-                Ok(c) => c,
-                Err(e) => return Err(e),
-            };
-            if let Ok(home) = home_dir() {
-                paths.extend(
-                    config
-                        .appearance
-                        .icon_paths
-                        .iter()
-                        .map(|p| expand_path(p, &home))
-                        .filter(|p| p.exists()),
-                );
-            }
-
-            Ok(paths)
-        })
-        .await
-        .ok()?;
-
-        match icon_paths {
-            Ok(p) => add_paths_incrementally(&icon_theme, p),
-            Err(e) => return Some(e),
+        if let Ok(paths_var) = env::var("XDG_DATA_DIRS") {
+            paths_var
+                .split(':')
+                .map(|p| PathBuf::from(p).join("icons"))
+                .filter(|p| p.exists())
+                .for_each(|p| icon_theme.add_search_path(p));
         }
-
         None
     }
-}
-
-fn add_paths_incrementally(icon_theme: &IconTheme, paths: Vec<PathBuf>) {
-    let icon_theme = icon_theme.clone();
-    let mut paths_iter = paths.into_iter();
-
-    gtk4::glib::idle_add_local(move || {
-        if let Some(path) = paths_iter.next() {
-            icon_theme.add_search_path(path);
-            true.into()
-        } else {
-            false.into()
-        }
-    });
 }
 
 pub struct CustomIconTheme {

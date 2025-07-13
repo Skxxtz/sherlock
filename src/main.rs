@@ -5,7 +5,7 @@ use gtk4::prelude::{GtkApplicationExt, WidgetExt};
 use gtk4::{glib, Application};
 use loader::pipe_loader::PipedData;
 use once_cell::sync::OnceCell;
-use simd_json::prelude::{ArrayMut, ArrayTrait};
+use simd_json::prelude::ArrayTrait;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -65,14 +65,18 @@ async fn main() {
         let errors = startup_errors.clone();
         let warnings = non_breaking.clone();
 
-        // glib::MainContext::default().spawn_local({
-        //     let sherlock = sherlock.clone();
-        //     async move {
-        //         if let Some(e) = Loader::load_icon_theme().await {
-        //             let _ = sherlock.borrow_mut().await_request(ApiCall::SherlockWarning(e));
-        //         }
-        //     }
-        // });
+        if app_config.behavior.use_xdg_data_dir_icons {
+            glib::MainContext::default().spawn_local({
+                let sherlock = sherlock.clone();
+                async move {
+                    if let Some(e) = Loader::load_icon_theme().await {
+                        let _ = sherlock
+                            .borrow_mut()
+                            .await_request(ApiCall::SherlockWarning(e));
+                    }
+                }
+            });
+        }
 
         // Main logic for the Search-View
         let (window, stack, current_stack_page, open_win) = ui::window::window(app);
@@ -111,7 +115,6 @@ async fn main() {
         glib::MainContext::default().spawn_local({
             let sherlock = Rc::clone(&sherlock);
             async move {
-                let t0 = Instant::now();
                 // Either show user-specified content or show normal search
                 let (error_stack, error_model) = ui::error_view::errors(
                     &errors,
