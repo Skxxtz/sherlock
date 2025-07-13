@@ -6,7 +6,7 @@ use gtk4::{prelude::EditableExt, Entry, ListView};
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    g_subclasses::{action_entry::ContextAction, sherlock_row::SherlockRow},
+    g_subclasses::{action_entry::ContextAction, sherlock_row::SherlockRow, tile_item::TileItem},
     prelude::SherlockNav,
     ui::search::UserBindHandler,
 };
@@ -61,13 +61,15 @@ impl KeyActions {
             }
         } else {
             // Activate apptile
-            if let Some(row) = self
+            if let Some(item) = self
                 .results
                 .upgrade()
                 .and_then(|r| r.selected_item())
-                .and_downcast::<SherlockRow>()
+                .and_downcast::<TileItem>()
             {
-                row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
+                if let Some(row) = item.parent().upgrade() {
+                    row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
+                }
             } else {
                 if let Some(current_text) = self.search_bar.upgrade().map(|s| s.text()) {
                     println!("{}", current_text);

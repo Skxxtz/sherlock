@@ -275,10 +275,8 @@ impl Tile {
                 results.push(object);
             } else {
                 // calc capabilities will be checked inside of calc tile
-                let mut calc_tile = Tile::calc_tile(launcher, calc).await;
-                if calc_tile.len() >= 1 {
-                    let tile = calc_tile.remove(0);
-                    // first update checks if the content is valid. then unsets
+                let calc_tile = Tile::calculator(launcher, calc, SherlockRow::new());
+                if let Some(tile) = calc_tile {
                     if tile.update(&clipboard_content) {
                         tile.set_home(HomeType::OnlyHome);
                         tile.set_update(|_| false);

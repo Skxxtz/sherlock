@@ -5,9 +5,14 @@ use std::{rc::Rc, usize};
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, WeakRef};
 use glib::Object;
-use gtk4::glib;
+use gtk4::{glib, Widget};
 use simd_json::prelude::Indexed;
 
+use crate::launcher::LauncherType;
+use crate::loader::util::ApplicationAction;
+use crate::ui::tiles::app_tile::AppTileHandler;
+use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
+use crate::ui::tiles::web_tile::WebTileHandler;
 use crate::{g_subclasses::sherlock_row::SherlockRow, launcher::Launcher, loader::util::AppData};
 
 glib::wrapper! {
@@ -21,9 +26,21 @@ impl TileItem {
     pub fn set_launcher(&self, launcher: Rc<Launcher>) {
         self.imp().launcher.replace(launcher);
     }
-    pub fn set_parent(&self, parent: &SherlockRow) {
-        let weak = parent.downgrade();
-        self.imp().parent.replace(weak);
+    pub fn set_parent(&self, parent: Option<&SherlockRow>) {
+        if let Some(parent) = parent {
+            let weak = parent.downgrade();
+            self.imp().parent.replace(weak);
+        } else {
+            self.imp().parent.take();
+        }
+    }
+    pub fn set_actions(&self, actions: Vec<ApplicationAction>) {
+        *self.imp().actions.borrow_mut() = actions;
+    }
+    pub fn add_actions(&self, actions: &Option<Vec<ApplicationAction>>) {
+        if let Some(actions) = actions {
+            self.imp().actions.borrow_mut().extend(actions.clone());
+        }
     }
 
     pub fn get_by_key<F, T>(&self, key: F) -> Option<T>
@@ -38,11 +55,11 @@ impl TileItem {
         Some(key(&data))
     }
 
-    pub fn get_patch(&self) -> Option<SherlockRow> {
+    pub fn get_patch(&self) -> Option<(Widget, UpdateHandler)> {
         let imp = self.imp();
         let launcher = imp.launcher.borrow();
         let index = imp.index.get();
-        launcher.get_tile(index, launcher.clone())
+        launcher.get_tile(index, launcher.clone(), self)
     }
     pub fn parent(&self) -> WeakRef<SherlockRow> {
         self.imp().parent.borrow().clone()
@@ -53,6 +70,56 @@ impl TileItem {
     pub fn priority(&self) -> f32 {
         self.get_by_key(|data| data.priority)
             .unwrap_or(self.imp().launcher.borrow().priority as f32)
+    }
+    pub fn actions(&self) -> Vec<ApplicationAction> {
+        let imp = self.imp();
+        let launcher = imp.launcher.borrow();
+        let mut actions = launcher.actions.clone().unwrap_or_default();
+        actions.extend(imp.actions.borrow().clone());
+        actions
+    }
+    pub fn based_show(&self, _keyword: &str) -> bool {
+        let imp = self.imp();
+        match &*imp.update_handler.borrow() {
+            UpdateHandler::AppTile(_) => false,
+            UpdateHandler::WebTile(_) => false,
+            UpdateHandler::Pomodoro(_) => false,
+            UpdateHandler::Default => false,
+        }
+    }
+    pub fn update(&self, keyword: &str) -> Option<()> {
+        let imp = self.imp();
+        match &*imp.update_handler.borrow() {
+            UpdateHandler::AppTile(app) => {
+                let launcher = imp.launcher.borrow();
+                let index = imp.index.get().unwrap();
+                if let Some(inner) = launcher.inner() {
+                    if let Some(value) = inner.get(index as usize) {
+                        return app.update(keyword, launcher.clone(), value);
+                    }
+                }
+            }
+            UpdateHandler::WebTile(inner) => {
+                let launcher = imp.launcher.borrow();
+                if let LauncherType::Web(web) = &launcher.launcher_type {
+                    return inner.update(keyword, launcher.clone(), web);
+                }
+            }
+            UpdateHandler::Pomodoro(_) | UpdateHandler::Default => {}
+        }
+        Some(())
+    }
+    pub fn bind_signal(&self, row: &SherlockRow) {
+        match &*self.imp().update_handler.borrow() {
+            UpdateHandler::AppTile(inner) => inner.bind_signal(row),
+            UpdateHandler::WebTile(inner) => inner.bind_signal(row),
+            UpdateHandler::Pomodoro(inner) => {
+                if let LauncherType::Pomodoro(pmd) = &self.imp().launcher.borrow().launcher_type {
+                    inner.bind_signal(row, pmd)
+                }
+            }
+            UpdateHandler::Default => {}
+        }
     }
 
     // Constructors
@@ -67,5 +134,18 @@ impl TileItem {
 
     pub fn new() -> Self {
         Object::builder().build()
+    }
+}
+
+#[derive(Debug)]
+pub enum UpdateHandler {
+    AppTile(AppTileHandler),
+    WebTile(WebTileHandler),
+    Pomodoro(PomodoroTileHandler),
+    Default,
+}
+impl Default for UpdateHandler {
+    fn default() -> Self {
+        Self::Default
     }
 }

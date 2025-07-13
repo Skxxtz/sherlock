@@ -14,16 +14,15 @@ use meval::eval_str;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 impl Tile {
-    pub async fn calc_tile(
+    pub fn calculator(
         launcher: Rc<Launcher>,
         calc_launcher: &CalculatorLauncher,
-    ) -> Vec<SherlockRow> {
+        object: SherlockRow,
+    ) -> Option<SherlockRow> {
         let capabilities: HashSet<String> = calc_launcher.capabilities.clone();
         let capability_rc = Rc::new(RefCell::new(capabilities));
 
         let tile = CalcTile::new();
-        let imp = tile.imp();
-        let object = SherlockRow::new();
         object.append(&tile);
 
         // Add action capabilities
@@ -31,14 +30,18 @@ impl Tile {
         object.with_launcher(launcher.clone());
 
         let update_closure = {
+            let tile_ref = tile.downgrade();
             let method_clone = launcher.method.clone();
-            let object_weak = object.downgrade();
+            let row_weak = object.downgrade();
             let capability_clone = Rc::clone(&capability_rc);
-            let equation_holder = imp.equation_holder.downgrade();
-            let result_holder = imp.result_holder.downgrade();
             let exit = launcher.exit.clone();
 
             move |search_query: &str| -> bool {
+                let Some(tile) = tile_ref.upgrade() else {
+                    return false;
+                };
+                let imp = tile.imp();
+
                 let mut result: Option<(String, String)> = None;
                 let capabilities = capability_clone.borrow();
                 if capabilities.contains("calc.math") {
@@ -82,19 +85,15 @@ impl Tile {
                     result = Calculator::measurement(&search_query, "currencies")
                 }
                 if let Some((num, result_text)) = result {
-                    equation_holder
-                        .upgrade()
-                        .map(|eq| eq.set_text(&search_query));
-                    result_holder
-                        .upgrade()
-                        .map(|result| result.set_text(&result_text));
+                    imp.equation_holder.set_text(&search_query);
+                    imp.result_holder.set_text(&result_text);
                     let attrs = get_attrs_map(vec![
                         ("method", Some(&method_clone)),
                         ("result", Some(&num)),
                         ("exit", Some(&exit.to_string())),
                     ]);
 
-                    object_weak.upgrade().map(|row| {
+                    row_weak.upgrade().map(|row| {
                         let signal_id =
                             row.connect_local("row-should-activate", false, move |args| {
                                 let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
@@ -115,7 +114,7 @@ impl Tile {
             }
         };
         object.set_update(update_closure);
-        vec![object]
+        Some(object)
     }
 }
 

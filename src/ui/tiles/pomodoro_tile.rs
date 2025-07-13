@@ -22,59 +22,19 @@ use std::{
 use super::Tile;
 
 impl Tile {
-    pub fn pomodoro(launcher: Rc<Launcher>, pomodoro: &Pomodoro) -> Option<SherlockRow> {
-        let object = SherlockRow::new();
-        let tile = TimerTile::new(object.downgrade());
+    pub fn pomodoro(launcher: Rc<Launcher>) -> TimerTile {
+        let tile = TimerTile::new();
         let imp = tile.imp();
-        object.append(&tile);
-
-        let style = match pomodoro.style {
-            PomodoroStyle::Minimal => "minimal",
-            _ => "normal",
-        };
-
-        object.set_css_classes(&vec!["tile", "timer-tile", style]);
-        object.with_launcher(launcher.clone());
 
         if let Some(title) = &launcher.name {
             imp.timer_title.set_text(title);
         }
-        let pomodoro_api = Rc::new(RefCell::new(PomodoroInterface::new(
-            pomodoro,
-            imp.remaining_label.downgrade(),
-            imp.animation.downgrade(),
-        )));
-        pomodoro_api.borrow_mut().update_ui();
-        // initialize view
-        // gather result from pomodoro tile
-        let signal_id = object.connect_local("row-should-activate", false, {
-            move |args| {
-                let _ = args[1]
-                    .get::<u8>()
-                    .expect("Failed to get u8 from signal args");
 
-                let callback = args[2]
-                    .get::<String>()
-                    .expect("Failed to get String from signal args");
-
-                match callback.as_str() {
-                    "reset" => {
-                        pomodoro_api.borrow_mut().reset();
-                    }
-                    "unset" => return None,
-                    _ => {
-                        pomodoro_api.borrow_mut().toggle();
-                    }
-                }
-                None
-            }
-        });
-        object.set_signal_id(signal_id);
-
-        Some(object)
+        tile
     }
 }
 
+#[derive(Debug)]
 struct PomodoroInterface {
     socket: PathBuf,
     exec: PathBuf,
@@ -385,12 +345,7 @@ use gdk_pixbuf::{
     prelude::PixbufAnimationExtManual, subclass::prelude::ObjectSubclassIsExt, Pixbuf,
 };
 use gio::glib::{object::ObjectExt, SourceId, WeakRef};
-use gtk4::{
-    gdk::Texture,
-    glib,
-    prelude::{BoxExt, WidgetExt},
-    Label, Picture,
-};
+use gtk4::{gdk::Texture, glib, prelude::WidgetExt, Label, Picture};
 use serde::Deserialize;
 
 glib::wrapper! {
@@ -400,10 +355,8 @@ glib::wrapper! {
 }
 
 impl TimerTile {
-    pub fn new(parent: WeakRef<SherlockRow>) -> Self {
-        let obj = glib::Object::new::<Self>();
-        *obj.imp().parent.borrow_mut() = parent;
-        obj
+    pub fn new() -> Self {
+        glib::Object::new::<Self>()
     }
     pub fn clear_timeout(&self) {
         let imp = self.imp();
@@ -416,5 +369,55 @@ impl TimerTile {
         if let Some(parent) = imp.parent.borrow().upgrade() {
             parent.clear_signal_id();
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct PomodoroTileHandler {
+    api: Rc<RefCell<PomodoroInterface>>,
+}
+impl PomodoroTileHandler {
+    pub fn new(tile: &TimerTile, pomodoro: &Pomodoro) -> Self {
+        let imp = tile.imp();
+        let pomodoro_api = Rc::new(RefCell::new(PomodoroInterface::new(
+            pomodoro,
+            imp.remaining_label.downgrade(),
+            imp.animation.downgrade(),
+        )));
+        pomodoro_api.borrow_mut().update_ui();
+
+        Self { api: pomodoro_api }
+    }
+    pub fn bind_signal(&self, row: &SherlockRow, pomodoro: &Pomodoro) {
+        let style = match pomodoro.style {
+            PomodoroStyle::Minimal => "minimal",
+            _ => "normal",
+        };
+        row.set_css_classes(&vec!["tile", "timer-tile", style]);
+
+        let signal_id = row.connect_local("row-should-activate", false, {
+            let pomodoro_api = self.api.clone();
+            move |args| {
+                let _ = args[1]
+                    .get::<u8>()
+                    .expect("Failed to get u8 from signal args");
+
+                let callback = args[2]
+                    .get::<String>()
+                    .expect("Failed to get String from signal args");
+
+                match callback.as_str() {
+                    "reset" => {
+                        pomodoro_api.borrow_mut().reset();
+                    }
+                    "unset" => return None,
+                    _ => {
+                        pomodoro_api.borrow_mut().toggle();
+                    }
+                }
+                None
+            }
+        });
+        row.set_signal_id(signal_id);
     }
 }

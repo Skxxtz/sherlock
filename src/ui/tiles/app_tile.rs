@@ -1,10 +1,13 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gio::glib::WeakRef;
 use gtk4::prelude::*;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
+use crate::g_subclasses::tile_item::TileItem;
 use crate::launcher::Launcher;
 use crate::loader::util::AppData;
 use crate::prelude::IconComp;
@@ -14,12 +17,9 @@ use super::util::update_tag;
 use super::Tile;
 
 impl Tile {
-    pub fn app(value: &AppData, launcher: Rc<Launcher>) -> SherlockRow {
+    pub fn app(value: &AppData, launcher: Rc<Launcher>, item: &TileItem) -> AppTile {
         let tile = AppTile::new();
         let imp = tile.imp();
-        let object = SherlockRow::new();
-        object.append(&tile);
-        object.set_css_classes(&vec!["tile"]);
 
         // Icon stuff
         imp.icon.set_icon(
@@ -28,77 +28,81 @@ impl Tile {
             launcher.icon.as_deref(),
         );
 
-        let update_closure = {
-            let tile_ref = tile.downgrade();
-            // Construct attrs and enable action capabilities
-            let tag_start_content = launcher.tag_start.clone();
-            let tag_end_content = launcher.tag_end.clone();
-            let row_weak = object.downgrade();
+        item.add_actions(&launcher.add_actions);
+        tile
+    }
+}
+#[derive(Default, Debug)]
+pub struct AppTileHandler {
+    tile: WeakRef<AppTile>,
+    attrs: Rc<RefCell<HashMap<String, String>>>,
+}
+impl AppTileHandler {
+    pub fn new(tile: &AppTile) -> Self {
+        Self {
+            tile: tile.downgrade(),
+            attrs: Rc::new(RefCell::new(HashMap::new())),
+        }
+    }
+    pub fn update(&self, keyword: &str, launcher: Rc<Launcher>, value: &AppData) -> Option<()> {
+        // Construct attrs and enable action capabilities
+        let tag_start_content = launcher.tag_start.clone();
+        let tag_end_content = launcher.tag_end.clone();
 
-            let launcher = Rc::clone(&launcher);
+        let launcher = Rc::clone(&launcher);
+        if self.attrs.borrow().is_empty() {
             let attrs = get_attrs_map(vec![
                 ("method", Some(&launcher.method)),
                 ("exec", value.exec.as_deref()),
                 ("term", Some(&value.terminal.to_string())),
                 ("exit", Some(&launcher.exit.to_string())),
             ]);
-            let attrs_rc = Rc::new(RefCell::new(attrs));
-            let name = value.name.clone();
-            move |keyword: &str| -> bool {
-                let Some(tile) = tile_ref.upgrade() else {
-                    return false;
-                };
-                let imp = tile.imp();
-
-                let attrs = Rc::clone(&attrs_rc);
-                {
-                    let mut attrs_ref = attrs.borrow_mut();
-                    attrs_ref.insert(String::from("keyword"), keyword.to_string());
-                }
-                let tile_name = name.replace("{keyword}", keyword);
-
-                // update first tag
-                update_tag(&imp.tag_start, &tag_start_content, keyword);
-
-                // update second tag
-                update_tag(&imp.tag_end, &tag_end_content, keyword);
-
-                imp.title.set_text(&tile_name);
-
-                if let Some(name) = &launcher.name {
-                    imp.category.set_text(name);
-                } else {
-                    imp.category.set_visible(false);
-                }
-
-                row_weak.upgrade().map(|row| {
-                    let signal_id = row.connect_local("row-should-activate", false, move |args| {
-                        let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
-                        let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-                        let param: Option<bool> = match param {
-                            1 => Some(false),
-                            2 => Some(true),
-                            _ => None,
-                        };
-                        execute_from_attrs(&row, &attrs.borrow(), param);
-                        // To reload ui according to mode
-                        let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
-                        None
-                    });
-                    row.set_signal_id(signal_id);
-                });
-                false
-            }
-        };
-
-        object.set_update(update_closure);
-        object.with_launcher(launcher.clone());
-        object.with_appdata(&value);
-        object.add_actions(&launcher.add_actions);
-        if launcher.shortcut {
-            object.set_shortcut_holder(Some(imp.shortcut_holder.downgrade()));
+            *self.attrs.borrow_mut() = attrs;
         }
-        object
+        let name = value.name.clone();
+        let tile = self.tile.upgrade()?;
+        let imp = tile.imp();
+
+        {
+            let mut attrs_ref = self.attrs.borrow_mut();
+            attrs_ref.insert(String::from("keyword"), keyword.to_string());
+        }
+        let tile_name = name.replace("{keyword}", keyword);
+
+        // update first tag
+        update_tag(&imp.tag_start, &tag_start_content, keyword);
+
+        // update second tag
+        update_tag(&imp.tag_end, &tag_end_content, keyword);
+
+        imp.title.set_text(&tile_name);
+
+        if let Some(name) = &launcher.name {
+            imp.category.set_text(name);
+        } else {
+            imp.category.set_visible(false);
+        }
+
+        Some(())
+    }
+    pub fn bind_signal(&self, row: &SherlockRow) {
+        let signal_id = row.connect_local("row-should-activate", false, {
+            let attrs = self.attrs.clone();
+            move |args| {
+                let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+                let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                let param: Option<bool> = match param {
+                    1 => Some(false),
+                    2 => Some(true),
+                    _ => None,
+                };
+                execute_from_attrs(&row, &attrs.borrow(), param);
+                // To reload ui according to mode
+                let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
+                None
+            }
+        });
+        row.set_signal_id(signal_id);
     }
 }
 
