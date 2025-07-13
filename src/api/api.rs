@@ -279,6 +279,7 @@ impl SherlockAPI {
     }
 
     fn search_view(&self) -> Option<()> {
+        let t0 = Instant::now();
         let handler = self.search_handler.as_ref()?.clone();
 
         MainContext::default().spawn_local(async move {

@@ -21,6 +21,7 @@ use gtk4::{
 use serde::Deserialize;
 
 use crate::g_subclasses::sherlock_row::SherlockRow;
+use crate::g_subclasses::tile_item::TileItem;
 use crate::launcher::Launcher;
 use crate::loader::Loader;
 use crate::sherlock_error;
@@ -326,14 +327,14 @@ impl SearchHandler {
                 let name = launcher.name.clone();
                 let launcher = Rc::new(launcher);
                 async move {
-                    let patch = Launcher::get_patch(launcher).await;
+                    let patch = Launcher::get_items(launcher);
                     (alias, name, patch)
                 }
             });
             let patches = join_all(futures).await;
 
             // Collect rows and holder
-            let mut rows: Vec<SherlockRow> = Vec::new();
+            let mut rows: Vec<TileItem> = Vec::new();
             for (alias, name, patch) in patches {
                 if let Some(alias) = alias {
                     holder.insert(format!("{} ", alias), name);
@@ -344,7 +345,7 @@ impl SearchHandler {
             let _freeze_guard = model.freeze_notify();
             model.splice(0, model.n_items(), &rows);
             let weaks: Vec<WeakRef<SherlockRow>> =
-                rows.into_iter().map(|row| row.downgrade()).collect();
+                rows.into_iter().map(|row| row.parent()).collect();
             update_async(weaks, &self.task, String::new());
             *self.modes.borrow_mut() = holder;
         }

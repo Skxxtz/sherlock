@@ -8,12 +8,12 @@ use gtk4::{
     gdk::{Key, ModifierType},
     prelude::*,
     CustomFilter, CustomSorter, EventControllerKey, FilterListModel, ListView, Overlay,
-    SignalListItemFactory, SingleSelection, SortListModel,
+    SignalListItemFactory, SingleSelection, SortListModel
 };
 use gtk4::{glib, ApplicationWindow, Entry};
 use levenshtein::levenshtein;
 use simd_json::prelude::ArrayTrait;
-use std::cell::{Cell, RefCell};
+use std::{cell::{Cell, RefCell}, f32};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -21,7 +21,7 @@ use super::context::make_context;
 use super::util::*;
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
-    g_subclasses::sherlock_row::SherlockRow,
+    g_subclasses::{sherlock_row::SherlockRow, tile_item::TileItem},
     launcher::utils::HomeType,
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
@@ -332,7 +332,7 @@ fn construct_window(
         .set_pixel_size(config.appearance.search_icon_size);
 
     // Setup model and factory
-    let model = ListStore::new::<SherlockRow>();
+    let model = ListStore::new::<TileItem>();
     let factory = make_factory();
     imp.results.set_factory(Some(&factory));
 
@@ -357,7 +357,7 @@ fn construct_window(
             let mut added_index = 0;
             let apply_css = search_text.borrow().trim().is_empty() && animate && first_iter.get();
             for i in 0..myself.n_items() {
-                if let Some(item) = myself.item(i).and_downcast::<SherlockRow>() {
+                if let Some(item) = myself.item(i).and_downcast::<TileItem>().and_then(|t| t.parent().upgrade()) {
                     if apply_css {
                         item.add_css_class("animate");
                     } else {
@@ -427,9 +427,12 @@ fn make_factory() -> SignalListItemFactory {
         let row = item
             .item()
             .clone()
-            .and_downcast::<SherlockRow>()
-            .expect("Row should be SherlockRow");
-        item.set_child(Some(&row));
+            .and_downcast::<TileItem>()
+            .expect("Row should be TileItem");
+        let patch = row.get_patch();
+        patch.update("");
+        row.set_parent(&patch);
+        item.set_child(Some(&patch));
     });
     factory
 }
@@ -438,14 +441,19 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
         let search_text = Rc::clone(search_text);
         let search_mode = Rc::clone(mode);
         move |entry| {
-            let item = entry.downcast_ref::<SherlockRow>().unwrap();
-            let home = item.home();
+            let item = entry.downcast_ref::<TileItem>().unwrap();
+            let imp = item.imp();
+            let row = imp.parent.borrow();
+            let launcher = imp.launcher.borrow();
+            let home = launcher.home;
 
             let mode = search_mode.borrow().trim().to_string();
             let current_text = search_text.borrow().clone();
             let is_home = current_text.is_empty() && mode == "all";
 
-            let update_res = item.update(&current_text);
+            let update_res = row.upgrade().map(|row| {
+                row.update(&current_text)
+            });
 
             if is_home {
                 if home != HomeType::Search {
@@ -453,10 +461,10 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
                 }
                 false
             } else {
-                let alias = item.alias();
+                let alias = &launcher.alias;
                 let priority = item.priority();
                 if mode != "all" {
-                    if home == HomeType::OnlyHome || mode != alias {
+                    if home == HomeType::OnlyHome || &Some(mode) != alias {
                         return false;
                     }
                     if current_text.is_empty() {
@@ -465,14 +473,16 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
                 } else if priority <= 1.0 {
                     return false;
                 }
-                if item.is_keyword_aware() {
+                let search = match item.search() {
+                    Some(s) => s,
+                    _ => return true
+                };
+
+                if Some(true) == update_res {
                     return true;
                 }
 
-                if update_res {
-                    return true;
-                }
-                item.search().fuzzy_match(&current_text)
+                search.fuzzy_match(&current_text)
             }
         }
     })
@@ -531,15 +541,19 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
         move |item_a, item_b| {
             let search_text = search_text.borrow();
 
-            let item_a = item_a.downcast_ref::<SherlockRow>().unwrap();
-            let item_b = item_b.downcast_ref::<SherlockRow>().unwrap();
+            let item_a = item_a.downcast_ref::<TileItem>().unwrap();
+            let item_b = item_b.downcast_ref::<TileItem>().unwrap();
 
             let mut priority_a = item_a.priority();
             let mut priority_b = item_b.priority();
 
             if !search_text.is_empty() {
-                priority_a = make_prio(item_a.priority(), &search_text, &item_a.search());
-                priority_b = make_prio(item_b.priority(), &search_text, &item_b.search());
+                if let Some(search) = item_a.search() {
+                    priority_a = make_prio(item_a.priority(), &search_text, &search);
+                }
+                if let Some(search) = item_b.search() {
+                    priority_b = make_prio(item_b.priority(), &search_text, &search);
+                }
             }
 
             priority_a.total_cmp(&priority_b).into()

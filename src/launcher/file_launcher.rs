@@ -5,7 +5,7 @@ use crate::loader::util::AppData;
 #[derive(Clone, Debug)]
 pub struct FileLauncher {
     pub dirs: HashSet<PathBuf>,
-    pub data: HashSet<AppData>,
+    pub data: Vec<AppData>,
     pub files: Option<Vec<FileData>>,
 }
 

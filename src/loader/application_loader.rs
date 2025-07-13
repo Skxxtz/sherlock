@@ -23,11 +23,11 @@ use util::{AppData, SherlockAlias};
 
 impl Loader {
     pub fn load_applications_from_disk(
-        applications: Option<HashSet<PathBuf>>,
+        applications: Option<Vec<PathBuf>>,
         priority: f32,
         counts: &HashMap<String, f32>,
         decimals: i32,
-    ) -> Result<HashSet<AppData>, SherlockError> {
+    ) -> Result<Vec<AppData>, SherlockError> {
         let config = ConfigGuard::read()?;
 
         // Define required paths for application parsing
@@ -63,13 +63,13 @@ impl Loader {
         let aliases = Arc::new(Mutex::new(aliases));
 
         // Gather '.desktop' files
-        let desktop_files: HashSet<PathBuf> = match applications {
+        let desktop_files: Vec<PathBuf> = match applications {
             Some(apps) => apps,
             _ => get_desktop_files(system_apps),
         };
 
         // Parellize opening of all .desktop files and parsing them into AppData
-        let apps: HashSet<AppData> = desktop_files
+        let apps: Vec<AppData> = desktop_files
             .into_par_iter()
             .filter_map(|entry| {
                 let r_path = entry.to_str()?;
@@ -164,12 +164,12 @@ impl Loader {
     }
 
     fn get_new_applications(
-        mut apps: HashSet<AppData>,
+        mut apps: Vec<AppData>,
         priority: f32,
         counts: &HashMap<String, f32>,
         decimals: i32,
         last_changed: Option<SystemTime>,
-    ) -> Result<HashSet<AppData>, SherlockError> {
+    ) -> Result<Vec<AppData>, SherlockError> {
         let system_apps = get_applications_dir();
 
         // get all desktop files
@@ -208,7 +208,7 @@ impl Loader {
         return Ok(apps);
     }
 
-    fn write_cache<T: AsRef<Path>>(apps: &HashSet<AppData>, cache_loc: T) {
+    fn write_cache<T: AsRef<Path>>(apps: &Vec<AppData>, cache_loc: T) {
         let path = cache_loc.as_ref();
         if let Some(parent) = path.parent() {
             let _ = fs::create_dir_all(parent);
@@ -228,7 +228,7 @@ impl Loader {
         priority: f32,
         counts: &HashMap<String, f32>,
         decimals: i32,
-    ) -> Result<HashSet<AppData>, SherlockError> {
+    ) -> Result<Vec<AppData>, SherlockError> {
         let config = ConfigGuard::read()?;
         // check if sherlock_alias was modified
         let changed = file_has_changed(&config.files.alias, &config.behavior.cache)
@@ -237,14 +237,14 @@ impl Loader {
 
         if !changed {
             let _ = sher_log!("Loading cached apps");
-            let cached_apps: Option<HashSet<AppData>> = File::open(&config.behavior.cache)
+            let cached_apps: Option<Vec<AppData>> = File::open(&config.behavior.cache)
                 .ok()
                 .and_then(|f| simd_json::from_reader(f).ok());
 
             if let Some(mut apps) = cached_apps {
                 // apply the current counts
                 apps = apps
-                    .drain()
+                    .drain(..)
                     .map(|mut v| {
                         let count = v
                             .exec
@@ -330,7 +330,7 @@ pub fn get_applications_dir() -> HashSet<PathBuf> {
     paths
 }
 
-pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> HashSet<PathBuf> {
+pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> Vec<PathBuf> {
     dirs.into_par_iter()
         .filter(|dir| dir.is_dir())
         .filter_map(|dir| {
@@ -350,7 +350,7 @@ pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> HashSet<PathBuf> {
             })
         })
         .flatten()
-        .collect::<HashSet<PathBuf>>()
+        .collect()
 }
 
 pub fn file_has_changed(file_path: &Path, compare_to: &Path) -> bool {

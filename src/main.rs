@@ -5,6 +5,7 @@ use gtk4::prelude::{GtkApplicationExt, WidgetExt};
 use gtk4::{glib, Application};
 use loader::pipe_loader::PipedData;
 use once_cell::sync::OnceCell;
+use simd_json::prelude::{ArrayMut, ArrayTrait};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -33,6 +34,7 @@ use utils::{
     errors::{SherlockError, SherlockErrorType},
 };
 
+use crate::loader::icon_loader::{CustomIconTheme, IconThemeGuard};
 use crate::utils::config::ConfigGuard;
 
 const SOCKET_PATH: &str = "/tmp/sherlock_daemon.sock";
@@ -40,6 +42,8 @@ const SOCKET_DIR: &str = "/tmp/";
 const LOCK_FILE: &str = "/tmp/sherlock.lock";
 
 static CONFIG: OnceCell<RwLock<SherlockConfig>> = OnceCell::new();
+static ICONS: OnceCell<RwLock<CustomIconTheme>> = OnceCell::new();
+
 
 #[tokio::main]
 async fn main() {
@@ -61,6 +65,15 @@ async fn main() {
         }
         let errors = startup_errors.clone();
         let warnings = non_breaking.clone();
+
+        // glib::MainContext::default().spawn_local({
+        //     let sherlock = sherlock.clone();
+        //     async move {
+        //         if let Some(e) = Loader::load_icon_theme().await {
+        //             let _ = sherlock.borrow_mut().await_request(ApiCall::SherlockWarning(e));
+        //         }
+        //     }
+        // });
 
 
         // Main logic for the Search-View
@@ -95,6 +108,7 @@ async fn main() {
         glib::MainContext::default().spawn_local({
             let sherlock = Rc::clone(&sherlock);
             async move {
+                let t0 = Instant::now();
                 // Either show user-specified content or show normal search
                 let (error_stack, error_model) = ui::error_view::errors(&errors, &warnings, &current_stack_page, Rc::clone(&sherlock));
                 let (search_frame, _handler) = match ui::search::search(&window, &current_stack_page, error_model.clone(), Rc::clone(&sherlock)) {
@@ -149,18 +163,7 @@ async fn main() {
                     sherlock.flush();
                 }
 
-                let (icon_response, css_response) = join!(
-                    // Load Icon theme
-                    Loader::load_icon_theme(),
-                    // Load CSS Stylesheet
-                    Loader::load_css(true)
-                );
-
-                // Handle Async Reponses
-                if let Some(warning) = icon_response {
-                    let _result = warning.insert(false);
-                }
-                if let Err(error) = css_response {
+                if let Err(error) = Loader::load_css(true).await {
                     let _result = error.insert(false);
                 }
             }
@@ -219,7 +222,7 @@ async fn startup_loading() -> (
             });
             app
         },
-        async { Loader::load_resources() },
+        async { Loader::load_resources() }
     );
 
     let sherlock_flags = flags_result
@@ -237,6 +240,12 @@ async fn startup_loading() -> (
             cfg
         },
     );
+    let _ = ICONS.set(RwLock::new(CustomIconTheme::new()));
+    app_config.appearance.icon_paths.iter().for_each(|path| {
+        if let Err(e) = IconThemeGuard::add_path(path){
+            startup_errors.push(e);
+        }
+    });
 
     let _ = CONFIG.set(RwLock::new(app_config.clone())).map_err(|_| {
         startup_errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));

@@ -19,8 +19,8 @@ pub mod weather_launcher;
 pub mod web_launcher;
 
 use crate::{
-    g_subclasses::sherlock_row::{SherlockRow, SherlockRowBind},
-    loader::util::{ApplicationAction, RawLauncher},
+    g_subclasses::{sherlock_row::{SherlockRow, SherlockRowBind}, tile_item::TileItem},
+    loader::util::{AppData, ApplicationAction, RawLauncher},
     ui::tiles::Tile,
 };
 
@@ -62,6 +62,23 @@ pub enum LauncherType {
     Web(WebLauncher),
     Empty,
 }
+impl Default for LauncherType {
+    fn default() -> Self {
+        Self::Empty
+    }
+}
+impl LauncherType {
+    pub fn inner(&self)->Option<&Vec<AppData>>{
+        match self {
+            Self::App(app) => Some(&app.apps),
+            Self::Bookmark(bkm) => Some(&bkm.bookmarks),
+            Self::Category(cat) => Some(&cat.categories),
+            Self::Command(cmd) => Some(&cmd.commands),
+            Self::Theme(thm) => Some(&thm.themes),
+            _ => None
+        }
+    }
+}
 /// # Launcher
 /// ### Fields:
 /// - **name:** Specifies the name of the launcher – such as a category e.g. `App Launcher`
@@ -80,7 +97,7 @@ pub enum LauncherType {
 /// - **shortcut:** Specifies whether the child tile should show `modekey + number` shortcuts
 /// - **spawn_focus:** Specifies whether the tile should have focus whenever Sherlock launches
 /// search entry & mode == `all`)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Launcher {
     pub name: Option<String>,
     pub icon: Option<String>,
@@ -156,6 +173,33 @@ impl Launcher {
             LauncherType::Weather(_) => Tile::weather_tile_loader(launcher).await,
             _ => Vec::new(),
         }
+    }
+    pub fn get_items(launcher_instance: Rc<Self>) -> Vec<TileItem> {
+        let launcher = Rc::clone(&launcher_instance);
+        match &launcher_instance.launcher_type {
+            LauncherType::App(app) => app.get_obj(launcher),
+            LauncherType::Bookmark(bmk) => bmk.get_obj(launcher), 
+            // LauncherType::Calc(calc) => Tile::calc_tile(launcher, &calc).await,
+            LauncherType::Category(ctg) => ctg.get_obj(launcher),
+            // LauncherType::Clipboard((clp, calc)) => {
+            //     Tile::clipboard_tile(launcher, &clp, &calc).await
+            // }
+            LauncherType::Command(cmd) => cmd.get_obj(launcher),
+            // LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
+            LauncherType::Emoji(emj) => emj.get_obj(launcher),
+            // LauncherType::File(f) => f.get_obj(launcher),
+            LauncherType::Theme(thm) => thm.get_obj(launcher),
+            // LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
+            // LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(launcher, &pmd).await,
+            // LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
+
+            // // Async tiles
+            // LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,
+            // LauncherType::MusicPlayer(mpris) => Tile::mpris_tile(launcher, &mpris).await,
+            // LauncherType::Weather(_) => Tile::weather_tile_loader(launcher).await,
+            _ => Vec::new(),
+        }
+
     }
     pub fn get_execs(&self) -> Option<HashSet<String>> {
         // NOTE: make a function to check for exec changes in the caching algorithm

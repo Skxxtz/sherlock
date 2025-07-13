@@ -126,7 +126,7 @@ fn parse_appdata(
     prio: f32,
     counts: &HashMap<String, f32>,
     max_decimals: i32,
-) -> HashSet<AppData> {
+) -> Vec<AppData> {
     let data: HashSet<AppData> =
         deserialize_named_appdata(value.clone().into_deserializer()).unwrap_or_default();
     data.into_iter()
@@ -138,7 +138,7 @@ fn parse_appdata(
                 .unwrap_or(&0.0);
             c.with_priority(parse_priority(prio, *count, max_decimals))
         })
-        .collect::<HashSet<AppData>>()
+        .collect::<Vec<AppData>>()
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_app_launcher(
@@ -146,8 +146,8 @@ fn parse_app_launcher(
     counts: &HashMap<String, f32>,
     max_decimals: i32,
 ) -> LauncherType {
-    let apps: HashSet<AppData> = ConfigGuard::read().ok().map_or_else(
-        || HashSet::new(),
+    let apps: Vec<AppData> = ConfigGuard::read().ok().map_or_else(
+        || Vec::new(),
         |config| {
             let prio = raw.priority;
             match config.behavior.caching {
@@ -339,16 +339,14 @@ fn parse_debug_launcher(
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_emoji_launcher(raw: &RawLauncher) -> LauncherType {
-    let mut data: HashSet<AppData> = HashSet::with_capacity(1);
     let mut app_data = AppData::from_raw_launcher(raw);
     if app_data.icon.is_none() {
         app_data.icon = Some(String::from("sherlock-emoji"))
     }
-    data.insert(app_data);
     LauncherType::Emoji(EmojiPicker {
         rows: 4,
         cols: 5,
-        data,
+        data: vec![app_data],
     })
 }
 #[sherlock_macro::timing(level = "launchers")]
@@ -394,12 +392,12 @@ fn parse_theme_launcher(raw: &RawLauncher) -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_file_launcher(raw: &RawLauncher) -> LauncherType {
-    let mut data: HashSet<AppData> = HashSet::with_capacity(1);
+    let mut data: Vec<AppData> = Vec::with_capacity(1);
     let mut app_data = AppData::from_raw_launcher(raw);
     if app_data.icon.is_none() {
         app_data.icon = Some(String::from("files"))
     }
-    data.insert(app_data);
+    data.push(app_data);
     let value = &raw.args["dirs"];
     match value.as_array() {
         Some(arr) => {
