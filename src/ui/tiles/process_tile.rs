@@ -15,9 +15,7 @@ use super::Tile;
 
 impl Tile {
     pub async fn process_tile(launcher: Rc<Launcher>, proc: &ProcessLauncher) -> Vec<SherlockRow> {
-        let processes = ProcessLauncher::get_all_processes()
-            .await
-            .unwrap_or_default();
+        let processes = ProcessLauncher::get_all_processes().unwrap_or_default();
 
         processes
             .into_iter()

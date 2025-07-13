@@ -1,4 +1,3 @@
-
 use crate::loader::util::AppData;
 
 #[derive(Clone, Debug)]

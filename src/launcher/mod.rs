@@ -24,7 +24,7 @@ use crate::{
         tile_item::TileItem,
     },
     loader::util::{AppData, ApplicationAction, RawLauncher},
-    ui::tiles::{app_tile::app_tile_patch, Tile},
+    ui::tiles::Tile,
 };
 
 use app_launcher::AppLauncher;
@@ -155,7 +155,9 @@ impl Launcher {
             | LauncherType::File(_)
             | LauncherType::Theme(_) => {
                 // Get app data value
-                let Some(inner) = self.inner() else { return vec![] };
+                let Some(inner) = self.inner() else {
+                    return vec![];
+                };
                 inner
                     .iter()
                     .enumerate()
@@ -166,17 +168,16 @@ impl Launcher {
 
                         base
                     })
-                .collect()
+                    .collect()
             }
 
-            LauncherType::Web(_) => {
+            LauncherType::Pomodoro(_) | LauncherType::Web(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
                 vec![base]
-            },
-            _ => vec![]
+            }
+            _ => vec![],
         }
-
     }
     pub fn inner(&self) -> Option<&Vec<AppData>> {
         match &self.launcher_type {
@@ -210,9 +211,10 @@ impl Launcher {
                 // Get app data value
                 let inner = self.inner()?;
                 let value = inner.get(index? as usize)?;
-                Some(app_tile_patch(value, launcher))
+                Some(Tile::app(value, launcher))
             }
 
+            LauncherType::Pomodoro(pmd) => Tile::pomodoro(launcher, &pmd),
             LauncherType::Web(web) => Tile::web(launcher, &web),
 
             _ => None,
@@ -221,21 +223,12 @@ impl Launcher {
     pub async fn get_patch(launcher_instance: Rc<Self>) -> Vec<SherlockRow> {
         let launcher = Rc::clone(&launcher_instance);
         match &launcher_instance.launcher_type {
-            LauncherType::App(app) => Tile::app_tile(launcher, &app.apps).await,
-            LauncherType::Bookmark(bmk) => Tile::app_tile(launcher, &bmk.bookmarks).await,
             LauncherType::Calc(calc) => Tile::calc_tile(launcher, &calc).await,
-            LauncherType::Category(ctg) => Tile::app_tile(launcher, &ctg.categories).await,
             LauncherType::Clipboard((clp, calc)) => {
                 Tile::clipboard_tile(launcher, &clp, &calc).await
             }
-            LauncherType::Command(cmd) => Tile::app_tile(launcher, &cmd.commands).await,
             LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
-            LauncherType::Emoji(emj) => Tile::app_tile(launcher, &emj.data).await,
-            LauncherType::File(f) => Tile::app_tile(launcher, &f.data).await,
-            LauncherType::Theme(thm) => Tile::app_tile(launcher, &thm.themes).await,
             LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
-            LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(launcher, &pmd).await,
-            LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
 
             // Async tiles
             LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,

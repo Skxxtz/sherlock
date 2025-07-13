@@ -22,7 +22,7 @@ use std::{
 use super::Tile;
 
 impl Tile {
-    pub async fn pomodoro_tile(launcher: Rc<Launcher>, pomodoro: &Pomodoro) -> Vec<SherlockRow> {
+    pub fn pomodoro(launcher: Rc<Launcher>, pomodoro: &Pomodoro) -> Option<SherlockRow> {
         let object = SherlockRow::new();
         let tile = TimerTile::new(object.downgrade());
         let imp = tile.imp();
@@ -71,7 +71,7 @@ impl Tile {
         });
         object.set_signal_id(signal_id);
 
-        vec![object]
+        Some(object)
     }
 }
 
