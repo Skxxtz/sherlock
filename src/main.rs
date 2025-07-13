@@ -261,6 +261,7 @@ async fn startup_loading() -> (
             cfg
         },
     );
+
     let _ = ICONS.set(RwLock::new(CustomIconTheme::new()));
     app_config.appearance.icon_paths.iter().for_each(|path| {
         if let Err(e) = IconThemeGuard::add_path(path) {

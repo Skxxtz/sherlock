@@ -24,7 +24,7 @@ use crate::{
         tile_item::TileItem,
     },
     loader::util::{AppData, ApplicationAction, RawLauncher},
-    ui::tiles::Tile,
+    ui::tiles::{app_tile::app_tile_patch, Tile},
 };
 
 use app_launcher::AppLauncher;
@@ -77,11 +77,44 @@ impl LauncherType {
             Self::Bookmark(bkm) => Some(&bkm.bookmarks),
             Self::Category(cat) => Some(&cat.categories),
             Self::Command(cmd) => Some(&cmd.commands),
+            Self::Emoji(emj) => Some(&emj.data),
+            Self::File(f) => Some(&f.data),
             Self::Theme(thm) => Some(&thm.themes),
             _ => None,
         }
     }
+    pub fn get_tile(&self, index: Option<u16>, launcher: Rc<Launcher>) -> Option<SherlockRow> {
+        match self {
+            //
+            // App Tile Based
+            //
+            Self::App(_)
+            | Self::Bookmark(_)
+            | Self::Category(_)
+            | Self::Command(_)
+            | Self::Emoji(_)
+            | Self::File(_)
+            | Self::Theme(_) => {
+                // Get app data value
+                let inner = self.inner()?;
+                let value = inner.get(index? as usize)?;
+                Some(app_tile_patch(value, launcher))
+            }
+
+            _ => None,
+        }
+    }
 }
+// LauncherType::Clipboard((clp, calc))
+// LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
+// LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
+// LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(launcher, &pmd).await,
+// LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
+
+// // Async tiles
+// LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,
+// LauncherType::MusicPlayer(mpris) => Tile::mpris_tile(launcher, &mpris).await,
+// LauncherType::Weather(_) => Tile::weather_tile_loader(launcher).await,
 /// # Launcher
 /// ### Fields:
 /// - **name:** Specifies the name of the launcher – such as a category e.g. `App Launcher`

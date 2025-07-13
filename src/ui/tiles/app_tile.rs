@@ -33,13 +33,10 @@ impl Tile {
                 );
 
                 let update_closure = {
+                    let tile_ref = tile.downgrade();
                     // Construct attrs and enable action capabilities
-                    let tag_start = imp.tag_start.downgrade();
-                    let tag_end = imp.tag_end.downgrade();
                     let tag_start_content = launcher.tag_start.clone();
                     let tag_end_content = launcher.tag_end.clone();
-                    let title = imp.title.downgrade();
-                    let category = imp.category.downgrade();
                     let row_weak = object.downgrade();
 
                     let launcher = Rc::clone(&launcher);
@@ -52,6 +49,11 @@ impl Tile {
                     let attrs_rc = Rc::new(RefCell::new(attrs));
                     let name = value.name.clone();
                     move |keyword: &str| -> bool {
+                        let Some(tile) = tile_ref.upgrade() else {
+                            return false;
+                        };
+                        let imp = tile.imp();
+
                         let attrs = Rc::clone(&attrs_rc);
                         {
                             let mut attrs_ref = attrs.borrow_mut();
@@ -60,20 +62,18 @@ impl Tile {
                         let tile_name = name.replace("{keyword}", keyword);
 
                         // update first tag
-                        update_tag(&tag_start, &tag_start_content, keyword);
+                        update_tag(&imp.tag_start, &tag_start_content, keyword);
 
                         // update second tag
-                        update_tag(&tag_end, &tag_end_content, keyword);
+                        update_tag(&imp.tag_end, &tag_end_content, keyword);
 
-                        title.upgrade().map(|title| title.set_text(&tile_name));
+                        imp.title.set_text(&tile_name);
 
-                        category.upgrade().map(|cat| {
-                            if let Some(name) = &launcher.name {
-                                cat.set_text(name);
-                            } else {
-                                cat.set_visible(false);
-                            }
-                        });
+                        if let Some(name) = &launcher.name {
+                            imp.category.set_text(name);
+                        } else {
+                            imp.category.set_visible(false);
+                        }
 
                         row_weak.upgrade().map(|row| {
                             let signal_id =
@@ -114,7 +114,6 @@ impl Tile {
 }
 
 pub fn app_tile_patch(value: &AppData, launcher: Rc<Launcher>) -> SherlockRow {
-    // Append content to the sherlock row
     let tile = AppTile::new();
     let imp = tile.imp();
     let object = SherlockRow::new();
@@ -129,13 +128,10 @@ pub fn app_tile_patch(value: &AppData, launcher: Rc<Launcher>) -> SherlockRow {
     );
 
     let update_closure = {
+        let tile_ref = tile.downgrade();
         // Construct attrs and enable action capabilities
-        let tag_start = imp.tag_start.downgrade();
-        let tag_end = imp.tag_end.downgrade();
         let tag_start_content = launcher.tag_start.clone();
         let tag_end_content = launcher.tag_end.clone();
-        let title = imp.title.downgrade();
-        let category = imp.category.downgrade();
         let row_weak = object.downgrade();
 
         let launcher = Rc::clone(&launcher);
@@ -148,6 +144,11 @@ pub fn app_tile_patch(value: &AppData, launcher: Rc<Launcher>) -> SherlockRow {
         let attrs_rc = Rc::new(RefCell::new(attrs));
         let name = value.name.clone();
         move |keyword: &str| -> bool {
+            let Some(tile) = tile_ref.upgrade() else {
+                return false;
+            };
+            let imp = tile.imp();
+
             let attrs = Rc::clone(&attrs_rc);
             {
                 let mut attrs_ref = attrs.borrow_mut();
@@ -156,20 +157,18 @@ pub fn app_tile_patch(value: &AppData, launcher: Rc<Launcher>) -> SherlockRow {
             let tile_name = name.replace("{keyword}", keyword);
 
             // update first tag
-            update_tag(&tag_start, &tag_start_content, keyword);
+            update_tag(&imp.tag_start, &tag_start_content, keyword);
 
             // update second tag
-            update_tag(&tag_end, &tag_end_content, keyword);
+            update_tag(&imp.tag_end, &tag_end_content, keyword);
 
-            title.upgrade().map(|title| title.set_text(&tile_name));
+            imp.title.set_text(&tile_name);
 
-            category.upgrade().map(|cat| {
-                if let Some(name) = &launcher.name {
-                    cat.set_text(name);
-                } else {
-                    cat.set_visible(false);
-                }
-            });
+            if let Some(name) = &launcher.name {
+                imp.category.set_text(name);
+            } else {
+                imp.category.set_visible(false);
+            }
 
             row_weak.upgrade().map(|row| {
                 let signal_id = row.connect_local("row-should-activate", false, move |args| {

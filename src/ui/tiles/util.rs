@@ -114,10 +114,8 @@ impl WeatherTileBuilder {
 /// * **label**: The UI label holding the result
 /// * **content**: The content for the label, as specified by the user
 /// * **keyword**: The current keyword of the search
-pub fn update_tag(label: &WeakRef<Label>, content: &Option<String>, keyword: &str) -> Option<()> {
+pub fn update_tag(label: &Label, content: &Option<String>, keyword: &str) -> Option<()> {
     if let Some(content) = &content {
-        let label = label.upgrade()?;
-
         let content = content.replace("{keyword}", keyword);
         if keyword.is_empty() {
             label.set_visible(false);

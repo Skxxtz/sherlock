@@ -8,10 +8,7 @@ use glib::Object;
 use gtk4::glib;
 use simd_json::prelude::Indexed;
 
-use crate::{
-    g_subclasses::sherlock_row::SherlockRow, launcher::Launcher, loader::util::AppData,
-    ui::tiles::app_tile::app_tile_patch,
-};
+use crate::{g_subclasses::sherlock_row::SherlockRow, launcher::Launcher, loader::util::AppData};
 
 glib::wrapper! {
     pub struct TileItem(ObjectSubclass<imp::TileItem>);
@@ -41,16 +38,11 @@ impl TileItem {
         Some(key(&data))
     }
 
-    pub fn get_patch(&self) -> SherlockRow {
+    pub fn get_patch(&self) -> Option<SherlockRow> {
         let imp = self.imp();
         let launcher = imp.launcher.borrow();
-        if let Some(inner) = launcher.launcher_type.inner() {
-            let index = imp.index.get().unwrap_or_default();
-            if let Some(data) = inner.get(index as usize) {
-                return app_tile_patch(data, launcher.clone());
-            }
-        }
-        SherlockRow::new()
+        let index = imp.index.get();
+        launcher.launcher_type.get_tile(index, launcher.clone())
     }
     pub fn parent(&self) -> WeakRef<SherlockRow> {
         self.imp().parent.borrow().clone()
