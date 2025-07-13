@@ -25,8 +25,8 @@ use crate::{
     },
     loader::util::{AppData, ApplicationAction, RawLauncher},
     ui::tiles::{
-        app_tile::AppTileHandler, pomodoro_tile::PomodoroTileHandler, web_tile::WebTileHandler,
-        Tile,
+        app_tile::AppTileHandler, calc_tile::CalcTileHandler, pomodoro_tile::PomodoroTileHandler,
+        web_tile::WebTileHandler, Tile,
     },
 };
 
@@ -40,7 +40,8 @@ use clipboard_launcher::ClipboardLauncher;
 use emoji_picker::EmojiPicker;
 use event_launcher::EventLauncher;
 use file_launcher::FileLauncher;
-use gio::glib::object::Cast;
+use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gio::glib::{object::Cast, property::PropertySet};
 use gtk4::Widget;
 use pomodoro_launcher::Pomodoro;
 use process_launcher::ProcessLauncher;
@@ -179,6 +180,10 @@ impl Launcher {
             LauncherType::Calc(_) | LauncherType::Pomodoro(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
+                let handler = CalcTileHandler::default();
+                base.imp()
+                    .update_handler
+                    .set(UpdateHandler::Calculator(handler));
                 vec![base]
             }
             LauncherType::Web(_) => {
@@ -230,7 +235,11 @@ impl Launcher {
                 Some((tile.upcast::<Widget>(), update))
             }
 
-            // LauncherType::Calc(clc) => Tile::calculator(launcher, &clc),
+            LauncherType::Calc(_) => {
+                let tile = Tile::calculator();
+                let update = UpdateHandler::Calculator(CalcTileHandler::new(&tile));
+                Some((tile.upcast::<Widget>(), update))
+            }
             LauncherType::Pomodoro(pmd) => {
                 let tile = Tile::pomodoro(launcher);
                 let update = UpdateHandler::Pomodoro(PomodoroTileHandler::new(&tile, &pmd));
