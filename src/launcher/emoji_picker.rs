@@ -7,11 +7,12 @@ use gtk4::{
     SignalListItemFactory, SingleSelection, SortListModel,
 };
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::g_subclasses::emoji_item::{EmojiObject, EmojiRaw};
+use crate::g_subclasses::tile_item::TileItem;
+use crate::launcher::Launcher;
 use crate::loader::util::AppData;
 use crate::prelude::{SherlockNav, SherlockSearch};
 use crate::sherlock_error;
@@ -22,7 +23,7 @@ use crate::utils::errors::{SherlockError, SherlockErrorType};
 pub struct EmojiPicker {
     pub rows: u32,
     pub cols: u32,
-    pub data: HashSet<AppData>,
+    pub data: Vec<AppData>,
 }
 
 impl EmojiPicker {
@@ -57,6 +58,15 @@ impl EmojiPicker {
             .map(|emj| EmojiObject::from(emj))
             .collect();
         Ok(emojies)
+    }
+    pub fn get_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem>{
+        self.data.iter().enumerate().map(|(i, _app)| {
+            let base = TileItem::new();
+            base.set_index(i);
+            base.set_launcher(launcher.clone());
+
+            base
+        }).collect()
     }
 }
 

@@ -495,7 +495,7 @@ pub struct ConfigAppearance {
     #[serde(default)]
     pub gsk_renderer: String,
     #[serde(default = "default_icon_paths")]
-    pub icon_paths: Vec<String>,
+    pub icon_paths: Vec<PathBuf>,
     #[serde(default = "default_icon_size")]
     pub icon_size: i32,
     #[serde(default)]
@@ -522,18 +522,18 @@ impl ConfigAppearance {
             root.pop();
         }
         let root = root.to_str();
-        fn use_root(root: Option<&str>, path: String) -> Option<String> {
-            if let Some(root) = root {
-                Some(format!(
-                    "{}{}",
-                    root,
-                    path.trim_start_matches("~/.config/sherlock")
-                ))
+        fn use_root(root: Option<&str>, path: PathBuf) -> Option<PathBuf> {
+            let root = root?;
+            let home = home_dir().ok()?;
+            let base = home.join(".config/sherlock");
+
+            if let Ok(suffix) = path.strip_prefix(&base) {
+                Some(Path::new(root).join(suffix))
             } else {
                 None
             }
         }
-        let icon_paths: Vec<String> = default_icon_paths()
+        let icon_paths: Vec<PathBuf> = default_icon_paths()
             .into_iter()
             .filter_map(|s| use_root(root, s))
             .collect();
@@ -783,8 +783,8 @@ pub fn default_backdrop_opacity() -> f64 {
 pub fn default_backdrop_edge() -> String {
     String::from("top")
 }
-pub fn default_icon_paths() -> Vec<String> {
-    vec![String::from("~/.config/sherlock/icons/")]
+pub fn default_icon_paths() -> Vec<PathBuf> {
+    vec![PathBuf::from("~/.config/sherlock/icons/")]
 }
 pub fn default_icon_size() -> i32 {
     22
