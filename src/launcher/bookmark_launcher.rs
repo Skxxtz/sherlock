@@ -1,10 +1,7 @@
 use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
-use std::rc::Rc;
 
-use crate::g_subclasses::tile_item::TileItem;
-use crate::launcher::Launcher;
 use crate::loader::util::{AppData, RawLauncher};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::files::home_dir;
@@ -39,19 +36,6 @@ impl BookmarkLauncher {
                 ))
             }
         }
-    }
-    pub fn get_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem> {
-        self.bookmarks
-            .iter()
-            .enumerate()
-            .map(|(i, _app)| {
-                let base = TileItem::new();
-                base.set_index(i);
-                base.set_launcher(launcher.clone());
-
-                base
-            })
-            .collect()
     }
 }
 

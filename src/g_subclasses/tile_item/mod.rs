@@ -33,7 +33,7 @@ impl TileItem {
         let imp = self.imp();
         let launcher = imp.launcher.borrow();
         let index = imp.index.get()?;
-        let inner = launcher.launcher_type.inner()?;
+        let inner = launcher.inner()?;
         let data = inner.get(index as usize)?;
         Some(key(&data))
     }
@@ -42,7 +42,7 @@ impl TileItem {
         let imp = self.imp();
         let launcher = imp.launcher.borrow();
         let index = imp.index.get();
-        launcher.launcher_type.get_tile(index, launcher.clone())
+        launcher.get_tile(index, launcher.clone())
     }
     pub fn parent(&self) -> WeakRef<SherlockRow> {
         self.imp().parent.borrow().clone()
@@ -51,7 +51,7 @@ impl TileItem {
         self.get_by_key(|data| data.search_string.clone())
     }
     pub fn priority(&self) -> f32 {
-        self.get_by_key(|data| data.priority).unwrap_or_default()
+        self.get_by_key(|data| data.priority).unwrap_or(self.imp().launcher.borrow().priority as f32)
     }
 
     // Constructors
