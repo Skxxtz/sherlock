@@ -436,10 +436,11 @@ fn make_factory() -> SignalListItemFactory {
             .clone()
             .and_downcast::<TileItem>()
             .expect("Row should be TileItem");
-        let patch = row.get_patch();
-        patch.update("");
-        row.set_parent(&patch);
-        item.set_child(Some(&patch));
+        if let Some(patch) = row.get_patch() {
+            patch.update("");
+            row.set_parent(&patch);
+            item.set_child(Some(&patch));
+        }
     });
     factory
 }

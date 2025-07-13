@@ -34,11 +34,9 @@ impl Tile {
         object.set_keyword_aware(true);
 
         let update_closure = {
-            let tag_start = imp.tag_start.downgrade();
-            let tag_end = imp.tag_end.downgrade();
+            let tile_ref = tile.downgrade();
             let tag_start_content = launcher.tag_start.clone();
             let tag_end_content = launcher.tag_end.clone();
-            let title = imp.title.downgrade();
             let row_weak = object.downgrade();
             let tile_name = web.display_name.clone();
             let mut attrs = get_attrs_map(vec![
@@ -51,18 +49,20 @@ impl Tile {
             }
             let attrs_rc = Rc::new(RefCell::new(attrs));
             move |keyword: &str| -> bool {
+                let Some(tile) = tile_ref.upgrade() else {
+                    return false;
+                };
+                let imp = tile.imp();
                 let attrs_clone = Rc::clone(&attrs_rc);
 
                 // Update title
-                if let Some(title) = title.upgrade() {
-                    title.set_text(&tile_name.replace("{keyword}", keyword));
-                }
+                imp.title.set_text(&tile_name.replace("{keyword}", keyword));
 
                 // update first tag
-                update_tag(&tag_start, &tag_start_content, keyword);
+                update_tag(&imp.tag_start, &tag_start_content, keyword);
 
                 // update second tag
-                update_tag(&tag_end, &tag_end_content, keyword);
+                update_tag(&imp.tag_end, &tag_end_content, keyword);
 
                 // update attributes to activate correct action
                 let keyword_clone = keyword.to_string();
