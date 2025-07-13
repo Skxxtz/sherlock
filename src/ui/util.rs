@@ -22,7 +22,6 @@ use serde::Deserialize;
 
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::g_subclasses::tile_item::TileItem;
-use crate::launcher::Launcher;
 use crate::loader::Loader;
 use crate::sherlock_error;
 use crate::utils::config::{default_modkey_ascii, ConfigGuard};
@@ -327,7 +326,7 @@ impl SearchHandler {
                 let name = launcher.name.clone();
                 let launcher = Rc::new(launcher);
                 async move {
-                    let patch = Launcher::get_items(launcher);
+                    let patch = launcher.bind_obj(launcher.clone());
                     (alias, name, patch)
                 }
             });

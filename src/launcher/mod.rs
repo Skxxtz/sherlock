@@ -39,6 +39,7 @@ use event_launcher::EventLauncher;
 use file_launcher::FileLauncher;
 use pomodoro_launcher::Pomodoro;
 use process_launcher::ProcessLauncher;
+use simd_json::prelude::ArrayTrait;
 use system_cmd_launcher::CommandLauncher;
 use theme_picker::ThemePicker;
 use utils::HomeType;
@@ -70,46 +71,6 @@ impl Default for LauncherType {
         Self::Empty
     }
 }
-impl LauncherType {
-    pub fn inner(&self) -> Option<&Vec<AppData>> {
-        match self {
-            Self::App(app) => Some(&app.apps),
-            Self::Bookmark(bkm) => Some(&bkm.bookmarks),
-            Self::Category(cat) => Some(&cat.categories),
-            Self::Command(cmd) => Some(&cmd.commands),
-            Self::Emoji(emj) => Some(&emj.data),
-            Self::File(f) => Some(&f.data),
-            Self::Theme(thm) => Some(&thm.themes),
-            _ => None,
-        }
-    }
-    pub fn get_tile(&self, index: Option<u16>, launcher: Rc<Launcher>) -> Option<SherlockRow> {
-        match self {
-            //
-            // App Tile Based
-            //
-            Self::App(_)
-            | Self::Bookmark(_)
-            | Self::Category(_)
-            | Self::Command(_)
-            | Self::Emoji(_)
-            | Self::File(_)
-            | Self::Theme(_) => {
-                // Get app data value
-                let inner = self.inner()?;
-                let value = inner.get(index? as usize)?;
-                Some(app_tile_patch(value, launcher))
-            }
-
-            _ => None,
-        }
-    }
-}
-// LauncherType::Clipboard((clp, calc))
-// LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
-// LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
-// LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(launcher, &pmd).await,
-// LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
 
 // // Async tiles
 // LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,
@@ -184,6 +145,79 @@ impl Launcher {
 
 impl Launcher {
     // TODO: tile method recreates already stored data...
+    pub fn bind_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem> {
+        match self.launcher_type {
+            LauncherType::App(_)
+            | LauncherType::Bookmark(_)
+            | LauncherType::Category(_)
+            | LauncherType::Command(_)
+            | LauncherType::Emoji(_)
+            | LauncherType::File(_)
+            | LauncherType::Theme(_) => {
+                // Get app data value
+                let Some(inner) = self.inner() else { return vec![] };
+                inner
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _app)| {
+                        let base = TileItem::new();
+                        base.set_index(i);
+                        base.set_launcher(launcher.clone());
+
+                        base
+                    })
+                .collect()
+            }
+
+            LauncherType::Web(_) => {
+                let base = TileItem::new();
+                base.set_launcher(launcher.clone());
+                vec![base]
+            },
+            _ => vec![]
+        }
+
+    }
+    pub fn inner(&self) -> Option<&Vec<AppData>> {
+        match &self.launcher_type {
+            LauncherType::App(app) => Some(&app.apps),
+            LauncherType::Bookmark(bkm) => Some(&bkm.bookmarks),
+            LauncherType::Category(cat) => Some(&cat.categories),
+            LauncherType::Command(cmd) => Some(&cmd.commands),
+            LauncherType::Emoji(emj) => Some(&emj.data),
+            LauncherType::File(f) => Some(&f.data),
+            LauncherType::Theme(thm) => Some(&thm.themes),
+            _ => None,
+        }
+    }
+    // LauncherType::Clipboard((clp, calc))
+    // LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
+    // LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
+    // LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(launcher, &pmd).await,
+    // LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
+    pub fn get_tile(&self, index: Option<u16>, launcher: Rc<Launcher>) -> Option<SherlockRow> {
+        match &self.launcher_type {
+            //
+            // App Tile Based
+            //
+            LauncherType::App(_)
+            | LauncherType::Bookmark(_)
+            | LauncherType::Category(_)
+            | LauncherType::Command(_)
+            | LauncherType::Emoji(_)
+            | LauncherType::File(_)
+            | LauncherType::Theme(_) => {
+                // Get app data value
+                let inner = self.inner()?;
+                let value = inner.get(index? as usize)?;
+                Some(app_tile_patch(value, launcher))
+            }
+
+            LauncherType::Web(web) => Tile::web(launcher, &web),
+
+            _ => None,
+        }
+    }
     pub async fn get_patch(launcher_instance: Rc<Self>) -> Vec<SherlockRow> {
         let launcher = Rc::clone(&launcher_instance);
         match &launcher_instance.launcher_type {
@@ -207,32 +241,6 @@ impl Launcher {
             LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,
             LauncherType::MusicPlayer(mpris) => Tile::mpris_tile(launcher, &mpris).await,
             LauncherType::Weather(_) => Tile::weather_tile_loader(launcher).await,
-            _ => Vec::new(),
-        }
-    }
-    pub fn get_items(launcher_instance: Rc<Self>) -> Vec<TileItem> {
-        let launcher = Rc::clone(&launcher_instance);
-        match &launcher_instance.launcher_type {
-            LauncherType::App(app) => app.get_obj(launcher),
-            LauncherType::Bookmark(bmk) => bmk.get_obj(launcher),
-            // LauncherType::Calc(calc) => Tile::calc_tile(launcher, &calc).await,
-            LauncherType::Category(ctg) => ctg.get_obj(launcher),
-            // LauncherType::Clipboard((clp, calc)) => {
-            //     Tile::clipboard_tile(launcher, &clp, &calc).await
-            // }
-            LauncherType::Command(cmd) => cmd.get_obj(launcher),
-            // LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
-            LauncherType::Emoji(emj) => emj.get_obj(launcher),
-            // LauncherType::File(f) => f.get_obj(launcher),
-            LauncherType::Theme(thm) => thm.get_obj(launcher),
-            // LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
-            // LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(launcher, &pmd).await,
-            // LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
-
-            // // Async tiles
-            // LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,
-            // LauncherType::MusicPlayer(mpris) => Tile::mpris_tile(launcher, &mpris).await,
-            // LauncherType::Weather(_) => Tile::weather_tile_loader(launcher).await,
             _ => Vec::new(),
         }
     }

@@ -798,18 +798,11 @@ pub fn default_backdrop_opacity() -> f64 {
 pub fn default_backdrop_edge() -> String {
     String::from("top")
 }
-<<<<<<< HEAD
-pub fn default_icon_paths() -> Vec<String> {
+pub fn default_icon_paths() -> Vec<PathBuf> {
     vec![paths::get_config_dir()
         .unwrap()
         .join("icons/")
-        .to_str()
-        .unwrap()
-        .to_string()]
-=======
-pub fn default_icon_paths() -> Vec<PathBuf> {
-    vec![PathBuf::from("~/.config/sherlock/icons/")]
->>>>>>> 89b0422 (impr: added custom icon theme loader to improve startup time)
+        .to_path_buf()]
 }
 pub fn default_icon_size() -> i32 {
     22

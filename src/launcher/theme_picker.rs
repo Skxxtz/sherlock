@@ -2,14 +2,7 @@ use gio::glib::MainContext;
 use std::fs::write;
 use std::path::Path;
 use std::path::PathBuf;
-<<<<<<< HEAD
-=======
-use std::rc::Rc;
-use tokio::fs::create_dir_all;
->>>>>>> 89b0422 (impr: added custom icon theme loader to improve startup time)
 
-use crate::g_subclasses::tile_item::TileItem;
-use crate::launcher::Launcher;
 use crate::loader::util::AppData;
 use crate::loader::Loader;
 use crate::sherlock_error;
@@ -92,18 +85,5 @@ impl ThemePicker {
             })?;
         }
         Ok(absolute)
-    }
-    pub fn get_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem> {
-        self.themes
-            .iter()
-            .enumerate()
-            .map(|(i, _app)| {
-                let base = TileItem::new();
-                base.set_index(i);
-                base.set_launcher(launcher.clone());
-
-                base
-            })
-            .collect()
     }
 }
