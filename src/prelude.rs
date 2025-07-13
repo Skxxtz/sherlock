@@ -73,7 +73,6 @@ impl IconComp for Image {
     fn set_icon(&self, icon_name: Option<&str>, icon_class: Option<&str>, fallback: Option<&str>) {
         if let Some(icon_name) = icon_name.or(fallback) {
             if let Ok(Some(icon)) = IconThemeGuard::lookup_icon(icon_name) {
-                println!("{:?}", icon);
                 self.set_from_file(Some(icon));
                 return;
             }
