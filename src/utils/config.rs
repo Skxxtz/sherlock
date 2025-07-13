@@ -564,6 +564,8 @@ impl Default for ConfigAppearance {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfigBehavior {
+    #[serde(default)]
+    pub use_xdg_data_dir_icons: bool,
     #[serde(default = "default_cache")]
     pub cache: PathBuf,
     #[serde(default = "default_true")]
@@ -584,6 +586,7 @@ pub struct ConfigBehavior {
 impl Default for ConfigBehavior {
     fn default() -> Self {
         Self {
+            use_xdg_data_dir_icons: false,
             cache: default_cache(),
             caching: false,
             daemonize: false,

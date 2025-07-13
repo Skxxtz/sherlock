@@ -59,6 +59,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 
 | **Keyword**           | **Default** | **Explanation**| **Documentation** |
 |-----------------------|-------------|---------------------------------------------------------------------------------|-------------------|
+| `use_xdg_data_dir_icons` | `false`     | If set to `true`, Sherlock will append all paths contained in the `XDG_DATA_DIRS` environment variable to the search paths for the `IconTheme`. **This will result in a noticeable delay on startup.** ||
 | `caching` | `false`     | If set to `true`, Desktop file caching will be activated to either the specified or the default location `~/sherlock/.cache/sherlock/sherlock_desktop_cache.json`. |[Caching](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
 | `cache` | `~/.cache/sherlock/sherlock_desktop_cache.json`   | Overrides the default caching location. ||
 | `daemonize` | `false`     | If set to `true`, Sherlock will run in daemon mode. This will consume more memory because the rendered application will be kept in memory. Daemonizing will allow faster startup times. Send the `open` message to socket `/tmp/sherlock_daemon.socket` to open the window. |[Daemonizing](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
