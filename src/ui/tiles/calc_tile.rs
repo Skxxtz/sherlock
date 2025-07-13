@@ -8,113 +8,15 @@ use crate::{
     },
 };
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::object::ObjectExt;
-use gtk4::prelude::{BoxExt, WidgetExt};
+use gio::glib::{object::ObjectExt, WeakRef};
+use gtk4::prelude::WidgetExt;
 use meval::eval_str;
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 impl Tile {
-    pub fn calculator(
-        launcher: Rc<Launcher>,
-        calc_launcher: &CalculatorLauncher,
-        object: SherlockRow,
-    ) -> Option<SherlockRow> {
-        let capabilities: HashSet<String> = calc_launcher.capabilities.clone();
-        let capability_rc = Rc::new(RefCell::new(capabilities));
-
+    pub fn calculator() -> CalcTile {
         let tile = CalcTile::new();
-        object.append(&tile);
-
-        // Add action capabilities
-        object.add_css_class("calc-tile");
-        object.with_launcher(launcher.clone());
-
-        let update_closure = {
-            let tile_ref = tile.downgrade();
-            let method_clone = launcher.method.clone();
-            let row_weak = object.downgrade();
-            let capability_clone = Rc::clone(&capability_rc);
-            let exit = launcher.exit.clone();
-
-            move |search_query: &str| -> bool {
-                let Some(tile) = tile_ref.upgrade() else {
-                    return false;
-                };
-                let imp = tile.imp();
-
-                let mut result: Option<(String, String)> = None;
-                let capabilities = capability_clone.borrow();
-                if capabilities.contains("calc.math") {
-                    let trimmed_keyword = search_query.trim();
-                    if let Ok(r) = eval_str(trimmed_keyword) {
-                        let r = r.to_string();
-                        if &r != trimmed_keyword {
-                            result = Some((r.clone(), format!("= {}", r)));
-                        }
-                    }
-                }
-
-                if (capabilities.contains("calc.lengths") || capabilities.contains("calc.units"))
-                    && result.is_none()
-                {
-                    result = Calculator::measurement(&search_query, "lengths")
-                }
-
-                if (capabilities.contains("calc.weights") || capabilities.contains("calc.units"))
-                    && result.is_none()
-                {
-                    result = Calculator::measurement(&search_query, "weights")
-                }
-
-                if (capabilities.contains("calc.volumes") || capabilities.contains("calc.units"))
-                    && result.is_none()
-                {
-                    result = Calculator::measurement(&search_query, "volumes")
-                }
-
-                if (capabilities.contains("calc.temperatures")
-                    || capabilities.contains("calc.units"))
-                    && result.is_none()
-                {
-                    result = Calculator::temperature(&search_query)
-                }
-
-                if (capabilities.contains("calc.currencies") || capabilities.contains("calc.units"))
-                    && result.is_none()
-                {
-                    result = Calculator::measurement(&search_query, "currencies")
-                }
-                if let Some((num, result_text)) = result {
-                    imp.equation_holder.set_text(&search_query);
-                    imp.result_holder.set_text(&result_text);
-                    let attrs = get_attrs_map(vec![
-                        ("method", Some(&method_clone)),
-                        ("result", Some(&num)),
-                        ("exit", Some(&exit.to_string())),
-                    ]);
-
-                    row_weak.upgrade().map(|row| {
-                        let signal_id =
-                            row.connect_local("row-should-activate", false, move |args| {
-                                let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
-                                let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-                                let param: Option<bool> = match param {
-                                    1 => Some(false),
-                                    2 => Some(true),
-                                    _ => None,
-                                };
-                                execute_from_attrs(&row, &attrs, param);
-                                None
-                            });
-                        row.set_signal_id(signal_id);
-                    });
-                    return true;
-                }
-                false
-            }
-        };
-        object.set_update(update_closure);
-        Some(object)
+        tile
     }
 }
 
@@ -165,5 +67,112 @@ glib::wrapper! {
 impl CalcTile {
     pub fn new() -> Self {
         glib::Object::new::<Self>()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct CalcTileHandler {
+    tile: WeakRef<CalcTile>,
+    attrs: Rc<RefCell<HashMap<String, String>>>,
+    result: RefCell<Option<(String, String)>>,
+}
+impl CalcTileHandler {
+    pub fn new(tile: &CalcTile) -> Self {
+        Self {
+            tile: tile.downgrade(),
+            attrs: Rc::new(RefCell::new(HashMap::new())),
+            result: RefCell::new(None),
+        }
+    }
+    pub fn based_show(&self, keyword: &str, calc: &CalculatorLauncher) -> bool {
+        if keyword.trim().is_empty() {
+            return false;
+        }
+
+        let capabilities = &calc.capabilities;
+        let mut result = None;
+
+        if capabilities.contains("calc.math") {
+            let trimmed_keyword = keyword.trim();
+            if let Ok(r) = eval_str(trimmed_keyword) {
+                let r = r.to_string();
+                if &r != trimmed_keyword {
+                    result = Some((r.clone(), format!("= {}", r)));
+                }
+            }
+        }
+
+        if (capabilities.contains("calc.lengths") || capabilities.contains("calc.units"))
+            && result.is_none()
+        {
+            result = Calculator::measurement(&keyword, "lengths");
+        }
+
+        if (capabilities.contains("calc.weights") || capabilities.contains("calc.units"))
+            && result.is_none()
+        {
+            result = Calculator::measurement(&keyword, "weights");
+        }
+
+        if (capabilities.contains("calc.volumes") || capabilities.contains("calc.units"))
+            && result.is_none()
+        {
+            result = Calculator::measurement(&keyword, "volumes");
+        }
+
+        if (capabilities.contains("calc.temperatures") || capabilities.contains("calc.units"))
+            && result.is_none()
+        {
+            result = Calculator::temperature(&keyword);
+        }
+
+        if (capabilities.contains("calc.currencies") || capabilities.contains("calc.units"))
+            && result.is_none()
+        {
+            result = Calculator::measurement(&keyword, "currencies");
+        }
+
+        self.result.replace(result);
+
+        !self.result.borrow().is_none()
+    }
+    pub fn update(&self, search_query: &str, launcher: Rc<Launcher>) -> Option<()> {
+        if self.attrs.borrow().is_empty() {
+            let attrs = get_attrs_map(vec![
+                ("method", Some(&launcher.method)),
+                ("exit", Some(&launcher.exit.to_string())),
+            ]);
+            *self.attrs.borrow_mut() = attrs;
+        }
+
+        let tile = self.tile.upgrade()?;
+        let imp = tile.imp();
+
+        if let Some((num, result_text)) = &*self.result.borrow() {
+            imp.equation_holder.set_text(&search_query);
+            imp.result_holder.set_text(&result_text);
+            self.attrs
+                .borrow_mut()
+                .entry("result".to_string())
+                .or_insert(num.to_string());
+        }
+
+        Some(())
+    }
+    pub fn bind_signal(&self, row: &SherlockRow) {
+        row.add_css_class("calc-tile");
+        let attrs = self.attrs.clone();
+        let signal_id = row.connect_local("row-should-activate", false, move |args| {
+            let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+            let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+            let param: Option<bool> = match param {
+                1 => Some(false),
+                2 => Some(true),
+                _ => None,
+            };
+            execute_from_attrs(&row, &attrs.borrow(), param);
+            None
+        });
+        row.set_signal_id(signal_id);
     }
 }

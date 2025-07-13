@@ -501,17 +501,13 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
                     if current_text.is_empty() {
                         return true;
                     }
-                } else if priority <= 1.0 {
+                } else if priority < 1.0 {
                     return false;
                 }
                 let search = match item.search() {
                     Some(s) => s,
-                    _ => return true,
+                    _ => return update_res,
                 };
-
-                if update_res {
-                    return true;
-                }
 
                 search.fuzzy_match(&current_text)
             }

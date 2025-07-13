@@ -9,7 +9,6 @@ use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::calc_launcher::CalculatorLauncher;
 use crate::launcher::clipboard_launcher::ClipboardLauncher;
-use crate::launcher::utils::HomeType;
 use crate::launcher::Launcher;
 use crate::prelude::IconComp;
 
@@ -95,7 +94,7 @@ impl Tile {
     pub async fn clipboard_tile(
         launcher: Rc<Launcher>,
         clp: &ClipboardLauncher,
-        calc: &CalculatorLauncher,
+        _calc: &CalculatorLauncher,
     ) -> Vec<SherlockRow> {
         let mut results: Vec<SherlockRow> = Vec::with_capacity(1);
         let mut clipboard_content: String = clp.clipboard_content.clone();
@@ -275,14 +274,12 @@ impl Tile {
                 results.push(object);
             } else {
                 // calc capabilities will be checked inside of calc tile
-                let calc_tile = Tile::calculator(launcher, calc, SherlockRow::new());
-                if let Some(tile) = calc_tile {
-                    if tile.update(&clipboard_content) {
-                        tile.set_home(HomeType::OnlyHome);
-                        tile.set_update(|_| false);
-                        results.push(tile)
-                    }
-                }
+                // let tile = Tile::calculator();
+                // if tile.update(&clipboard_content) {
+                //     tile.set_home(HomeType::OnlyHome);
+                //     tile.set_update(|_| false);
+                //     results.push(tile)
+                // }
             }
         }
 

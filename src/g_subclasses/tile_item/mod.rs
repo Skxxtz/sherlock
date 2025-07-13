@@ -11,6 +11,7 @@ use simd_json::prelude::Indexed;
 use crate::launcher::LauncherType;
 use crate::loader::util::ApplicationAction;
 use crate::ui::tiles::app_tile::AppTileHandler;
+use crate::ui::tiles::calc_tile::CalcTileHandler;
 use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
 use crate::ui::tiles::web_tile::WebTileHandler;
 use crate::{g_subclasses::sherlock_row::SherlockRow, launcher::Launcher, loader::util::AppData};
@@ -78,12 +79,20 @@ impl TileItem {
         actions.extend(imp.actions.borrow().clone());
         actions
     }
-    pub fn based_show(&self, _keyword: &str) -> bool {
+    pub fn based_show(&self, keyword: &str) -> bool {
         let imp = self.imp();
         match &*imp.update_handler.borrow() {
             UpdateHandler::AppTile(_) => false,
-            UpdateHandler::WebTile(_) => false,
+            UpdateHandler::Calculator(inner) => {
+                let launcher = self.imp().launcher.borrow();
+                if let LauncherType::Calc(clc) = &launcher.launcher_type {
+                    inner.based_show(keyword, clc)
+                } else {
+                    false
+                }
+            }
             UpdateHandler::Pomodoro(_) => false,
+            UpdateHandler::WebTile(_) => false,
             UpdateHandler::Default => false,
         }
     }
@@ -99,12 +108,19 @@ impl TileItem {
                     }
                 }
             }
+            UpdateHandler::Calculator(inner) => {
+                let launcher = imp.launcher.borrow();
+                if let LauncherType::Calc(_) = &launcher.launcher_type {
+                    return inner.update(keyword, launcher.clone());
+                }
+            }
             UpdateHandler::WebTile(inner) => {
                 let launcher = imp.launcher.borrow();
                 if let LauncherType::Web(web) = &launcher.launcher_type {
                     return inner.update(keyword, launcher.clone(), web);
                 }
             }
+
             UpdateHandler::Pomodoro(_) | UpdateHandler::Default => {}
         }
         Some(())
@@ -112,12 +128,13 @@ impl TileItem {
     pub fn bind_signal(&self, row: &SherlockRow) {
         match &*self.imp().update_handler.borrow() {
             UpdateHandler::AppTile(inner) => inner.bind_signal(row),
-            UpdateHandler::WebTile(inner) => inner.bind_signal(row),
+            UpdateHandler::Calculator(inner) => inner.bind_signal(row),
             UpdateHandler::Pomodoro(inner) => {
                 if let LauncherType::Pomodoro(pmd) = &self.imp().launcher.borrow().launcher_type {
                     inner.bind_signal(row, pmd)
                 }
             }
+            UpdateHandler::WebTile(inner) => inner.bind_signal(row),
             UpdateHandler::Default => {}
         }
     }
@@ -140,8 +157,9 @@ impl TileItem {
 #[derive(Debug)]
 pub enum UpdateHandler {
     AppTile(AppTileHandler),
-    WebTile(WebTileHandler),
+    Calculator(CalcTileHandler),
     Pomodoro(PomodoroTileHandler),
+    WebTile(WebTileHandler),
     Default,
 }
 impl Default for UpdateHandler {
