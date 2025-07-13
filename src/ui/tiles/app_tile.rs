@@ -113,7 +113,7 @@ impl Tile {
     }
 }
 
-pub fn app_tile_patch(value: &AppData, launcher: Rc<Launcher>)->SherlockRow{
+pub fn app_tile_patch(value: &AppData, launcher: Rc<Launcher>) -> SherlockRow {
     // Append content to the sherlock row
     let tile = AppTile::new();
     let imp = tile.imp();
@@ -172,24 +172,19 @@ pub fn app_tile_patch(value: &AppData, launcher: Rc<Launcher>)->SherlockRow{
             });
 
             row_weak.upgrade().map(|row| {
-                let signal_id =
-                    row.connect_local("row-should-activate", false, move |args| {
-                        let row =
-                            args.first().map(|f| f.get::<SherlockRow>().ok())??;
-                        let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-                        let param: Option<bool> = match param {
-                            1 => Some(false),
-                            2 => Some(true),
-                            _ => None,
-                        };
-                        execute_from_attrs(&row, &attrs.borrow(), param);
-                        // To reload ui according to mode
-                        let _ = row.activate_action(
-                            "win.update-items",
-                            Some(&false.to_variant()),
-                        );
-                        None
-                    });
+                let signal_id = row.connect_local("row-should-activate", false, move |args| {
+                    let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+                    let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                    let param: Option<bool> = match param {
+                        1 => Some(false),
+                        2 => Some(true),
+                        _ => None,
+                    };
+                    execute_from_attrs(&row, &attrs.borrow(), param);
+                    // To reload ui according to mode
+                    let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
+                    None
+                });
                 row.set_signal_id(signal_id);
             });
             false

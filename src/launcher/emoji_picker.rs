@@ -59,14 +59,18 @@ impl EmojiPicker {
             .collect();
         Ok(emojies)
     }
-    pub fn get_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem>{
-        self.data.iter().enumerate().map(|(i, _app)| {
-            let base = TileItem::new();
-            base.set_index(i);
-            base.set_launcher(launcher.clone());
+    pub fn get_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem> {
+        self.data
+            .iter()
+            .enumerate()
+            .map(|(i, _app)| {
+                let base = TileItem::new();
+                base.set_index(i);
+                base.set_launcher(launcher.clone());
 
-            base
-        }).collect()
+                base
+            })
+            .collect()
     }
 }
 

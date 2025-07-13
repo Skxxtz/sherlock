@@ -8,14 +8,17 @@ use gtk4::{
     gdk::{Key, ModifierType},
     prelude::*,
     CustomFilter, CustomSorter, EventControllerKey, FilterListModel, ListView, Overlay,
-    SignalListItemFactory, SingleSelection, SortListModel
+    SignalListItemFactory, SingleSelection, SortListModel,
 };
 use gtk4::{glib, ApplicationWindow, Entry};
 use levenshtein::levenshtein;
 use simd_json::prelude::ArrayTrait;
-use std::{cell::{Cell, RefCell}, f32};
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::{
+    cell::{Cell, RefCell},
+    f32,
+};
 
 use super::context::make_context;
 use super::util::*;
@@ -357,7 +360,11 @@ fn construct_window(
             let mut added_index = 0;
             let apply_css = search_text.borrow().trim().is_empty() && animate && first_iter.get();
             for i in 0..myself.n_items() {
-                if let Some(item) = myself.item(i).and_downcast::<TileItem>().and_then(|t| t.parent().upgrade()) {
+                if let Some(item) = myself
+                    .item(i)
+                    .and_downcast::<TileItem>()
+                    .and_then(|t| t.parent().upgrade())
+                {
                     if apply_css {
                         item.add_css_class("animate");
                     } else {
@@ -451,9 +458,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             let current_text = search_text.borrow().clone();
             let is_home = current_text.is_empty() && mode == "all";
 
-            let update_res = row.upgrade().map(|row| {
-                row.update(&current_text)
-            });
+            let update_res = row.upgrade().map(|row| row.update(&current_text));
 
             if is_home {
                 if home != HomeType::Search {
@@ -475,7 +480,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
                 }
                 let search = match item.search() {
                     Some(s) => s,
-                    _ => return true
+                    _ => return true,
                 };
 
                 if Some(true) == update_res {

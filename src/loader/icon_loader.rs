@@ -20,34 +20,35 @@ impl Loader {
             if let Ok(paths_var) = env::var("XDG_DATA_DIRS") {
                 paths.extend(
                     paths_var
-                    .split(':')
-                    .map(|p| PathBuf::from(p).join("icons"))
-                    .filter(|p| p.exists()),
+                        .split(':')
+                        .map(|p| PathBuf::from(p).join("icons"))
+                        .filter(|p| p.exists()),
                 );
             }
 
             let config = match ConfigGuard::read() {
                 Ok(c) => c,
-                Err(e) => return Err(e)
+                Err(e) => return Err(e),
             };
             if let Ok(home) = home_dir() {
                 paths.extend(
                     config
-                    .appearance
-                    .icon_paths
-                    .iter()
-                    .map(|p| expand_path(p, &home))
-                    .filter(|p| p.exists()),
+                        .appearance
+                        .icon_paths
+                        .iter()
+                        .map(|p| expand_path(p, &home))
+                        .filter(|p| p.exists()),
                 );
             }
 
             Ok(paths)
         })
-        .await.ok()?;
+        .await
+        .ok()?;
 
         match icon_paths {
             Ok(p) => add_paths_incrementally(&icon_theme, p),
-            Err(e) => return Some(e)
+            Err(e) => return Some(e),
         }
 
         None
@@ -74,10 +75,10 @@ pub struct CustomIconTheme {
 impl CustomIconTheme {
     pub fn new() -> Self {
         Self {
-            buf: HashMap::new()
+            buf: HashMap::new(),
         }
     }
-    pub fn add_path<T: AsRef<Path>>(&mut self, path: T){
+    pub fn add_path<T: AsRef<Path>>(&mut self, path: T) {
         let path_ref = path.as_ref();
 
         let path = if let Some(str_path) = path_ref.to_str() {
@@ -98,27 +99,28 @@ impl CustomIconTheme {
     pub fn lookup_icon(&self, name: &str) -> Option<PathBuf> {
         self.buf.get(name).cloned()
     }
-    fn scan_path(path: &Path, buf: &mut HashMap<String, PathBuf>){
+    fn scan_path(path: &Path, buf: &mut HashMap<String, PathBuf>) {
         // Early return if its not a scannable directory
-        if !path.exists() ||!path.is_dir() {
-            return
+        if !path.exists() || !path.is_dir() {
+            return;
         }
 
-        let Ok(entries) = std::fs::read_dir(path) else { return };
+        let Ok(entries) = std::fs::read_dir(path) else {
+            return;
+        };
         for entry in entries.flatten() {
             let entry_path = entry.path();
             if entry_path.is_dir() {
                 Self::scan_path(&entry_path, buf);
-            } else if let Some(ext) = entry_path.extension().and_then(|e|e.to_str()){
+            } else if let Some(ext) = entry_path.extension().and_then(|e| e.to_str()) {
                 let is_icon = matches!(ext.to_ascii_lowercase().as_str(), "png" | "svg");
                 if is_icon {
-                    if let Some(stem) = entry_path.file_stem().and_then(|s| s.to_str()){
+                    if let Some(stem) = entry_path.file_stem().and_then(|s| s.to_str()) {
                         buf.entry(stem.to_string()).or_insert(entry_path);
                     }
                 }
             }
         }
-
     }
 }
 
@@ -155,7 +157,7 @@ impl<'g> IconThemeGuard {
         Self::get_read()
     }
 
-    pub fn add_path<T: AsRef<Path>>(path: T) -> Result<(), SherlockError>{
+    pub fn add_path<T: AsRef<Path>>(path: T) -> Result<(), SherlockError> {
         let mut inner = Self::get_write()?;
         inner.add_path(path);
         Ok(())

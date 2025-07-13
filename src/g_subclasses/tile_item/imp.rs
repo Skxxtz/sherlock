@@ -2,8 +2,8 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gio::glib::WeakRef;
-use gtk4::subclass::prelude::*;
 use gtk4::glib;
+use gtk4::subclass::prelude::*;
 
 use crate::g_subclasses::sherlock_row::{SherlockRow, SherlockRowBind};
 use crate::launcher::Launcher;

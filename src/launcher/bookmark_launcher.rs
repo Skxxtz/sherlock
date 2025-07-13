@@ -15,10 +15,7 @@ pub struct BookmarkLauncher {
     pub bookmarks: Vec<AppData>,
 }
 impl BookmarkLauncher {
-    pub fn find_bookmarks(
-        browser: &str,
-        raw: &RawLauncher,
-    ) -> Result<Vec<AppData>, SherlockError> {
+    pub fn find_bookmarks(browser: &str, raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
         match browser.to_lowercase().as_str() {
             "zen" | "zen-browser" | "/opt/zen-browser-bin/zen-bin %u" => BookmarkParser::zen(raw),
             "brave" | "brave %u" => BookmarkParser::brave(raw),
@@ -44,13 +41,17 @@ impl BookmarkLauncher {
         }
     }
     pub fn get_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem> {
-        self.bookmarks.iter().enumerate().map(|(i, _app)| {
-            let base = TileItem::new();
-            base.set_index(i);
-            base.set_launcher(launcher.clone());
+        self.bookmarks
+            .iter()
+            .enumerate()
+            .map(|(i, _app)| {
+                let base = TileItem::new();
+                base.set_index(i);
+                base.set_launcher(launcher.clone());
 
-            base
-        }).collect()
+                base
+            })
+            .collect()
     }
 }
 
