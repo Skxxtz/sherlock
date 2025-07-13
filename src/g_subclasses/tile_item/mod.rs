@@ -51,7 +51,8 @@ impl TileItem {
         self.get_by_key(|data| data.search_string.clone())
     }
     pub fn priority(&self) -> f32 {
-        self.get_by_key(|data| data.priority).unwrap_or(self.imp().launcher.borrow().priority as f32)
+        self.get_by_key(|data| data.priority)
+            .unwrap_or(self.imp().launcher.borrow().priority as f32)
     }
 
     // Constructors

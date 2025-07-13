@@ -10,12 +10,15 @@ use crate::utils::errors::{SherlockError, SherlockErrorType};
 #[derive(Clone, Debug)]
 pub struct ProcessLauncher {
     pub icon: String,
+    pub processes: HashMap<(i32, i32), String>,
 }
 
 impl ProcessLauncher {
     pub fn new(icon: &str) -> Option<Self> {
+        let processes = Self::get_all_processes()?;
         return Some(Self {
             icon: icon.to_string(),
+            processes,
         });
     }
     pub fn kill(pid: (i32, i32)) -> Result<(), SherlockError> {
@@ -36,7 +39,7 @@ impl ProcessLauncher {
             )
         })
     }
-    pub async fn get_all_processes() -> Option<HashMap<(i32, i32), String>> {
+    pub fn get_all_processes() -> Option<HashMap<(i32, i32), String>> {
         match all_processes() {
             Ok(procs) => {
                 let user_processes: Vec<Process> = procs
