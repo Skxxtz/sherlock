@@ -19,7 +19,10 @@ pub mod weather_launcher;
 pub mod web_launcher;
 
 use crate::{
-    g_subclasses::{sherlock_row::{SherlockRow, SherlockRowBind}, tile_item::TileItem},
+    g_subclasses::{
+        sherlock_row::{SherlockRow, SherlockRowBind},
+        tile_item::TileItem,
+    },
     loader::util::{AppData, ApplicationAction, RawLauncher},
     ui::tiles::Tile,
 };
@@ -68,14 +71,14 @@ impl Default for LauncherType {
     }
 }
 impl LauncherType {
-    pub fn inner(&self)->Option<&Vec<AppData>>{
+    pub fn inner(&self) -> Option<&Vec<AppData>> {
         match self {
             Self::App(app) => Some(&app.apps),
             Self::Bookmark(bkm) => Some(&bkm.bookmarks),
             Self::Category(cat) => Some(&cat.categories),
             Self::Command(cmd) => Some(&cmd.commands),
             Self::Theme(thm) => Some(&thm.themes),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -178,7 +181,7 @@ impl Launcher {
         let launcher = Rc::clone(&launcher_instance);
         match &launcher_instance.launcher_type {
             LauncherType::App(app) => app.get_obj(launcher),
-            LauncherType::Bookmark(bmk) => bmk.get_obj(launcher), 
+            LauncherType::Bookmark(bmk) => bmk.get_obj(launcher),
             // LauncherType::Calc(calc) => Tile::calc_tile(launcher, &calc).await,
             LauncherType::Category(ctg) => ctg.get_obj(launcher),
             // LauncherType::Clipboard((clp, calc)) => {
@@ -199,7 +202,6 @@ impl Launcher {
             // LauncherType::Weather(_) => Tile::weather_tile_loader(launcher).await,
             _ => Vec::new(),
         }
-
     }
     pub fn get_execs(&self) -> Option<HashSet<String>> {
         // NOTE: make a function to check for exec changes in the caching algorithm

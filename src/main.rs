@@ -44,7 +44,6 @@ const LOCK_FILE: &str = "/tmp/sherlock.lock";
 static CONFIG: OnceCell<RwLock<SherlockConfig>> = OnceCell::new();
 static ICONS: OnceCell<RwLock<CustomIconTheme>> = OnceCell::new();
 
-
 #[tokio::main]
 async fn main() {
     let t0 = Instant::now();
@@ -75,7 +74,6 @@ async fn main() {
         //     }
         // });
 
-
         // Main logic for the Search-View
         let (window, stack, current_stack_page, open_win) = ui::window::window(app);
         {
@@ -87,22 +85,27 @@ async fn main() {
         window.connect_show({
             let t0 = t0.clone();
             move |_| {
-            if let Ok(timing_enabled) = std::env::var("TIMING") {
-                if timing_enabled == "true" {
-                    println!("Window shown after {:?}", t0.elapsed());
+                if let Ok(timing_enabled) = std::env::var("TIMING") {
+                    if timing_enabled == "true" {
+                        println!("Window shown after {:?}", t0.elapsed());
+                    }
                 }
+                post_startup();
             }
-            post_startup();
-        }});
+        });
 
         // Add closing logic
         app.set_accels_for_action("win.close", &["<Ctrl>W"]);
 
         // Significantly better id done here
         if let Some(obf) = app_config.runtime.input {
-            sherlock.borrow_mut().request(ApiCall::SwitchMode(SherlockModes::Input(obf)));
+            sherlock
+                .borrow_mut()
+                .request(ApiCall::SwitchMode(SherlockModes::Input(obf)));
         } else {
-            sherlock.borrow_mut().request(ApiCall::Show("all".to_string()));
+            sherlock
+                .borrow_mut()
+                .request(ApiCall::Show("all".to_string()));
         }
 
         glib::MainContext::default().spawn_local({
@@ -110,12 +113,24 @@ async fn main() {
             async move {
                 let t0 = Instant::now();
                 // Either show user-specified content or show normal search
-                let (error_stack, error_model) = ui::error_view::errors(&errors, &warnings, &current_stack_page, Rc::clone(&sherlock));
-                let (search_frame, _handler) = match ui::search::search(&window, &current_stack_page, error_model.clone(), Rc::clone(&sherlock)) {
+                let (error_stack, error_model) = ui::error_view::errors(
+                    &errors,
+                    &warnings,
+                    &current_stack_page,
+                    Rc::clone(&sherlock),
+                );
+                let (search_frame, _handler) = match ui::search::search(
+                    &window,
+                    &current_stack_page,
+                    error_model.clone(),
+                    Rc::clone(&sherlock),
+                ) {
                     Ok(r) => r,
                     Err(e) => {
-                        error_model.upgrade().map(|stack| stack.append(&e.tile("ERROR")));
-                        return
+                        error_model
+                            .upgrade()
+                            .map(|stack| stack.append(&e.tile("ERROR")));
+                        return;
                     }
                 };
                 stack.add_named(&search_frame, Some("search-page"));
@@ -125,7 +140,8 @@ async fn main() {
                 // Logic for the Error-View
                 let error_view_active = if !app_config.debug.try_suppress_errors {
                     let show_errors = !errors.is_empty();
-                    let show_warnings = !app_config.debug.try_suppress_warnings && !warnings.is_empty();
+                    let show_warnings =
+                        !app_config.debug.try_suppress_warnings && !warnings.is_empty();
                     show_errors || show_warnings
                 } else {
                     false
@@ -138,13 +154,16 @@ async fn main() {
                         if sherlock_flags.display_raw {
                             let pipe = String::from_utf8_lossy(&pipe).to_string();
                             mode = Some(SherlockModes::DisplayRaw(pipe));
-                        } else if let Some(mut data) = PipedData::new(&pipe){
-                            if let Some(settings) = data.settings.take(){
+                        } else if let Some(mut data) = PipedData::new(&pipe) {
+                            if let Some(settings) = data.settings.take() {
                                 settings.into_iter().for_each(|request| {
                                     sherlock.await_request(request);
                                 });
                             }
-                            mode = data.elements.take().map(|elements| SherlockModes::Pipe(elements));
+                            mode = data
+                                .elements
+                                .take()
+                                .map(|elements| SherlockModes::Pipe(elements));
                         }
                     };
                     if let Some(mode) = mode {
@@ -180,7 +199,6 @@ async fn main() {
                 let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
             }
         }
-
 
         // Print Timing
         if let Ok(timing_enabled) = std::env::var("TIMING") {
@@ -242,7 +260,7 @@ async fn startup_loading() -> (
     );
     let _ = ICONS.set(RwLock::new(CustomIconTheme::new()));
     app_config.appearance.icon_paths.iter().for_each(|path| {
-        if let Err(e) = IconThemeGuard::add_path(path){
+        if let Err(e) = IconThemeGuard::add_path(path) {
             startup_errors.push(e);
         }
     });
@@ -284,17 +302,28 @@ fn post_startup() {
     env::remove_var("ORIGINAL_GSK_RENDERER");
 
     // Print messages if icon parsers aren't installed
-    let available: HashSet<String> = gdk_pixbuf::Pixbuf::formats().into_iter().filter_map(|f| f.name()).map(|s|s.to_string()).collect();
+    let available: HashSet<String> = gdk_pixbuf::Pixbuf::formats()
+        .into_iter()
+        .filter_map(|f| f.name())
+        .map(|s| s.to_string())
+        .collect();
     let required = vec![("svg", "librsvg"), ("png", "gdk-pixbuf2")];
 
-    required.into_iter().filter(|(t, _)| !available.contains(*t)).for_each(|(t, d)| {
-        let _ = sherlock_error!(
-            SherlockErrorType::MissingIconParser(t.to_string()),
-            format!("Icon parser for {} not found.\n\
+    required
+        .into_iter()
+        .filter(|(t, _)| !available.contains(*t))
+        .for_each(|(t, d)| {
+            let _ = sherlock_error!(
+                SherlockErrorType::MissingIconParser(t.to_string()),
+                format!(
+                    "Icon parser for {} not found.\n\
                 This could hinder Sherlock from rendering .{} icons.\n\
-            Please ensure that \"{}\" is installed correctly.", t, t, d)
-        ).insert(false);
-    });
+            Please ensure that \"{}\" is installed correctly.",
+                    t, t, d
+                )
+            )
+            .insert(false);
+        });
 
     // Notify the user about the value not having any effect to avoid confusion
     if let Ok(c) = ConfigGuard::read() {

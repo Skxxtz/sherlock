@@ -9,12 +9,16 @@ pub struct AppLauncher {
 
 impl AppLauncher {
     pub fn get_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem> {
-        self.apps.iter().enumerate().map(|(i, _app)| {
-            let base = TileItem::new();
-            base.set_index(i);
-            base.set_launcher(launcher.clone());
+        self.apps
+            .iter()
+            .enumerate()
+            .map(|(i, _app)| {
+                let base = TileItem::new();
+                base.set_index(i);
+                base.set_launcher(launcher.clone());
 
-            base
-        }).collect()
+                base
+            })
+            .collect()
     }
 }
