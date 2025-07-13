@@ -336,7 +336,7 @@ fn construct_window(
 
     // Setup model and factory
     let model = ListStore::new::<TileItem>();
-    let factory = make_factory();
+    let factory = make_factory(search_text.clone());
     imp.results.set_factory(Some(&factory));
 
     // Setup selection
@@ -360,22 +360,21 @@ fn construct_window(
             let mut added_index = 0;
             let apply_css = search_text.borrow().trim().is_empty() && animate && first_iter.get();
             for i in 0..myself.n_items() {
-                if let Some(item) = myself
-                    .item(i)
-                    .and_downcast::<TileItem>()
-                    .and_then(|t| t.parent().upgrade())
-                {
-                    if apply_css {
-                        item.add_css_class("animate");
-                    } else {
-                        item.remove_css_class("animate");
-                    }
-                    if let Some(shortcut_holder) = item.shortcut_holder() {
-                        if added_index < 5 {
-                            added_index +=
-                                shortcut_holder.apply_shortcut(added_index + 1, &mod_str);
+                if let Some(item) = myself.item(i).and_downcast::<TileItem>() {
+                    if let Some(row) = item.parent().upgrade() {
+                        item.bind_signal(&row);
+                        if apply_css {
+                            row.add_css_class("animate");
                         } else {
-                            shortcut_holder.remove_shortcut();
+                            row.remove_css_class("animate");
+                        }
+                        if let Some(shortcut_holder) = row.shortcut_holder() {
+                            if added_index < 5 {
+                                added_index +=
+                                    shortcut_holder.apply_shortcut(added_index + 1, &mod_str);
+                            } else {
+                                shortcut_holder.remove_shortcut();
+                            }
                         }
                     }
                 }
@@ -425,9 +424,39 @@ fn construct_window(
 
     Ok((search_text, main_overlay, ui, handler, context))
 }
-fn make_factory() -> SignalListItemFactory {
+fn make_factory(search_text: Rc<RefCell<String>>) -> SignalListItemFactory {
     let factory = SignalListItemFactory::new();
-    factory.connect_bind(|_, item| {
+    factory.connect_setup(|_, item| {
+        let item = item
+            .downcast_ref::<gtk4::ListItem>()
+            .expect("Item must be a ListItem");
+        let container = SherlockRow::new();
+        item.set_child(Some(&container));
+    });
+    factory.connect_bind(move |_, item| {
+        let item = item
+            .downcast_ref::<gtk4::ListItem>()
+            .expect("Item mut be a ListItem");
+
+        let row = item
+            .child()
+            .and_downcast::<SherlockRow>()
+            .expect("Child must be a SherlockRow");
+
+        let tile_item = item
+            .item()
+            .and_downcast::<TileItem>()
+            .expect("Row should be TileItem");
+
+        if let Some((patch, handler)) = tile_item.get_patch() {
+            tile_item.imp().update_handler.replace(handler);
+            tile_item.update(&search_text.borrow());
+            tile_item.bind_signal(&row);
+            tile_item.set_parent(Some(&row));
+            row.append(&patch);
+        }
+    });
+    factory.connect_unbind(|_, item| {
         let item = item
             .downcast_ref::<gtk4::ListItem>()
             .expect("Item mut be a ListItem");
@@ -436,11 +465,7 @@ fn make_factory() -> SignalListItemFactory {
             .clone()
             .and_downcast::<TileItem>()
             .expect("Row should be TileItem");
-        if let Some(patch) = row.get_patch() {
-            patch.update("");
-            row.set_parent(&patch);
-            item.set_child(Some(&patch));
-        }
+        row.set_parent(None);
     });
     factory
 }
@@ -451,7 +476,6 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
         move |entry| {
             let item = entry.downcast_ref::<TileItem>().unwrap();
             let imp = item.imp();
-            let row = imp.parent.borrow();
             let launcher = imp.launcher.borrow();
             let home = launcher.home;
 
@@ -459,7 +483,8 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             let current_text = search_text.borrow().clone();
             let is_home = current_text.is_empty() && mode == "all";
 
-            let update_res = row.upgrade().map(|row| row.update(&current_text));
+            let update_res = item.based_show(&search_text.borrow());
+            item.update(&search_text.borrow());
 
             if is_home {
                 if home != HomeType::Search {
@@ -484,7 +509,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
                     _ => return true,
                 };
 
-                if Some(true) == update_res {
+                if update_res {
                     return true;
                 }
 

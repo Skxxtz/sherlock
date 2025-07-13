@@ -21,10 +21,13 @@ pub mod web_launcher;
 use crate::{
     g_subclasses::{
         sherlock_row::{SherlockRow, SherlockRowBind},
-        tile_item::TileItem,
+        tile_item::{TileItem, UpdateHandler},
     },
     loader::util::{AppData, ApplicationAction, RawLauncher},
-    ui::tiles::Tile,
+    ui::tiles::{
+        app_tile::AppTileHandler, pomodoro_tile::PomodoroTileHandler, web_tile::WebTileHandler,
+        Tile,
+    },
 };
 
 use app_launcher::AppLauncher;
@@ -37,6 +40,8 @@ use clipboard_launcher::ClipboardLauncher;
 use emoji_picker::EmojiPicker;
 use event_launcher::EventLauncher;
 use file_launcher::FileLauncher;
+use gio::glib::object::Cast;
+use gtk4::Widget;
 use pomodoro_launcher::Pomodoro;
 use process_launcher::ProcessLauncher;
 use simd_json::prelude::ArrayTrait;
@@ -171,7 +176,12 @@ impl Launcher {
                     .collect()
             }
 
-            LauncherType::Pomodoro(_) | LauncherType::Web(_) => {
+            LauncherType::Calc(_) | LauncherType::Pomodoro(_) => {
+                let base = TileItem::new();
+                base.set_launcher(launcher.clone());
+                vec![base]
+            }
+            LauncherType::Web(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
                 vec![base]
@@ -194,9 +204,13 @@ impl Launcher {
     // LauncherType::Clipboard((clp, calc))
     // LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
     // LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
-    // LauncherType::Pomodoro(pmd) => Tile::pomodoro_tile(launcher, &pmd).await,
     // LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
-    pub fn get_tile(&self, index: Option<u16>, launcher: Rc<Launcher>) -> Option<SherlockRow> {
+    pub fn get_tile(
+        &self,
+        index: Option<u16>,
+        launcher: Rc<Launcher>,
+        item: &TileItem,
+    ) -> Option<(Widget, UpdateHandler)> {
         match &self.launcher_type {
             //
             // App Tile Based
@@ -211,11 +225,22 @@ impl Launcher {
                 // Get app data value
                 let inner = self.inner()?;
                 let value = inner.get(index? as usize)?;
-                Some(Tile::app(value, launcher))
+                let tile = Tile::app(value, launcher, item);
+                let update = UpdateHandler::AppTile(AppTileHandler::new(&tile));
+                Some((tile.upcast::<Widget>(), update))
             }
 
-            LauncherType::Pomodoro(pmd) => Tile::pomodoro(launcher, &pmd),
-            LauncherType::Web(web) => Tile::web(launcher, &web),
+            // LauncherType::Calc(clc) => Tile::calculator(launcher, &clc),
+            LauncherType::Pomodoro(pmd) => {
+                let tile = Tile::pomodoro(launcher);
+                let update = UpdateHandler::Pomodoro(PomodoroTileHandler::new(&tile, &pmd));
+                Some((tile.upcast::<Widget>(), update))
+            }
+            LauncherType::Web(web) => {
+                let tile = Tile::web(launcher, &web);
+                let update = UpdateHandler::WebTile(WebTileHandler::new(&tile));
+                Some((tile.upcast::<Widget>(), update))
+            }
 
             _ => None,
         }
@@ -223,7 +248,6 @@ impl Launcher {
     pub async fn get_patch(launcher_instance: Rc<Self>) -> Vec<SherlockRow> {
         let launcher = Rc::clone(&launcher_instance);
         match &launcher_instance.launcher_type {
-            LauncherType::Calc(calc) => Tile::calc_tile(launcher, &calc).await,
             LauncherType::Clipboard((clp, calc)) => {
                 Tile::clipboard_tile(launcher, &clp, &calc).await
             }

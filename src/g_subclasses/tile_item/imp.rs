@@ -6,6 +6,7 @@ use gtk4::glib;
 use gtk4::subclass::prelude::*;
 
 use crate::g_subclasses::sherlock_row::{SherlockRow, SherlockRowBind};
+use crate::g_subclasses::tile_item::UpdateHandler;
 use crate::launcher::Launcher;
 use crate::loader::util::ApplicationAction;
 
@@ -16,6 +17,8 @@ pub struct TileItem {
 
     pub index: Cell<Option<u16>>,
     pub parent: RefCell<WeakRef<SherlockRow>>,
+
+    pub update_handler: RefCell<UpdateHandler>,
 
     // Customs
     pub actions: RefCell<Vec<ApplicationAction>>,
