@@ -13,6 +13,7 @@ use crate::loader::util::ApplicationAction;
 use crate::ui::tiles::app_tile::AppTileHandler;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
 use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
+use crate::ui::tiles::weather_tile::WeatherTileHandler;
 use crate::ui::tiles::web_tile::WebTileHandler;
 use crate::{g_subclasses::sherlock_row::SherlockRow, launcher::Launcher, loader::util::AppData};
 
@@ -92,6 +93,7 @@ impl TileItem {
                 }
             }
             UpdateHandler::Pomodoro(_) => false,
+            UpdateHandler::Weather(_) => false,
             UpdateHandler::WebTile(_) => false,
             UpdateHandler::Default => false,
         }
@@ -121,9 +123,20 @@ impl TileItem {
                 }
             }
 
-            UpdateHandler::Pomodoro(_) | UpdateHandler::Default => {}
+            UpdateHandler::Pomodoro(_) | UpdateHandler::Default | UpdateHandler::Weather(_) => {}
         }
         Some(())
+    }
+    pub async fn update_async(&self, _keyword: &str) -> Option<()> {
+        let imp = self.imp();
+        match &*imp.update_handler.borrow() {
+            UpdateHandler::Weather(wttr) => {
+                let launcher = imp.launcher.borrow();
+                let row = self.parent().upgrade()?;
+                wttr.async_update(&row, launcher.clone()).await
+            }
+            _ => None,
+        }
     }
     pub fn bind_signal(&self, row: &SherlockRow) {
         match &*self.imp().update_handler.borrow() {
@@ -134,6 +147,7 @@ impl TileItem {
                     inner.bind_signal(row, pmd)
                 }
             }
+            UpdateHandler::Weather(inner) => inner.bind_signal(row),
             UpdateHandler::WebTile(inner) => inner.bind_signal(row),
             UpdateHandler::Default => {}
         }
@@ -145,7 +159,6 @@ impl TileItem {
         let imp = obj.imp();
 
         imp.launcher.replace(launcher);
-
         obj
     }
 
@@ -159,6 +172,7 @@ pub enum UpdateHandler {
     AppTile(AppTileHandler),
     Calculator(CalcTileHandler),
     Pomodoro(PomodoroTileHandler),
+    Weather(WeatherTileHandler),
     WebTile(WebTileHandler),
     Default,
 }
