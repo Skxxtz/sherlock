@@ -25,8 +25,9 @@ use crate::{
     },
     loader::util::{AppData, ApplicationAction, RawLauncher},
     ui::tiles::{
-        app_tile::AppTileHandler, calc_tile::CalcTileHandler, pomodoro_tile::PomodoroTileHandler,
-        weather_tile::WeatherTileHandler, web_tile::WebTileHandler, Tile,
+        app_tile::AppTileHandler, calc_tile::CalcTileHandler, mpris_tile::MusicTileHandler,
+        pomodoro_tile::PomodoroTileHandler, weather_tile::WeatherTileHandler,
+        web_tile::WebTileHandler, Tile,
     },
 };
 
@@ -186,7 +187,7 @@ impl Launcher {
                     .set(UpdateHandler::Calculator(handler));
                 vec![base]
             }
-            LauncherType::Weather(_) | LauncherType::Web(_) => {
+            LauncherType::Weather(_) | LauncherType::Web(_) | LauncherType::MusicPlayer(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
                 vec![base]
@@ -240,6 +241,15 @@ impl Launcher {
                 let update = UpdateHandler::Calculator(CalcTileHandler::new(&tile));
                 Some((tile.upcast::<Widget>(), update))
             }
+            LauncherType::MusicPlayer(mpris) => {
+                let tile = Tile::mpris_tile();
+                let update = UpdateHandler::MusicPlayer(MusicTileHandler::new(
+                    &tile,
+                    mpris,
+                    launcher.clone(),
+                ));
+                Some((tile.upcast::<Widget>(), update))
+            }
             LauncherType::Pomodoro(pmd) => {
                 let tile = Tile::pomodoro(launcher);
                 let update = UpdateHandler::Pomodoro(PomodoroTileHandler::new(&tile, &pmd));
@@ -271,7 +281,6 @@ impl Launcher {
 
             // Async tiles
             LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,
-            LauncherType::MusicPlayer(mpris) => Tile::mpris_tile(launcher, &mpris).await,
             _ => Vec::new(),
         }
     }

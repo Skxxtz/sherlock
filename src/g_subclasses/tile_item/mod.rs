@@ -12,6 +12,7 @@ use crate::launcher::LauncherType;
 use crate::loader::util::ApplicationAction;
 use crate::ui::tiles::app_tile::AppTileHandler;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
+use crate::ui::tiles::mpris_tile::MusicTileHandler;
 use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
 use crate::ui::tiles::weather_tile::WeatherTileHandler;
 use crate::ui::tiles::web_tile::WebTileHandler;
@@ -95,10 +96,11 @@ impl TileItem {
                     false
                 }
             }
-            UpdateHandler::Pomodoro(_) => false,
-            UpdateHandler::Weather(_) => false,
-            UpdateHandler::WebTile(_) => false,
-            UpdateHandler::Default => false,
+            UpdateHandler::MusicPlayer(_)
+            | UpdateHandler::Pomodoro(_)
+            | UpdateHandler::Weather(_)
+            | UpdateHandler::WebTile(_)
+            | UpdateHandler::Default => false,
         }
     }
     pub fn update(&self, keyword: &str) -> Option<()> {
@@ -119,6 +121,7 @@ impl TileItem {
                     return inner.update(keyword, launcher.clone());
                 }
             }
+            UpdateHandler::MusicPlayer(inner) => inner.update(),
             UpdateHandler::WebTile(inner) => {
                 let launcher = imp.launcher.borrow();
                 if let LauncherType::Web(web) = &launcher.launcher_type {
@@ -133,11 +136,16 @@ impl TileItem {
     pub async fn update_async(&self, _keyword: &str) -> Option<()> {
         let imp = self.imp();
         match &*imp.update_handler.borrow() {
-            UpdateHandler::Weather(wttr) => {
+            UpdateHandler::MusicPlayer(inner) => {
+                let row = self.parent().upgrade()?;
+                inner.update_async(&row).await
+            }
+            UpdateHandler::Weather(inner) => {
                 let launcher = imp.launcher.borrow();
                 let row = self.parent().upgrade()?;
-                wttr.async_update(&row, launcher.clone()).await
+                inner.async_update(&row, launcher.clone()).await
             }
+
             _ => None,
         }
     }
@@ -145,9 +153,16 @@ impl TileItem {
         match &*self.imp().update_handler.borrow() {
             UpdateHandler::AppTile(inner) => inner.bind_signal(row),
             UpdateHandler::Calculator(inner) => inner.bind_signal(row),
+            UpdateHandler::MusicPlayer(inner) => {
+                if let LauncherType::MusicPlayer(mpris) =
+                    &self.imp().launcher.borrow().launcher_type
+                {
+                    inner.bind_signal(row, mpris);
+                }
+            }
             UpdateHandler::Pomodoro(inner) => {
                 if let LauncherType::Pomodoro(pmd) = &self.imp().launcher.borrow().launcher_type {
-                    inner.bind_signal(row, pmd)
+                    inner.bind_signal(row, pmd);
                 }
             }
             UpdateHandler::Weather(inner) => inner.bind_signal(row),
@@ -174,6 +189,7 @@ impl TileItem {
 pub enum UpdateHandler {
     AppTile(AppTileHandler),
     Calculator(CalcTileHandler),
+    MusicPlayer(MusicTileHandler),
     Pomodoro(PomodoroTileHandler),
     Weather(WeatherTileHandler),
     WebTile(WebTileHandler),
