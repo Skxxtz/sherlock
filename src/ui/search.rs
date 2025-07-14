@@ -485,7 +485,6 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
 
             let update_res = item.based_show(&search_text.borrow());
             item.update(&search_text.borrow());
-            println!("{:?}", launcher.name);
 
             if is_home {
                 if home != HomeType::Search {
