@@ -73,6 +73,9 @@ impl TileItem {
         self.get_by_key(|data| data.priority)
             .unwrap_or(self.imp().launcher.borrow().priority as f32)
     }
+    pub fn is_async(&self) -> bool {
+        self.imp().launcher.borrow().r#async
+    }
     pub fn actions(&self) -> Vec<ApplicationAction> {
         let imp = self.imp();
         let launcher = imp.launcher.borrow();

@@ -308,7 +308,7 @@ impl SherlockNav for ListView {
         let n_items = selection.n_items();
         let weaks = (0..n_items)
             .filter_map(|i| selection.item(i).and_downcast::<TileItem>())
-            .filter(|r| r.parent().upgrade().is_some())
+            .filter(|r| i.is_async() && r.parent().upgrade().is_some())
             .map(|row| row.downgrade())
             .collect();
         Some(weaks)
