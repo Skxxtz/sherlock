@@ -1,6 +1,6 @@
-use crate::{g_subclasses::sherlock_row::SherlockRow, utils::config::ConfigGuard};
+use crate::g_subclasses::sherlock_row::SherlockRow;
 use gio::glib::WeakRef;
-use gtk4::{prelude::*, Box, Builder, Image, Label, Overlay, Spinner, TextView};
+use gtk4::{prelude::*, Box, Builder, Image, Label, TextView};
 
 #[derive(Default)]
 pub struct TextViewTileBuilder {
@@ -54,58 +54,6 @@ impl EventTileBuilder {
             end_time,
             icon,
             shortcut_holder,
-        }
-    }
-}
-
-#[derive(Clone, Default)]
-pub struct WeatherTileBuilder {
-    pub object: SherlockRow,
-    pub icon: Option<WeakRef<Image>>,
-    pub location: Option<WeakRef<Label>>,
-    pub temperature: Option<WeakRef<Label>>,
-    pub spinner: WeakRef<Spinner>,
-}
-
-impl WeatherTileBuilder {
-    pub fn new(resource: &str) -> Self {
-        let builder = Builder::from_resource(resource);
-        let body = builder.object::<Box>("holder").unwrap_or_default();
-        let icon = builder.object::<Image>("icon-name").map(|w| w.downgrade());
-        let location = builder.object::<Label>("location").map(|w| w.downgrade());
-        let temperature = builder
-            .object::<Label>("temperature")
-            .map(|w| w.downgrade());
-
-        // Append content to the sherlock row
-        let object = SherlockRow::new();
-        object.set_css_classes(&["tile"]);
-
-        let overlay = Overlay::new();
-        overlay.set_child(Some(&body));
-
-        let spinner = Spinner::new();
-        spinner.set_spinning(true);
-        spinner.set_size_request(20, 20);
-        spinner.set_halign(gtk4::Align::Center);
-        spinner.set_valign(gtk4::Align::Center);
-        overlay.add_overlay(&spinner);
-
-        object.append(&overlay);
-
-        // Set the icon size to the user-specified one
-        if let Ok(c) = ConfigGuard::read() {
-            icon.as_ref()
-                .and_then(|tmp| tmp.upgrade())
-                .map(|icon| icon.set_pixel_size(c.appearance.icon_size));
-        }
-
-        WeatherTileBuilder {
-            object,
-            icon,
-            location,
-            temperature,
-            spinner: spinner.downgrade(),
         }
     }
 }

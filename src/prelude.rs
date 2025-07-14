@@ -17,7 +17,7 @@ use gtk4::{
 };
 
 use crate::{
-    g_subclasses::sherlock_row::SherlockRow,
+    g_subclasses::{sherlock_row::SherlockRow, tile_item::TileItem},
     loader::{icon_loader::IconThemeGuard, pipe_loader::PipedElements},
     ui::search::UserBindHandler,
 };
@@ -142,7 +142,7 @@ pub trait SherlockNav {
     fn focus_offset(&self, context_model: Option<&WeakRef<ListStore>>, offset: i32) -> Option<()>;
     fn execute_by_index(&self, index: u32);
     fn selected_item(&self) -> Option<glib::Object>;
-    fn get_weaks(&self) -> Option<Vec<WeakRef<SherlockRow>>>;
+    fn get_weaks(&self) -> Option<Vec<WeakRef<TileItem>>>;
     fn mark_active(&self) -> Option<()>;
     fn get_actives<T: IsA<Object>>(&self) -> Option<Vec<T>>;
 }
@@ -303,16 +303,13 @@ impl SherlockNav for ListView {
         }
         selection.selected_item()
     }
-    fn get_weaks(&self) -> Option<Vec<WeakRef<SherlockRow>>> {
+    fn get_weaks(&self) -> Option<Vec<WeakRef<TileItem>>> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let n_items = selection.n_items();
         let weaks = (0..n_items)
-            .filter_map(|i| {
-                selection
-                    .item(i)
-                    .and_downcast::<SherlockRow>()
-                    .map(|row| row.downgrade())
-            })
+            .filter_map(|i| selection.item(i).and_downcast::<TileItem>())
+            .filter(|r| r.parent().upgrade().is_some())
+            .map(|row| row.downgrade())
             .collect();
         Some(weaks)
     }
@@ -403,7 +400,7 @@ impl SherlockNav for GridView {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         selection.selected_item()
     }
-    fn get_weaks(&self) -> Option<Vec<WeakRef<SherlockRow>>> {
+    fn get_weaks(&self) -> Option<Vec<WeakRef<TileItem>>> {
         None
     }
     fn mark_active(&self) -> Option<()> {

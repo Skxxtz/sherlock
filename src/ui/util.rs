@@ -20,7 +20,6 @@ use gtk4::{
 };
 use serde::Deserialize;
 
-use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::g_subclasses::tile_item::TileItem;
 use crate::loader::Loader;
 use crate::sherlock_error;
@@ -343,8 +342,8 @@ impl SearchHandler {
 
             let _freeze_guard = model.freeze_notify();
             model.splice(0, model.n_items(), &rows);
-            let weaks: Vec<WeakRef<SherlockRow>> =
-                rows.into_iter().map(|row| row.parent()).collect();
+            let weaks: Vec<WeakRef<TileItem>> =
+                rows.into_iter().map(|row| row.downgrade()).collect();
             update_async(weaks, &self.task, String::new());
             *self.modes.borrow_mut() = holder;
         }
@@ -380,7 +379,7 @@ pub struct SearchUI {
     pub context_menu_second: WeakRef<Label>,
 }
 pub fn update_async(
-    update_tiles: Vec<WeakRef<SherlockRow>>,
+    update_tiles: Vec<WeakRef<TileItem>>,
     current_task: &Rc<RefCell<Option<glib::JoinHandle<()>>>>,
     keyword: String,
 ) {
@@ -395,7 +394,10 @@ pub fn update_async(
 
     let current_task_clone = Rc::clone(current_task);
     let keyword = Arc::new(keyword);
-    let spinner_row = update_tiles.get(0).and_then(|row| row.upgrade());
+    let spinner_row = update_tiles
+        .get(0)
+        .and_then(|item| item.upgrade())
+        .and_then(|row| row.parent().upgrade());
     let task = glib::MainContext::default().spawn_local({
         async move {
             if let Some(row) = &spinner_row {
@@ -404,12 +406,12 @@ pub fn update_async(
             // Make async tiles update concurrently
             let mut futures = update_tiles
                 .into_iter()
-                .map(|row| {
+                .map(|item| {
                     let current_text = keyword.clone();
                     async move {
                         // Process text tile
-                        if let Some(row) = row.upgrade() {
-                            row.async_update(&current_text).await;
+                        if let Some(row) = item.upgrade() {
+                            row.update_async(&current_text).await;
                         }
                     }
                 })
