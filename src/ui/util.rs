@@ -342,8 +342,11 @@ impl SearchHandler {
 
             let _freeze_guard = model.freeze_notify();
             model.splice(0, model.n_items(), &rows);
-            let weaks: Vec<WeakRef<TileItem>> =
-                rows.into_iter().map(|row| row.downgrade()).collect();
+            let weaks: Vec<WeakRef<TileItem>> = rows
+                .into_iter()
+                .filter(|t| t.is_async())
+                .map(|row| row.downgrade())
+                .collect();
             update_async(weaks, &self.task, String::new());
             *self.modes.borrow_mut() = holder;
         }
