@@ -1,6 +1,7 @@
 use serde::de::IntoDeserializer;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 
 use std::env::home_dir;
 use std::fs::File;
@@ -455,13 +456,24 @@ fn parse_launcher_configs(
                     e.to_string()
                 )
             }),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(sherlock_error!(
-                SherlockErrorType::FileExistError(fallback_path.clone()),
-                format!(
-                    "The file \"{}\" does not exist in the specified location.",
-                    fallback_path.to_string_lossy()
-                )
-            )),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                let mut non_breaking: Vec<SherlockError> = Vec::new();
+                let config = match load_default_fallback()
+                    .map_err(|e| non_breaking.push(e))
+                    .ok()
+                {
+                    Some(v) => v,
+                    None => load_default_fallback()?,
+                };
+                let content = serde_json::to_string_pretty(&config).unwrap();
+                fs::write(fallback_path, content).map_err(|e| {
+                    sherlock_error!(
+                        SherlockErrorType::FileWriteError(fallback_path.clone()),
+                        e.to_string()
+                    )
+                })?;
+                Ok(config)
+            }
             Err(e) => Err(sherlock_error!(
                 SherlockErrorType::FileReadError(fallback_path.clone()),
                 e.to_string()

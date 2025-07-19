@@ -3,6 +3,7 @@ use gio::glib::WeakRef;
 use gtk4::gdk::Display;
 use gtk4::CssProvider;
 use std::cell::RefCell;
+use std::fs;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 
@@ -66,11 +67,12 @@ impl Loader {
             set_provider(usr_provider.downgrade());
             sher_log!("Added new user style provider")?;
         } else {
-            let _result = sherlock_error!(
-                SherlockErrorType::FileExistError(config.files.css.clone()),
-                "Using default css"
-            )
-            .insert(false);
+            fs::write(&theme, "").map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::FileWriteError(theme.clone()),
+                    e.to_string()
+                )
+            })?;
         }
 
         drop(provider);

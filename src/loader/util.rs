@@ -21,7 +21,7 @@ use crate::{
     },
 };
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct RawLauncher {
     pub name: Option<String>,
     pub alias: Option<String>,
