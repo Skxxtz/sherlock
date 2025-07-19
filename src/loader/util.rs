@@ -6,7 +6,6 @@ use serde_json::Value;
 use std::{
     borrow::Cow,
     collections::{BTreeSet, HashMap, HashSet},
-    env,
     fmt::Debug,
     fs::{self, File},
     hash::{Hash, Hasher},
@@ -18,6 +17,7 @@ use crate::{
     utils::{
         errors::{SherlockError, SherlockErrorType},
         files::{expand_path, home_dir},
+        paths,
     },
 };
 
@@ -261,18 +261,12 @@ pub struct CounterReader {
 }
 impl CounterReader {
     pub fn new() -> Result<Self, SherlockError> {
-        let home = env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
-        })?;
-        let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".sherlock/counts.json");
+        let data_dir = paths::get_data_dir()?;
+        let path = data_dir.join("counts.json");
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
-                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    SherlockErrorType::DirCreateError(parent.to_string_lossy().to_string()),
                     e.to_string()
                 )
             })?;

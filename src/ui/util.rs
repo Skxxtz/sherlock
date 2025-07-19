@@ -20,6 +20,7 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::loader::Loader;
 use crate::utils::config::default_modkey_ascii;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::utils::paths;
 use crate::{sherlock_error, CONFIG};
 
 use super::tiles::util::TextViewTileBuilder;
@@ -178,18 +179,12 @@ pub struct SherlockCounter {
 }
 impl SherlockCounter {
     pub fn new() -> Result<Self, SherlockError> {
-        let home = std::env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
-        })?;
-        let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".cache/sherlock/sherlock_count");
+        let cache_dir = paths::get_cache_dir()?;
+        let path = cache_dir.join("sherlock_count");
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
-                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    SherlockErrorType::DirCreateError(parent.to_string_lossy().to_string()),
                     e.to_string()
                 )
             })?;
