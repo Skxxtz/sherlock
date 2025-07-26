@@ -26,8 +26,8 @@ use crate::{
     loader::util::{AppData, ApplicationAction, RawLauncher},
     ui::tiles::{
         app_tile::AppTileHandler, calc_tile::CalcTileHandler, mpris_tile::MusicTileHandler,
-        pomodoro_tile::PomodoroTileHandler, weather_tile::WeatherTileHandler,
-        web_tile::WebTileHandler, Tile,
+        pomodoro_tile::PomodoroTileHandler, process_tile::ProcTileHandler,
+        weather_tile::WeatherTileHandler, web_tile::WebTileHandler, Tile,
     },
 };
 
@@ -160,6 +160,7 @@ impl Launcher {
             | LauncherType::Command(_)
             | LauncherType::Emoji(_)
             | LauncherType::File(_)
+            | LauncherType::Process(_)
             | LauncherType::Theme(_) => {
                 // Get app data value
                 let Some(inner) = self.inner() else {
@@ -213,13 +214,13 @@ impl Launcher {
             LauncherType::Emoji(emj) => Some(&emj.data),
             LauncherType::File(f) => Some(&f.data),
             LauncherType::Theme(thm) => Some(&thm.themes),
+            LauncherType::Process(proc) => Some(&proc.processes),
             _ => None,
         }
     }
     // LauncherType::Clipboard((clp, calc))
     // LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
     // LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
-    // LauncherType::Web(web) => Tile::web_tile(launcher, &web).await,
     pub fn get_tile(
         &self,
         index: Option<u16>,
@@ -264,6 +265,14 @@ impl Launcher {
                 let update = UpdateHandler::Pomodoro(PomodoroTileHandler::new(&tile, &pmd));
                 Some((tile.upcast::<Widget>(), update))
             }
+            LauncherType::Process(_) => {
+                // Get app data value
+                let inner = self.inner()?;
+                let value = inner.get(index? as usize)?;
+                let tile = Tile::process(value, launcher, item);
+                let update = UpdateHandler::Process(ProcTileHandler::new(&tile));
+                Some((tile.upcast::<Widget>(), update))
+            }
             LauncherType::Weather(_) => {
                 let tile = Tile::weather();
                 let update =
@@ -286,7 +295,6 @@ impl Launcher {
                 Tile::clipboard_tile(launcher, &clp, &calc).await
             }
             LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
-            LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
 
             // Async tiles
             LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,

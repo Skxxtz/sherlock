@@ -14,6 +14,7 @@ use crate::ui::tiles::app_tile::AppTileHandler;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
 use crate::ui::tiles::mpris_tile::MusicTileHandler;
 use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
+use crate::ui::tiles::process_tile::ProcTileHandler;
 use crate::ui::tiles::weather_tile::WeatherTileHandler;
 use crate::ui::tiles::web_tile::WebTileHandler;
 use crate::{g_subclasses::sherlock_row::SherlockRow, launcher::Launcher, loader::util::AppData};
@@ -98,6 +99,7 @@ impl TileItem {
             }
             UpdateHandler::MusicPlayer(_)
             | UpdateHandler::Pomodoro(_)
+            | UpdateHandler::Process(_)
             | UpdateHandler::Weather(_)
             | UpdateHandler::Default => false,
 
@@ -123,6 +125,15 @@ impl TileItem {
                 }
             }
             UpdateHandler::MusicPlayer(inner) => inner.update(),
+            UpdateHandler::Process(proc) => {
+                let launcher = imp.launcher.borrow();
+                let index = imp.index.get().unwrap();
+                if let Some(inner) = launcher.inner() {
+                    if let Some(value) = inner.get(index as usize) {
+                        return proc.update(keyword, launcher.clone(), value);
+                    }
+                }
+            }
             UpdateHandler::WebTile(inner) => {
                 let launcher = imp.launcher.borrow();
                 if let LauncherType::Web(web) = &launcher.launcher_type {
@@ -166,6 +177,7 @@ impl TileItem {
                     inner.bind_signal(row, pmd);
                 }
             }
+            UpdateHandler::Process(inner) => inner.bind_signal(row),
             UpdateHandler::Weather(inner) => inner.bind_signal(row),
             UpdateHandler::WebTile(inner) => inner.bind_signal(row),
             UpdateHandler::Default => {}
@@ -192,6 +204,7 @@ pub enum UpdateHandler {
     Calculator(CalcTileHandler),
     MusicPlayer(MusicTileHandler),
     Pomodoro(PomodoroTileHandler),
+    Process(ProcTileHandler),
     Weather(WeatherTileHandler),
     WebTile(WebTileHandler),
     Default,

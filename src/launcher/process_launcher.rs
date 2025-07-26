@@ -4,13 +4,14 @@ use procfs::process::{all_processes, Process};
 use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 
+use crate::loader::util::AppData;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 #[derive(Clone, Debug)]
 pub struct ProcessLauncher {
     pub icon: String,
-    pub processes: HashMap<(i32, i32), String>,
+    pub processes: Vec<AppData>,
 }
 
 impl ProcessLauncher {
@@ -39,7 +40,7 @@ impl ProcessLauncher {
             )
         })
     }
-    pub fn get_all_processes() -> Option<HashMap<(i32, i32), String>> {
+    pub fn get_all_processes() -> Option<Vec<AppData>> {
         match all_processes() {
             Ok(procs) => {
                 let user_processes: Vec<Process> = procs
@@ -64,7 +65,7 @@ impl ProcessLauncher {
                     .filter_map(|p| p.stat().ok())
                     .collect();
                 let mut tmp: HashMap<i32, i32> = HashMap::new();
-                let collected: HashMap<(i32, i32), String> = stats
+                let collected: Vec<AppData> = stats
                     .into_iter()
                     .rev()
                     .filter_map(|item| {
@@ -86,6 +87,14 @@ impl ProcessLauncher {
                         } else {
                             None
                         }
+                    })
+                    .map(|((ppid, pid), name)| {
+                        let mut data = AppData::new();
+                        data.name = name.clone();
+                        data.search_string = name;
+                        data.priority = 1.0;
+                        data.exec = Some(format!("{},{}", ppid, pid));
+                        data
                     })
                     .collect();
                 Some(collected)
