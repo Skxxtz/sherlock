@@ -188,19 +188,13 @@ pub fn search(
                         .map(|sorter| sorter.changed(gtk4::SorterChange::Different));
                     let weaks = results.get_weaks().unwrap_or(vec![]);
                     if focus_first {
-                        if results
-                            .focus_first(
-                                Some(&context_model),
-                                Some(current_mode.clone()),
-                                Some(custom_handler.clone()),
-                            )
-                            .is_some()
-                        {
-                            update_async(weaks, &current_task, current_text.borrow().clone());
-                        }
-                    } else {
-                        update_async(weaks, &current_task, current_text.borrow().clone());
+                        results.focus_first(
+                            Some(&context_model),
+                            Some(current_mode.clone()),
+                            Some(custom_handler.clone()),
+                        );
                     }
+                    update_async(weaks, &current_task, current_text.borrow().clone());
                 }
             }
         })

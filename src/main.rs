@@ -112,84 +112,78 @@ async fn main() {
                 .request(ApiCall::Show("all".to_string()));
         }
 
-        glib::MainContext::default().spawn_local({
-            let sherlock = Rc::clone(&sherlock);
-            async move {
-                // Either show user-specified content or show normal search
-                let (error_stack, error_model) = ui::error_view::errors(
-                    &errors,
-                    &warnings,
-                    &current_stack_page,
-                    Rc::clone(&sherlock),
-                );
-                let (search_frame, _handler) = match ui::search::search(
-                    &window,
-                    &current_stack_page,
-                    error_model.clone(),
-                    Rc::clone(&sherlock),
-                ) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        error_model
-                            .upgrade()
-                            .map(|stack| stack.append(&e.tile("ERROR")));
-                        return;
-                    }
-                };
-                stack.add_named(&search_frame, Some("search-page"));
-                stack.add_named(&error_stack, Some("error-page"));
-
-                // Mode switching
-                // Logic for the Error-View
-                let error_view_active = if !app_config.debug.try_suppress_errors {
-                    let show_errors = !errors.is_empty();
-                    let show_warnings =
-                        !app_config.debug.try_suppress_warnings && !warnings.is_empty();
-                    show_errors || show_warnings
-                } else {
-                    false
-                };
-                {
-                    let mut sherlock = sherlock.borrow_mut();
-                    let pipe = Loader::load_pipe_args();
-                    let mut mode: Option<SherlockModes> = None;
-                    if !pipe.is_empty() {
-                        if sherlock_flags.display_raw {
-                            let pipe = String::from_utf8_lossy(&pipe).to_string();
-                            mode = Some(SherlockModes::DisplayRaw(pipe));
-                        } else if let Some(mut data) = PipedData::new(&pipe) {
-                            if let Some(settings) = data.settings.take() {
-                                settings.into_iter().for_each(|request| {
-                                    sherlock.await_request(request);
-                                });
-                            }
-                            mode = data
-                                .elements
-                                .take()
-                                .map(|elements| SherlockModes::Pipe(elements));
-                        }
-                    };
-                    if let Some(mode) = mode {
-                        let request = ApiCall::SwitchMode(mode);
-                        sherlock.await_request(request);
-                    } else {
-                        let mode = SherlockModes::Search;
-                        let request = ApiCall::SwitchMode(mode);
-                        sherlock.await_request(request);
-                    }
-                    if error_view_active {
-                        let mode = SherlockModes::Error;
-                        let request = ApiCall::SwitchMode(mode);
-                        sherlock.await_request(request);
-                    }
-                    sherlock.flush();
-                }
-
-                if let Err(error) = Loader::load_css(true).await {
-                    let _result = error.insert(false);
-                }
+        // Either show user-specified content or show normal search
+        let (error_stack, error_model) = ui::error_view::errors(
+            &errors,
+            &warnings,
+            &current_stack_page,
+            Rc::clone(&sherlock),
+        );
+        let (search_frame, _handler) = match ui::search::search(
+            &window,
+            &current_stack_page,
+            error_model.clone(),
+            Rc::clone(&sherlock),
+        ) {
+            Ok(r) => r,
+            Err(e) => {
+                error_model
+                    .upgrade()
+                    .map(|stack| stack.append(&e.tile("ERROR")));
+                return;
             }
-        });
+        };
+        stack.add_named(&search_frame, Some("search-page"));
+        stack.add_named(&error_stack, Some("error-page"));
+
+        // Mode switching
+        // Logic for the Error-View
+        let error_view_active = if !app_config.debug.try_suppress_errors {
+            let show_errors = !errors.is_empty();
+            let show_warnings = !app_config.debug.try_suppress_warnings && !warnings.is_empty();
+            show_errors || show_warnings
+        } else {
+            false
+        };
+        {
+            let mut sherlock = sherlock.borrow_mut();
+            let pipe = Loader::load_pipe_args();
+            let mut mode: Option<SherlockModes> = None;
+            if !pipe.is_empty() {
+                if sherlock_flags.display_raw {
+                    let pipe = String::from_utf8_lossy(&pipe).to_string();
+                    mode = Some(SherlockModes::DisplayRaw(pipe));
+                } else if let Some(mut data) = PipedData::new(&pipe) {
+                    if let Some(settings) = data.settings.take() {
+                        settings.into_iter().for_each(|request| {
+                            sherlock.await_request(request);
+                        });
+                    }
+                    mode = data
+                        .elements
+                        .take()
+                        .map(|elements| SherlockModes::Pipe(elements));
+                }
+            };
+            if let Some(mode) = mode {
+                let request = ApiCall::SwitchMode(mode);
+                sherlock.await_request(request);
+            } else {
+                let mode = SherlockModes::Search;
+                let request = ApiCall::SwitchMode(mode);
+                sherlock.await_request(request);
+            }
+            if error_view_active {
+                let mode = SherlockModes::Error;
+                let request = ApiCall::SwitchMode(mode);
+                sherlock.await_request(request);
+            }
+            sherlock.flush();
+        }
+
+        if let Err(error) = Loader::load_css(true) {
+            let _result = error.insert(false);
+        }
 
         // Spawn api listener
         let _server = SherlockServer::listen(sherlock);
@@ -198,7 +192,6 @@ async fn main() {
         if app_config.behavior.daemonize {
             // Used to cache render
             if let Some(window) = open_win.upgrade() {
-                let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.open", None);
                 let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
             }
         }
@@ -229,22 +222,20 @@ async fn startup_loading() -> (
 
     let lock = lock::ensure_single_instance(LOCK_FILE).unwrap_or_else(|_| process::exit(1));
 
-    let (flags_result, app_result, res_result) = join!(
-        async { Loader::load_flags() },
-        async {
-            let app = Application::builder()
-                .flags(
-                    gio::ApplicationFlags::NON_UNIQUE | gio::ApplicationFlags::HANDLES_COMMAND_LINE,
-                )
-                .build();
-            app.connect_command_line(|app, _| {
-                app.activate();
-                0
-            });
-            app
-        },
-        async { Loader::load_resources() }
-    );
+    let (flags_result, app_result) = join!(async { Loader::load_flags() }, async {
+        let app = Application::builder()
+            .flags(gio::ApplicationFlags::NON_UNIQUE | gio::ApplicationFlags::HANDLES_COMMAND_LINE)
+            .build();
+        app.connect_command_line(|app, _| {
+            app.activate();
+            0
+        });
+        app
+    },);
+
+    if let Err(e) = Loader::load_resources() {
+        startup_errors.push(e);
+    }
 
     let sherlock_flags = flags_result
         .map_err(|e| startup_errors.push(e))
@@ -276,10 +267,6 @@ async fn startup_loading() -> (
     // Set GSK_RENDERER
     if let Ok(config) = ConfigGuard::read() {
         env::set_var("GSK_RENDERER", &config.appearance.gsk_renderer);
-    }
-
-    if let Err(e) = res_result {
-        startup_errors.push(e);
     }
 
     if let Ok(timing_enabled) = std::env::var("TIMING") {
@@ -334,12 +321,12 @@ fn post_startup() {
         let opacity = c.appearance.opacity;
         if !(0.1..=1.0).contains(&opacity) {
             let _ = sherlock_error!(
-                    SherlockErrorType::ConfigError(Some(format!(
-                                "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
-                                opacity,
-                                opacity.clamp(0.1, 1.0)
-                    ))),
-                    ""
+                SherlockErrorType::ConfigError(Some(format!(
+                            "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
+                            opacity,
+                            opacity.clamp(0.1, 1.0)
+                ))),
+                ""
             ).insert(false);
         }
     }

@@ -1,4 +1,3 @@
-use gio::glib::MainContext;
 use std::fs::write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -64,11 +63,9 @@ impl ThemePicker {
             )
         })?;
         if !exit {
-            MainContext::default().block_on(async {
-                if let Err(error) = Loader::load_css(false).await {
-                    let _result = error.insert(false);
-                }
-            });
+            if let Err(error) = Loader::load_css(false) {
+                let _result = error.insert(false);
+            }
         }
         Ok(())
     }

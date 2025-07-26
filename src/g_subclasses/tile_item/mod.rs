@@ -99,8 +99,9 @@ impl TileItem {
             UpdateHandler::MusicPlayer(_)
             | UpdateHandler::Pomodoro(_)
             | UpdateHandler::Weather(_)
-            | UpdateHandler::WebTile(_)
             | UpdateHandler::Default => false,
+
+            UpdateHandler::WebTile(_) => true,
         }
     }
     pub fn update(&self, keyword: &str) -> Option<()> {

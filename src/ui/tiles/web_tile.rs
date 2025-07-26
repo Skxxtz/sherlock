@@ -94,3 +94,11 @@ impl WebTileHandler {
         row.set_signal_id(signal_id);
     }
 }
+impl Default for WebTileHandler {
+    fn default() -> Self {
+        Self {
+            attrs: Rc::new(RefCell::new(HashMap::new())),
+            tile: WeakRef::new(),
+        }
+    }
+}

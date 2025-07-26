@@ -25,7 +25,7 @@ fn set_provider(provider: WeakRef<CssProvider>) {
 }
 
 impl Loader {
-    pub async fn load_css(apply_base: bool) -> Result<(), SherlockError> {
+    pub fn load_css(apply_base: bool) -> Result<(), SherlockError> {
         let provider = CssProvider::new();
 
         let config = ConfigGuard::read()?;

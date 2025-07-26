@@ -187,7 +187,16 @@ impl Launcher {
                     .set(UpdateHandler::Calculator(handler));
                 vec![base]
             }
-            LauncherType::Weather(_) | LauncherType::Web(_) | LauncherType::MusicPlayer(_) => {
+            LauncherType::Web(_) => {
+                let base = TileItem::new();
+                base.set_launcher(launcher.clone());
+                let handler = WebTileHandler::default();
+                base.imp()
+                    .update_handler
+                    .set(UpdateHandler::WebTile(handler));
+                vec![base]
+            }
+            LauncherType::Weather(_) | LauncherType::MusicPlayer(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
                 vec![base]
