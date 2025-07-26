@@ -151,6 +151,7 @@ impl Loader {
                             .as_ref()
                             .and_then(|exec| counts.get(exec))
                             .unwrap_or(&0.0);
+                        println!("{:?}", decimals);
                         let priority = parse_priority(priority, *count, decimals);
                         data.priority = priority;
                         Some(data)
