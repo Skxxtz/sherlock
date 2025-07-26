@@ -1,3 +1,5 @@
+use gio::glib::{idle_add, MainContext};
+use rayon::prelude::*;
 use serde::de::IntoDeserializer;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
@@ -64,7 +66,7 @@ impl Loader {
 
         // Parse the launchers
         let deserialized_launchers: Vec<Result<Launcher, SherlockError>> = raw_launchers
-            .into_iter()
+            .into_par_iter()
             .map(|raw| {
                 let launcher_type: LauncherType = match raw.r#type.as_str() {
                     "app_launcher" => parse_app_launcher(&raw, &counts, max_decimals),
@@ -99,6 +101,7 @@ impl Loader {
                 Ok(Launcher::from_raw(raw, method, launcher_type, icon))
             })
             .collect();
+
 
         // Get errors and launchers
         type LauncherResult = Vec<Result<Launcher, SherlockError>>;
@@ -212,7 +215,6 @@ fn parse_bulk_text_launcher(raw: &RawLauncher) -> LauncherType {
             .to_string(),
     })
 }
-#[sherlock_macro::timing(level = "launchers")]
 fn parse_calculator(raw: &RawLauncher) -> LauncherType {
     let capabilities: HashSet<String> = match raw.args.get("capabilities") {
         Some(Value::Array(arr)) => arr
@@ -228,9 +230,13 @@ fn parse_calculator(raw: &RawLauncher) -> LauncherType {
         .get("currency_update_interval")
         .and_then(|interval| interval.as_u64())
         .unwrap_or(60 * 60 * 24);
-    tokio::spawn(async move {
-        let result = Currency::get_exchange(update_interval).await.ok();
-        let _result = CURRENCIES.set(result);
+
+    idle_add(move || {
+        MainContext::default().spawn_local(async move {
+            let result = Currency::get_exchange(update_interval).await.ok();
+            let _result = CURRENCIES.set(result);
+        });
+        false.into()
     });
 
     LauncherType::Calc(CalculatorLauncher { capabilities })

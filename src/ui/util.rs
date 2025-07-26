@@ -340,8 +340,8 @@ impl SearchHandler {
                 rows.extend(patch);
             }
 
-            let _freeze_guard = model.freeze_notify();
             model.splice(0, model.n_items(), &rows);
+            let _freeze_guard = model.freeze_notify();
             let weaks: Vec<WeakRef<TileItem>> = rows
                 .into_iter()
                 .filter(|t| t.is_async())
