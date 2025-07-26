@@ -479,7 +479,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             let is_home = current_text.is_empty() && mode == "all";
 
             let update_res = item.based_show(&search_text.borrow());
-            // item.update(&search_text.borrow());
+            item.update(&search_text.borrow());
 
             if is_home {
                 if home != HomeType::Search {
