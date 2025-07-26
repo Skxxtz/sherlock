@@ -23,7 +23,6 @@ use crate::sherlock_error;
 use crate::utils::config::{default_modkey_ascii, ConfigGuard};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::paths;
-use crate::{sherlock_error, CONFIG};
 
 
 use super::tiles::util::TextViewTileBuilder;

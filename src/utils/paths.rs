@@ -16,10 +16,6 @@ fn legacy_path() -> Result<PathBuf, crate::utils::errors::SherlockError> {
 /// Otherwise, it returns the XDG standard configuration path, `$XDG_CONFIG_HOME/sherlock`.
 /// If the directory does not exist, it will be created.
 pub fn get_config_dir() -> Result<PathBuf, crate::utils::errors::SherlockError> {
-    let legacy_path = legacy_path()?;
-    if legacy_path.exists() {
-        return Ok(legacy_path);
-    }
     let xdg_dirs = get_xdg_dirs();
     let dir = xdg_dirs.get_config_home().ok_or_else(|| {
         crate::sherlock_error!(

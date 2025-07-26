@@ -63,7 +63,7 @@ impl SherlockAPI {
     pub fn request(&mut self, api_call: ApiCall) {
         self.flush();
         if self.match_action(&api_call).is_none() {
-            sher_log!(format!(
+            let _ = sher_log!(format!(
                 "Action {} could not be executed and is moved to queue",
                 api_call
             ));

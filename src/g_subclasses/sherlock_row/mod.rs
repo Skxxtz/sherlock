@@ -15,7 +15,7 @@ use gtk4::{
     glib,
     prelude::WidgetExt,
 };
-use serde::{de, Deserialize, Deserializer};
+use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     launcher::{utils::HomeType, Launcher},
@@ -261,5 +261,35 @@ impl<'de> Deserialize<'de> for SherlockRowBind {
             callback: temp.callback,
             exit: temp.exit,
         })
+    }
+}
+impl Serialize for SherlockRowBind {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Build the bind string
+        let mut bind_parts = Vec::new();
+
+        for name in self.modifier.iter_names() {
+            bind_parts.push(name.0.to_string());
+        }
+
+        if let Some(key) = &self.key {
+            if let Some(name) = key.name() {
+                bind_parts.push(name.to_string());
+            }
+        }
+
+        let bind = bind_parts.join("+");
+
+        // Start serializing
+        let mut state = serializer.serialize_struct("SherlockRowBind", 3)?;
+        state.serialize_field("bind", &bind)?;
+        state.serialize_field("callback", &self.callback)?;
+        if let Some(exit) = &self.exit {
+            state.serialize_field("exit", exit)?;
+        }
+        state.end()
     }
 }

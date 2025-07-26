@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use serde::Serialize;
 use zbus::zvariant::DeserializeDict;
 use zbus::zvariant::Type;
 
@@ -51,7 +52,7 @@ pub fn to_title_case(input_str: &str) -> String {
     result
 }
 
-#[derive(Debug, Copy, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Copy, Clone, Deserialize, PartialEq, Serialize)]
 pub enum HomeType {
     OnlyHome,
     Home,

@@ -43,7 +43,7 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
 
     match command.spawn() {
         Ok(mut _child) => {
-            sher_log!(format!("Detached process started: {}.", raw_command));
+            let _ = sher_log!(format!("Detached process started: {}.", raw_command));
             // if let Some(err) = child.stderr.take() {
             // sher_log!(format!(
             //     r#"Detached process {} erred: {:?}"#,
@@ -53,7 +53,7 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
             Ok(())
         }
         Err(e) => {
-            sher_log!(format!(
+            let _ = sher_log!(format!(
                 "Failed to detach command: {}\nError: {}",
                 raw_command, e
             ));

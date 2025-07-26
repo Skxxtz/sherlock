@@ -3,7 +3,6 @@ use std::fs::write;
 use std::path::Path;
 use std::path::PathBuf;
 use gio::glib::MainContext;
-use tokio::fs::create_dir_all;
 
 use crate::loader::util::AppData;
 use crate::loader::Loader;
