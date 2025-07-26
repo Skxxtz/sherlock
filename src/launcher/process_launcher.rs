@@ -10,15 +10,13 @@ use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 #[derive(Clone, Debug)]
 pub struct ProcessLauncher {
-    pub icon: String,
     pub processes: Vec<AppData>,
 }
 
 impl ProcessLauncher {
-    pub fn new(icon: &str) -> Option<Self> {
-        let processes = Self::get_all_processes()?;
+    pub fn new(prio: f32) -> Option<Self> {
+        let processes = Self::get_all_processes(prio)?;
         return Some(Self {
-            icon: icon.to_string(),
             processes,
         });
     }
@@ -40,7 +38,7 @@ impl ProcessLauncher {
             )
         })
     }
-    pub fn get_all_processes() -> Option<Vec<AppData>> {
+    pub fn get_all_processes(prio: f32) -> Option<Vec<AppData>> {
         match all_processes() {
             Ok(procs) => {
                 let user_processes: Vec<Process> = procs
@@ -92,7 +90,7 @@ impl ProcessLauncher {
                         let mut data = AppData::new();
                         data.name = name.clone();
                         data.search_string = name;
-                        data.priority = 1.0;
+                        data.priority = prio;
                         data.exec = Some(format!("{},{}", ppid, pid));
                         data
                     })

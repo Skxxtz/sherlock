@@ -418,12 +418,7 @@ fn parse_file_launcher(raw: &RawLauncher) -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_process_launcher(raw: &RawLauncher) -> LauncherType {
-    let icon = raw
-        .args
-        .get("icon")
-        .and_then(Value::as_str)
-        .unwrap_or("sherlock-process");
-    let launcher = ProcessLauncher::new(icon);
+    let launcher = ProcessLauncher::new(raw.priority);
     if let Some(launcher) = launcher {
         LauncherType::Process(launcher)
     } else {
