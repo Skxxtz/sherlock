@@ -134,6 +134,9 @@ pub enum SherlockErrorType {
 
     // Icons
     MissingIconParser(String),
+
+    // Actions
+    InvalidAction,
 }
 impl std::fmt::Display for SherlockError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -247,6 +250,11 @@ impl SherlockErrorType {
             // Icon Parsers
             SherlockErrorType::MissingIconParser(parser) => {
                 format!(r#"Missing Icon Parser for <i>"{}"</i>"#, parser)
+            }
+
+            // Actions
+            SherlockErrorType::InvalidAction => {
+                format!(r#"Invalid Action Defined"#)
             }
         };
         (variant_name(self), message)

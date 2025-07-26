@@ -17,5 +17,5 @@ To enable `daemonizing`, you'll have to set its key in the `behavior` section of
 2. To open the window, you can just run Sherlock again. (since 0.1.10)
 
 > **💡 Note:** (< 0.1.10) In your system configuration, you can set a keybind to execute:  
-> `echo "show" | nc -U /tmp/sherlock_daemon.socket`
+> `echo "show" | nc -U /tmp/sherlock_daemon.sock`
 

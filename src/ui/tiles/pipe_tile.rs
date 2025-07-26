@@ -3,6 +3,7 @@ use std::io::Cursor;
 use crate::actions::execute_from_attrs;
 use crate::actions::get_attrs_map;
 use crate::g_subclasses::sherlock_row::SherlockRow;
+use crate::launcher::utils::HomeType;
 use crate::loader::pipe_loader::PipedElements;
 use crate::prelude::IconComp;
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
@@ -79,7 +80,7 @@ impl Tile {
                 let attrs = get_attrs_map(constructor);
 
                 object.set_spawn_focus(true);
-                object.set_home(true);
+                object.set_home(HomeType::Home);
                 object.set_priority(1.0);
                 object.set_search(&search);
                 object.connect_local("row-should-activate", false, move |args| {

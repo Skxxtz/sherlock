@@ -4,6 +4,7 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
+    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
 use super::{
@@ -11,7 +12,7 @@ use super::{
     files::{expand_path, home_dir},
     paths,
 };
-use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error};
+use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error, CONFIG};
 
 #[derive(Clone, Debug, Default)]
 pub struct SherlockFlags {
@@ -29,6 +30,7 @@ pub struct SherlockFlags {
     pub sub_menu: Option<String>,
     pub multi: bool,
     pub photo_mode: bool,
+    pub input: Option<bool>,
 }
 /// Configuration sections:
 ///
@@ -98,6 +100,7 @@ impl SherlockConfig {
                 center: false,
                 photo_mode: false,
                 display_raw: false,
+                input: None,
             },
             expand: ConfigExpand::default(),
             backdrop: ConfigBackdrop::default(),
@@ -118,6 +121,7 @@ impl SherlockConfig {
                 center: false,
                 photo_mode: false,
                 display_raw: false,
+                input: None,
             },
             expand: ConfigExpand::default(),
             backdrop: ConfigBackdrop::default(),
@@ -408,6 +412,7 @@ impl SherlockConfig {
         );
         config.behavior.sub_menu = sherlock_flags.sub_menu.clone();
         config.runtime.method = sherlock_flags.method.clone();
+        config.runtime.input = sherlock_flags.input.clone();
         config.runtime.center = sherlock_flags.center_raw.clone();
         config.runtime.multi = sherlock_flags.multi;
         config.runtime.display_raw = sherlock_flags.display_raw;
@@ -681,6 +686,9 @@ pub struct Runtime {
 
     #[serde(default)]
     pub display_raw: bool,
+
+    #[serde(default)]
+    pub input: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -869,8 +877,48 @@ pub fn get_terminal() -> Result<String, SherlockError> {
     }
 }
 fn is_terminal_installed(terminal: &str) -> bool {
-    Command::new(terminal)
-        .arg("--version") // You can adjust this if the terminal doesn't have a "--version" flag
-        .output()
-        .is_ok()
+    Command::new(terminal).arg("--version").output().is_ok()
+}
+
+pub struct ConfigGuard;
+impl<'g> ConfigGuard {
+    fn get_config() -> Result<&'g RwLock<SherlockConfig>, SherlockError> {
+        CONFIG.get().ok_or_else(|| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Config not initialized".to_string()
+            )
+        })
+    }
+
+    fn get_read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_config()?.read().map_err(|_| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Failed to acquire write lock on config".to_string()
+            )
+        })
+    }
+
+    fn _get_write() -> Result<RwLockWriteGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_config()?.write().map_err(|_| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Failed to acquire write lock on config".to_string()
+            )
+        })
+    }
+
+    pub fn read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_read()
+    }
+
+    pub fn write_key<F>(key_fn: F) -> Result<(), SherlockError>
+    where
+        F: FnOnce(&mut SherlockConfig),
+    {
+        let mut config = Self::_get_write()?;
+        key_fn(&mut config);
+        Ok(())
+    }
 }

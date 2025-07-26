@@ -3,9 +3,9 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
-use std::env::home_dir;
 use std::fs::File;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use crate::actions::util::{parse_default_browser, read_from_clipboard};
 use crate::launcher::audio_launcher::AudioLauncherFunctions;
@@ -15,6 +15,7 @@ use crate::launcher::category_launcher::CategoryLauncher;
 use crate::launcher::emoji_picker::EmojiPicker;
 use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::file_launcher::FileLauncher;
+use crate::launcher::pomodoro_launcher::{Pomodoro, PomodoroStyle};
 use crate::launcher::process_launcher::ProcessLauncher;
 use crate::launcher::theme_picker::ThemePicker;
 use crate::launcher::weather_launcher::WeatherLauncher;
@@ -23,8 +24,10 @@ use crate::launcher::{
     Launcher, LauncherType,
 };
 use crate::loader::util::{CounterReader, JsonCache};
+use crate::utils::config::ConfigGuard;
 use crate::utils::errors::SherlockError;
 use crate::utils::errors::SherlockErrorType;
+use crate::utils::files::{expand_path, home_dir};
 
 use app_launcher::AppLauncher;
 use bulk_text_launcher::BulkTextLauncher;
@@ -39,14 +42,12 @@ use super::util::deserialize_named_appdata;
 use super::util::AppData;
 use super::util::RawLauncher;
 use super::Loader;
-use crate::{sherlock_error, CONFIG};
+use crate::sherlock_error;
 
 impl Loader {
     #[sherlock_macro::timing(name = "Loading launchers")]
     pub fn load_launchers() -> Result<(Vec<Launcher>, Vec<SherlockError>), SherlockError> {
-        let config = CONFIG
-            .get()
-            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+        let config = ConfigGuard::read()?;
 
         // Read fallback data here:
         let (raw_launchers, n) = parse_launcher_configs(&config.files.fallback)?;
@@ -80,6 +81,7 @@ impl Loader {
                     "teams_event" => parse_event_launcher(&raw),
                     "theme_picker" => parse_theme_launcher(&raw),
                     "process" => parse_process_launcher(&raw),
+                    "pomodoro" => parse_pomodoro(&raw),
                     "weather" => parse_weather_launcher(&raw),
                     "web_launcher" => parse_web_launcher(&raw),
                     _ => LauncherType::Empty,
@@ -144,7 +146,7 @@ fn parse_app_launcher(
     counts: &HashMap<String, f32>,
     max_decimals: i32,
 ) -> LauncherType {
-    let apps: HashSet<AppData> = CONFIG.get().map_or_else(
+    let apps: HashSet<AppData> = ConfigGuard::read().ok().map_or_else(
         || HashSet::new(),
         |config| {
             let prio = raw.priority;
@@ -171,8 +173,8 @@ fn parse_audio_sink_launcher() -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
-    if let Some(browser) = CONFIG
-        .get()
+    if let Some(browser) = ConfigGuard::read()
+        .ok()
         .and_then(|c| c.default_apps.browser.clone())
         .or_else(|| parse_default_browser().ok())
     {
@@ -297,6 +299,33 @@ fn parse_command_launcher(
     let commands = parse_appdata(value, prio, counts, max_decimals);
     LauncherType::Command(CommandLauncher { commands })
 }
+
+#[sherlock_macro::timing(level = "launchers")]
+fn parse_pomodoro(raw: &RawLauncher) -> LauncherType {
+    let home = match home_dir() {
+        Ok(dir) => dir,
+        Err(_) => return LauncherType::Empty,
+    };
+    let program_raw = raw
+        .args
+        .get("program")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let program = expand_path(program_raw, &home);
+    let socket = PathBuf::from(raw.args.get("socket").and_then(Value::as_str).unwrap_or(""));
+    let style_raw = raw
+        .args
+        .get("style")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_lowercase();
+    let style = PomodoroStyle::from_str(&style_raw).unwrap(); // cant panic
+    LauncherType::Pomodoro(Pomodoro {
+        program,
+        socket,
+        style,
+    })
+}
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_debug_launcher(
     raw: &RawLauncher,
@@ -357,8 +386,8 @@ fn parse_theme_launcher(raw: &RawLauncher) -> LauncherType {
         .unwrap_or("~/.config/sherlock/themes/");
     let relative = relative.strip_prefix("~/").unwrap_or(relative);
     let home = match home_dir() {
-        Some(dir) => dir,
-        _ => return LauncherType::Empty,
+        Ok(dir) => dir,
+        Err(_) => return LauncherType::Empty,
     };
     let absolute = home.join(relative);
     ThemePicker::new(absolute, raw.priority)

@@ -8,6 +8,7 @@ use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::calc_launcher::CalculatorLauncher;
 use crate::launcher::clipboard_launcher::ClipboardLauncher;
+use crate::launcher::utils::HomeType;
 use crate::launcher::Launcher;
 use crate::prelude::IconComp;
 
@@ -278,7 +279,7 @@ impl Tile {
                     let tile = calc_tile.remove(0);
                     // first update checks if the content is valid. then unsets
                     if tile.update(&clipboard_content) {
-                        tile.set_only_home(true);
+                        tile.set_home(HomeType::OnlyHome);
                         tile.set_update(|_| false);
                         results.push(tile)
                     }

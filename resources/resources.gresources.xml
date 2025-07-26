@@ -18,6 +18,8 @@
         <file alias="ui/window.ui">ui/window.ui</file>
         <file alias="ui/input_window.ui">ui/input_window.ui</file>
         <file alias="ui/weather_tile.ui">ui/weather_tile.ui</file>
+        <file alias="ui/timer_tile.ui">ui/timer_tile.ui</file>
+        <file alias="ui/timer.gif">icons/timer.gif</file>
     </gresource>
     <gresource prefix="/org/gtk/libgtk/icons/">
         <file alias="google.svg">icons/google.svg</file>

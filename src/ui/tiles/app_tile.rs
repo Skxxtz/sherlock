@@ -9,7 +9,7 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::Launcher;
 use crate::loader::util::AppData;
 use crate::prelude::IconComp;
-use crate::CONFIG;
+use crate::utils::config::ConfigGuard;
 
 use super::util::update_tag;
 use super::Tile;
@@ -176,7 +176,7 @@ glib::wrapper! {
 impl AppTile {
     pub fn new() -> Self {
         let obj = glib::Object::new::<Self>();
-        if let Some(config) = CONFIG.get() {
+        if let Ok(config) = ConfigGuard::read() {
             let imp = obj.imp();
             imp.icon.set_pixel_size(config.appearance.icon_size);
         }
