@@ -10,22 +10,24 @@ Using raw text, the content will be split into lines and each line will be assig
 ### Json format
 When providing json data, the data should follow this formatting:
 ```json
-[
+{
+  "settings": [],
+  "elements": [
     {
-        "title": "String",
-        "description": "String",
-        "icon": "String",
-        "icon_size": i32,
-        "result": "String",
-        "binary": Vec<u8>,
-        "method": "String",
-        "field": "String"
-        "hidden": {
-            "attr name": "String",
-            "another name": "String",
-        }
+      "title": "string",
+      "description": "string",
+      "icon": "string",
+      "icon_size": 64,
+      "result": "string",
+      "method": "string",
+      "field": "string",
+      "hidden": {
+        "key1": "value",
+        "key2": "value"
+      }
     }
-]
+  ]
+}
 ```
 #### Fields
 All fields are optional.<br>
@@ -40,6 +42,7 @@ All fields are optional.<br>
 | `field` | Specifies the field which hidden field should be used as the output. |
 | `method` | Sets the action on how to handle the output to either `print` or `copy`. Will default to `print` |
 | `hidden` | This is a set of hidden elements, that will not be shown but can be accessed as a result using the `--field` flag. |
+| `exit` | This bool specifies whether Sherlock should exit after pressing `<RETURN>` or stay active |
 
 
 ### Flags
