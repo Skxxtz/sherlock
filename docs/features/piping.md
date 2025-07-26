@@ -24,7 +24,8 @@ When providing json data, the data should follow this formatting:
       "hidden": {
         "key1": "value",
         "key2": "value"
-      }
+      },
+      "exit": true
     }
   ]
 }
