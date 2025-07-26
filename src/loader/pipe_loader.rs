@@ -10,7 +10,7 @@ use simd_json::base::ValueTryAsMutObject;
 use simd_json::OwnedValue;
 
 use crate::api::call::ApiCall;
-use crate::utils::config::ConfigGuard;
+use crate::utils::config::{default_true, ConfigGuard};
 
 use super::Loader;
 
@@ -41,8 +41,10 @@ pub struct PipedElements {
     pub method: Option<String>,
     pub field: Option<String>,
     pub hidden: Option<HashMap<String, String>>,
+    #[serde(default= "default_true")]
     pub exit: bool,
 }
+
 impl PipedElements {
     pub fn clean(&mut self) {
         if let Some(title) = &self.title {
