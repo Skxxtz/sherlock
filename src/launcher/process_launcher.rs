@@ -16,9 +16,7 @@ pub struct ProcessLauncher {
 impl ProcessLauncher {
     pub fn new(prio: f32) -> Option<Self> {
         let processes = Self::get_all_processes(prio)?;
-        return Some(Self {
-            processes,
-        });
+        return Some(Self { processes });
     }
     pub fn kill(pid: (i32, i32)) -> Result<(), SherlockError> {
         if pid.0 != pid.1 {

@@ -74,7 +74,7 @@ impl CalcTile {
 pub struct CalcTileHandler {
     tile: WeakRef<CalcTile>,
     attrs: Rc<RefCell<HashMap<String, String>>>,
-    result: RefCell<Option<(String, String)>>,
+    pub result: RefCell<Option<(String, String)>>,
 }
 impl CalcTileHandler {
     pub fn new(tile: &CalcTile) -> Self {

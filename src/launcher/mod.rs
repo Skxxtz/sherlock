@@ -179,7 +179,7 @@ impl Launcher {
                     .collect()
             }
 
-            LauncherType::Calc(_) | LauncherType::Pomodoro(_) => {
+            LauncherType::Calc(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
                 let handler = CalcTileHandler::default();
@@ -197,7 +197,7 @@ impl Launcher {
                     .set(UpdateHandler::WebTile(handler));
                 vec![base]
             }
-            LauncherType::Weather(_) | LauncherType::MusicPlayer(_) => {
+            LauncherType::Weather(_) | LauncherType::MusicPlayer(_) | LauncherType::Pomodoro(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
                 vec![base]
@@ -220,7 +220,6 @@ impl Launcher {
     }
     // LauncherType::Clipboard((clp, calc))
     // LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
-    // LauncherType::Process(proc) => Tile::process_tile(launcher, &proc).await,
     pub fn get_tile(
         &self,
         index: Option<u16>,
@@ -228,9 +227,7 @@ impl Launcher {
         item: &TileItem,
     ) -> Option<(Widget, UpdateHandler)> {
         match &self.launcher_type {
-            //
             // App Tile Based
-            //
             LauncherType::App(_)
             | LauncherType::Bookmark(_)
             | LauncherType::Category(_)

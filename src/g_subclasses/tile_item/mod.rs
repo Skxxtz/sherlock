@@ -1,12 +1,11 @@
 mod imp;
 
-use std::{rc::Rc, usize};
-
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, WeakRef};
 use glib::Object;
 use gtk4::{glib, Widget};
 use simd_json::prelude::Indexed;
+use std::{rc::Rc, usize};
 
 use crate::launcher::LauncherType;
 use crate::loader::util::ApplicationAction;
@@ -84,6 +83,16 @@ impl TileItem {
         let mut actions = launcher.actions.clone().unwrap_or_default();
         actions.extend(imp.actions.borrow().clone());
         actions
+    }
+    pub fn replace_handler(&self, handler: UpdateHandler) {
+        let imp = self.imp();
+        {
+            let current = imp.update_handler.borrow();
+            if !matches!(&*current, UpdateHandler::Default) {
+                return;
+            }
+        }
+        imp.update_handler.replace(handler);
     }
     pub fn based_show(&self, keyword: &str) -> bool {
         let imp = self.imp();

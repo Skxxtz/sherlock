@@ -444,6 +444,7 @@ fn make_factory(search_text: Rc<RefCell<String>>) -> SignalListItemFactory {
 
         if let Some((patch, handler)) = tile_item.get_patch() {
             tile_item.imp().update_handler.replace(handler);
+            tile_item.based_show(&search_text.borrow());
             tile_item.update(&search_text.borrow());
             tile_item.bind_signal(&row);
             tile_item.set_parent(Some(&row));
@@ -478,7 +479,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             let is_home = current_text.is_empty() && mode == "all";
 
             let update_res = item.based_show(&search_text.borrow());
-            item.update(&search_text.borrow());
+            // item.update(&search_text.borrow());
 
             if is_home {
                 if home != HomeType::Search {

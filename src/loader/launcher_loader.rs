@@ -102,7 +102,6 @@ impl Loader {
             })
             .collect();
 
-
         // Get errors and launchers
         type LauncherResult = Vec<Result<Launcher, SherlockError>>;
         let (oks, errs): (LauncherResult, LauncherResult) =
