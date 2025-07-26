@@ -10,6 +10,7 @@ use std::{
 use super::{
     errors::{SherlockError, SherlockErrorType},
     files::{expand_path, home_dir},
+    paths,
 };
 use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error, CONFIG};
 
@@ -259,7 +260,7 @@ impl SherlockConfig {
         let home = home_dir()?;
         let mut path = match &sherlock_flags.config {
             Some(path) => expand_path(path, &home),
-            _ => home.join(".config/sherlock/config.toml"),
+            _ => paths::get_config_dir()?.join("config.toml"),
         };
         // logic to either use json or toml
         let mut filetype: String = String::new();
@@ -337,13 +338,20 @@ impl SherlockConfig {
             }
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => {
-                    let error =
-                        sherlock_error!(SherlockErrorType::FileExistError(path), e.to_string());
-
                     let mut config = SherlockConfig::default();
+                    let config_str = match filetype.as_str() {
+                        "json" => serde_json::to_string_pretty(&config).unwrap(),
+                        _ => toml::to_string(&config).unwrap(),
+                    };
+                    fs::write(&path, config_str).map_err(|e| {
+                        sherlock_error!(
+                            SherlockErrorType::FileWriteError(path.clone()),
+                            e.to_string()
+                        )
+                    })?;
 
                     config = SherlockConfig::apply_flags(sherlock_flags, config);
-                    Ok((config, vec![error]))
+                    Ok((config, vec![]))
                 }
                 _ => Err(sherlock_error!(
                     SherlockErrorType::FileReadError(path),
@@ -750,25 +758,29 @@ pub fn default_currency() -> String {
 }
 
 pub fn default_cache() -> PathBuf {
-    PathBuf::from("~/.cache/sherlock/sherlock_desktop_cache.json")
+    paths::get_cache_dir()
+        .unwrap()
+        .join("sherlock_desktop_cache.json")
 }
 pub fn default_config() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/config.toml")
+    paths::get_config_dir().unwrap().join("config.toml")
 }
 pub fn default_fallback() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/fallback.json")
+    paths::get_config_dir().unwrap().join("fallback.json")
 }
 pub fn default_css() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/main.css")
+    paths::get_config_dir().unwrap().join("main.css")
 }
 pub fn default_alias() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/sherlock_alias.json")
+    paths::get_config_dir().unwrap().join("sherlock_alias.json")
 }
 pub fn default_ignore() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/sherlockignore")
+    paths::get_config_dir().unwrap().join("sherlockignore")
 }
 pub fn default_actions() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/sherlock_actions.json")
+    paths::get_config_dir()
+        .unwrap()
+        .join("sherlock_actions.json")
 }
 
 pub fn default_true() -> bool {
@@ -784,7 +796,12 @@ pub fn default_backdrop_edge() -> String {
     String::from("top")
 }
 pub fn default_icon_paths() -> Vec<String> {
-    vec![String::from("~/.config/sherlock/icons/")]
+    vec![paths::get_config_dir()
+        .unwrap()
+        .join("icons/")
+        .to_str()
+        .unwrap()
+        .to_string()]
 }
 pub fn default_icon_size() -> i32 {
     22

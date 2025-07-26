@@ -36,8 +36,7 @@ async-channel = "2.3.1"
 async-std = "1.13.1"
 futures = "0.3.31"
 levenshtein = "1.0.5"
-jemalloc = "0.3.0"
-mimallocator = "0.1.3"
+xdg = "3.0.0"
 
 [package.metadata]
 assets = ["resources/*"]

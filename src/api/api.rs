@@ -71,7 +71,7 @@ impl SherlockAPI {
         }
         if !self.queue.is_empty() {
             self.queue.iter().for_each(|wait| {
-                sher_log!(format!("Action {} stays in queue", wait));
+                let _ = sher_log!(format!("Action {} stays in queue", wait));
             });
         }
     }
@@ -158,6 +158,12 @@ impl SherlockAPI {
                 ]);
                 execute_from_attrs(&window, &attrs, None);
             });
+
+        // Refresh homescreen on show
+        if let Some(handler) = &self.search_handler {
+            handler.populate();
+        }
+
         open_window.present();
         Some(())
     }

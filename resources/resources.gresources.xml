@@ -26,6 +26,7 @@
         <file alias="sherlock-process.svg">icons/sherlock-process.svg</file>
         <file alias="sherlock-back.svg">icons/sherlock-back.svg</file>
         <file alias="sherlock-pin.svg">icons/sherlock-pin.svg</file>
+        <file alias="sherlock-emoji.png">icons/sherlock-emoji.png</file>
         <file alias="sherlock-devtools.svg">icons/sherlock-devtools.svg</file>
         <file alias="sherlock-bookmark.svg">icons/sherlock-bookmark.svg</file>
         <file alias="bing.svg">icons/bing.svg</file>

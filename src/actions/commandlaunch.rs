@@ -30,7 +30,7 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
 
 pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<(), SherlockError> {
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
-    sher_log!(format!(r#"Spawning command "{}""#, raw_command));
+    sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
     let mut command = Command::new("sh");
 
