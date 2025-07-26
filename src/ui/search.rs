@@ -484,9 +484,14 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             if match_in.len() == 0 {
                 return 0.0;
             }
-            let distance = levenshtein(query, match_in) as f32;
-            let normed = (distance / match_in.len() as f32).clamp(0.2, 1.0);
-            let starts_with = if match_in.starts_with(query) {
+            let (distance, element) = match_in
+                .split(';')
+                .map(|elem| (levenshtein(query, elem), elem))
+                .min_by_key(|(dist, _)| *dist)
+                .unwrap_or((usize::MAX, ""));
+
+            let normed = (distance as f32 / element.len() as f32).clamp(0.2, 1.0);
+            let starts_with = if element.starts_with(query) {
                 -0.2
             } else {
                 0.0
