@@ -295,9 +295,9 @@ fn should_ignore(ignore_apps: &Vec<Pattern>, app: &str) -> bool {
 }
 pub fn parse_priority(priority: f32, count: f32, decimals: i32) -> f32 {
     if count == 0.0 {
-        priority + 1.0
+        priority + 0.99
     } else {
-        priority + 1.0 - count * 10f32.powi(-decimals)
+        priority + 0.99 - count * 10f32.powi(-decimals)
     }
 }
 

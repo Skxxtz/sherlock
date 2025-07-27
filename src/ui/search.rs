@@ -491,6 +491,7 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
                 .unwrap_or((usize::MAX, ""));
 
             let normed = (distance as f32 / element.len() as f32).clamp(0.2, 1.0);
+            let normed = (normed * 100.0).round() / 100.0;
             let starts_with = if element.starts_with(query) {
                 -0.2
             } else {
