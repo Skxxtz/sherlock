@@ -104,17 +104,6 @@ impl SherlockRow {
         self.imp().num_actions.set(actions.len());
         *self.imp().actions.borrow_mut() = actions;
     }
-    pub fn add_actions(&self, actions: &Option<Vec<ApplicationAction>>) {
-        if let Some(actions) = actions {
-            self.imp().actions.borrow_mut().extend(actions.clone());
-        }
-        self.imp()
-            .num_actions
-            .set(self.imp().actions.borrow().len());
-    }
-    pub fn set_num_actions(&self, num: usize) {
-        self.imp().num_actions.set(num);
-    }
     pub fn set_terminal(&self, term: bool) {
         self.imp().terminal.set(term);
     }

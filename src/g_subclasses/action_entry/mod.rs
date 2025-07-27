@@ -7,7 +7,7 @@ use gtk4::{glib, prelude::WidgetExt};
 
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
-    g_subclasses::sherlock_row::SherlockRow,
+    g_subclasses::tile_item::TileItem,
     loader::util::ApplicationAction,
     prelude::IconComp,
 };
@@ -25,14 +25,14 @@ impl ContextAction {
         }
         *self.imp().signal_id.borrow_mut() = Some(signal);
     }
-    pub fn get_row(&self) -> Option<&WeakRef<SherlockRow>> {
+    pub fn get_row(&self) -> Option<&WeakRef<TileItem>> {
         self.imp().parent.get()
     }
     pub fn new(
         mod_str: &str,
         action: &ApplicationAction,
         terminal: bool,
-        parent: WeakRef<SherlockRow>,
+        parent: WeakRef<TileItem>,
     ) -> Self {
         let obj: Self = Object::builder().build();
         let imp = obj.imp();

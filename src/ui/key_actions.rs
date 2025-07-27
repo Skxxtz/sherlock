@@ -102,7 +102,7 @@ impl KeyActions {
             self.close_context()?;
         }
         let results = self.results.upgrade()?;
-        let row = results.selected_item().and_downcast::<SherlockRow>()?;
+        let row = results.selected_item().and_downcast::<TileItem>()?;
         let context = self.context.model.upgrade()?;
 
         context.remove_all();
@@ -110,7 +110,7 @@ impl KeyActions {
             for action in row.actions().iter() {
                 context.append(&ContextAction::new(
                     "",
-                    &action,
+                    action,
                     row.terminal(),
                     row.downgrade(),
                 ))

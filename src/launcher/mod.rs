@@ -20,7 +20,7 @@ pub mod web_launcher;
 
 use crate::{
     g_subclasses::{
-        sherlock_row::{SherlockRow, SherlockRowBind},
+        sherlock_row::SherlockRowBind,
         tile_item::{TileItem, UpdateHandler},
     },
     loader::util::{AppData, ApplicationAction, RawLauncher},
@@ -202,7 +202,8 @@ impl Launcher {
                     .set(UpdateHandler::WebTile(handler));
                 vec![base]
             }
-            LauncherType::Event(_)
+            LauncherType::Clipboard(_)
+            | LauncherType::Event(_)
             | LauncherType::Weather(_)
             | LauncherType::MusicPlayer(_)
             | LauncherType::Pomodoro(_) => {
@@ -226,8 +227,6 @@ impl Launcher {
             _ => None,
         }
     }
-    // LauncherType::Clipboard((clp, calc))
-    // LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
     pub fn get_tile(
         &self,
         index: Option<u16>,
@@ -255,10 +254,10 @@ impl Launcher {
                 let update = UpdateHandler::ApiTile(ApiTileHandler::new(&tile, launcher));
                 Some((tile.upcast::<Widget>(), update))
             }
-
+            LauncherType::Clipboard(clp) => Tile::clipboard(launcher, &clp.0),
             LauncherType::Calc(_) => {
                 let tile = Tile::calculator();
-                let update = UpdateHandler::Calculator(CalcTileHandler::new(&tile));
+                let update = UpdateHandler::Calculator(CalcTileHandler::new(&tile, launcher));
                 Some((tile.upcast::<Widget>(), update))
             }
             LauncherType::Event(evt) => {
@@ -301,15 +300,6 @@ impl Launcher {
             }
 
             _ => None,
-        }
-    }
-    pub async fn get_patch(launcher_instance: Rc<Self>) -> Vec<SherlockRow> {
-        let launcher = Rc::clone(&launcher_instance);
-        match &launcher_instance.launcher_type {
-            LauncherType::Clipboard((clp, calc)) => {
-                Tile::clipboard_tile(launcher, &clp, &calc).await
-            }
-            _ => Vec::new(),
         }
     }
     pub fn get_execs(&self) -> Option<HashSet<String>> {

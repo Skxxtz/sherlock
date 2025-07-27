@@ -8,7 +8,7 @@ use once_cell::sync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
 
-use crate::g_subclasses::sherlock_row::SherlockRow;
+use crate::g_subclasses::tile_item::TileItem;
 
 /// ## Fields:
 #[derive(Default)]
@@ -25,7 +25,7 @@ pub struct ContextAction {
     pub modkey: OnceCell<WeakRef<Label>>,
     pub title: OnceCell<WeakRef<Label>>,
 
-    pub parent: OnceCell<WeakRef<SherlockRow>>,
+    pub parent: OnceCell<WeakRef<TileItem>>,
 }
 
 // The central trait for subclassing a GObject

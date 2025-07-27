@@ -880,7 +880,7 @@ impl UserBindHandler {
     pub fn set_binds(
         &mut self,
         binds: Rc<RefCell<Vec<SherlockRowBind>>>,
-        widget: WeakRef<SherlockRow>,
+        widget: WeakRef<TileItem>,
     ) -> Option<SignalHandlerId> {
         if binds.borrow().is_empty() {
             return None;

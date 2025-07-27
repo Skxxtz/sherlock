@@ -5,13 +5,16 @@ use gio::glib::{object::ObjectExt, WeakRef};
 use glib::Object;
 use gtk4::{glib, Widget};
 use simd_json::prelude::Indexed;
+use std::cell::RefCell;
 use std::{rc::Rc, usize};
 
+use crate::g_subclasses::sherlock_row::SherlockRowBind;
 use crate::launcher::LauncherType;
 use crate::loader::util::ApplicationAction;
 use crate::ui::tiles::api_tile::ApiTileHandler;
 use crate::ui::tiles::app_tile::AppTileHandler;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
+use crate::ui::tiles::clipboard_tile::ClipboardHandler;
 use crate::ui::tiles::event_tile::EventTileHandler;
 use crate::ui::tiles::mpris_tile::MusicTileHandler;
 use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
@@ -47,6 +50,9 @@ impl TileItem {
             self.imp().actions.borrow_mut().extend(actions.clone());
         }
     }
+    pub fn set_binds(&self, binds: Vec<SherlockRowBind>) {
+        self.imp().binds.replace(binds);
+    }
 
     pub fn get_by_key<F, T>(&self, key: F) -> Option<T>
     where
@@ -66,6 +72,9 @@ impl TileItem {
         let index = imp.index.get();
         launcher.get_tile(index, launcher.clone(), self)
     }
+    pub fn binds(&self) -> Rc<RefCell<Vec<SherlockRowBind>>> {
+        self.imp().binds.clone()
+    }
     pub fn parent(&self) -> WeakRef<SherlockRow> {
         self.imp().parent.borrow().clone()
     }
@@ -82,12 +91,54 @@ impl TileItem {
     pub fn spawn_focus(&self) -> bool {
         self.imp().launcher.borrow().spawn_focus
     }
+    pub fn num_actions(&self) -> usize {
+        let imp = self.imp();
+        if let Some(index) = imp.index.get() {
+            imp.launcher
+                .borrow()
+                .inner()
+                .and_then(|inner| inner.get(index as usize))
+                .map_or(0, |val| val.actions.len())
+        } else {
+            imp.launcher
+                .borrow()
+                .actions
+                .as_ref()
+                .map_or(0, |a| a.len())
+        }
+    }
     pub fn actions(&self) -> Vec<ApplicationAction> {
         let imp = self.imp();
-        let launcher = imp.launcher.borrow();
-        let mut actions = launcher.actions.clone().unwrap_or_default();
-        actions.extend(imp.actions.borrow().clone());
-        actions
+        let actions = if let Some(index) = imp.index.get() {
+            imp.launcher
+                .borrow()
+                .inner()
+                .and_then(|inner| inner.get(index as usize))
+                .map(|val| val.actions.clone())
+        } else {
+            imp.launcher.borrow().actions.clone()
+        };
+        actions.unwrap_or_default()
+    }
+    pub fn alias(&self) -> String {
+        self.imp()
+            .launcher
+            .borrow()
+            .alias
+            .clone()
+            .unwrap_or_default()
+    }
+    pub fn terminal(&self) -> bool {
+        let imp = self.imp();
+        if let Some(index) = imp.index.get() {
+            imp.launcher
+                .borrow()
+                .inner()
+                .and_then(|inner| inner.get(index as usize))
+                .map_or(false, |v| v.terminal)
+        } else {
+            false
+        }
     }
     pub fn replace_handler(&self, handler: UpdateHandler) {
         let imp = self.imp();
@@ -106,13 +157,14 @@ impl TileItem {
             UpdateHandler::Calculator(inner) => {
                 let launcher = self.imp().launcher.borrow();
                 if let LauncherType::Calc(clc) = &launcher.launcher_type {
-                    inner.based_show(keyword, clc)
+                    inner.based_show(keyword, &clc.capabilities)
                 } else {
                     false
                 }
             }
 
-            UpdateHandler::Event(_)
+            UpdateHandler::Clipboard(_)
+            | UpdateHandler::Event(_)
             | UpdateHandler::MusicPlayer(_)
             | UpdateHandler::Pomodoro(_)
             | UpdateHandler::Process(_)
@@ -137,7 +189,7 @@ impl TileItem {
             UpdateHandler::Calculator(inner) => {
                 let launcher = imp.launcher.borrow();
                 if let LauncherType::Calc(_) = &launcher.launcher_type {
-                    return inner.update(keyword, launcher.clone());
+                    return inner.update(keyword);
                 }
             }
             UpdateHandler::Process(proc) => {
@@ -157,6 +209,7 @@ impl TileItem {
             }
 
             UpdateHandler::ApiTile(_)
+            | UpdateHandler::Clipboard(_)
             | UpdateHandler::Event(_)
             | UpdateHandler::MusicPlayer(_)
             | UpdateHandler::Pomodoro(_)
@@ -191,6 +244,7 @@ impl TileItem {
             UpdateHandler::ApiTile(inner) => inner.bind_signal(row),
             UpdateHandler::AppTile(inner) => inner.bind_signal(row),
             UpdateHandler::Calculator(inner) => inner.bind_signal(row),
+            UpdateHandler::Clipboard(inner) => inner.bind_signal(row),
             UpdateHandler::Event(inner) => inner.bind_signal(row),
             UpdateHandler::MusicPlayer(inner) => {
                 if let LauncherType::MusicPlayer(mpris) =
@@ -230,6 +284,7 @@ pub enum UpdateHandler {
     AppTile(AppTileHandler),
     ApiTile(ApiTileHandler),
     Calculator(CalcTileHandler),
+    Clipboard(ClipboardHandler),
     Event(EventTileHandler),
     MusicPlayer(MusicTileHandler),
     Pomodoro(PomodoroTileHandler),

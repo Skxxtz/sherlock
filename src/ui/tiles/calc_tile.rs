@@ -2,16 +2,17 @@ use super::Tile;
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
     g_subclasses::sherlock_row::SherlockRow,
-    launcher::{
-        calc_launcher::{Calculator, CalculatorLauncher},
-        Launcher,
-    },
+    launcher::{calc_launcher::Calculator, Launcher},
 };
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, WeakRef};
 use gtk4::prelude::WidgetExt;
 use meval::eval_str;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 impl Tile {
     pub fn calculator() -> CalcTile {
@@ -77,19 +78,22 @@ pub struct CalcTileHandler {
     pub result: RefCell<Option<(String, String)>>,
 }
 impl CalcTileHandler {
-    pub fn new(tile: &CalcTile) -> Self {
+    pub fn new(tile: &CalcTile, launcher: Rc<Launcher>) -> Self {
+        let attrs = get_attrs_map(vec![
+            ("method", Some(&launcher.method)),
+            ("exit", Some(&launcher.exit.to_string())),
+        ]);
         Self {
             tile: tile.downgrade(),
-            attrs: Rc::new(RefCell::new(HashMap::new())),
+            attrs: Rc::new(RefCell::new(attrs)),
             result: RefCell::new(None),
         }
     }
-    pub fn based_show(&self, keyword: &str, calc: &CalculatorLauncher) -> bool {
+    pub fn based_show(&self, keyword: &str, capabilities: &HashSet<String>) -> bool {
         if keyword.trim().is_empty() {
             return false;
         }
 
-        let capabilities = &calc.capabilities;
         let mut result = None;
 
         if capabilities.contains("calc.math") {
@@ -136,15 +140,7 @@ impl CalcTileHandler {
 
         !self.result.borrow().is_none()
     }
-    pub fn update(&self, search_query: &str, launcher: Rc<Launcher>) -> Option<()> {
-        if self.attrs.borrow().is_empty() {
-            let attrs = get_attrs_map(vec![
-                ("method", Some(&launcher.method)),
-                ("exit", Some(&launcher.exit.to_string())),
-            ]);
-            *self.attrs.borrow_mut() = attrs;
-        }
-
+    pub fn update(&self, search_query: &str) -> Option<()> {
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
 

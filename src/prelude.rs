@@ -169,7 +169,7 @@ impl SherlockNav for ListView {
         if new_index < n_items {
             selection.set_selected(new_index);
             self.scroll_to(new_index, ListScrollFlags::NONE, None);
-            let selected = selection.selected_item().and_downcast::<SherlockRow>()?;
+            let selected = selection.selected_item().and_downcast::<TileItem>()?;
 
             // Logic to handle custom user binds
             if let Some(handler) = custom_handler {
@@ -207,7 +207,7 @@ impl SherlockNav for ListView {
         if new_index != index {
             if new_index < n_items {
                 self.scroll_to(new_index, ListScrollFlags::NONE, None);
-                let selected = selection.selected_item().and_downcast::<SherlockRow>()?;
+                let selected = selection.selected_item().and_downcast::<TileItem>()?;
 
                 // Logic to handle custom user binds
                 if let Some(handler) = custom_handler {
@@ -262,7 +262,7 @@ impl SherlockNav for ListView {
             self.scroll_to(0, ListScrollFlags::NONE, None);
         }
         // Update context mode shortcuts
-        let selected = selection.selected_item().and_downcast::<SherlockRow>()?;
+        let selected = selection.selected_item().and_downcast::<TileItem>()?;
 
         // Logic to handle custom user binds
         if let Some(handler) = custom_handler {
