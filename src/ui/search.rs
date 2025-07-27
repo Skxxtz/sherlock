@@ -80,18 +80,33 @@ pub fn search(
             let context_model = context.model.clone();
             let current_mode = Rc::clone(&handler.mode);
             let custom_handler = Rc::clone(&custom_handler);
+            let modstr = handler.binds.shortcut_modifier_str.clone();
             move |_myself, _position, _removed, added| {
                 if added == 0 {
                     return;
                 }
                 // Show or hide context menu shortcuts whenever stack shows
-                results.upgrade().map(|r| {
-                    r.focus_first(
+                if let Some(results) = results.upgrade() {
+                    results.focus_first(
                         Some(&context_model),
                         Some(current_mode.clone()),
                         Some(custom_handler.clone()),
-                    )
-                });
+                    );
+                    if let Some(selection) = results.model().and_downcast::<SingleSelection>() {
+                        let mut current = 1;
+                        for i in 0..selection.n_items() {
+                            if let Some(item) = selection.item(i).and_downcast::<TileItem>() {
+                                if let Some(shortcut) = item.shortcut() {
+                                    if current < 6 {
+                                        current += shortcut.apply_shortcut(current, &modstr);
+                                    } else {
+                                        shortcut.remove_shortcut();
+                                    }
+                                }
+                            }
+                        }
+                    };
+                }
             }
         });
     }
@@ -178,6 +193,7 @@ pub fn search(
             let context_model = context.model.clone();
             let current_mode = Rc::clone(&handler.mode);
             let custom_handler = Rc::clone(&custom_handler);
+            let modstr = handler.binds.shortcut_modifier_str.clone();
             move |_: &ApplicationWindow, _, parameter| {
                 if let Some(focus_first) = parameter.and_then(|p| p.get::<bool>()) {
                     filter
@@ -193,6 +209,20 @@ pub fn search(
                             Some(current_mode.clone()),
                             Some(custom_handler.clone()),
                         );
+                        if let Some(selection) = results.model().and_downcast::<SingleSelection>() {
+                            let mut current = 1;
+                            for i in 0..selection.n_items() {
+                                if let Some(item) = selection.item(i).and_downcast::<TileItem>() {
+                                    if let Some(shortcut) = item.shortcut() {
+                                        if current < 6 {
+                                            current += shortcut.apply_shortcut(current, &modstr);
+                                        } else {
+                                            shortcut.remove_shortcut();
+                                        }
+                                    }
+                                }
+                            }
+                        };
                     }
                     update_async(weaks, &current_task, current_text.borrow().clone());
                 }
@@ -340,19 +370,18 @@ fn construct_window(
     let sorted_model = SortListModel::new(Some(filter_model), Some(sorter.clone()));
 
     // Set and update `modkey + num` shortcut ui
-    let first_iter = Cell::new(true);
+    let first_iter = Cell::new(config.behavior.animate);
     sorted_model.connect_items_changed({
         let mod_str = custom_binds.shortcut_modifier_str.clone();
         let search_text = Rc::clone(&search_text);
         let first_iter = Cell::clone(&first_iter);
-        let animate = config.behavior.animate;
         move |myself, _, removed, added| {
             // Early exit if nothing changed
             if added == 0 && removed == 0 {
                 return;
             }
             let mut added_index = 0;
-            let apply_css = search_text.borrow().trim().is_empty() && animate && first_iter.get();
+            let apply_css = search_text.borrow().trim().is_empty() && first_iter.get();
             for i in 0..myself.n_items() {
                 if let Some(item) = myself.item(i).and_downcast::<TileItem>() {
                     if let Some(row) = item.parent().upgrade() {
@@ -362,7 +391,7 @@ fn construct_window(
                         } else {
                             row.remove_css_class("animate");
                         }
-                        if let Some(shortcut_holder) = row.shortcut_holder() {
+                        if let Some(shortcut_holder) = item.shortcut() {
                             if added_index < 5 {
                                 added_index +=
                                     shortcut_holder.apply_shortcut(added_index + 1, &mod_str);
@@ -460,6 +489,10 @@ fn make_factory(search_text: Rc<RefCell<String>>) -> SignalListItemFactory {
             .clone()
             .and_downcast::<TileItem>()
             .expect("Row should be TileItem");
+        if let Some(shortcut) = row.shortcut() {
+            shortcut.remove_shortcut();
+        }
+
         row.set_parent(None);
     });
     factory

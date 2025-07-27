@@ -8,7 +8,7 @@ use gio::glib::variant::ToVariant;
 use gio::glib::{Bytes, WeakRef};
 use gio::prelude::ListModelExt;
 use gtk4::prelude::{BoxExt, WidgetExt};
-use gtk4::{gdk, Image, Overlay};
+use gtk4::{gdk, Box, Image, Overlay};
 
 use super::Tile;
 use crate::actions::{execute_from_attrs, get_attrs_map};
@@ -121,7 +121,6 @@ impl MusicTileHandler {
         }
         Some(())
     }
-    pub fn update(&self) {}
     pub fn bind_signal(&self, row: &SherlockRow, mpris: &MusicPlayerLauncher) -> Option<()> {
         row.add_css_class("mpris-tile");
         let attrs = self.attrs.clone();
@@ -171,5 +170,8 @@ impl MusicTileHandler {
         });
         row.set_signal_id(signal_id);
         Some(())
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }

@@ -1,11 +1,6 @@
 mod imp;
 
-use std::{
-    cell::{Ref, RefCell},
-    future::Future,
-    pin::Pin,
-    rc::Rc,
-};
+use std::{future::Future, pin::Pin};
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, GString, SignalHandlerId, WeakRef};
@@ -17,10 +12,7 @@ use gtk4::{
 };
 use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{
-    launcher::{utils::HomeType, Launcher},
-    loader::util::{AppData, ApplicationAction},
-};
+use crate::{launcher::utils::HomeType, loader::util::ApplicationAction};
 
 glib::wrapper! {
     pub struct SherlockRow(ObjectSubclass<imp::SherlockRow>)
@@ -118,77 +110,8 @@ impl SherlockRow {
             .get()
             .and_then(|inner| inner.as_ref().and_then(|inner2| inner2.upgrade()))
     }
-    pub fn alias(&self) -> String {
-        self.imp().alias.borrow().clone()
-    }
-    pub fn search(&self) -> String {
-        self.imp().search.borrow().clone()
-    }
-    pub fn priority(&self) -> f32 {
-        self.imp().priority.get()
-    }
-    pub fn home(&self) -> HomeType {
-        self.imp().home.get()
-    }
-    pub fn update(&self, keyword: &str) -> bool {
-        if let Some(callback) = &*self.imp().update.borrow() {
-            callback(keyword)
-        } else {
-            false
-        }
-    }
-    pub async fn async_update(&self, keyword: &str) {
-        if let Some(callback) = &*self.imp().async_content_update.borrow() {
-            callback(keyword).await;
-        }
-    }
-    pub fn is_keyword_aware(&self) -> bool {
-        self.imp().keyword_aware.get()
-    }
-    pub fn actions(&self) -> Ref<Vec<ApplicationAction>> {
-        self.imp().actions.borrow()
-    }
     pub fn active(&self) -> bool {
         self.imp().active.get()
-    }
-    pub fn num_actions(&self) -> usize {
-        self.imp().num_actions.get()
-    }
-    pub fn terminal(&self) -> bool {
-        self.imp().terminal.get()
-    }
-    pub fn binds(&self) -> Rc<RefCell<Vec<SherlockRowBind>>> {
-        self.imp().binds.clone()
-    }
-    /// Sets shared values from a launcher to the SherlockRow
-    /// * only_home
-    /// * home
-    /// * spawn_focus
-    /// * priority
-    /// * alias
-    pub fn with_launcher(&self, launcher: Rc<Launcher>) {
-        self.set_home(launcher.home);
-        self.set_priority((launcher.priority + 1) as f32);
-        if let Some(alias) = &launcher.alias {
-            self.set_alias(alias);
-        }
-        if let Some(binds) = &launcher.binds {
-            self.set_binds(binds.clone())
-        }
-        if let Some(actions) = &launcher.actions {
-            self.set_actions(actions.clone());
-        }
-        if !launcher.exit {
-            self.add_css_class("exec-inplace");
-        }
-    }
-    pub fn with_appdata(&self, data: &AppData) {
-        self.set_search(&data.search_string);
-        self.set_priority(data.priority);
-        if !data.actions.is_empty() {
-            self.set_actions(data.actions.clone());
-        }
-        self.set_terminal(data.terminal);
     }
 }
 

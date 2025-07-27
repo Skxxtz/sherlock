@@ -316,6 +316,9 @@ mod imp {
         #[template_child(id = "animation")]
         pub animation: TemplateChild<Picture>,
 
+        #[template_child(id = "shortcut-holder")]
+        pub shortcut_holder: TemplateChild<GtkBox>,
+
         pub return_action: RefCell<Option<SignalHandlerId>>,
         pub time_out_handle: RefCell<Option<SourceId>>,
         pub parent: RefCell<WeakRef<SherlockRow>>,
@@ -345,7 +348,7 @@ use gdk_pixbuf::{
     prelude::PixbufAnimationExtManual, subclass::prelude::ObjectSubclassIsExt, Pixbuf,
 };
 use gio::glib::{object::ObjectExt, SourceId, WeakRef};
-use gtk4::{gdk::Texture, glib, prelude::WidgetExt, Label, Picture};
+use gtk4::{gdk::Texture, glib, prelude::WidgetExt, Box, Label, Picture};
 use serde::Deserialize;
 
 glib::wrapper! {
@@ -374,6 +377,7 @@ impl TimerTile {
 
 #[derive(Debug)]
 pub struct PomodoroTileHandler {
+    tile: WeakRef<TimerTile>,
     api: Rc<RefCell<PomodoroInterface>>,
 }
 impl PomodoroTileHandler {
@@ -386,7 +390,10 @@ impl PomodoroTileHandler {
         )));
         pomodoro_api.borrow_mut().update_ui();
 
-        Self { api: pomodoro_api }
+        Self {
+            tile: tile.downgrade(),
+            api: pomodoro_api,
+        }
     }
     pub fn bind_signal(&self, row: &SherlockRow, pomodoro: &Pomodoro) {
         let style = match pomodoro.style {
@@ -419,5 +426,8 @@ impl PomodoroTileHandler {
             }
         });
         row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }

@@ -6,6 +6,7 @@ use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::ObjectExt;
 use gio::glib::WeakRef;
 use gtk4::prelude::WidgetExt;
+use gtk4::Box;
 
 use super::util::update_tag;
 use super::Tile;
@@ -92,6 +93,9 @@ impl WebTileHandler {
             }
         });
         row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }
 impl Default for WebTileHandler {

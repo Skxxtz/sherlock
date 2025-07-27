@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::WeakRef;
-use gtk4::prelude::*;
+use gtk4::{prelude::*, Box};
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
@@ -111,5 +111,8 @@ impl ProcTileHandler {
             }
         });
         row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }

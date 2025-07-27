@@ -1,6 +1,6 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::Bytes;
-use gtk4::{gdk, prelude::*, Image, Widget};
+use gio::glib::{Bytes, WeakRef};
+use gtk4::{gdk, prelude::*, Box, Image, Widget};
 use regex::Regex;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -137,7 +137,7 @@ impl Tile {
                     imp.title.set_text(clipboard_content.trim());
                     imp.category.set_text("From Clipboard");
 
-                    let handler = ClipboardHandler::new(attrs);
+                    let handler = ClipboardHandler::new(&tile, attrs);
 
                     return Some((tile.upcast::<Widget>(), UpdateHandler::Clipboard(handler)));
                 }
@@ -165,7 +165,7 @@ impl Tile {
                         let color = RGB::from_str(rgb.as_str());
                         let label = format!("rbg({})", rgb.as_str().trim());
                         let tile = color_tile(color, label);
-                        let handler = ClipboardHandler::new(attrs);
+                        let handler = ClipboardHandler::new(&tile, attrs);
                         return Some((tile.upcast::<Widget>(), UpdateHandler::Clipboard(handler)));
                     }
                 }
@@ -191,7 +191,7 @@ impl Tile {
                         let color = RGB::from_hsl(res);
                         let label = format!("hls({})", hsl.as_str().trim());
                         let tile = color_tile(color, label);
-                        let handler = ClipboardHandler::new(attrs);
+                        let handler = ClipboardHandler::new(&tile, attrs);
                         return Some((tile.upcast::<Widget>(), UpdateHandler::Clipboard(handler)));
                     }
                 }
@@ -201,7 +201,7 @@ impl Tile {
                         let color = RGB::from_hex(hex.as_str());
                         let label = format!("#{}", hex.as_str().trim());
                         let tile = color_tile(color, label);
-                        let handler = ClipboardHandler::new(attrs);
+                        let handler = ClipboardHandler::new(&tile, attrs);
                         return Some((tile.upcast::<Widget>(), UpdateHandler::Clipboard(handler)));
                     }
                 }
@@ -261,12 +261,14 @@ fn color_tile(rgb: RGB, label: String) -> AppTile {
 
 #[derive(Debug)]
 pub struct ClipboardHandler {
+    tile: WeakRef<AppTile>,
     attrs: Rc<RefCell<HashMap<String, String>>>,
 }
 
 impl ClipboardHandler {
-    fn new(attrs: HashMap<String, String>) -> Self {
+    fn new(tile: &AppTile, attrs: HashMap<String, String>) -> Self {
         Self {
+            tile: tile.downgrade(),
             attrs: Rc::new(RefCell::new(attrs)),
         }
     }
@@ -288,5 +290,8 @@ impl ClipboardHandler {
             }
         });
         row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }

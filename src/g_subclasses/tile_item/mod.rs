@@ -3,7 +3,7 @@ mod imp;
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, WeakRef};
 use glib::Object;
-use gtk4::{glib, Widget};
+use gtk4::{glib, Box as GtkBox, Widget};
 use simd_json::prelude::Indexed;
 use std::cell::RefCell;
 use std::{rc::Rc, usize};
@@ -262,6 +262,26 @@ impl TileItem {
             UpdateHandler::Weather(inner) => inner.bind_signal(row),
             UpdateHandler::WebTile(inner) => inner.bind_signal(row),
             UpdateHandler::Default => {}
+        }
+    }
+    pub fn shortcut(&self) -> Option<GtkBox> {
+        if !self.imp().launcher.borrow().shortcut {
+            return None;
+        }
+
+        match &*self.imp().update_handler.borrow() {
+            UpdateHandler::AppTile(inner) => inner.shortcut(),
+            UpdateHandler::Clipboard(inner) => inner.shortcut(),
+            UpdateHandler::Event(inner) => inner.shortcut(),
+            UpdateHandler::MusicPlayer(inner) => inner.shortcut(),
+            UpdateHandler::Pomodoro(inner) => inner.shortcut(),
+            UpdateHandler::Process(inner) => inner.shortcut(),
+            UpdateHandler::WebTile(inner) => inner.shortcut(),
+
+            UpdateHandler::ApiTile(_)
+            | UpdateHandler::Calculator(_)
+            | UpdateHandler::Weather(_)
+            | UpdateHandler::Default => None,
         }
     }
 

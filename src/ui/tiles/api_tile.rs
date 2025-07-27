@@ -109,7 +109,6 @@ impl ApiTileHandler {
             attrs: Rc::new(RefCell::new(attrs)),
         }
     }
-    pub fn update(&self) {}
     pub async fn update_async(
         &self,
         keyword: &str,

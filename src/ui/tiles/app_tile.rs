@@ -1,6 +1,6 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::WeakRef;
-use gtk4::prelude::*;
+use gtk4::{prelude::*, Box};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -103,6 +103,9 @@ impl AppTileHandler {
             }
         });
         row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }
 

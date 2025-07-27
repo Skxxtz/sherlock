@@ -27,7 +27,7 @@ impl Tile {
 
 #[derive(Default, Debug)]
 pub struct EventTileHandler {
-    _tile: WeakRef<EventTile>,
+    tile: WeakRef<EventTile>,
     attrs: Rc<RefCell<HashMap<String, String>>>,
 }
 impl EventTileHandler {
@@ -41,11 +41,10 @@ impl EventTileHandler {
         ]);
 
         Self {
-            _tile: tile.downgrade(),
+            tile: tile.downgrade(),
             attrs: Rc::new(RefCell::new(attrs)),
         }
     }
-    pub fn update(&self) {}
     pub fn bind_signal(&self, row: &SherlockRow) {
         row.add_css_class("event-tile");
         let signal_id = row.connect_local("row-should-activate", false, {
@@ -65,6 +64,9 @@ impl EventTileHandler {
             }
         });
         row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }
 
@@ -117,8 +119,8 @@ use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::ObjectExt;
 use gio::glib::variant::ToVariant;
 use gio::glib::WeakRef;
-use gtk4::glib;
 use gtk4::prelude::WidgetExt;
+use gtk4::{glib, Box};
 
 glib::wrapper! {
     pub struct EventTile(ObjectSubclass<imp::EventTile>)
