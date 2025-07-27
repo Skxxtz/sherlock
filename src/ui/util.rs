@@ -24,7 +24,6 @@ use crate::utils::config::{default_modkey_ascii, ConfigGuard};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::paths;
 
-
 use super::tiles::util::TextViewTileBuilder;
 
 #[derive(Debug, Clone, PartialEq)]

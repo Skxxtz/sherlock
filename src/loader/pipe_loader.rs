@@ -41,7 +41,7 @@ pub struct PipedElements {
     pub method: Option<String>,
     pub field: Option<String>,
     pub hidden: Option<HashMap<String, String>>,
-    #[serde(default= "default_true")]
+    #[serde(default = "default_true")]
     pub exit: bool,
 }
 

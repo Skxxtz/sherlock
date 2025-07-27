@@ -249,15 +249,22 @@ async fn startup_loading() -> (
         async { Loader::load_flags() },
         async {
             let app = Application::builder()
-                .flags(gio::ApplicationFlags::NON_UNIQUE | gio::ApplicationFlags::HANDLES_COMMAND_LINE)
+                .flags(
+                    gio::ApplicationFlags::NON_UNIQUE | gio::ApplicationFlags::HANDLES_COMMAND_LINE,
+                )
                 .build();
-            app.connect_command_line(|app, _| { app.activate(); 0 });
+            app.connect_command_line(|app, _| {
+                app.activate();
+                0
+            });
             app
         },
         async { Loader::load_resources() },
     );
 
-    let sherlock_flags = flags_result.map_err(|e| startup_errors.push(e)).unwrap_or_default();
+    let sherlock_flags = flags_result
+        .map_err(|e| startup_errors.push(e))
+        .unwrap_or_default();
 
     let app_config = SherlockConfig::from_flags(&sherlock_flags).map_or_else(
         |e| {
