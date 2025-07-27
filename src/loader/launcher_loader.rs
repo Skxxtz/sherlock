@@ -1,5 +1,6 @@
 use gio::glib::{idle_add, MainContext};
 use rayon::prelude::*;
+use regex::Regex;
 use serde::de::IntoDeserializer;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
@@ -26,6 +27,7 @@ use crate::launcher::{
     Launcher, LauncherType,
 };
 use crate::loader::util::{CounterReader, JsonCache};
+use crate::ui::tiles::calc_tile::CalcTileHandler;
 use crate::utils::config::ConfigGuard;
 use crate::utils::errors::SherlockError;
 use crate::utils::errors::SherlockErrorType;
@@ -254,43 +256,66 @@ fn parse_category_launcher(
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_clipboard_launcher(raw: &RawLauncher) -> Result<LauncherType, SherlockError> {
     let clipboard_content: String = read_from_clipboard()?;
-    let capabilities: Option<HashSet<String>> = match raw.args.get("capabilities") {
+
+    if clipboard_content.trim().is_empty() {
+        return Ok(LauncherType::Empty);
+    }
+
+    let capabilities: HashSet<String> = match raw.args.get("capabilities") {
         Some(Value::Array(arr)) => {
             let strings: HashSet<String> = arr
                 .iter()
                 .filter_map(|v| v.as_str().map(|s| s.to_string()))
                 .collect();
-            Some(strings)
+            strings
         }
-        _ => None,
+        _ => vec!["url", "calc.math", "calc.units", "colors.all"]
+            .into_iter()
+            .map(String::from)
+            .collect::<HashSet<_>>(),
     };
+
     if clipboard_content.is_empty() {
         Ok(LauncherType::Empty)
     } else {
-        if capabilities.is_none() {
-            // initialize currencies
-            let update_interval = raw
-                .args
-                .get("currency_update_interval")
-                .and_then(|interval| interval.as_u64())
-                .unwrap_or(60 * 60 * 24);
-            tokio::spawn(async move {
-                let result = Currency::get_exchange(update_interval).await.ok();
-                let _result = CURRENCIES.set(result);
-            });
+        // Check if the content is in a suitable format
+
+        let mut is_empty = true;
+        if capabilities.contains("url") {
+            let url_raw = r"^(https?:\/\/)?(www\.)?([\da-z\.-]+)\.([a-z]{2,6})([\/\w\.-]*)*\/?$";
+            let url_re = Regex::new(url_raw).unwrap();
+            is_empty = url_re.is_match(&clipboard_content);
         }
-        Ok(LauncherType::Clipboard((
-            ClipboardLauncher {
-                clipboard_content,
-                capabilities: capabilities.clone(),
-            },
-            CalculatorLauncher {
-                capabilities: capabilities.unwrap_or(HashSet::from([
-                    String::from("calc.math"),
-                    String::from("calc.units"),
-                ])),
-            },
-        )))
+
+        if !is_empty
+            && capabilities
+                .iter()
+                .find(|c| c.starts_with("colors."))
+                .is_some()
+            && clipboard_content.len() <= 20
+        {
+            let color_raw = r"^(rgb|hsl)*\(?(\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3})\)?|\(?(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}\s*%\w*)\)?|^#([a-fA-F0-9]{6,8})$";
+            let color_re = Regex::new(color_raw).unwrap();
+            is_empty = color_re.is_match(&clipboard_content);
+        }
+
+        if !is_empty
+            && capabilities
+                .iter()
+                .find(|c| c.starts_with("calc."))
+                .is_some()
+        {
+            is_empty = CalcTileHandler::based_show(&clipboard_content, &capabilities);
+        }
+
+        if !is_empty {
+            return Ok(LauncherType::Empty);
+        }
+
+        Ok(LauncherType::Clipboard(ClipboardLauncher {
+            clipboard_content,
+            capabilities: capabilities.clone(),
+        }))
     }
 }
 #[sherlock_macro::timing(level = "launchers")]

@@ -61,7 +61,7 @@ pub enum LauncherType {
     BulkText(BulkTextLauncher),
     Calc(CalculatorLauncher),
     Category(CategoryLauncher),
-    Clipboard((ClipboardLauncher, CalculatorLauncher)),
+    Clipboard(ClipboardLauncher),
     Command(CommandLauncher),
     Emoji(EmojiPicker),
     Event(EventLauncher),
@@ -254,7 +254,7 @@ impl Launcher {
                 let update = UpdateHandler::ApiTile(ApiTileHandler::new(&tile, launcher));
                 Some((tile.upcast::<Widget>(), update))
             }
-            LauncherType::Clipboard(clp) => Tile::clipboard(launcher, &clp.0),
+            LauncherType::Clipboard(clp) => Tile::clipboard(launcher, &clp),
             LauncherType::Calc(_) => {
                 let tile = Tile::calculator();
                 let update = UpdateHandler::Calculator(CalcTileHandler::new(&tile, launcher));

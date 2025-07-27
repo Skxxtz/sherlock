@@ -3,7 +3,7 @@ use gio::glib::{Bytes, WeakRef};
 use gtk4::{gdk, prelude::*, Box, Image, Widget};
 use regex::Regex;
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
@@ -101,12 +101,7 @@ impl Tile {
         if clipboard_content.is_empty() {
             return None;
         }
-        let capabilities = clp.capabilities.clone().unwrap_or(
-            vec!["url", "calc.math", "calc.units", "colors.all"]
-                .into_iter()
-                .map(String::from)
-                .collect::<HashSet<_>>(),
-        );
+        let capabilities = &clp.capabilities;
 
         // Url Capabilities
         if capabilities.contains("url") {
@@ -216,7 +211,7 @@ impl Tile {
         {
             let tile = CalcTile::new();
             let handler = CalcTileHandler::new(&tile, launcher);
-            if handler.based_show(&clipboard_content, &capabilities) {
+            if CalcTileHandler::based_show(&clipboard_content, &capabilities) {
                 handler.update(&clipboard_content);
                 return Some((tile.upcast::<Widget>(), UpdateHandler::Calculator(handler)));
             }

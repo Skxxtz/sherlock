@@ -153,17 +153,17 @@ impl TileItem {
     pub fn based_show(&self, keyword: &str) -> bool {
         let imp = self.imp();
         match &*imp.update_handler.borrow() {
-            UpdateHandler::AppTile(_) | UpdateHandler::ApiTile(_) => true,
-            UpdateHandler::Calculator(inner) => {
+            UpdateHandler::Calculator(_) => {
                 let launcher = self.imp().launcher.borrow();
                 if let LauncherType::Calc(clc) = &launcher.launcher_type {
-                    inner.based_show(keyword, &clc.capabilities)
+                    CalcTileHandler::based_show(keyword, &clc.capabilities)
                 } else {
                     false
                 }
             }
 
-            UpdateHandler::Clipboard(_)
+            UpdateHandler::AppTile(_)
+            | UpdateHandler::Clipboard(_)
             | UpdateHandler::Event(_)
             | UpdateHandler::MusicPlayer(_)
             | UpdateHandler::Pomodoro(_)
@@ -171,7 +171,7 @@ impl TileItem {
             | UpdateHandler::Weather(_)
             | UpdateHandler::Default => false,
 
-            UpdateHandler::WebTile(_) => true,
+            UpdateHandler::ApiTile(_) | UpdateHandler::WebTile(_) => true,
         }
     }
     pub fn update(&self, keyword: &str) -> Option<()> {

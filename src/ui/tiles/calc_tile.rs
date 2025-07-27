@@ -89,7 +89,7 @@ impl CalcTileHandler {
             result: RefCell::new(None),
         }
     }
-    pub fn based_show(&self, keyword: &str, capabilities: &HashSet<String>) -> bool {
+    pub fn based_show(keyword: &str, capabilities: &HashSet<String>) -> bool {
         if keyword.trim().is_empty() {
             return false;
         }
@@ -136,9 +136,7 @@ impl CalcTileHandler {
             result = Calculator::measurement(&keyword, "currencies");
         }
 
-        self.result.replace(result);
-
-        !self.result.borrow().is_none()
+        !result.is_none()
     }
     pub fn update(&self, search_query: &str) -> Option<()> {
         let tile = self.tile.upgrade()?;
