@@ -496,6 +496,11 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             } else {
                 0.0
             };
+            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
+                if var == "true" {
+                    println!("Query: {}\nBest Fit: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}\n", query, element, distance, normed, normed + starts_with);
+                }
+            }
             normed + starts_with
         }
 
