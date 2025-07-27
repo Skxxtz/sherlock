@@ -1,5 +1,5 @@
-pub mod app_tile;
 pub mod api_tile;
+pub mod app_tile;
 pub mod calc_tile;
 pub mod clipboard_tile;
 pub mod error_tile;

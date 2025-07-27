@@ -25,7 +25,10 @@ use crate::{
     },
     loader::util::{AppData, ApplicationAction, RawLauncher},
     ui::tiles::{
-        app_tile::AppTileHandler, api_tile::ApiTileHandler, calc_tile::CalcTileHandler, mpris_tile::MusicTileHandler, pomodoro_tile::PomodoroTileHandler, process_tile::ProcTileHandler, weather_tile::WeatherTileHandler, web_tile::WebTileHandler, Tile
+        api_tile::ApiTileHandler, app_tile::AppTileHandler, calc_tile::CalcTileHandler,
+        mpris_tile::MusicTileHandler, pomodoro_tile::PomodoroTileHandler,
+        process_tile::ProcTileHandler, weather_tile::WeatherTileHandler, web_tile::WebTileHandler,
+        Tile,
     },
 };
 

@@ -109,8 +109,13 @@ impl ApiTileHandler {
             attrs: Rc::new(RefCell::new(attrs)),
         }
     }
-    pub fn update(&self){}
-    pub async fn update_async(&self, keyword: &str, launcher: Rc<Launcher>, row: &SherlockRow) -> Option<()> {
+    pub fn update(&self) {}
+    pub async fn update_async(
+        &self,
+        keyword: &str,
+        launcher: Rc<Launcher>,
+        row: &SherlockRow,
+    ) -> Option<()> {
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
 
@@ -133,8 +138,7 @@ impl ApiTileHandler {
 
             if let Some(action) = actions {
                 let open = !action.is_empty();
-                let _ = row
-                    .activate_action("win.context-mode", Some(&open.to_variant()));
+                let _ = row.activate_action("win.context-mode", Some(&open.to_variant()));
                 row.set_actions(action);
             }
 
