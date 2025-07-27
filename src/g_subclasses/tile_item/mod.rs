@@ -10,6 +10,7 @@ use std::{rc::Rc, usize};
 use crate::launcher::LauncherType;
 use crate::loader::util::ApplicationAction;
 use crate::ui::tiles::app_tile::AppTileHandler;
+use crate::ui::tiles::api_tile::ApiTileHandler;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
 use crate::ui::tiles::mpris_tile::MusicTileHandler;
 use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
@@ -97,7 +98,8 @@ impl TileItem {
     pub fn based_show(&self, keyword: &str) -> bool {
         let imp = self.imp();
         match &*imp.update_handler.borrow() {
-            UpdateHandler::AppTile(_) => false,
+            UpdateHandler::AppTile(_) |
+            UpdateHandler::ApiTile(_) => true,
             UpdateHandler::Calculator(inner) => {
                 let launcher = self.imp().launcher.borrow();
                 if let LauncherType::Calc(clc) = &launcher.launcher_type {
@@ -118,6 +120,7 @@ impl TileItem {
     pub fn update(&self, keyword: &str) -> Option<()> {
         let imp = self.imp();
         match &*imp.update_handler.borrow() {
+            UpdateHandler::ApiTile(inner) => inner.update(), 
             UpdateHandler::AppTile(app) => {
                 let launcher = imp.launcher.borrow();
                 let index = imp.index.get().unwrap();
@@ -154,9 +157,14 @@ impl TileItem {
         }
         Some(())
     }
-    pub async fn update_async(&self, _keyword: &str) -> Option<()> {
+    pub async fn update_async(&self, keyword: &str) -> Option<()> {
         let imp = self.imp();
         match &*imp.update_handler.borrow() {
+            UpdateHandler::ApiTile(inner) => {
+                let launcher = imp.launcher.borrow();
+                let row = self.parent().upgrade()?;
+                inner.update_async(keyword, launcher.clone(), &row).await
+            }
             UpdateHandler::MusicPlayer(inner) => {
                 let row = self.parent().upgrade()?;
                 inner.update_async(&row).await
@@ -172,6 +180,7 @@ impl TileItem {
     }
     pub fn bind_signal(&self, row: &SherlockRow) {
         match &*self.imp().update_handler.borrow() {
+            UpdateHandler::ApiTile(inner) => inner.bind_signal(row),
             UpdateHandler::AppTile(inner) => inner.bind_signal(row),
             UpdateHandler::Calculator(inner) => inner.bind_signal(row),
             UpdateHandler::MusicPlayer(inner) => {
@@ -210,6 +219,7 @@ impl TileItem {
 #[derive(Debug)]
 pub enum UpdateHandler {
     AppTile(AppTileHandler),
+    ApiTile(ApiTileHandler),
     Calculator(CalcTileHandler),
     MusicPlayer(MusicTileHandler),
     Pomodoro(PomodoroTileHandler),

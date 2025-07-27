@@ -25,9 +25,7 @@ use crate::{
     },
     loader::util::{AppData, ApplicationAction, RawLauncher},
     ui::tiles::{
-        app_tile::AppTileHandler, calc_tile::CalcTileHandler, mpris_tile::MusicTileHandler,
-        pomodoro_tile::PomodoroTileHandler, process_tile::ProcTileHandler,
-        weather_tile::WeatherTileHandler, web_tile::WebTileHandler, Tile,
+        app_tile::AppTileHandler, api_tile::ApiTileHandler, calc_tile::CalcTileHandler, mpris_tile::MusicTileHandler, pomodoro_tile::PomodoroTileHandler, process_tile::ProcTileHandler, weather_tile::WeatherTileHandler, web_tile::WebTileHandler, Tile
     },
 };
 
@@ -154,6 +152,11 @@ impl Launcher {
     // TODO: tile method recreates already stored data...
     pub fn bind_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem> {
         match self.launcher_type {
+            LauncherType::BulkText(_) => {
+                let base = TileItem::new();
+                base.set_launcher(launcher.clone());
+                vec![base]
+            }
             LauncherType::App(_)
             | LauncherType::Bookmark(_)
             | LauncherType::Category(_)
@@ -242,6 +245,11 @@ impl Launcher {
                 let update = UpdateHandler::AppTile(AppTileHandler::new(&tile));
                 Some((tile.upcast::<Widget>(), update))
             }
+            LauncherType::BulkText(api) => {
+                let tile = Tile::api(launcher.clone(), api);
+                let update = UpdateHandler::ApiTile(ApiTileHandler::new(&tile, launcher));
+                Some((tile.upcast::<Widget>(), update))
+            }
 
             LauncherType::Calc(_) => {
                 let tile = Tile::calculator();
@@ -293,8 +301,6 @@ impl Launcher {
             }
             LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
 
-            // Async tiles
-            LauncherType::BulkText(bulk_text) => Tile::bulk_text_tile(launcher, &bulk_text).await,
             _ => Vec::new(),
         }
     }
