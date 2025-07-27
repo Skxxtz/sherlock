@@ -79,6 +79,9 @@ impl TileItem {
     pub fn is_async(&self) -> bool {
         self.imp().launcher.borrow().r#async
     }
+    pub fn spawn_focus(&self) -> bool {
+        self.imp().launcher.borrow().spawn_focus
+    }
     pub fn actions(&self) -> Vec<ApplicationAction> {
         let imp = self.imp();
         let launcher = imp.launcher.borrow();

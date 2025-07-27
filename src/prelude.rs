@@ -244,8 +244,8 @@ impl SherlockNav for ListView {
             return None;
         }
         while new_index < n_items {
-            if let Some(item) = selection.item(new_index).and_downcast::<SherlockRow>() {
-                if item.imp().spawn_focus.get() {
+            if let Some(item) = selection.item(new_index).and_downcast::<TileItem>() {
+                if item.spawn_focus() {
                     break;
                 } else {
                     new_index += 1;

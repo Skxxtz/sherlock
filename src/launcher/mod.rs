@@ -309,7 +309,6 @@ impl Launcher {
             LauncherType::Clipboard((clp, calc)) => {
                 Tile::clipboard_tile(launcher, &clp, &calc).await
             }
-            // LauncherType::Event(evl) => Tile::event(launcher, &evl).await,
             _ => Vec::new(),
         }
     }
