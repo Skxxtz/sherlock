@@ -1,14 +1,24 @@
 mod imp;
 
-use std::{cell::Ref, future::Future, pin::Pin};
+use std::{
+    cell::{Ref, RefCell},
+    future::Future,
+    pin::Pin,
+    rc::Rc,
+};
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, GString, SignalHandlerId, WeakRef};
 use glib::Object;
-use gtk4::{glib, prelude::WidgetExt};
+use gtk4::{
+    gdk::{Key, ModifierType},
+    glib,
+    prelude::WidgetExt,
+};
+use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    launcher::Launcher,
+    launcher::{utils::HomeType, Launcher},
     loader::util::{AppData, ApplicationAction},
 };
 
@@ -41,9 +51,6 @@ impl SherlockRow {
     pub fn set_spawn_focus(&self, focus: bool) {
         self.imp().spawn_focus.set(focus);
     }
-    pub fn set_shortcut(&self, shortcut: bool) {
-        self.imp().shortcut.set(shortcut);
-    }
     pub fn set_active(&self, active: bool) {
         self.imp().active.set(active);
         let class_name = GString::from("multi-active");
@@ -63,11 +70,8 @@ impl SherlockRow {
     pub fn set_alias(&self, mode: &str) {
         *self.imp().alias.borrow_mut() = mode.to_string();
     }
-    pub fn set_home(&self, home: bool) {
+    pub fn set_home(&self, home: HomeType) {
         self.imp().home.set(home);
-    }
-    pub fn set_only_home(&self, home: bool) {
-        self.imp().only_home.set(home);
     }
     pub fn set_shortcut_holder(&self, holder: Option<WeakRef<gtk4::Box>>) {
         let _ = self.imp().shortcut_holder.set(holder);
@@ -95,6 +99,11 @@ impl SherlockRow {
         }
         *self.imp().signal_id.borrow_mut() = Some(signal);
     }
+    pub fn clear_signal_id(&self) {
+        if let Some(old) = self.imp().signal_id.borrow_mut().take() {
+            self.disconnect(old);
+        }
+    }
     pub fn set_keyword_aware(&self, state: bool) {
         self.imp().keyword_aware.set(state);
     }
@@ -116,6 +125,9 @@ impl SherlockRow {
     pub fn set_terminal(&self, term: bool) {
         self.imp().terminal.set(term);
     }
+    pub fn set_binds(&self, binds: Vec<SherlockRowBind>) {
+        self.imp().binds.replace(binds);
+    }
 
     // getters
     pub fn shortcut_holder(&self) -> Option<gtk4::Box> {
@@ -133,10 +145,8 @@ impl SherlockRow {
     pub fn priority(&self) -> f32 {
         self.imp().priority.get()
     }
-    pub fn home(&self) -> (bool, bool) {
-        let only_home = self.imp().only_home.get();
-        let home = self.imp().home.get();
-        (home, only_home)
+    pub fn home(&self) -> HomeType {
+        self.imp().home.get()
     }
     pub fn update(&self, keyword: &str) -> bool {
         if let Some(callback) = &*self.imp().update.borrow() {
@@ -165,6 +175,9 @@ impl SherlockRow {
     pub fn terminal(&self) -> bool {
         self.imp().terminal.get()
     }
+    pub fn binds(&self) -> Rc<RefCell<Vec<SherlockRowBind>>> {
+        self.imp().binds.clone()
+    }
     /// Sets shared values from a launcher to the SherlockRow
     /// * only_home
     /// * home
@@ -172,13 +185,14 @@ impl SherlockRow {
     /// * priority
     /// * alias
     pub fn with_launcher(&self, launcher: &Launcher) {
-        self.set_only_home(launcher.only_home);
         self.set_home(launcher.home);
-        self.set_shortcut(launcher.shortcut);
         self.set_spawn_focus(launcher.spawn_focus);
         self.set_priority((launcher.priority + 1) as f32);
         if let Some(alias) = &launcher.alias {
             self.set_alias(alias);
+        }
+        if let Some(binds) = &launcher.binds {
+            self.set_binds(binds.clone())
         }
         if let Some(actions) = &launcher.actions {
             self.set_actions(actions.clone());
@@ -203,5 +217,79 @@ impl Default for SherlockRow {
         row.set_spawn_focus(true);
         row.set_css_classes(&["tile"]);
         row
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SherlockRowBind {
+    pub key: Option<Key>,
+    pub modifier: ModifierType,
+    pub callback: String,
+    pub exit: Option<bool>,
+}
+impl<'de> Deserialize<'de> for SherlockRowBind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Temp {
+            bind: String,
+            callback: String,
+            exit: Option<bool>,
+        }
+
+        let temp = Temp::deserialize(deserializer)?;
+
+        // Parse bind string like "Ctrl+Shift+S"
+        let mut key: Option<Key> = None;
+        let mut modifier = ModifierType::empty();
+
+        for token in temp.bind.split('+') {
+            if let Some(m) = ModifierType::from_name(token) {
+                modifier |= m;
+            } else if key.is_none() {
+                key = Key::from_name(token);
+            } else {
+                return Err(de::Error::custom(format!("Unknown bind token: {}", token)));
+            }
+        }
+
+        Ok(SherlockRowBind {
+            key,
+            modifier,
+            callback: temp.callback,
+            exit: temp.exit,
+        })
+    }
+}
+impl Serialize for SherlockRowBind {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Build the bind string
+        let mut bind_parts = Vec::new();
+
+        for name in self.modifier.iter_names() {
+            bind_parts.push(name.0.to_string());
+        }
+
+        if let Some(key) = &self.key {
+            if let Some(name) = key.name() {
+                bind_parts.push(name.to_string());
+            }
+        }
+
+        let bind = bind_parts.join("+");
+
+        // Start serializing
+        let mut state = serializer.serialize_struct("SherlockRowBind", 3)?;
+        state.serialize_field("bind", &bind)?;
+        state.serialize_field("callback", &self.callback)?;
+        if let Some(exit) = &self.exit {
+            state.serialize_field("exit", exit)?;
+        }
+        state.end()
     }
 }

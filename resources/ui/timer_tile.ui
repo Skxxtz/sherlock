@@ -1,0 +1,51 @@
+<interface>
+    <template class="TimerTile" parent="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
+        <property name="hexpand">true</property> 
+        <child>
+            <object class="GtkLabel" id="timer_title">
+                <property name="hexpand">true</property> 
+                <property name="halign">start</property> 
+                <property name="name">timer-title</property> 
+            </object>
+        </child>
+
+        <child>
+            <object class="GtkBox" id="content_holder">
+                <property name="orientation">horizontal</property>
+                <property name="hexpand">true</property>
+                <property name="vexpand">true</property>
+                <property name="spacing">10</property>
+                <child>
+                    <object class="GtkOverlay" id="overlay">
+                        <property name="name">timer-overlay</property>
+                        <property name="hexpand">true</property>
+                        <property name="vexpand">true</property>
+                        <child>
+                            <object class="GtkLabel" id="remaining_time">
+                                <property name="name">timer-count</property>
+                                <property name="halign">center</property>
+                                <property name="valign">center</property>
+                                <property name="hexpand">false</property>
+                                <property name="vexpand">false</property>
+                                <property name="width-chars">8</property>
+                            </object>
+                        </child>
+                        <child type="overlay">
+                            <object class="GtkPicture" id="animation">
+                                <property name="content-fit">contain</property> 
+                                <property name="name">timer-image</property>
+                                <property name="halign">center</property>
+                                <property name="valign">start</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+
+            </object>
+        </child>
+
+
+    </template>
+</interface>

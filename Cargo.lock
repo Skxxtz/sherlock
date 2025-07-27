@@ -2525,7 +2525,7 @@ dependencies = [
 
 [[package]]
 name = "sherlock"
-version = "0.1.13"
+version = "0.1.14"
 dependencies = [
  "async-channel 2.3.1",
  "async-std",
@@ -2555,6 +2555,7 @@ dependencies = [
  "tokio",
  "toml",
  "wayland-protocols 0.32.8",
+ "xdg",
  "zbus",
 ]
 
@@ -3552,6 +3553,12 @@ checksum = "56b245751c0ac9db0e006dc812031482784e434630205a93c73cfefcaabeac67"
 dependencies = [
  "nix 0.24.3",
 ]
+
+[[package]]
+name = "xdg"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fb433233f2df9344722454bc7e96465c9d03bff9d77c248f9e7523fe79585b5"
 
 [[package]]
 name = "xml-rs"

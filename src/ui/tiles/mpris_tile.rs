@@ -74,13 +74,14 @@ impl Tile {
             object.set_shortcut_holder(Some(imp.shortcut_holder.downgrade()));
         }
 
-        let mpris = Rc::new(RefCell::new(mpris.clone()));
+        let mpris_rc = Rc::new(RefCell::new(mpris.clone()));
         let async_update_closure: Box<dyn Fn(&str) -> Pin<Box<dyn futures::Future<Output = ()>>>> =
             Box::new({
                 let overlay = overlay.downgrade();
                 let row_weak = object.downgrade();
                 let category = imp.category.downgrade();
                 let title = imp.title.downgrade();
+                let mpris = Rc::clone(&mpris_rc);
                 move |_keyword: &str| {
                     let mpris = Rc::clone(&mpris);
                     let icon_overlay = overlay.clone();
@@ -137,13 +138,43 @@ impl Tile {
         object.set_async_update(async_update_closure);
         let signal_id = object.connect_local("row-should-activate", false, move |args| {
             let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
-            let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-            let param: Option<bool> = match param {
+            let exit: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+            let mut callback: String = args.get(2).and_then(|v| v.get::<String>().ok())?;
+            if callback.is_empty() {
+                callback = attrs.get("method")?.to_string();
+            }
+
+            callback.make_ascii_lowercase();
+
+            let exit: Option<bool> = match exit {
                 1 => Some(false),
                 2 => Some(true),
                 _ => None,
             };
-            execute_from_attrs(&row, &attrs, param);
+            match callback.as_str() {
+                "next" => {
+                    let player = &mpris_rc.borrow().player;
+                    if let Err(error) = MusicPlayerLauncher::next(player) {
+                        let _result = error.insert(false);
+                    }
+                }
+                "previous" => {
+                    let player = &mpris_rc.borrow().player;
+                    if let Err(error) = MusicPlayerLauncher::previous(player) {
+                        let _result = error.insert(false);
+                    }
+                }
+                "playpause" | "audio_sink" => {
+                    let player = &mpris_rc.borrow().player;
+                    if let Err(error) = MusicPlayerLauncher::playpause(player) {
+                        let _result = error.insert(false);
+                    }
+                }
+                "unbind" => return None,
+                _ => {
+                    execute_from_attrs(&row, &attrs, exit);
+                }
+            }
             // To reload ui according to mode
             let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
             None

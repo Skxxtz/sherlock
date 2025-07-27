@@ -3,13 +3,15 @@ use gio::glib::WeakRef;
 use gtk4::gdk::Display;
 use gtk4::CssProvider;
 use std::cell::RefCell;
+use std::fs;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 
 use super::Loader;
 use crate::launcher::theme_picker::ThemePicker;
+use crate::utils::config::ConfigGuard;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{sher_log, sherlock_error, CONFIG};
+use crate::{sher_log, sherlock_error};
 
 thread_local! {
     static CURRENT_PROVIDER: RefCell<Option<WeakRef<CssProvider>>> = RefCell::new(None);
@@ -23,13 +25,10 @@ fn set_provider(provider: WeakRef<CssProvider>) {
 }
 
 impl Loader {
-    #[sherlock_macro::timing(name = "Loading CSS", level = "setup")]
-    pub fn load_css(apply_base: bool) -> Result<(), SherlockError> {
+    pub async fn load_css(apply_base: bool) -> Result<(), SherlockError> {
         let provider = CssProvider::new();
 
-        let config = CONFIG
-            .get()
-            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+        let config = ConfigGuard::read()?;
         let display = Display::default().ok_or_else(|| {
             sherlock_error!(SherlockErrorType::DisplayError, "No display available")
         })?;
@@ -66,11 +65,12 @@ impl Loader {
             set_provider(usr_provider.downgrade());
             sher_log!("Added new user style provider")?;
         } else {
-            let _result = sherlock_error!(
-                SherlockErrorType::FileExistError(config.files.css.clone()),
-                "Using default css"
-            )
-            .insert(false);
+            fs::write(&theme, "").map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::FileWriteError(theme.clone()),
+                    e.to_string()
+                )
+            })?;
         }
 
         drop(provider);

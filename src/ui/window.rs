@@ -1,6 +1,6 @@
 use gio::glib::WeakRef;
 use gio::ActionEntry;
-use gtk4::gdk::{Display, Key, Monitor};
+use gtk4::gdk::Key;
 use gtk4::{
     prelude::*, Application, ApplicationWindow, EventControllerFocus, EventControllerKey,
     StackTransitionType,
@@ -10,10 +10,10 @@ use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::api::server::SherlockServer;
 use crate::daemon::daemon::close_response;
 use crate::launcher::emoji_picker::emojies;
-use crate::utils::config::SherlockConfig;
-use crate::CONFIG;
+use crate::utils::config::ConfigGuard;
 
 use super::tiles::util::TextViewTileBuilder;
 
@@ -27,10 +27,7 @@ pub fn window(
     WeakRef<ApplicationWindow>,
 ) {
     // 617 with, 593 without notification bar
-    let config = match CONFIG.get() {
-        Some(c) => c,
-        _ => &SherlockConfig::default(),
-    };
+    let config = ConfigGuard::read().map(|c| c.clone()).unwrap_or_default();
     let (width, height, opacity) = (
         config.appearance.width,
         config.appearance.height,
@@ -62,11 +59,8 @@ pub fn window(
     if !config.runtime.photo_mode {
         let focus_controller = EventControllerFocus::new();
         focus_controller.connect_leave({
-            let window_ref = window.downgrade();
             move |_| {
-                if let Some(window) = window_ref.upgrade() {
-                    let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
-                }
+                let _ = SherlockServer::send_action(crate::api::call::ApiCall::Close);
             }
         });
         window.add_controller(focus_controller);
@@ -76,12 +70,9 @@ pub fn window(
     let key_controller = EventControllerKey::new();
     key_controller.set_propagation_phase(gtk4::PropagationPhase::Bubble);
     key_controller.connect_key_pressed({
-        let window_clone = window.downgrade();
         move |_, keyval, _, _| {
             if keyval == Key::Escape {
-                window_clone
-                    .upgrade()
-                    .map(|win| gtk4::prelude::WidgetExt::activate_action(&win, "win.close", None));
+                let _ = SherlockServer::send_action(crate::api::call::ApiCall::Close);
             }
             false.into()
         }
@@ -89,7 +80,7 @@ pub fn window(
     window.add_controller(key_controller);
 
     // Make backdrop if config key is set
-    let backdrop = if let Some(c) = CONFIG.get() {
+    let backdrop = if let Ok(c) = ConfigGuard::read() {
         if c.backdrop.enable {
             let edge = match c.backdrop.edge.to_lowercase().as_str() {
                 "top" => Edge::Top,
@@ -121,14 +112,19 @@ pub fn window(
             // Send close message to possible instance
             let _result = close_response();
 
-            if let Some(c) = CONFIG.get() {
+            if let Ok(c) = ConfigGuard::read() {
                 match c.behavior.daemonize {
                     true => {
                         window.set_visible(false);
                         let _ = gtk4::prelude::WidgetExt::activate_action(
                             window,
                             "win.clear-search",
-                            None,
+                            Some(&true.to_variant()),
+                        );
+                        let _ = gtk4::prelude::WidgetExt::activate_action(
+                            window,
+                            "win.switch-page",
+                            Some(&"->search-page".to_variant()),
                         );
                     }
                     false => window.destroy(),
@@ -249,22 +245,30 @@ fn make_backdrop(
     opacity: f64,
     edge: Edge,
 ) -> Option<ApplicationWindow> {
-    let monitor = Display::default()
-        .map(|d| d.monitors())
-        .and_then(|m| m.item(0).and_downcast::<Monitor>())?;
-    let rect = monitor.geometry();
     let backdrop = ApplicationWindow::builder()
         .application(application)
         .decorated(false)
         .title("Backdrop")
+        .default_width(10)
+        .default_height(10)
         .opacity(opacity)
-        .default_width(rect.width()) // Adjust to your screen resolution or use monitor API
-        .default_height(rect.height())
         .resizable(false)
         .build();
+
+    backdrop.init_layer_shell();
+
+    // Set backdrop dimensions
+    backdrop.connect_realize(|window| {
+        if let Some(surf) = window.surface() {
+            if let Some(monitor) = surf.display().monitor_at_surface(&surf) {
+                let rect = monitor.geometry();
+                window.set_default_size(rect.width(), rect.height());
+            }
+        }
+    });
+
     // Initialize layershell
     backdrop.set_widget_name("backdrop");
-    backdrop.init_layer_shell();
     backdrop.set_namespace("sherlock-backdrop");
     backdrop.set_exclusive_zone(0);
     backdrop.set_layer(gtk4_layer_shell::Layer::Overlay);

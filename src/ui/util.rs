@@ -1,6 +1,7 @@
 use futures::future::join_all;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::fs::{self, File};
 use std::io::{BufWriter, Read, Write};
 use std::path::PathBuf;
@@ -18,9 +19,11 @@ use serde::Deserialize;
 
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::loader::Loader;
-use crate::utils::config::default_modkey_ascii;
+use crate::sherlock_error;
+use crate::utils::config::{default_modkey_ascii, ConfigGuard};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{sherlock_error, CONFIG};
+use crate::utils::paths;
+
 
 use super::tiles::util::TextViewTileBuilder;
 
@@ -46,7 +49,7 @@ pub struct ConfKeys {
 }
 impl ConfKeys {
     pub fn new() -> Self {
-        if let Some(c) = CONFIG.get() {
+        if let Ok(c) = ConfigGuard::read() {
             let (prev_mod, prev) = match &c.binds.prev {
                 Some(prev) => ConfKeys::eval_bind_combination(prev),
                 _ => (None, (None, None)),
@@ -141,8 +144,8 @@ impl ConfKeys {
         }
     }
     fn get_mod_str(mod_key: &Option<ModifierType>) -> String {
-        let strings = CONFIG
-            .get()
+        let strings = ConfigGuard::read()
+            .ok()
             .and_then(|c| {
                 let s = &c.appearance.mod_key_ascii;
                 if s.len() == 8 {
@@ -173,23 +176,32 @@ pub struct SherlockAction {
     pub action: String,
     pub exec: Option<String>,
 }
+impl Display for SherlockAction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            r#"{{"on": {}, "action": "{}", "exec": {} }}"#,
+            self.on,
+            self.action,
+            match &self.exec {
+                Some(s) => format!(r#""{}""#, s),
+                None => "null".to_string(),
+            }
+        )
+    }
+}
+
 pub struct SherlockCounter {
     path: PathBuf,
 }
 impl SherlockCounter {
     pub fn new() -> Result<Self, SherlockError> {
-        let home = std::env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
-        })?;
-        let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".cache/sherlock/sherlock_count");
+        let cache_dir = paths::get_cache_dir()?;
+        let path = cache_dir.join("sherlock_count");
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
-                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    SherlockErrorType::DirCreateError(parent.to_string_lossy().to_string()),
                     e.to_string()
                 )
             })?;
@@ -246,6 +258,7 @@ impl SherlockCounter {
 #[derive(Clone, Debug)]
 pub struct SearchHandler {
     pub model: Option<WeakRef<ListStore>>,
+    pub mode: Rc<RefCell<String>>,
     pub modes: Rc<RefCell<HashMap<String, Option<String>>>>,
     pub task: Rc<RefCell<Option<glib::JoinHandle<()>>>>,
     pub error_model: WeakRef<ListStore>,
@@ -257,6 +270,7 @@ pub struct SearchHandler {
 impl SearchHandler {
     pub fn new(
         model: WeakRef<ListStore>,
+        mode: Rc<RefCell<String>>,
         error_model: WeakRef<ListStore>,
         filter: WeakRef<CustomFilter>,
         sorter: WeakRef<CustomSorter>,
@@ -265,6 +279,7 @@ impl SearchHandler {
     ) -> Self {
         Self {
             model: Some(model),
+            mode,
             modes: Rc::new(RefCell::new(HashMap::new())),
             task: Rc::new(RefCell::new(None)),
             error_model,

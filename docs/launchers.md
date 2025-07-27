@@ -17,9 +17,9 @@ will be used.<br>
 
 The launcher can be of the following types:<br>
 
-- **[Category Launcher](#category-launcher):** Groups your launchers.
 - **[App Launcher](#app-launcher):** Launches your apps.
 - **[Bookmark Launcher](#bookmark-launcher):** Finds and launches your browser bookmarks.
+- **[Category Launcher](#category-launcher):** Groups your launchers.
 - **[Web Launcher](#web-launcher):** Opens the ``{keyword}`` in your default web browser. The used search engine is configurable and the most common search engines are included.
 - **[Calculator](#calculator):** Converts your input into a math equation and displays its result. On Return, it also copies the result into the clipboard.
 - **[Clipboard Launcher](#clipboard-launcher):** Checks if your clipboard currently holds a URL. On Return, it opens the URL in the default web browser. Also displays hex and rgb colors.
@@ -31,6 +31,7 @@ The launcher can be of the following types:<br>
 - **[Theme Picker](#theme-picjer):** This launcher shows available themes and sets them as your default.
 - **[Music Player Launcher](#music-player):** This launcher shows the currently playing song with artist and toggles playback on return.
 - **[Process Terminator](#process-terminator):** This utility shows user processes and terminates them on return.
+- **[Pomodoro Timer](#pomodoro-timer):** This utility shows a pomodoro-timer focus utility.
 - **[Weather Launcher](#weather-launcher):** It shows the current weather condition in your selected region or city.
 
 ## Shared Launcher Attributes
@@ -52,8 +53,7 @@ The launcher can be of the following types:<br>
 |-------------|------|-------------|
 | `name`      | `[UI]` | The name of the category the tiles belong to. This name will appear under the app’s name. It is required but can be left empty. |
 | `alias`     | `[FC]` | The command used to search within this category. |
-| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. |
-| `only_home`      | `[FC]` | Determines if the launcher should be included in searches or only be shown on startup. |
+| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. Can be set to `Home`, `OnlyHome`, or `Search` (default)|
 | `async`     | `[FC]` | Indicates whether the launcher should run asynchronously. This is used in `Bulk Text`. |
 | `on_return`     | `[FC]` | Specifies what to do if return is pressed on the tile. |
 | `spawn_focus`     | `[FC]` | Determines whether the tile should automatically gain focus when it appears as the first item in the list. |
@@ -71,7 +71,8 @@ Actions are used to define entries within Sherlock's context menu. They are defi
     "name": "display name",
     "exec": "should be executed",
     "icon": "display icon",
-    "method": "some method"
+    "method": "some method",
+    "exit": false,
 }
 ```
 
@@ -81,6 +82,32 @@ Actions are used to define entries within Sherlock's context menu. They are defi
 - `icon`: Defines the icon to be shown in the context menu
 - `exec`: The argument to be processed by `method`. For instance, in case of `app_launcher`, this should be the app with its flags
 - `method`: The function to be executed whenever you activate this menu entry
+- `exit`: Whether sherlock should close after completing the action
+
+### Binds
+
+This feature allows for custom binds to be set to some launchers. The related
+functions are listed in the launcher description. Currently supported launchers
+are:
+
+- Pomodoro Timer
+
+Binds have the following structure:
+
+```json
+"binds": [
+    {"bind": "control+r", "callback": "reload"},
+    {"bind": "control+x", "callback": "example2"},
+    {"bind": "control+c", "callback": "example3"}
+]
+```
+
+**Arguments:**
+
+- **`bind`:** Defines the bind to be used with the specified action
+- **`callback`:** Defines the internal function to be executed. This function
+  depend on the launcher and is listed in the `Inner Function` section for available
+  launchers
 
 #### Available Methods
 
@@ -95,7 +122,49 @@ Actions are used to define entries within Sherlock's context menu. They are defi
 
 ---
 
-## Category Launcher
+## App Launcher
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="app-launcher" width="100%" src="assets/AppTile.svg">
+  </picture>
+</div>
+<br>
+
+```json
+{
+    "name": "App Launcher",
+    "alias": "app",
+    "type": "app_launcher",
+    "args": {},
+    "priority": 2,
+    "home": "Home"
+}
+```
+
+<br>
+
+## Bookmark Launcher
+
+<div align="center">
+  <picture>
+    <img alt="web-launcher" width="100%" src="assets/BookmarkTile.svg">
+  </picture>
+</div>
+<br>
+
+```json
+{
+    "name": "Bookmarks",
+    "type": "bookmarks",
+    "args": {
+        "icon": "sherlock-bookmark",
+        "icon_class": "reactive"
+    },
+    "priority": 3,
+    "home": "Search"
+}
+```
 
 <br>
 
@@ -128,7 +197,7 @@ Actions are used to define entries within Sherlock's context menu. They are defi
         }
     },
     "priority": 3,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -146,52 +215,6 @@ Actions are used to define entries within Sherlock's context menu. They are defi
 1. `icon_class`: Sets the css class for the icon to style it according to your theme
 2. `search_string`: the string to match to on search
 3. `exec`: the alias of the launcher you want to execute. If left empty, will not do anything
-<br>
-
-## App Launcher
-
-<div align="center" style="text-align:center; border-radius:10px;">
-  <picture>
-    <img alt="app-launcher" width="100%" src="assets/AppTile.svg">
-  </picture>
-</div>
-<br>
-
-```json
-{
-    "name": "App Launcher",
-    "alias": "app",
-    "type": "app_launcher",
-    "args": {},
-    "priority": 2,
-    "home": true
-}
-```
-
-<br>
-
-## Bookmark Launcher
-
-<div align="center">
-  <picture>
-    <img alt="web-launcher" width="100%" src="assets/BookmarkTile.svg">
-  </picture>
-</div>
-<br>
-
-```json
-{
-    "name": "Bookmarks",
-    "type": "bookmarks",
-    "args": {
-        "icon": "sherlock-bookmark",
-        "icon_class": "reactive"
-    },
-    "priority": 3,
-    "home": false
-}
-```
-
 <br>
 
 ### Supported Browsers
@@ -322,7 +345,7 @@ Specifies what the launcher should parse:
         ]
     },
     "priority": 1,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -462,7 +485,7 @@ Has following fields of its own:
     "type": "emoji_picker",
     "args": {},
     "priority": 4,
-    "home": false
+    "home": "Search"
 }
 ```
 
@@ -529,7 +552,7 @@ Specifies the arguments to pass along to the `exec` program.<br>
         "event_end": "+15 minutes"
     },
     "priority": 1,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -559,7 +582,7 @@ Specifies the second offset from the `date` parameter.<br>
         "location": "~/.config/sherlock/themes/"
     },
     "priority": 4,
-    "home": true
+    "home": "Home"
 }
 ```
 
@@ -586,8 +609,7 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
     "args": {},
     "async": true,
     "priority": 1,
-    "home": true,
-    "only_home": true,
+    "home": "Home",
     "spawn_focus": false,
     "actions": [
         {
@@ -602,9 +624,36 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
             "exec": "playerctl previous",
             "method": "command"
         }
+    ],
+    "binds": [
+        {
+            "bind": "control+p",
+            "callback": "playpause",
+            "exit": false
+        },
+        {
+            "bind": "control+l",
+            "callback": "next",
+            "exit": false
+        },
+        {
+            "bind": "control+h",
+            "callback": "previous",
+            "exit": false
+        }
     ]
 }
 ```
+
+### Inner Functions
+
+These functions can be called either using actions with the `inner.[function
+name]` method or by using bind callbacks `"callback": "[function name]"`.
+
+1. **`playpause`:** toggles the playback
+2. **`next`:** moves to the next song
+3. **`previous`:** moves to the previous song
+4. **`unbind`:** unbinds the specified key. This can be useful if you want to unbind return
 
 <br>
 
@@ -624,9 +673,81 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
     "type": "process",
     "args": {},
     "priority": 6,
-    "home": false
+    "home": "Search"
 }
 ```
+
+<br>
+
+## Pomodoro Timer
+
+<div align="center">
+    <img alt="pomorodo-launcher-minimal" width="100%" src="assets/PomodoroMinimal.svg">
+    <br />
+    <img alt="pomorodo-launcher-normal" width="100%" src="assets/PomodoroNormal.svg">
+</div>
+<br>
+
+```json
+{
+    "name": "Pomodoro Timer",
+        "type": "pomodoro",
+        "args": {
+            "program": "~/.config/sherlock/scripts/sherlock-pomodoro",
+            "socket": "/tmp/sherlock-pomorodo.sock",
+            "style": "minimal"
+        },
+        "priority": 0,
+        "home": "Home",
+        "spawn_focus": false,
+        "binds": [
+        {
+            "bind": "control+r",
+            "callback": "reset"
+        }
+        ],
+        "actions": [
+        {
+            "name": "Reset",
+            "icon": "edit-undo",
+            "exec": "",
+            "method": "inner.reset",
+            "exit": false
+        },
+        {
+            "name": "Toggle",
+            "icon": "media-playback-start",
+            "exec": "",
+            "method": "inner.toggle",
+            "exit": false
+        }
+        ]
+}
+```
+
+> [!WARNING]
+> This launcher depends on the [sherlock-pomodoro](https://github.com/Skxxtz/sherlock-pomodoro) project – a fast, and efficient pomodro client, built for Sherlock.
+
+### Arguments (args)
+
+**`program`** (required):<br>
+Specifies the location of the pomodoro client
+
+**`socket`** (required):<br>
+Specifies the socket over which to communicate with the client. If the
+`sherlock-pomorodo` project is used, this location is the same as listed above.
+
+**`style`** (optional):<br>
+Specifies the style of the pomodoro timer. (1) Minimal, (2) Normal (default)
+
+### Inner Functions
+
+These functions can be called either using actions with the `inner.[function
+name]` method or by using bind callbacks `"callback": "[function name]"`.
+
+1. **`reset`:** resets the timer
+2. **`toggle`:** toggles the timer
+3. **`unbind`:** unbinds the specified key. This can be useful if you want to unbind return
 
 <br>
 
@@ -648,8 +769,7 @@ Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
         "update_interval": 60
     },
     "priority": 1,
-    "home": true,
-    "only_home": true,
+    "home": "OnlyHome",
     "async": true,
     "shortcut": false,
     "spawn_focus": false

@@ -1,20 +1,19 @@
 use gio::glib::{object::IsA, variant::ToVariant};
-use gtk4::{prelude::WidgetExt, Widget};
+use gtk4::{prelude::*, Widget};
 use std::collections::HashMap;
 use std::fs::File;
 use teamslaunch::teamslaunch;
 use util::{clear_cached_files, reset_app_counter};
 
 use crate::{
+    actions::commandlaunch::command_launch,
+    api::{call::ApiCall, server::SherlockServer},
     daemon::daemon::print_reponse,
-    launcher::{
-        audio_launcher::MusicPlayerLauncher, process_launcher::ProcessLauncher,
-        theme_picker::ThemePicker,
-    },
+    g_subclasses::action_entry::ContextAction,
+    launcher::{process_launcher::ProcessLauncher, theme_picker::ThemePicker},
     loader::util::CounterReader,
     sherlock_error,
-    utils::{errors::SherlockErrorType, files::home_dir},
-    CONFIG,
+    utils::{config::ConfigGuard, errors::SherlockErrorType, files::home_dir},
 };
 
 pub mod applaunch;
@@ -42,7 +41,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 exit = false;
                 attrs.get("exec").map(|mode| {
                     let _ = row.activate_action("win.switch-mode", Some(&mode.to_variant()));
-                    let _ = row.activate_action("win.clear-search", None);
+                    let _ = row.activate_action("win.clear-search", Some(&false.to_variant()));
                 });
             }
             "app_launcher" => {
@@ -78,17 +77,17 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 }
             }
             "copy" => {
-                let field = attrs
-                    .get("field")
-                    .or(CONFIG.get().and_then(|c| c.behavior.field.as_ref()));
-                if let Some(field) = field {
-                    if let Some(output) = attrs.get(field) {
-                        let _ = util::copy_to_clipboard(output.as_str());
-                    }
-                } else if let Some(output) = attrs.get("result").or(attrs.get("exec")) {
-                    if let Err(err) = util::copy_to_clipboard(output.as_str()) {
-                        exit = false;
-                        let _result = err.insert(false);
+                if let Ok(config) = ConfigGuard::read() {
+                    let field = attrs.get("field").or(config.behavior.field.as_ref());
+                    if let Some(field) = field {
+                        if let Some(output) = attrs.get(field) {
+                            let _ = util::copy_to_clipboard(output.as_str());
+                        }
+                    } else if let Some(output) = attrs.get("result").or(attrs.get("exec")) {
+                        if let Err(err) = util::copy_to_clipboard(output.as_str()) {
+                            exit = false;
+                            let _result = err.insert(false);
+                        }
                     }
                 }
             }
@@ -103,16 +102,11 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             }
             "teams_event" => {
                 if let Some(meeting) = attrs.get("meeting_url") {
-                    match teamslaunch(meeting) {
-                        Ok(_) => {
-                            let _ = row.activate_action("win.close", None);
-                        }
-                        Err(_) => {
-                            let _ = row.activate_action(
-                                "win.switch-page",
-                                Some(&String::from("search-page->error-page").to_variant()),
-                            );
-                        }
+                    if let Err(_) = teamslaunch(meeting) {
+                        let _ = row.activate_action(
+                            "win.switch-page",
+                            Some(&String::from("search-page->error-page").to_variant()),
+                        );
                     }
                 }
             }
@@ -142,14 +136,6 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
 
                 let _ = row
                     .activate_action("win.add-page", Some(&next_content.to_string().to_variant()));
-            }
-            "play-pause" | "audio_sink" => {
-                if let Some(player) = attrs.get("player") {
-                    if let Err(error) = MusicPlayerLauncher::playpause(player) {
-                        exit = false;
-                        let _result = error.insert(false);
-                    }
-                }
             }
             "kill-process" => {
                 if let Some((ppid, cpid)) = attrs
@@ -212,11 +198,33 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                         );
                         let _result = err.insert(false);
                     }
+                    "restart" => {
+                        // start new sherlock instance
+                        if let Ok(config) = ConfigGuard::read() {
+                            if config.behavior.daemonize {
+                                if let Err(err) =
+                                    command_launch("sherlock --take-over --daemonize", "")
+                                {
+                                    let _result = err.insert(true);
+                                }
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
             "clear_cache" => {
                 let _result = clear_cached_files();
+            }
+            k if k.starts_with("inner.") => {
+                if let Some(callback) = k.strip_prefix("inner.") {
+                    if let Some(context) = row.dynamic_cast_ref::<ContextAction>() {
+                        if let Some(row) = context.get_row().and_then(|row| row.upgrade()) {
+                            let exit = exit as u8;
+                            row.emit_by_name::<()>("row-should-activate", &[&exit, &callback]);
+                        }
+                    }
+                }
             }
             _ => {
                 if let Some(out) = attrs.get("result") {
@@ -230,7 +238,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
 
         exit = do_exit.unwrap_or(exit);
         if exit {
-            eval_close(row);
+            eval_close();
         }
     }
 }
@@ -251,6 +259,6 @@ fn increment(key: &str) {
         let _ = count_reader.increment(key);
     };
 }
-fn eval_close<T: IsA<Widget>>(row: &T) {
-    let _ = row.activate_action("win.close", None);
+fn eval_close() {
+    let _ = SherlockServer::send_action(ApiCall::Close);
 }

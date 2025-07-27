@@ -2,13 +2,13 @@ use std::collections::HashSet;
 use std::fs::write;
 use std::path::Path;
 use std::path::PathBuf;
-use tokio::fs::create_dir_all;
+use gio::glib::MainContext;
 
 use crate::loader::util::AppData;
 use crate::loader::Loader;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::utils::files::home_dir;
+use crate::utils::paths;
 
 use super::LauncherType;
 
@@ -66,18 +66,25 @@ impl ThemePicker {
         })?;
         println!("{:?}", exit);
         if !exit {
-            if let Err(error) = Loader::load_css(false) {
-                let _result = error.insert(false);
-            }
+            MainContext::default().block_on(async {
+                if let Err(error) = Loader::load_css(false).await {
+                    let _result = error.insert(false);
+                }
+            });
         }
         Ok(())
     }
 
     pub fn get_cached() -> Result<PathBuf, SherlockError> {
-        let home = home_dir()?;
-        let absolute = home.join(".sherlock/theme.txt");
+        let config_dir = paths::get_config_dir()?;
+        let absolute = config_dir.join("theme.txt");
         if let Some(parents) = absolute.parent() {
-            let _ = create_dir_all(parents);
+            std::fs::create_dir_all(parents).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::DirCreateError(parents.to_string_lossy().to_string()),
+                    e.to_string()
+                )
+            })?;
         }
         Ok(absolute)
     }

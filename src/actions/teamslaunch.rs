@@ -3,14 +3,16 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::CONFIG;
 use crate::{
     sherlock_error,
-    utils::errors::{SherlockError, SherlockErrorType},
+    utils::{
+        config::ConfigGuard,
+        errors::{SherlockError, SherlockErrorType},
+    },
 };
 
 pub fn teamslaunch(meeting_url: &str) -> Result<(), SherlockError> {
-    if let Some(c) = CONFIG.get() {
+    if let Ok(c) = ConfigGuard::read() {
         let teams_command = c.default_apps.teams.clone();
         let exec = teams_command.replace("{meeting_url}", meeting_url);
 

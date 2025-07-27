@@ -1,5 +1,6 @@
 :root {
     --background: 0, 0%, 9%;
+    --background2: 0, 0%, 20%;
     --foreground: 0, 0%, 15%;
     --text: 53, 100%, 97%;
     --border: 0, 0%, 19%;
@@ -592,7 +593,7 @@ gridview child:selected box {
 .weather-tile {
     padding: 0px 20px 0px 10px;
     background: darkgray;
-    margin-bottom: 10px;
+    /* margin-bottom: 10px; */
 }
 
 .tile.weather-tile #content-holder {
@@ -692,8 +693,29 @@ gridview child:selected box {
     background-clip: padding-box;
 }
 
+/* TIMER TILE */
+.tile.timer-tile {
+    padding: 10px 15px;
+    background: transparent;
+}
 
 
+.tile.timer-tile.normal #timer-count {
+    font-size: 2.5em;
+    padding: 1.25em;
+}
+.tile.timer-tile.minimal #timer-count {
+    font-size: 1.5em;
+}
+
+#timer-title {
+    color: hsla(var(--text), 0.7);
+    font-size: 11px;
+}
+#timer-image {
+    /* -gtk-icon-filter: brightness(10) saturate(100%) contrast(100%); /1* white *1/ */
+    filter: brightness(10) saturate(100%) contrast(100%); /* black */
+}
 
 /*ANIMATIONS*/
 @keyframes vanish-rotate {

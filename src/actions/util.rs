@@ -2,14 +2,16 @@ use std::{fs, process::Command};
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 
+use crate::sherlock_error;
+use crate::utils::config::ConfigGuard;
 use crate::{
     loader::application_loader::{get_applications_dir, get_desktop_files},
     utils::{
         errors::{SherlockError, SherlockErrorType},
-        files::{home_dir, read_lines},
+        files::read_lines,
+        paths,
     },
 };
-use crate::{sherlock_error, CONFIG};
 
 pub fn copy_to_clipboard(string: &str) -> Result<(), SherlockError> {
     let mut ctx = ClipboardContext::new()
@@ -26,14 +28,13 @@ pub fn read_from_clipboard() -> Result<String, SherlockError> {
 }
 
 pub fn clear_cached_files() -> Result<(), SherlockError> {
-    let config = CONFIG
-        .get()
-        .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
-    let home = home_dir()?;
+    let cache_dir = paths::get_cache_dir()?;
+
+    let config = ConfigGuard::read()?;
     // Clear sherlocks cache
-    fs::remove_dir_all(home.join(".cache/sherlock")).map_err(|e| {
+    fs::remove_dir_all(&cache_dir).map_err(|e| {
         sherlock_error!(
-            SherlockErrorType::DirRemoveError(String::from("~/.cache/sherlock")),
+            SherlockErrorType::DirRemoveError(cache_dir.to_string_lossy().to_string()),
             e.to_string()
         )
     })?;
@@ -50,10 +51,11 @@ pub fn clear_cached_files() -> Result<(), SherlockError> {
 }
 
 pub fn reset_app_counter() -> Result<(), SherlockError> {
-    let home = home_dir()?;
-    fs::remove_file(home.join(".sherlock/counts.json")).map_err(|e| {
+    let data_dir = paths::get_data_dir()?;
+    let counts_path = data_dir.join("counts.json");
+    fs::remove_file(&counts_path).map_err(|e| {
         sherlock_error!(
-            SherlockErrorType::FileRemoveError(home.join(".sherlock/counts.json")),
+            SherlockErrorType::FileRemoveError(counts_path),
             e.to_string()
         )
     })

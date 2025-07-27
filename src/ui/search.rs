@@ -1,5 +1,8 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::{glib::WeakRef, ActionEntry, ListStore};
+use gio::{
+    glib::{SignalHandlerId, WeakRef},
+    ActionEntry, ListStore,
+};
 use gtk4::{
     self,
     gdk::{Key, ModifierType},
@@ -9,6 +12,7 @@ use gtk4::{
 };
 use gtk4::{glib, ApplicationWindow, Entry};
 use levenshtein::levenshtein;
+use simd_json::prelude::ArrayTrait;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -18,14 +22,14 @@ use super::util::*;
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
     g_subclasses::sherlock_row::SherlockRow,
+    launcher::utils::HomeType,
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
     utils::config::{default_search_icon, default_search_icon_back},
 };
 use crate::{
-    sherlock_error,
-    utils::errors::{SherlockError, SherlockErrorType},
-    CONFIG,
+    g_subclasses::sherlock_row::SherlockRowBind,
+    utils::{config::ConfigGuard, errors::SherlockError},
 };
 
 #[sherlock_macro::timing(name = "Search Window Creation")]
@@ -36,10 +40,17 @@ pub fn search(
     sherlock: Rc<RefCell<SherlockAPI>>,
 ) -> Result<(Overlay, SearchHandler), SherlockError> {
     // Initialize the view to show all apps
-    let (search_query, mode, stack_page, ui, handler, context) = construct_window(error_model)?;
+    let (search_query, stack_page, ui, handler, context) = construct_window(error_model)?;
     let imp = ui.imp();
     imp.result_viewport
         .set_policy(gtk4::PolicyType::Automatic, gtk4::PolicyType::Automatic);
+
+    // Add support for custom binds
+    let custom_controller = EventControllerKey::new();
+    custom_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
+    let custom_handler = Rc::new(RefCell::new(UserBindHandler::new(
+        custom_controller.downgrade(),
+    )));
 
     {
         let mut sherlock = sherlock.borrow_mut();
@@ -48,7 +59,7 @@ pub fn search(
     }
 
     // Mode setup - used to decide which tiles should be shown
-    let initial_mode = mode.borrow().clone();
+    let initial_mode = handler.mode.borrow().clone();
 
     // Initial setup on show
     stack_page.connect_map({
@@ -64,15 +75,20 @@ pub fn search(
         model.connect_items_changed({
             let results = imp.results.downgrade();
             let context_model = context.model.clone();
-            let current_mode = Rc::clone(&mode);
+            let current_mode = Rc::clone(&handler.mode);
+            let custom_handler = Rc::clone(&custom_handler);
             move |_myself, _position, _removed, added| {
                 if added == 0 {
                     return;
                 }
                 // Show or hide context menu shortcuts whenever stack shows
-                results
-                    .upgrade()
-                    .map(|r| r.focus_first(Some(&context_model), Some(current_mode.clone())));
+                results.upgrade().map(|r| {
+                    r.focus_first(
+                        Some(&context_model),
+                        Some(current_mode.clone()),
+                        Some(custom_handler.clone()),
+                    )
+                });
             }
         });
     }
@@ -84,14 +100,15 @@ pub fn search(
         handler.sorter.clone(),
         handler.binds.clone(),
         stack_page_ref,
-        &mode,
+        &Rc::clone(&handler.mode),
         context.clone(),
+        Rc::clone(&custom_handler),
     );
     change_event(
         imp.search_bar.downgrade(),
         imp.results.downgrade(),
         Rc::clone(&handler.modes),
-        &mode,
+        &Rc::clone(&handler.mode),
         &search_query,
     );
 
@@ -100,7 +117,7 @@ pub fn search(
         .parameter_type(Some(&String::static_variant_type()))
         .state(initial_mode.to_variant())
         .activate({
-            let mode_clone = Rc::clone(&mode);
+            let mode_clone = Rc::clone(&handler.mode);
             let modes_clone = Rc::clone(&handler.modes);
             let ui = ui.downgrade();
             move |_, action, parameter| {
@@ -156,7 +173,8 @@ pub fn search(
             let current_task = handler.task.clone();
             let current_text = search_query.clone();
             let context_model = context.model.clone();
-            let current_mode = Rc::clone(&mode);
+            let current_mode = Rc::clone(&handler.mode);
+            let custom_handler = Rc::clone(&custom_handler);
             move |_: &ApplicationWindow, _, parameter| {
                 if let Some(focus_first) = parameter.and_then(|p| p.get::<bool>()) {
                     filter
@@ -168,7 +186,11 @@ pub fn search(
                     let weaks = results.get_weaks().unwrap_or(vec![]);
                     if focus_first {
                         if results
-                            .focus_first(Some(&context_model), Some(current_mode.clone()))
+                            .focus_first(
+                                Some(&context_model),
+                                Some(current_mode.clone()),
+                                Some(custom_handler.clone()),
+                            )
                             .is_some()
                         {
                             update_async(weaks, &current_task, current_text.borrow().clone());
@@ -232,16 +254,24 @@ pub fn search(
         })
         .build();
 
-    let search_bar = imp.search_bar.downgrade();
     let action_clear_win = ActionEntry::builder("clear-search")
-        .activate(move |_: &ApplicationWindow, _, _| {
-            let search_bar = search_bar.clone();
-            glib::idle_add_local(move || {
-                if let Some(entry) = search_bar.upgrade() {
-                    entry.set_text("");
+        .parameter_type(Some(&bool::static_variant_type()))
+        .activate({
+            let search_bar = imp.search_bar.downgrade();
+            let mode = Rc::clone(&handler.mode);
+            move |_: &ApplicationWindow, _, parameter| {
+                let clear_mode = parameter.and_then(|p| p.get::<bool>()).unwrap_or_default();
+                if clear_mode {
+                    *mode.borrow_mut() = "all".to_string();
                 }
-                glib::ControlFlow::Break
-            });
+                let search_bar = search_bar.clone();
+                glib::idle_add_local(move || {
+                    if let Some(entry) = search_bar.upgrade() {
+                        entry.set_text("");
+                    }
+                    glib::ControlFlow::Break
+                });
+            }
         })
         .build();
     window.add_action_entries([
@@ -260,7 +290,6 @@ fn construct_window(
 ) -> Result<
     (
         Rc<RefCell<String>>,
-        Rc<RefCell<String>>,
         Overlay,
         SearchUiObj,
         SearchHandler,
@@ -270,9 +299,7 @@ fn construct_window(
 > {
     // Collect Modes
     let custom_binds = ConfKeys::new();
-    let config = CONFIG
-        .get()
-        .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+    let config = ConfigGuard::read()?;
     let original_mode = config.behavior.sub_menu.as_deref().unwrap_or("all");
     let mode = Rc::new(RefCell::new(original_mode.to_string()));
     let search_text = Rc::new(RefCell::new(String::from("")));
@@ -321,15 +348,14 @@ fn construct_window(
         let mod_str = custom_binds.shortcut_modifier_str.clone();
         let search_text = Rc::clone(&search_text);
         let first_iter = Cell::clone(&first_iter);
+        let animate = config.behavior.animate;
         move |myself, _, removed, added| {
             // Early exit if nothing changed
             if added == 0 && removed == 0 {
                 return;
             }
             let mut added_index = 0;
-            let apply_css = search_text.borrow().trim().is_empty()
-                && config.behavior.animate
-                && first_iter.get();
+            let apply_css = search_text.borrow().trim().is_empty() && animate && first_iter.get();
             for i in 0..myself.n_items() {
                 if let Some(item) = myself.item(i).and_downcast::<SherlockRow>() {
                     if apply_css {
@@ -337,14 +363,12 @@ fn construct_window(
                     } else {
                         item.remove_css_class("animate");
                     }
-                    if item.imp().shortcut.get() {
-                        if let Some(shortcut_holder) = item.shortcut_holder() {
-                            if added_index < 5 {
-                                added_index +=
-                                    shortcut_holder.apply_shortcut(added_index + 1, &mod_str);
-                            } else {
-                                shortcut_holder.remove_shortcut();
-                            }
+                    if let Some(shortcut_holder) = item.shortcut_holder() {
+                        if added_index < 5 {
+                            added_index +=
+                                shortcut_holder.apply_shortcut(added_index + 1, &mod_str);
+                        } else {
+                            shortcut_holder.remove_shortcut();
                         }
                     }
                 }
@@ -370,6 +394,7 @@ fn construct_window(
 
     let handler = SearchHandler::new(
         model.downgrade(),
+        mode,
         error_model,
         filter.downgrade(),
         sorter.downgrade(),
@@ -391,7 +416,7 @@ fn construct_window(
     imp.search_icon_holder
         .set_visible(config.appearance.search_icon);
 
-    Ok((search_text, mode, main_overlay, ui, handler, context))
+    Ok((search_text, main_overlay, ui, handler, context))
 }
 fn make_factory() -> SignalListItemFactory {
     let factory = SignalListItemFactory::new();
@@ -414,7 +439,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
         let search_mode = Rc::clone(mode);
         move |entry| {
             let item = entry.downcast_ref::<SherlockRow>().unwrap();
-            let (home, only_home) = item.home();
+            let home = item.home();
 
             let mode = search_mode.borrow().trim().to_string();
             let current_text = search_text.borrow().clone();
@@ -423,15 +448,15 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             let update_res = item.update(&current_text);
 
             if is_home {
-                if home || only_home {
+                if home != HomeType::Search {
                     return true;
                 }
-                return false;
+                false
             } else {
                 let alias = item.alias();
                 let priority = item.priority();
                 if mode != "all" {
-                    if only_home || mode != alias {
+                    if home == HomeType::OnlyHome || mode != alias {
                         return false;
                     }
                     if current_text.is_empty() {
@@ -459,20 +484,38 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             if match_in.len() == 0 {
                 return 0.0;
             }
-            let distance = levenshtein(query, match_in) as f32;
-            let normed = (distance / match_in.len() as f32).clamp(0.2, 1.0);
-            let starts_with = if match_in.starts_with(query) {
+            let (distance, element) = match_in
+                .split(';')
+                .map(|elem| (levenshtein(query, elem), elem))
+                .min_by_key(|(dist, _)| *dist)
+                .unwrap_or((usize::MAX, ""));
+
+            let normed = (distance as f32 / element.len() as f32).clamp(0.2, 1.0);
+            let normed = (normed * 100.0).round() / 100.0;
+            let starts_with = if element.starts_with(query) {
                 -0.2
             } else {
                 0.0
             };
+            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
+                if var == "true" {
+                    println!("Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}", element, query, distance, normed, normed + starts_with);
+                }
+            }
             normed + starts_with
         }
 
         fn make_prio(prio: f32, query: &str, match_in: &str) -> f32 {
             let score = search_score(query, match_in);
-            // shift counts 3 to right; 1.34 → 1.00034 to make room for levenshtein
-            let counters = prio.fract() / 1000.0;
+            // shift counts 3 to right; 1.34 → 1.0034 to make room for levenshtein (2 spaces for
+            // max .99)
+            let counters = prio.fract() / 100.0;
+            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
+                if var == "true" {
+                    println!("Base Prio: {}", prio);
+                    println!("Resulting Prio: {}\n", prio.trunc() + (counters + score).min(0.99));
+                }
+            }
             prio.trunc() + (counters + score).min(0.99)
         }
         move |item_a, item_b| {
@@ -503,15 +546,18 @@ fn nav_event(
     stack_page: &Rc<RefCell<String>>,
     current_mode: &Rc<RefCell<String>>,
     context: ContextUI,
+    custom_handler: Rc<RefCell<UserBindHandler>>,
 ) {
     let event_controller = EventControllerKey::new();
+    let custom_controller = custom_handler.borrow().get_controller();
     let stack_page = Rc::clone(stack_page);
-    let multi = CONFIG.get().map_or(false, |c| c.runtime.multi);
+    let multi = ConfigGuard::read().map_or(false, |c| c.runtime.multi);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         let search_bar = search_bar.clone();
         let current_mode = Rc::clone(current_mode);
-        let key_actions = KeyActions::new(results, search_bar, context);
+        let stack_page = Rc::clone(&stack_page);
+        let key_actions = KeyActions::new(results, search_bar, context, custom_handler);
         move |_, key, i, mods| {
             if stack_page.borrow().as_str() != "search-page" {
                 return false.into();
@@ -630,9 +676,12 @@ fn nav_event(
         }
     });
 
-    search_bar
-        .upgrade()
-        .map(|entry| entry.add_controller(event_controller));
+    if let Some(entry) = search_bar.upgrade() {
+        entry.add_controller(event_controller);
+        if let Some(custom_controller) = custom_controller {
+            entry.add_controller(custom_controller);
+        }
+    }
 }
 
 fn change_event(
@@ -659,7 +708,7 @@ fn change_event(
             if !trimmed.is_empty() && modes.borrow().contains_key(&current_text) {
                 // Logic to apply modes
                 let _ = search_bar.activate_action("win.switch-mode", Some(&trimmed.to_variant()));
-                let _ = search_bar.activate_action("win.clear-search", None);
+                let _ = search_bar.activate_action("win.clear-search", Some(&false.to_variant()));
                 current_text.clear();
             }
             *search_query_clone.borrow_mut() = current_text.clone();
@@ -761,5 +810,60 @@ impl SearchUiObj {
         imp.search_icon_holder.add_css_class("search");
         imp.results.set_focusable(false);
         ui
+    }
+}
+
+pub struct UserBindHandler {
+    signal_id: Option<SignalHandlerId>,
+    inner: WeakRef<EventControllerKey>,
+}
+impl UserBindHandler {
+    pub fn new(inner: WeakRef<EventControllerKey>) -> Self {
+        Self {
+            signal_id: None,
+            inner,
+        }
+    }
+    pub fn set_handler(&mut self, id: SignalHandlerId) {
+        if let Some(inner) = self.inner.upgrade() {
+            if let Some(id) = self.signal_id.replace(id) {
+                inner.disconnect(id);
+            }
+        }
+    }
+    pub fn set_binds(
+        &mut self,
+        binds: Rc<RefCell<Vec<SherlockRowBind>>>,
+        widget: WeakRef<SherlockRow>,
+    ) -> Option<SignalHandlerId> {
+        if binds.borrow().is_empty() {
+            return None;
+        }
+        let inner = self.inner.upgrade()?;
+
+        inner.connect_key_pressed({
+            move |_, key, _, mods| {
+                if let Some(bind) = binds
+                    .borrow()
+                    .iter()
+                    .find(|s| s.key == Some(key) && mods.contains(s.modifier))
+                {
+                    let exit: u8 = match bind.exit {
+                        Some(false) => 1,
+                        Some(true) => 2,
+                        _ => 0,
+                    };
+                    if let Some(row) = widget.upgrade() {
+                        row.emit_by_name::<()>("row-should-activate", &[&exit, &bind.callback]);
+                        return true.into();
+                    }
+                };
+                false.into()
+            }
+        });
+        None
+    }
+    pub fn get_controller(&self) -> Option<EventControllerKey> {
+        self.inner.upgrade()
     }
 }

@@ -5,8 +5,11 @@ use crate::{
     daemon::daemon::{SherlockDaemon, SizedMessage},
     loader::pipe_loader::PipedData,
     sher_log, sherlock_error,
-    utils::errors::{SherlockError, SherlockErrorType},
-    CONFIG, SOCKET_PATH,
+    utils::{
+        config::ConfigGuard,
+        errors::{SherlockError, SherlockErrorType},
+    },
+    SOCKET_PATH,
 };
 
 use super::{api::SherlockAPI, call::ApiCall};
@@ -37,7 +40,7 @@ impl SherlockServer {
                             });
                         }
                         if let Some(elements) = data.elements.take() {
-                            let raw = CONFIG.get().map_or(false, |c| c.runtime.display_raw);
+                            let raw = ConfigGuard::read().map_or(false, |c| c.runtime.display_raw);
                             let request = if raw {
                                 ApiCall::DisplayRaw(elements)
                             } else {

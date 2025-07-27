@@ -12,7 +12,8 @@ pub enum ApiCall {
     Obfuscate(bool),
     // Actions
     Socket(Option<String>),
-    Show,
+    Show(String),
+    Close,
     Clear,
     SherlockError(SherlockError),
     SherlockWarning(SherlockError),
@@ -20,6 +21,7 @@ pub enum ApiCall {
     Pipe(String),
     DisplayRaw(String),
     SwitchMode(SherlockModes),
+    Method(String),
 }
 impl Display for ApiCall {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -28,7 +30,8 @@ impl Display for ApiCall {
             Self::InputOnly => write!(f, "setting.InputOnly"),
             Self::Obfuscate(val) => write!(f, "setting.Obfuscate:{}", val),
             // Actions
-            Self::Show => write!(f, "action.Show"),
+            Self::Show(submenu) => write!(f, "action.Show:{}", submenu),
+            Self::Close => write!(f, "action.Close"),
             Self::Socket(socket) => write!(f, "action.Socket:{:?}", socket),
             Self::Clear => write!(f, "action.Clear"),
             Self::SherlockError(err) => write!(f, "action.InsertError:{}", err),
@@ -37,6 +40,7 @@ impl Display for ApiCall {
             Self::Pipe(pipe) => write!(f, "action.ProcessPipe:{}", pipe),
             Self::DisplayRaw(pipe) => write!(f, "action.DisplayRaw:{}", pipe),
             Self::SwitchMode(mode) => write!(f, "action.SwitchMode:{}", mode),
+            Self::Method(meth) => write!(f, "action.Method:{}", meth),
         }
     }
 }

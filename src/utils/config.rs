@@ -4,13 +4,15 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
+    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
 use super::{
     errors::{SherlockError, SherlockErrorType},
     files::{expand_path, home_dir},
+    paths,
 };
-use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error};
+use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error, CONFIG};
 
 #[derive(Clone, Debug, Default)]
 pub struct SherlockFlags {
@@ -28,6 +30,7 @@ pub struct SherlockFlags {
     pub sub_menu: Option<String>,
     pub multi: bool,
     pub photo_mode: bool,
+    pub input: Option<bool>,
 }
 /// Configuration sections:
 ///
@@ -97,6 +100,7 @@ impl SherlockConfig {
                 center: false,
                 photo_mode: false,
                 display_raw: false,
+                input: None,
             },
             expand: ConfigExpand::default(),
             backdrop: ConfigBackdrop::default(),
@@ -117,6 +121,7 @@ impl SherlockConfig {
                 center: false,
                 photo_mode: false,
                 display_raw: false,
+                input: None,
             },
             expand: ConfigExpand::default(),
             backdrop: ConfigBackdrop::default(),
@@ -255,7 +260,7 @@ impl SherlockConfig {
         let home = home_dir()?;
         let mut path = match &sherlock_flags.config {
             Some(path) => expand_path(path, &home),
-            _ => home.join(".config/sherlock/config.toml"),
+            _ => paths::get_config_dir()?.join("config.toml"),
         };
         // logic to either use json or toml
         let mut filetype: String = String::new();
@@ -333,13 +338,20 @@ impl SherlockConfig {
             }
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => {
-                    let error =
-                        sherlock_error!(SherlockErrorType::FileExistError(path), e.to_string());
-
                     let mut config = SherlockConfig::default();
+                    let config_str = match filetype.as_str() {
+                        "json" => serde_json::to_string_pretty(&config).unwrap(),
+                        _ => toml::to_string(&config).unwrap(),
+                    };
+                    fs::write(&path, config_str).map_err(|e| {
+                        sherlock_error!(
+                            SherlockErrorType::FileWriteError(path.clone()),
+                            e.to_string()
+                        )
+                    })?;
 
                     config = SherlockConfig::apply_flags(sherlock_flags, config);
-                    Ok((config, vec![error]))
+                    Ok((config, vec![]))
                 }
                 _ => Err(sherlock_error!(
                     SherlockErrorType::FileReadError(path),
@@ -400,6 +412,7 @@ impl SherlockConfig {
         );
         config.behavior.sub_menu = sherlock_flags.sub_menu.clone();
         config.runtime.method = sherlock_flags.method.clone();
+        config.runtime.input = sherlock_flags.input.clone();
         config.runtime.center = sherlock_flags.center_raw.clone();
         config.runtime.multi = sherlock_flags.multi;
         config.runtime.display_raw = sherlock_flags.display_raw;
@@ -673,6 +686,9 @@ pub struct Runtime {
 
     #[serde(default)]
     pub display_raw: bool,
+
+    #[serde(default)]
+    pub input: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -742,25 +758,29 @@ pub fn default_currency() -> String {
 }
 
 pub fn default_cache() -> PathBuf {
-    PathBuf::from("~/.cache/sherlock/sherlock_desktop_cache.json")
+    paths::get_cache_dir()
+        .unwrap()
+        .join("sherlock_desktop_cache.json")
 }
 pub fn default_config() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/config.toml")
+    paths::get_config_dir().unwrap().join("config.toml")
 }
 pub fn default_fallback() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/fallback.json")
+    paths::get_config_dir().unwrap().join("fallback.json")
 }
 pub fn default_css() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/main.css")
+    paths::get_config_dir().unwrap().join("main.css")
 }
 pub fn default_alias() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/sherlock_alias.json")
+    paths::get_config_dir().unwrap().join("sherlock_alias.json")
 }
 pub fn default_ignore() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/sherlockignore")
+    paths::get_config_dir().unwrap().join("sherlockignore")
 }
 pub fn default_actions() -> PathBuf {
-    PathBuf::from("~/.config/sherlock/sherlock_actions.json")
+    paths::get_config_dir()
+        .unwrap()
+        .join("sherlock_actions.json")
 }
 
 pub fn default_true() -> bool {
@@ -776,7 +796,12 @@ pub fn default_backdrop_edge() -> String {
     String::from("top")
 }
 pub fn default_icon_paths() -> Vec<String> {
-    vec![String::from("~/.config/sherlock/icons/")]
+    vec![paths::get_config_dir()
+        .unwrap()
+        .join("icons/")
+        .to_str()
+        .unwrap()
+        .to_string()]
 }
 pub fn default_icon_size() -> i32 {
     22
@@ -852,8 +877,48 @@ pub fn get_terminal() -> Result<String, SherlockError> {
     }
 }
 fn is_terminal_installed(terminal: &str) -> bool {
-    Command::new(terminal)
-        .arg("--version") // You can adjust this if the terminal doesn't have a "--version" flag
-        .output()
-        .is_ok()
+    Command::new(terminal).arg("--version").output().is_ok()
+}
+
+pub struct ConfigGuard;
+impl<'g> ConfigGuard {
+    fn get_config() -> Result<&'g RwLock<SherlockConfig>, SherlockError> {
+        CONFIG.get().ok_or_else(|| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Config not initialized".to_string()
+            )
+        })
+    }
+
+    fn get_read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_config()?.read().map_err(|_| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Failed to acquire write lock on config".to_string()
+            )
+        })
+    }
+
+    fn _get_write() -> Result<RwLockWriteGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_config()?.write().map_err(|_| {
+            sherlock_error!(
+                SherlockErrorType::ConfigError(None),
+                "Failed to acquire write lock on config".to_string()
+            )
+        })
+    }
+
+    pub fn read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
+        Self::get_read()
+    }
+
+    pub fn write_key<F>(key_fn: F) -> Result<(), SherlockError>
+    where
+        F: FnOnce(&mut SherlockConfig),
+    {
+        let mut config = Self::_get_write()?;
+        key_fn(&mut config);
+        Ok(())
+    }
 }

@@ -10,12 +10,12 @@ use gtk4::{
     SingleSelection,
 };
 
-use crate::{g_subclasses::action_entry::ContextAction, CONFIG};
+use crate::{g_subclasses::action_entry::ContextAction, utils::config::ConfigGuard};
 
 use super::util::ContextUI;
 
 pub fn make_context() -> (ContextUI, Revealer) {
-    let max_heigth = CONFIG.get().map_or(60, |c| c.appearance.height - 200);
+    let max_heigth = ConfigGuard::read().map_or(60, |c| c.appearance.height - 200);
     let factory = make_factory();
     let model = ListStore::new::<ContextAction>();
     let selection = SingleSelection::new(Some(model.clone()));
@@ -43,7 +43,7 @@ pub fn make_context() -> (ContextUI, Revealer) {
         .child(&viewport)
         .build();
 
-    if !CONFIG.get().map_or(false, |c| c.behavior.animate) {
+    if !ConfigGuard::read().map_or(false, |c| c.behavior.animate) {
         revealer.set_transition_duration(0);
     }
 

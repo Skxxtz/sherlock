@@ -1,7 +1,7 @@
 use super::Loader;
-use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::utils::config::ConfigGuard;
+use crate::utils::errors::SherlockError;
 use crate::utils::files::{expand_path, home_dir};
-use crate::{sherlock_error, CONFIG};
 use gtk4::{gdk::Display, IconTheme};
 use std::collections::HashSet;
 use std::env;
@@ -9,10 +9,10 @@ use std::path::PathBuf;
 
 impl Loader {
     #[sherlock_macro::timing(name = "Loading Icon Theme", level = "setup")]
-    pub fn load_icon_theme() -> Option<SherlockError> {
-        let config = match CONFIG.get() {
-            Some(c) => c,
-            None => return Some(sherlock_error!(SherlockErrorType::ConfigError(None), "")),
+    pub async fn load_icon_theme() -> Option<SherlockError> {
+        let config = match ConfigGuard::read() {
+            Ok(c) => c,
+            Err(e) => return Some(e),
         };
 
         let icon_paths = config.appearance.icon_paths.clone();
