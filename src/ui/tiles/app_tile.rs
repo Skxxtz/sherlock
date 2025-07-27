@@ -102,8 +102,8 @@ impl Tile {
                 };
 
                 object.set_update(update_closure);
-                object.with_launcher(launcher);
                 object.with_appdata(&value);
+                object.with_launcher(launcher);
                 object.add_actions(&launcher.add_actions);
                 if launcher.shortcut {
                     object.set_shortcut_holder(Some(imp.shortcut_holder.downgrade()));
