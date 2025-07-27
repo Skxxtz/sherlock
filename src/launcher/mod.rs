@@ -26,9 +26,9 @@ use crate::{
     loader::util::{AppData, ApplicationAction, RawLauncher},
     ui::tiles::{
         api_tile::ApiTileHandler, app_tile::AppTileHandler, calc_tile::CalcTileHandler,
-        mpris_tile::MusicTileHandler, pomodoro_tile::PomodoroTileHandler,
-        process_tile::ProcTileHandler, weather_tile::WeatherTileHandler, web_tile::WebTileHandler,
-        Tile,
+        event_tile::EventTileHandler, mpris_tile::MusicTileHandler,
+        pomodoro_tile::PomodoroTileHandler, process_tile::ProcTileHandler,
+        weather_tile::WeatherTileHandler, web_tile::WebTileHandler, Tile,
     },
 };
 
@@ -155,11 +155,6 @@ impl Launcher {
     // TODO: tile method recreates already stored data...
     pub fn bind_obj(&self, launcher: Rc<Launcher>) -> Vec<TileItem> {
         match self.launcher_type {
-            LauncherType::BulkText(_) => {
-                let base = TileItem::new();
-                base.set_launcher(launcher.clone());
-                vec![base]
-            }
             LauncherType::App(_)
             | LauncherType::Bookmark(_)
             | LauncherType::Category(_)
@@ -184,7 +179,11 @@ impl Launcher {
                     })
                     .collect()
             }
-
+            LauncherType::BulkText(_) => {
+                let base = TileItem::new();
+                base.set_launcher(launcher.clone());
+                vec![base]
+            }
             LauncherType::Calc(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
@@ -203,7 +202,10 @@ impl Launcher {
                     .set(UpdateHandler::WebTile(handler));
                 vec![base]
             }
-            LauncherType::Weather(_) | LauncherType::MusicPlayer(_) | LauncherType::Pomodoro(_) => {
+            LauncherType::Event(_)
+            | LauncherType::Weather(_)
+            | LauncherType::MusicPlayer(_)
+            | LauncherType::Pomodoro(_) => {
                 let base = TileItem::new();
                 base.set_launcher(launcher.clone());
                 vec![base]
@@ -259,6 +261,11 @@ impl Launcher {
                 let update = UpdateHandler::Calculator(CalcTileHandler::new(&tile));
                 Some((tile.upcast::<Widget>(), update))
             }
+            LauncherType::Event(evt) => {
+                let tile = Tile::event(evt)?;
+                let update = UpdateHandler::Event(EventTileHandler::new(&tile, launcher, evt));
+                Some((tile.upcast::<Widget>(), update))
+            }
             LauncherType::MusicPlayer(mpris) => {
                 let tile = Tile::mpris_tile();
                 let update = UpdateHandler::MusicPlayer(MusicTileHandler::new(
@@ -302,8 +309,7 @@ impl Launcher {
             LauncherType::Clipboard((clp, calc)) => {
                 Tile::clipboard_tile(launcher, &clp, &calc).await
             }
-            LauncherType::Event(evl) => Tile::event_tile(launcher, &evl).await,
-
+            // LauncherType::Event(evl) => Tile::event(launcher, &evl).await,
             _ => Vec::new(),
         }
     }

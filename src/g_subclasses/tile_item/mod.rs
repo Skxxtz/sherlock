@@ -12,6 +12,7 @@ use crate::loader::util::ApplicationAction;
 use crate::ui::tiles::api_tile::ApiTileHandler;
 use crate::ui::tiles::app_tile::AppTileHandler;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
+use crate::ui::tiles::event_tile::EventTileHandler;
 use crate::ui::tiles::mpris_tile::MusicTileHandler;
 use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
 use crate::ui::tiles::process_tile::ProcTileHandler;
@@ -107,7 +108,9 @@ impl TileItem {
                     false
                 }
             }
-            UpdateHandler::MusicPlayer(_)
+
+            UpdateHandler::Event(_)
+            | UpdateHandler::MusicPlayer(_)
             | UpdateHandler::Pomodoro(_)
             | UpdateHandler::Process(_)
             | UpdateHandler::Weather(_)
@@ -119,7 +122,6 @@ impl TileItem {
     pub fn update(&self, keyword: &str) -> Option<()> {
         let imp = self.imp();
         match &*imp.update_handler.borrow() {
-            UpdateHandler::ApiTile(inner) => inner.update(),
             UpdateHandler::AppTile(app) => {
                 let launcher = imp.launcher.borrow();
                 let index = imp.index.get().unwrap();
@@ -135,7 +137,6 @@ impl TileItem {
                     return inner.update(keyword, launcher.clone());
                 }
             }
-            UpdateHandler::MusicPlayer(inner) => inner.update(),
             UpdateHandler::Process(proc) => {
                 let launcher = imp.launcher.borrow();
                 let index = imp.index.get().unwrap();
@@ -152,7 +153,12 @@ impl TileItem {
                 }
             }
 
-            UpdateHandler::Pomodoro(_) | UpdateHandler::Default | UpdateHandler::Weather(_) => {}
+            UpdateHandler::ApiTile(_)
+            | UpdateHandler::Event(_)
+            | UpdateHandler::MusicPlayer(_)
+            | UpdateHandler::Pomodoro(_)
+            | UpdateHandler::Default
+            | UpdateHandler::Weather(_) => {}
         }
         Some(())
     }
@@ -182,6 +188,7 @@ impl TileItem {
             UpdateHandler::ApiTile(inner) => inner.bind_signal(row),
             UpdateHandler::AppTile(inner) => inner.bind_signal(row),
             UpdateHandler::Calculator(inner) => inner.bind_signal(row),
+            UpdateHandler::Event(inner) => inner.bind_signal(row),
             UpdateHandler::MusicPlayer(inner) => {
                 if let LauncherType::MusicPlayer(mpris) =
                     &self.imp().launcher.borrow().launcher_type
@@ -220,6 +227,7 @@ pub enum UpdateHandler {
     AppTile(AppTileHandler),
     ApiTile(ApiTileHandler),
     Calculator(CalcTileHandler),
+    Event(EventTileHandler),
     MusicPlayer(MusicTileHandler),
     Pomodoro(PomodoroTileHandler),
     Process(ProcTileHandler),

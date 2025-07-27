@@ -1,5 +1,5 @@
 <interface>
-    <object class="GtkBox" id="holder">
+    <template class="EventTile" parent="GtkBox">
         <!-- Horizontal Split for Shortcuts -->
         <property name="orientation">horizontal</property>
         <property name="spacing">20</property>
@@ -92,6 +92,5 @@
                 </child>
             </object>
         </child>
-
-    </object>
+    </template>
 </interface>
