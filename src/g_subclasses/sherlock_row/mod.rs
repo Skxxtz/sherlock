@@ -38,19 +38,14 @@ impl SherlockRow {
         let search = imp.search.borrow().to_string();
         let prio = imp.priority.get();
         let home = imp.home.get();
-        let spawn = imp.spawn_focus.get();
         let alias = imp.alias.borrow().to_string();
 
         println!("Search: {:?}", search);
         println!("Prio: {:?}", prio);
         println!("Home: {:?}", home);
-        println!("Spawn: {:?}", spawn);
         println!("Alias: {:?}", alias);
     }
     // setters
-    pub fn set_spawn_focus(&self, focus: bool) {
-        self.imp().spawn_focus.set(focus);
-    }
     pub fn set_active(&self, active: bool) {
         self.imp().active.set(active);
         let class_name = GString::from("multi-active");
@@ -184,7 +179,6 @@ impl SherlockRow {
     /// * alias
     pub fn with_launcher(&self, launcher: Rc<Launcher>) {
         self.set_home(launcher.home);
-        self.set_spawn_focus(launcher.spawn_focus);
         self.set_priority((launcher.priority + 1) as f32);
         if let Some(alias) = &launcher.alias {
             self.set_alias(alias);
@@ -212,7 +206,6 @@ impl SherlockRow {
 impl Default for SherlockRow {
     fn default() -> Self {
         let row = Self::new();
-        row.set_spawn_focus(true);
         row.set_css_classes(&["tile"]);
         row
     }

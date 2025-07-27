@@ -203,7 +203,6 @@ impl Tile {
                         object.append(&tile);
 
                         object.with_launcher(launcher.clone());
-                        object.set_spawn_focus(false);
                         object.set_search(&raw);
 
                         clipboard_content = raw;

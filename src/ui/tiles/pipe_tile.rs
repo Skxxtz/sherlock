@@ -79,7 +79,6 @@ impl Tile {
                 ]);
                 let attrs = get_attrs_map(constructor);
 
-                object.set_spawn_focus(true);
                 object.set_home(HomeType::Home);
                 object.set_priority(1.0);
                 object.set_search(&search);

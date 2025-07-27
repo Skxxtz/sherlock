@@ -33,9 +33,6 @@ use crate::loader::util::ApplicationAction;
 /// * **terminal**: If the app should be executed using the terminal
 #[derive(Default)]
 pub struct SherlockRow {
-    /// Whether the tile should receive focus when Sherlock starts  
-    pub spawn_focus: Cell<bool>,
-
     /// Whether the row should be shown as active in multi selection
     pub active: Cell<bool>,
 
