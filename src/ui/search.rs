@@ -498,7 +498,7 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             };
             if let Ok(var) = std::env::var("DEBUG_SEARCH") {
                 if var == "true" {
-                    println!("Query: {}\nBest Fit: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}\n", query, element, distance, normed, normed + starts_with);
+                    println!("Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}", element, query, distance, normed, normed + starts_with);
                 }
             }
             normed + starts_with
@@ -509,6 +509,12 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             // shift counts 3 to right; 1.34 → 1.0034 to make room for levenshtein (2 spaces for
             // max .99)
             let counters = prio.fract() / 100.0;
+            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
+                if var == "true" {
+                    println!("Base Prio: {}", prio);
+                    println!("Resulting Prio: {}\n", prio.trunc() + (counters + score).min(0.99));
+                }
+            }
             prio.trunc() + (counters + score).min(0.99)
         }
         move |item_a, item_b| {
