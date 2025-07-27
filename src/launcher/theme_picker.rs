@@ -1,8 +1,8 @@
+use gio::glib::MainContext;
 use std::collections::HashSet;
 use std::fs::write;
 use std::path::Path;
 use std::path::PathBuf;
-use gio::glib::MainContext;
 
 use crate::loader::util::AppData;
 use crate::loader::Loader;

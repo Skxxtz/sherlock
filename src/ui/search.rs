@@ -499,7 +499,14 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             };
             if let Ok(var) = std::env::var("DEBUG_SEARCH") {
                 if var == "true" {
-                    println!("Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}", element, query, distance, normed, normed + starts_with);
+                    println!(
+                        "Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}",
+                        element,
+                        query,
+                        distance,
+                        normed,
+                        normed + starts_with
+                    );
                 }
             }
             normed + starts_with
@@ -513,7 +520,10 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             if let Ok(var) = std::env::var("DEBUG_SEARCH") {
                 if var == "true" {
                     println!("Base Prio: {}", prio);
-                    println!("Resulting Prio: {}\n", prio.trunc() + (counters + score).min(0.99));
+                    println!(
+                        "Resulting Prio: {}\n",
+                        prio.trunc() + (counters + score).min(0.99)
+                    );
                 }
             }
             prio.trunc() + (counters + score).min(0.99)

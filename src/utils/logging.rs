@@ -16,7 +16,6 @@ static LOG_FILE: Lazy<Result<Mutex<std::fs::File>, SherlockError>> = Lazy::new(|
         )
     })?;
 
-
     let location = cache_dir.join("sherlock.log");
 
     let file = OpenOptions::new()

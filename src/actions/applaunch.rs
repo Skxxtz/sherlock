@@ -61,7 +61,7 @@ pub fn split_as_command(cmd: &str) -> Vec<String> {
                     prev = '\0';
                     continue;
                 }
-                _ => current.push('\\')
+                _ => current.push('\\'),
             }
         }
         if quoting && c == '\\' && prev == '\\' {
