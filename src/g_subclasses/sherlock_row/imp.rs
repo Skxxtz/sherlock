@@ -1,33 +1,19 @@
 use gio::glib::object::ObjectExt;
 use gio::glib::subclass::Signal;
-use gio::glib::{SignalHandlerId, WeakRef};
+use gio::glib::SignalHandlerId;
 use gtk4::prelude::*;
 use gtk4::prelude::{GestureSingleExt, WidgetExt};
 use gtk4::subclass::prelude::*;
 use gtk4::{glib, GestureClick};
 use once_cell::unsync::OnceCell;
 use std::cell::{Cell, RefCell};
-use std::future::Future;
-use std::pin::Pin;
-use std::rc::Rc;
 use std::sync::OnceLock;
 
-use crate::g_subclasses::sherlock_row::SherlockRowBind;
-use crate::launcher::utils::HomeType;
 use crate::loader::util::ApplicationAction;
 
 /// ## Fields:
-/// * **spawn_focus**: Whether the tile should receive focus when Sherlock starts.
 /// * **active**: Whether the row should be shown as active in multi selection
 /// * **gesture**: State to hold and replace double-click gestures.
-/// * **shortcut_holder**: A `GtkBox` widget that holds the `modkey + number` shortcut indicators.
-/// * **priority**: Determines the tile's ordering within the `GtkListView`.
-/// * **search**: The string used to compute Levenshtein distance for this tile.
-/// * **alias**: The display mode in which this tile should appear.
-/// * **home**: Whether the tile should appear on the home screen (i.e., when the search entry is empty and mode is `all`).
-/// * **disable**: Whether the tile be forced to not show.
-/// * **update**: The function used to update ui elements (i.e. calculator results or bulk text results)
-/// * **keyword_aware**: Whether the tile shuold take the keyword as context
 /// * **actions**: Additional actions this tile has
 /// * **num_actions**: Number of additional actions
 /// * **terminal**: If the app should be executed using the terminal
@@ -42,44 +28,11 @@ pub struct SherlockRow {
     /// State to hold and replace activate signale
     pub signal_id: RefCell<Option<SignalHandlerId>>,
 
-    /// A `GtkBox` widget that holds the `modkey + number` shortcut indicators  
-    pub shortcut_holder: OnceCell<Option<WeakRef<gtk4::Box>>>,
-
-    /// Determines the tile's ordering within the `GtkListView`  
-    pub priority: Cell<f32>,
-
-    /// The string used to compute Levenshtein distance for this tile  
-    pub search: RefCell<String>,
-
-    /// The display mode in which this tile should appear  
-    pub alias: RefCell<String>,
-
-    /// Whether the tile should appear on the home screen  
-    ///             (i.e. when the search entry is empty and mode is `all`)  
-    pub home: Cell<HomeType>,
-
-    // The function used to update ui elements
-    //              (i.e. calculator results)
-    pub update: RefCell<Option<Box<dyn Fn(&str) -> bool>>>,
-
-    // The function used to update async ui elements
-    //              (i.e. bulk text results, mpris_tiles)
-    pub async_content_update:
-        RefCell<Option<Box<dyn Fn(&str) -> Pin<Box<dyn Future<Output = ()> + 'static>> + 'static>>>,
-
-    /// Whether the tile shuold take the keyword as context
-    pub keyword_aware: Cell<bool>,
-
     /// * **actions**: Additional actions this tile has
     pub actions: RefCell<Vec<ApplicationAction>>,
 
     /// * **num_actions**: Number of additional actions
     pub num_actions: Cell<usize>,
-
-    /// * **terminal**: If this tile should be executed using the terminal
-    pub terminal: Cell<bool>,
-
-    pub binds: Rc<RefCell<Vec<SherlockRowBind>>>,
 }
 
 // The central trait for subclassing a GObject

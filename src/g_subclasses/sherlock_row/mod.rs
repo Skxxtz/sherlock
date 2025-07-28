@@ -1,9 +1,7 @@
 mod imp;
 
-use std::{future::Future, pin::Pin};
-
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::ObjectExt, GString, SignalHandlerId, WeakRef};
+use gio::glib::{object::ObjectExt, GString, SignalHandlerId};
 use glib::Object;
 use gtk4::{
     gdk::{Key, ModifierType},
@@ -12,7 +10,7 @@ use gtk4::{
 };
 use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{launcher::utils::HomeType, loader::util::ApplicationAction};
+use crate::loader::util::ApplicationAction;
 
 glib::wrapper! {
     pub struct SherlockRow(ObjectSubclass<imp::SherlockRow>)
@@ -25,18 +23,6 @@ impl SherlockRow {
         myself.add_css_class("tile");
         myself
     }
-    pub fn show(&self) {
-        let imp = self.imp();
-        let search = imp.search.borrow().to_string();
-        let prio = imp.priority.get();
-        let home = imp.home.get();
-        let alias = imp.alias.borrow().to_string();
-
-        println!("Search: {:?}", search);
-        println!("Prio: {:?}", prio);
-        println!("Home: {:?}", home);
-        println!("Alias: {:?}", alias);
-    }
     // setters
     pub fn set_active(&self, active: bool) {
         self.imp().active.set(active);
@@ -47,36 +33,6 @@ impl SherlockRow {
         } else if !class_exists && active {
             self.add_css_class("multi-active");
         }
-    }
-    pub fn set_search(&self, search: &str) {
-        *self.imp().search.borrow_mut() = search.to_lowercase();
-    }
-    pub fn set_priority(&self, prio: f32) {
-        self.imp().priority.set(prio);
-    }
-    pub fn set_alias(&self, mode: &str) {
-        *self.imp().alias.borrow_mut() = mode.to_string();
-    }
-    pub fn set_home(&self, home: HomeType) {
-        self.imp().home.set(home);
-    }
-    pub fn set_shortcut_holder(&self, holder: Option<WeakRef<gtk4::Box>>) {
-        let _ = self.imp().shortcut_holder.set(holder);
-    }
-    pub fn set_update<F>(&self, state: F)
-    where
-        F: Fn(&str) -> bool + 'static,
-    {
-        *self.imp().update.borrow_mut() = Some(Box::new(state));
-    }
-    pub fn set_async_update<F, Fut>(&self, f: F)
-    where
-        F: Fn(&str) -> Fut + 'static,
-        Fut: Future<Output = ()> + 'static,
-    {
-        let boxed_fn: Box<dyn Fn(&str) -> Pin<Box<dyn Future<Output = ()>>>> =
-            Box::new(move |s| Box::pin(f(s)));
-        self.imp().async_content_update.replace(Some(boxed_fn));
     }
     pub fn set_signal_id(&self, signal: SignalHandlerId) {
         // Take the previous signal if it exists and disconnect it
@@ -89,27 +45,11 @@ impl SherlockRow {
             self.disconnect(old);
         }
     }
-    pub fn set_keyword_aware(&self, state: bool) {
-        self.imp().keyword_aware.set(state);
-    }
     pub fn set_actions(&self, actions: Vec<ApplicationAction>) {
         self.imp().num_actions.set(actions.len());
         *self.imp().actions.borrow_mut() = actions;
     }
-    pub fn set_terminal(&self, term: bool) {
-        self.imp().terminal.set(term);
-    }
-    pub fn set_binds(&self, binds: Vec<SherlockRowBind>) {
-        self.imp().binds.replace(binds);
-    }
 
-    // getters
-    pub fn shortcut_holder(&self) -> Option<gtk4::Box> {
-        self.imp()
-            .shortcut_holder
-            .get()
-            .and_then(|inner| inner.as_ref().and_then(|inner2| inner2.upgrade()))
-    }
     pub fn active(&self) -> bool {
         self.imp().active.get()
     }
