@@ -215,8 +215,8 @@ pub fn window(
                 let (emoji_stack, _emoji_model) = match emojies(&current_stack_page) {
                     Ok(r) => r,
                     Err(e) => {
-                        println!("{:?}", e);
-                        return;
+                        let _ = e.insert(false);
+                        return
                     }
                 };
                 if let Some(stack) = stack_clone.upgrade() {
