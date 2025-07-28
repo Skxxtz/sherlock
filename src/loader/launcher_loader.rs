@@ -305,7 +305,8 @@ fn parse_clipboard_launcher(raw: &RawLauncher) -> Result<LauncherType, SherlockE
                 .find(|c| c.starts_with("calc."))
                 .is_some()
         {
-            is_empty = CalcTileHandler::based_show(&clipboard_content, &capabilities);
+            let handler = CalcTileHandler::default();
+            is_empty = handler.based_show(&clipboard_content, &capabilities);
         }
 
         if !is_empty {
@@ -402,8 +403,10 @@ fn parse_event_launcher(raw: &RawLauncher) -> LauncherType {
         .get("event_end")
         .and_then(Value::as_str)
         .unwrap_or("+15 minutes");
-    let event = EventLauncher::get_event(date, event_start, event_end);
-    LauncherType::Event(EventLauncher { event, icon })
+    match EventLauncher::get_event(date, event_start, event_end) {
+        Some(event) => LauncherType::Event(EventLauncher { event, icon }),
+        _ => LauncherType::Empty
+    }
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_theme_launcher(raw: &RawLauncher) -> LauncherType {

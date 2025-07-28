@@ -157,7 +157,8 @@ impl TileItem {
             UpdateHandler::Calculator(_) => {
                 let launcher = self.imp().launcher.borrow();
                 if let LauncherType::Calc(clc) = &launcher.launcher_type {
-                    CalcTileHandler::based_show(keyword, &clc.capabilities)
+                    let handler = CalcTileHandler::default();
+                    handler.based_show(keyword, &clc.capabilities)
                 } else {
                     false
                 }

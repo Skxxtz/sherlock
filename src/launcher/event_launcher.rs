@@ -20,7 +20,7 @@ pub struct TeamsEvent {
 
 #[derive(Clone, Debug)]
 pub struct EventLauncher {
-    pub event: Option<TeamsEvent>,
+    pub event: TeamsEvent,
     pub icon: String,
 }
 

@@ -211,7 +211,7 @@ impl Tile {
         {
             let tile = CalcTile::new();
             let handler = CalcTileHandler::new(&tile, launcher);
-            if CalcTileHandler::based_show(&clipboard_content, &capabilities) {
+            if handler.based_show(&clipboard_content, &capabilities) {
                 handler.update(&clipboard_content);
                 return Some((tile.upcast::<Widget>(), UpdateHandler::Calculator(handler)));
             }

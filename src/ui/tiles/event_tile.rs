@@ -11,7 +11,7 @@ use crate::launcher::Launcher;
 
 impl Tile {
     pub fn event(event_launcher: &EventLauncher) -> Option<EventTile> {
-        let event = event_launcher.event.clone()?;
+        let event = event_launcher.event.clone();
         let tile = EventTile::new();
         let imp = tile.imp();
 
@@ -32,10 +32,10 @@ pub struct EventTileHandler {
 }
 impl EventTileHandler {
     pub fn new(tile: &EventTile, launcher: Rc<Launcher>, event: &EventLauncher) -> Self {
-        let meeting_url = event.event.as_ref().map(|e| e.meeting_url.as_str());
+        let meeting_url = event.event.meeting_url.as_str();
         let attrs = get_attrs_map(vec![
             ("method", Some(&launcher.method)),
-            ("meeting_url", meeting_url),
+            ("meeting_url", Some(meeting_url)),
             ("next_content", launcher.next_content.as_deref()),
             ("exit", Some(&launcher.exit.to_string())),
         ]);
