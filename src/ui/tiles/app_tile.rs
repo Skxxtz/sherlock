@@ -38,10 +38,14 @@ pub struct AppTileHandler {
     attrs: Rc<RefCell<HashMap<String, String>>>,
 }
 impl AppTileHandler {
-    pub fn new(tile: &AppTile) -> Self {
+    pub fn new(launcher: Rc<Launcher>) -> Self {
+        let attrs = get_attrs_map(vec![
+            ("method", Some(&launcher.method)),
+            ("exit", Some(&launcher.exit.to_string())),
+        ]);
         Self {
-            tile: tile.downgrade(),
-            attrs: Rc::new(RefCell::new(HashMap::new())),
+            tile: WeakRef::new(),
+            attrs: Rc::new(RefCell::new(attrs)),
         }
     }
     pub fn update(&self, keyword: &str, launcher: Rc<Launcher>, value: &AppData) -> Option<()> {
@@ -49,16 +53,20 @@ impl AppTileHandler {
         let tag_start_content = launcher.tag_start.clone();
         let tag_end_content = launcher.tag_end.clone();
 
-        let launcher = Rc::clone(&launcher);
-        if self.attrs.borrow().is_empty() {
-            let attrs = get_attrs_map(vec![
-                ("method", Some(&launcher.method)),
-                ("exec", value.exec.as_deref()),
-                ("term", Some(&value.terminal.to_string())),
-                ("exit", Some(&launcher.exit.to_string())),
-            ]);
-            *self.attrs.borrow_mut() = attrs;
+        {
+            let mut attrs = self.attrs.borrow_mut();
+            if let Some(exec) = &value.exec {
+                attrs
+                    .entry("exec".to_string())
+                    .and_modify(|val| *val = exec.to_string())
+                    .or_insert_with(|| exec.to_string());
+            }
+            attrs
+                .entry("term".to_string())
+                .and_modify(|val| *val = value.terminal.to_string())
+                .or_insert_with(|| value.terminal.to_string());
         }
+
         let name = value.name.clone();
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
@@ -110,7 +118,7 @@ impl AppTileHandler {
 }
 impl TileHandler for AppTileHandler {
     fn replace_tile(&mut self, tile: &Widget) {
-        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+        if let Some(tile) = tile.downcast_ref::<AppTile>() {
             self.tile = tile.downgrade()
         }
     }

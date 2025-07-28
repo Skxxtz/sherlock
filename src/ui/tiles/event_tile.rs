@@ -32,7 +32,7 @@ pub struct EventTileHandler {
     attrs: Rc<RefCell<HashMap<String, String>>>,
 }
 impl EventTileHandler {
-    pub fn new(tile: &EventTile, launcher: Rc<Launcher>, event: &EventLauncher) -> Self {
+    pub fn new(launcher: Rc<Launcher>, event: &EventLauncher) -> Self {
         let meeting_url = event.event.meeting_url.as_str();
         let attrs = get_attrs_map(vec![
             ("method", Some(&launcher.method)),
@@ -42,7 +42,7 @@ impl EventTileHandler {
         ]);
 
         Self {
-            tile: tile.downgrade(),
+            tile: WeakRef::new(),
             attrs: Rc::new(RefCell::new(attrs)),
         }
     }
@@ -72,9 +72,9 @@ impl EventTileHandler {
 }
 impl TileHandler for EventTileHandler {
     fn replace_tile(&mut self, tile: &Widget) {
-        if let Some(tile) = tile.downcast_ref::<EventTile>(){
+        if let Some(tile) = tile.downcast_ref::<EventTile>() {
             self.tile = tile.downgrade()
-        } 
+        }
     }
 }
 mod imp {

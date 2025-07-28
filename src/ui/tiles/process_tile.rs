@@ -118,7 +118,7 @@ impl ProcTileHandler {
 }
 impl TileHandler for ProcTileHandler {
     fn replace_tile(&mut self, tile: &gtk4::Widget) {
-        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+        if let Some(tile) = tile.downcast_ref::<AppTile>() {
             self.tile = tile.downgrade();
         }
     }

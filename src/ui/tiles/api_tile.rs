@@ -99,13 +99,13 @@ pub struct ApiTileHandler {
     attrs: Rc<RefCell<HashMap<String, String>>>,
 }
 impl ApiTileHandler {
-    pub fn new(tile: &ApiTile, launcher: Rc<Launcher>) -> Self {
+    pub fn new(launcher: Rc<Launcher>) -> Self {
         let attrs = get_attrs_map(vec![
             ("method", Some(&launcher.method)),
             ("exit", Some(&launcher.exit.to_string())),
         ]);
         Self {
-            tile: tile.downgrade(),
+            tile: WeakRef::new(),
             attrs: Rc::new(RefCell::new(attrs)),
         }
     }
@@ -173,7 +173,7 @@ impl ApiTileHandler {
 }
 impl TileHandler for ApiTileHandler {
     fn replace_tile(&mut self, tile: &Widget) {
-        if let Some(tile) = tile.downcast_ref::<ApiTile>(){
+        if let Some(tile) = tile.downcast_ref::<ApiTile>() {
             self.tile = tile.downgrade()
         }
     }

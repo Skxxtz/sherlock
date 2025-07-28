@@ -30,7 +30,11 @@ use crate::{
         util::{AppData, ApplicationAction, RawLauncher},
     },
     ui::tiles::{
-        api_tile::ApiTileHandler, app_tile::AppTileHandler, calc_tile::CalcTileHandler, clipboard_tile::ClipboardHandler, event_tile::EventTileHandler, mpris_tile::MusicTileHandler, pipe_tile::PipeTileHandler, pomodoro_tile::PomodoroTileHandler, weather_tile::WeatherTileHandler, web_tile::WebTileHandler
+        api_tile::ApiTileHandler, app_tile::AppTileHandler, calc_tile::CalcTileHandler,
+        clipboard_tile::ClipboardHandler, event_tile::EventTileHandler,
+        mpris_tile::MusicTileHandler, pipe_tile::PipeTileHandler,
+        pomodoro_tile::PomodoroTileHandler, weather_tile::WeatherTileHandler,
+        web_tile::WebTileHandler,
     },
 };
 
@@ -223,7 +227,7 @@ impl Launcher {
             _ => vec![],
         }
     }
-    fn base_setup(&self, launcher: Rc<Launcher>) -> TileItem{
+    fn base_setup(&self, launcher: Rc<Launcher>) -> TileItem {
         let handler = match &self.launcher_type {
             LauncherType::App(_)
             | LauncherType::Bookmark(_)
@@ -233,36 +237,28 @@ impl Launcher {
             | LauncherType::File(_)
             | LauncherType::Process(_)
             | LauncherType::Theme(_) => {
-                UpdateHandler::AppTile(AppTileHandler::default())
+                UpdateHandler::AppTile(AppTileHandler::new(launcher.clone()))
             }
-            LauncherType::Api(_) => {
-                UpdateHandler::ApiTile(ApiTileHandler::default())
-            }
+            LauncherType::Api(_) => UpdateHandler::ApiTile(ApiTileHandler::new(launcher.clone())),
             LauncherType::Calc(_) => {
-                UpdateHandler::Calculator(CalcTileHandler::default())
+                UpdateHandler::Calculator(CalcTileHandler::new(launcher.clone()))
             }
-            LauncherType::Clipboard(_) => {
-                UpdateHandler::Clipboard(ClipboardHandler::default())
-            }
-            LauncherType::Event(_) => {
-                UpdateHandler::Event(EventTileHandler::default())
+            LauncherType::Clipboard(_) => UpdateHandler::Clipboard(ClipboardHandler::default()),
+            LauncherType::Event(evt) => {
+                UpdateHandler::Event(EventTileHandler::new(launcher.clone(), evt))
             }
             LauncherType::MusicPlayer(mpris) => {
                 UpdateHandler::MusicPlayer(MusicTileHandler::new(mpris, launcher.clone()))
             }
-            LauncherType::Pomodoro(pmd) => {
-                UpdateHandler::Pomodoro(PomodoroTileHandler::new(pmd))
-            }
-            LauncherType::Pipe(_) => {
-                UpdateHandler::Pipe(PipeTileHandler::default())
+            LauncherType::Pomodoro(pmd) => UpdateHandler::Pomodoro(PomodoroTileHandler::new(pmd)),
+            LauncherType::Pipe(pipe) => {
+                UpdateHandler::Pipe(PipeTileHandler::new(launcher.clone(), pipe))
             }
             LauncherType::Weather(_) => {
-                UpdateHandler::Weather(WeatherTileHandler::default())
+                UpdateHandler::Weather(WeatherTileHandler::new(launcher.clone()))
             }
-            LauncherType::Web(_) => {
-                UpdateHandler::WebTile(WebTileHandler::default())
-            }
-            LauncherType::Empty => UpdateHandler::Default
+            LauncherType::Web(_) => UpdateHandler::WebTile(WebTileHandler::default()),
+            LauncherType::Empty => UpdateHandler::Default,
         };
 
         let base = TileItem::new();

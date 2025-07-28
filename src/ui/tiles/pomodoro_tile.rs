@@ -1,8 +1,14 @@
 use crate::{
-    actions::commandlaunch::command_launch, daemon::daemon::SizedMessage, g_subclasses::sherlock_row::SherlockRow, launcher::{
+    actions::commandlaunch::command_launch,
+    daemon::daemon::SizedMessage,
+    g_subclasses::sherlock_row::SherlockRow,
+    launcher::{
         pomodoro_launcher::{Pomodoro, PomodoroStyle},
         Launcher,
-    }, prelude::TileHandler, sherlock_error, utils::errors::{SherlockError, SherlockErrorType}
+    },
+    prelude::TileHandler,
+    sherlock_error,
+    utils::errors::{SherlockError, SherlockErrorType},
 };
 use std::os::unix::net::UnixStream;
 use std::{
@@ -357,7 +363,10 @@ mod imp {
 use gdk_pixbuf::{
     prelude::PixbufAnimationExtManual, subclass::prelude::ObjectSubclassIsExt, Pixbuf,
 };
-use gio::glib::{object::{Cast, ObjectExt}, SourceId, WeakRef};
+use gio::glib::{
+    object::{Cast, ObjectExt},
+    SourceId, WeakRef,
+};
 use gtk4::{gdk::Texture, glib, prelude::WidgetExt, Box, Label, Picture, Widget};
 use serde::Deserialize;
 
@@ -442,7 +451,7 @@ impl PomodoroTileHandler {
 }
 impl TileHandler for PomodoroTileHandler {
     fn replace_tile(&mut self, tile: &Widget) {
-        if let Some(tile) = tile.downcast_ref::<TimerTile>(){
+        if let Some(tile) = tile.downcast_ref::<TimerTile>() {
             let imp = tile.imp();
             let remaining = imp.remaining_label.downgrade();
             let anim = imp.animation.downgrade();
@@ -452,6 +461,6 @@ impl TileHandler for PomodoroTileHandler {
                 api.update_ui();
             }
             self.tile = tile.downgrade()
-        } 
+        }
     }
 }

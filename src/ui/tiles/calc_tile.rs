@@ -2,10 +2,14 @@ use super::Tile;
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
     g_subclasses::sherlock_row::SherlockRow,
-    launcher::{calc_launcher::Calculator, Launcher}, prelude::TileHandler,
+    launcher::{calc_launcher::Calculator, Launcher},
+    prelude::TileHandler,
 };
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::{Cast, ObjectExt}, WeakRef};
+use gio::glib::{
+    object::{Cast, ObjectExt},
+    WeakRef,
+};
 use gtk4::{prelude::WidgetExt, Widget};
 use meval::eval_str;
 use std::{
@@ -77,13 +81,13 @@ pub struct CalcTileHandler {
     pub result: RefCell<Option<(String, String)>>,
 }
 impl CalcTileHandler {
-    pub fn new(tile: &CalcTile, launcher: Rc<Launcher>) -> Self {
+    pub fn new(launcher: Rc<Launcher>) -> Self {
         let attrs = get_attrs_map(vec![
             ("method", Some(&launcher.method)),
             ("exit", Some(&launcher.exit.to_string())),
         ]);
         Self {
-            tile: tile.downgrade(),
+            tile: WeakRef::new(),
             attrs: Rc::new(RefCell::new(attrs)),
             result: RefCell::new(None),
         }
@@ -172,7 +176,7 @@ impl CalcTileHandler {
 }
 impl TileHandler for CalcTileHandler {
     fn replace_tile(&mut self, tile: &Widget) {
-        if let Some(tile) = tile.downcast_ref::<CalcTile>(){
+        if let Some(tile) = tile.downcast_ref::<CalcTile>() {
             self.tile = tile.downgrade()
         }
     }

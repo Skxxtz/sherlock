@@ -79,13 +79,13 @@ pub struct WeatherTileHandler {
     attrs: Rc<RefCell<HashMap<String, String>>>,
 }
 impl WeatherTileHandler {
-    pub fn new(tile: &WeatherTile, launcher: Rc<Launcher>) -> Self {
+    pub fn new(launcher: Rc<Launcher>) -> Self {
         let attrs: HashMap<String, String> = vec![("method", &launcher.method)]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect();
         Self {
-            tile: tile.downgrade(),
+            tile: WeakRef::new(),
             attrs: Rc::new(RefCell::new(attrs)),
         }
     }
@@ -133,7 +133,7 @@ impl WeatherTileHandler {
 }
 impl TileHandler for WeatherTileHandler {
     fn replace_tile(&mut self, tile: &gtk4::Widget) {
-        if let Some(tile) = tile.downcast_ref::<WeatherTile>(){
+        if let Some(tile) = tile.downcast_ref::<WeatherTile>() {
             self.tile = tile.downgrade();
         }
     }

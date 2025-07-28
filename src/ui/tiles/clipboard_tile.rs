@@ -210,7 +210,7 @@ impl Tile {
             .is_some()
         {
             let tile = CalcTile::new();
-            let handler = CalcTileHandler::new(&tile, launcher);
+            let handler = CalcTileHandler::new(launcher);
             if handler.based_show(&clipboard_content, &capabilities) {
                 handler.update(&clipboard_content);
                 return Some((tile.upcast::<Widget>(), UpdateHandler::Calculator(handler)));
@@ -300,8 +300,8 @@ impl Default for ClipboardHandler {
 }
 impl TileHandler for ClipboardHandler {
     fn replace_tile(&mut self, tile: &Widget) {
-        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+        if let Some(tile) = tile.downcast_ref::<AppTile>() {
             self.tile = tile.downgrade()
-        } 
+        }
     }
 }

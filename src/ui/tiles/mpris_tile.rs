@@ -178,8 +178,8 @@ impl MusicTileHandler {
 }
 impl TileHandler for MusicTileHandler {
     fn replace_tile(&mut self, tile: &Widget) {
-        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+        if let Some(tile) = tile.downcast_ref::<AppTile>() {
             self.tile = tile.downgrade()
-        } 
+        }
     }
 }

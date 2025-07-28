@@ -87,7 +87,7 @@ pub struct PipeTileHandler {
     attrs: Rc<RefCell<HashMap<String, String>>>,
 }
 impl PipeTileHandler {
-    pub fn new(tile: &AppTile, launcher: Rc<Launcher>, pipe: &PipeLauncher) -> Self {
+    pub fn new(launcher: Rc<Launcher>, pipe: &PipeLauncher) -> Self {
         let method = launcher.method.as_ref();
         let result = pipe.result.as_deref().or(launcher.name.as_deref());
         let exit = launcher.exit.to_string();
@@ -105,7 +105,7 @@ impl PipeTileHandler {
         ]);
         let attrs = get_attrs_map(constructor);
         Self {
-            tile: tile.downgrade(),
+            tile: WeakRef::new(),
             attrs: Rc::new(RefCell::new(attrs)),
         }
     }
@@ -134,8 +134,8 @@ impl PipeTileHandler {
 }
 impl TileHandler for PipeTileHandler {
     fn replace_tile(&mut self, tile: &Widget) {
-        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+        if let Some(tile) = tile.downcast_ref::<AppTile>() {
             self.tile = tile.downgrade()
-        } 
+        }
     }
 }
