@@ -148,6 +148,7 @@ async fn main() {
         {
             let mut sherlock = sherlock.borrow_mut();
             let pipe = Loader::load_pipe_args();
+            println!("{:?}", pipe);
             let mut mode: Option<SherlockModes> = None;
             if !pipe.is_empty() {
                 if sherlock_flags.display_raw {

@@ -484,16 +484,24 @@ fn make_factory(search_text: Rc<RefCell<String>>) -> SignalListItemFactory {
         let item = item
             .downcast_ref::<gtk4::ListItem>()
             .expect("Item mut be a ListItem");
-        let row = item
+        let tile_item = item
             .item()
             .clone()
             .and_downcast::<TileItem>()
             .expect("Row should be TileItem");
-        if let Some(shortcut) = row.shortcut() {
-            shortcut.remove_shortcut();
+        let row = item
+            .child()
+            .and_downcast::<SherlockRow>()
+            .expect("Child must be a SherlockRow");
+
+        while let Some(child) = row.first_child() {
+            row.remove(&child);
         }
 
-        row.set_parent(None);
+        if let Some(shortcut) = tile_item.shortcut() {
+            shortcut.remove_shortcut();
+        }
+        tile_item.set_parent(None);
     });
     factory
 }

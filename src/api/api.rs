@@ -236,8 +236,10 @@ impl SherlockAPI {
         let elements = if let Some(elements) = PipedData::elements(&msg) {
             Some(elements)
         } else if let Some(elements) = PipedData::deserialize_pipe(&msg) {
+            println!("{:?}", elements);
             Some(elements)
         } else {
+            println!("none");
             None
         };
         if let Some(elements) = elements {

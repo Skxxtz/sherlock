@@ -142,6 +142,7 @@ impl PipedData {
 
             // Check if the chunk contains valid UTF-8
             if let Ok(line) = std::str::from_utf8(chunk) {
+                println!("{:?}", line);
                 // Treat it as a normal string (text line)
                 let mut raw_meta: Vec<&str> = line.split('\0').collect();
                 let name = raw_meta.remove(0).to_string();

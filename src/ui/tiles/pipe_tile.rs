@@ -50,7 +50,7 @@ impl Tile {
         }
         // Set texts
         if let Some(title) = &launcher.name {
-            imp.title.set_text(&title);
+            imp.title.set_text(title.trim());
         }
         if let Some(name) = &pipe.description {
             imp.category.set_text(&name);
