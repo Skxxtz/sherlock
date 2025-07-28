@@ -6,7 +6,6 @@ use gio::glib::{object::ObjectExt, WeakRef};
 use glib::Object;
 use gtk4::{glib, Box as GtkBox, Widget};
 use simd_json::prelude::Indexed;
-use std::cell::RefCell;
 use std::{rc::Rc, usize};
 
 use crate::g_subclasses::sherlock_row::SherlockRowBind;
@@ -53,9 +52,6 @@ impl TileItem {
         if let Some(actions) = actions {
             self.imp().actions.borrow_mut().extend(actions.clone());
         }
-    }
-    pub fn set_binds(&self, binds: Vec<SherlockRowBind>) {
-        self.imp().binds.replace(binds);
     }
 
     pub fn get_by_key<F, T>(&self, key: F) -> Option<T>
@@ -140,8 +136,8 @@ impl TileItem {
             _ => None,
         }
     }
-    pub fn binds(&self) -> Rc<RefCell<Vec<SherlockRowBind>>> {
-        self.imp().binds.clone()
+    pub fn binds(&self) -> Option<Vec<SherlockRowBind>> {
+        self.imp().launcher.borrow().binds.clone()
     }
     pub fn parent(&self) -> WeakRef<SherlockRow> {
         self.imp().parent.borrow().clone()

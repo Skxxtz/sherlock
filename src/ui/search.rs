@@ -920,10 +920,11 @@ impl UserBindHandler {
     }
     pub fn set_binds(
         &mut self,
-        binds: Rc<RefCell<Vec<SherlockRowBind>>>,
+        binds: Option<Vec<SherlockRowBind>>,
         widget: WeakRef<TileItem>,
     ) -> Option<SignalHandlerId> {
-        if binds.borrow().is_empty() {
+        let binds = binds?;
+        if binds.is_empty() {
             return None;
         }
         let inner = self.inner.upgrade()?;
@@ -931,7 +932,6 @@ impl UserBindHandler {
         inner.connect_key_pressed({
             move |_, key, _, mods| {
                 if let Some(bind) = binds
-                    .borrow()
                     .iter()
                     .find(|s| s.key == Some(key) && mods.contains(s.modifier))
                 {
@@ -940,7 +940,7 @@ impl UserBindHandler {
                         Some(true) => 2,
                         _ => 0,
                     };
-                    if let Some(row) = widget.upgrade() {
+                    if let Some(row) = widget.upgrade().and_then(|tile| tile.parent().upgrade()) {
                         row.emit_by_name::<()>("row-should-activate", &[&exit, &bind.callback]);
                         return true.into();
                     }
