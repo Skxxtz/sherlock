@@ -446,7 +446,11 @@ impl TileHandler for PomodoroTileHandler {
             let imp = tile.imp();
             let remaining = imp.remaining_label.downgrade();
             let anim = imp.animation.downgrade();
-            self.api.borrow_mut().replace_tile(remaining, anim);
+            {
+                let mut api = self.api.borrow_mut();
+                api.replace_tile(remaining, anim);
+                api.update_ui();
+            }
             self.tile = tile.downgrade()
         } 
     }
