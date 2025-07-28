@@ -219,7 +219,11 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             k if k.starts_with("inner.") => {
                 if let Some(callback) = k.strip_prefix("inner.") {
                     if let Some(context) = row.dynamic_cast_ref::<ContextAction>() {
-                        if let Some(row) = context.get_row().and_then(|row| row.upgrade()).and_then(|tile| tile.parent().upgrade()) {
+                        if let Some(row) = context
+                            .get_row()
+                            .and_then(|row| row.upgrade())
+                            .and_then(|tile| tile.parent().upgrade())
+                        {
                             let exit = exit as u8;
                             row.emit_by_name::<()>("row-should-activate", &[&exit, &callback]);
                         }

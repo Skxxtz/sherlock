@@ -90,7 +90,7 @@ impl TileItem {
                 Some(tile.upcast::<Widget>())
             }
             LauncherType::Clipboard(clp) => {
-                if let Some((tile, handler)) = Tile::clipboard(launcher.clone(), &clp){
+                if let Some((tile, handler)) = Tile::clipboard(launcher.clone(), &clp) {
                     self.imp().update_handler.replace(handler);
                     Some(tile)
                 } else {
@@ -374,7 +374,7 @@ impl Default for UpdateHandler {
     }
 }
 impl UpdateHandler {
-    pub fn replace_tile(&mut self, tile: &Widget){
+    pub fn replace_tile(&mut self, tile: &Widget) {
         match self {
             Self::AppTile(inner) => inner.replace_tile(tile),
             Self::ApiTile(inner) => inner.replace_tile(tile),

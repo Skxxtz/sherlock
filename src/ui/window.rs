@@ -216,7 +216,7 @@ pub fn window(
                     Ok(r) => r,
                     Err(e) => {
                         let _ = e.insert(false);
-                        return
+                        return;
                     }
                 };
                 if let Some(stack) = stack_clone.upgrade() {

@@ -405,7 +405,7 @@ fn parse_event_launcher(raw: &RawLauncher) -> LauncherType {
         .unwrap_or("+15 minutes");
     match EventLauncher::get_event(date, event_start, event_end) {
         Some(event) => LauncherType::Event(EventLauncher { event, icon }),
-        _ => LauncherType::Empty
+        _ => LauncherType::Empty,
     }
 }
 #[sherlock_macro::timing(level = "launchers")]
