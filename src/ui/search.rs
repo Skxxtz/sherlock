@@ -471,8 +471,8 @@ fn make_factory(search_text: Rc<RefCell<String>>) -> SignalListItemFactory {
             .and_downcast::<TileItem>()
             .expect("Row should be TileItem");
 
-        if let Some((patch, handler)) = tile_item.get_patch() {
-            tile_item.imp().update_handler.replace(handler);
+        if let Some(patch) = tile_item.get_patch() {
+            tile_item.replace_tile(&patch);
             tile_item.based_show(&search_text.borrow());
             tile_item.update(&search_text.borrow());
             tile_item.bind_signal(&row);

@@ -11,7 +11,7 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::g_subclasses::tile_item::UpdateHandler;
 use crate::launcher::clipboard_launcher::ClipboardLauncher;
 use crate::launcher::Launcher;
-use crate::prelude::IconComp;
+use crate::prelude::{IconComp, TileHandler};
 use crate::ui::tiles::calc_tile::{CalcTile, CalcTileHandler};
 
 use super::app_tile::AppTile;
@@ -288,5 +288,20 @@ impl ClipboardHandler {
     }
     pub fn shortcut(&self) -> Option<Box> {
         self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
+    }
+}
+impl Default for ClipboardHandler {
+    fn default() -> Self {
+        Self {
+            tile: WeakRef::new(),
+            attrs: Rc::new(RefCell::new(HashMap::new())),
+        }
+    }
+}
+impl TileHandler for ClipboardHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+            self.tile = tile.downgrade()
+        } 
     }
 }

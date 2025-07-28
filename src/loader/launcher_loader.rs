@@ -195,7 +195,7 @@ fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_bulk_text_launcher(raw: &RawLauncher) -> LauncherType {
-    LauncherType::BulkText(BulkTextLauncher {
+    LauncherType::Api(BulkTextLauncher {
         icon: raw
             .args
             .get("icon")

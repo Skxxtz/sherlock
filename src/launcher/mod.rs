@@ -30,10 +30,7 @@ use crate::{
         util::{AppData, ApplicationAction, RawLauncher},
     },
     ui::tiles::{
-        api_tile::ApiTileHandler, app_tile::AppTileHandler, calc_tile::CalcTileHandler,
-        event_tile::EventTileHandler, mpris_tile::MusicTileHandler, pipe_tile::PipeTileHandler,
-        pomodoro_tile::PomodoroTileHandler, process_tile::ProcTileHandler,
-        weather_tile::WeatherTileHandler, web_tile::WebTileHandler, Tile,
+        api_tile::ApiTileHandler, app_tile::AppTileHandler, calc_tile::CalcTileHandler, clipboard_tile::ClipboardHandler, event_tile::EventTileHandler, mpris_tile::MusicTileHandler, pipe_tile::PipeTileHandler, pomodoro_tile::PomodoroTileHandler, weather_tile::WeatherTileHandler, web_tile::WebTileHandler
     },
 };
 
@@ -48,8 +45,7 @@ use emoji_picker::EmojiPicker;
 use event_launcher::EventLauncher;
 use file_launcher::FileLauncher;
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::Cast, property::PropertySet};
-use gtk4::Widget;
+use gio::glib::property::PropertySet;
 use pomodoro_launcher::Pomodoro;
 use process_launcher::ProcessLauncher;
 use simd_json::prelude::ArrayTrait;
@@ -63,7 +59,7 @@ use web_launcher::WebLauncher;
 pub enum LauncherType {
     App(AppLauncher),
     Bookmark(BookmarkLauncher),
-    BulkText(BulkTextLauncher),
+    Api(BulkTextLauncher),
     Calc(CalculatorLauncher),
     Category(CategoryLauncher),
     Clipboard(ClipboardLauncher),
@@ -206,49 +202,76 @@ impl Launcher {
                     .iter()
                     .enumerate()
                     .map(|(i, _app)| {
-                        let base = TileItem::new();
+                        let base = self.base_setup(launcher.clone());
                         base.set_index(i);
-                        base.set_launcher(launcher.clone());
 
                         base
                     })
                     .collect()
             }
-            LauncherType::BulkText(_) => {
-                let base = TileItem::new();
-                base.set_launcher(launcher.clone());
-                vec![base]
-            }
-            LauncherType::Calc(_) => {
-                let base = TileItem::new();
-                base.set_launcher(launcher.clone());
-                let handler = CalcTileHandler::default();
-                base.imp()
-                    .update_handler
-                    .set(UpdateHandler::Calculator(handler));
-                vec![base]
-            }
-            LauncherType::Web(_) => {
-                let base = TileItem::new();
-                base.set_launcher(launcher.clone());
-                let handler = WebTileHandler::default();
-                base.imp()
-                    .update_handler
-                    .set(UpdateHandler::WebTile(handler));
-                vec![base]
-            }
-            LauncherType::Clipboard(_)
+            LauncherType::Api(_)
+            | LauncherType::Calc(_)
+            | LauncherType::Clipboard(_)
             | LauncherType::Event(_)
+            | LauncherType::Web(_)
             | LauncherType::Weather(_)
             | LauncherType::MusicPlayer(_)
             | LauncherType::Pomodoro(_) => {
-                let base = TileItem::new();
-                base.set_launcher(launcher.clone());
+                let base = self.base_setup(launcher);
                 vec![base]
             }
             _ => vec![],
         }
     }
+    fn base_setup(&self, launcher: Rc<Launcher>) -> TileItem{
+        let handler = match &self.launcher_type {
+            LauncherType::App(_)
+            | LauncherType::Bookmark(_)
+            | LauncherType::Category(_)
+            | LauncherType::Command(_)
+            | LauncherType::Emoji(_)
+            | LauncherType::File(_)
+            | LauncherType::Process(_)
+            | LauncherType::Theme(_) => {
+                UpdateHandler::AppTile(AppTileHandler::default())
+            }
+            LauncherType::Api(_) => {
+                UpdateHandler::ApiTile(ApiTileHandler::default())
+            }
+            LauncherType::Calc(_) => {
+                UpdateHandler::Calculator(CalcTileHandler::default())
+            }
+            LauncherType::Clipboard(_) => {
+                UpdateHandler::Clipboard(ClipboardHandler::default())
+            }
+            LauncherType::Event(_) => {
+                UpdateHandler::Event(EventTileHandler::default())
+            }
+            LauncherType::MusicPlayer(mpris) => {
+                UpdateHandler::MusicPlayer(MusicTileHandler::new(mpris, launcher.clone()))
+            }
+            LauncherType::Pomodoro(pmd) => {
+                UpdateHandler::Pomodoro(PomodoroTileHandler::new(pmd))
+            }
+            LauncherType::Pipe(_) => {
+                UpdateHandler::Pipe(PipeTileHandler::default())
+            }
+            LauncherType::Weather(_) => {
+                UpdateHandler::Weather(WeatherTileHandler::default())
+            }
+            LauncherType::Web(_) => {
+                UpdateHandler::WebTile(WebTileHandler::default())
+            }
+            LauncherType::Empty => UpdateHandler::Default
+        };
+
+        let base = TileItem::new();
+        base.set_launcher(launcher);
+
+        base.imp().update_handler.set(handler);
+        base
+    }
+
     pub fn inner(&self) -> Option<&Vec<AppData>> {
         match &self.launcher_type {
             LauncherType::App(app) => Some(&app.apps),
@@ -259,86 +282,6 @@ impl Launcher {
             LauncherType::File(f) => Some(&f.data),
             LauncherType::Theme(thm) => Some(&thm.themes),
             LauncherType::Process(proc) => Some(&proc.processes),
-            _ => None,
-        }
-    }
-    pub fn get_tile(
-        &self,
-        index: Option<u16>,
-        launcher: Rc<Launcher>,
-        item: &TileItem,
-    ) -> Option<(Widget, UpdateHandler)> {
-        match &self.launcher_type {
-            // App Tile Based
-            LauncherType::App(_)
-            | LauncherType::Bookmark(_)
-            | LauncherType::Category(_)
-            | LauncherType::Command(_)
-            | LauncherType::Emoji(_)
-            | LauncherType::File(_)
-            | LauncherType::Theme(_) => {
-                // Get app data value
-                let inner = self.inner()?;
-                let value = inner.get(index? as usize)?;
-                let tile = Tile::app(value, launcher, item);
-                let update = UpdateHandler::AppTile(AppTileHandler::new(&tile));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::BulkText(api) => {
-                let tile = Tile::api(launcher.clone(), api);
-                let update = UpdateHandler::ApiTile(ApiTileHandler::new(&tile, launcher));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::Clipboard(clp) => Tile::clipboard(launcher, &clp),
-            LauncherType::Calc(_) => {
-                let tile = Tile::calculator();
-                let update = UpdateHandler::Calculator(CalcTileHandler::new(&tile, launcher));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::Event(evt) => {
-                let tile = Tile::event(evt)?;
-                let update = UpdateHandler::Event(EventTileHandler::new(&tile, launcher, evt));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::MusicPlayer(mpris) => {
-                let tile = Tile::mpris_tile();
-                let update = UpdateHandler::MusicPlayer(MusicTileHandler::new(
-                    &tile,
-                    mpris,
-                    launcher.clone(),
-                ));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::Pipe(pipe) => {
-                let tile = Tile::pipe(launcher.clone(), pipe)?;
-                let update = UpdateHandler::Pipe(PipeTileHandler::new(&tile, launcher, pipe));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::Pomodoro(pmd) => {
-                let tile = Tile::pomodoro(launcher);
-                let update = UpdateHandler::Pomodoro(PomodoroTileHandler::new(&tile, &pmd));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::Process(_) => {
-                // Get app data value
-                let inner = self.inner()?;
-                let value = inner.get(index? as usize)?;
-                let tile = Tile::process(value, launcher, item);
-                let update = UpdateHandler::Process(ProcTileHandler::new(&tile));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::Weather(_) => {
-                let tile = Tile::weather();
-                let update =
-                    UpdateHandler::Weather(WeatherTileHandler::new(&tile, launcher.clone()));
-                Some((tile.upcast::<Widget>(), update))
-            }
-            LauncherType::Web(web) => {
-                let tile = Tile::web(launcher, &web);
-                let update = UpdateHandler::WebTile(WebTileHandler::new(&tile));
-                Some((tile.upcast::<Widget>(), update))
-            }
-
             _ => None,
         }
     }
@@ -371,7 +314,7 @@ impl Launcher {
 
             // None-Home Launchers
             LauncherType::Calc(_) => None,
-            LauncherType::BulkText(_) => None,
+            LauncherType::Api(_) => None,
             LauncherType::Clipboard(_) => None,
             LauncherType::Event(_) => None,
             _ => None,
@@ -379,7 +322,7 @@ impl Launcher {
     }
     pub async fn get_result(&self, keyword: &str) -> Option<AsyncCommandResponse> {
         match &self.launcher_type {
-            LauncherType::BulkText(bulk_text) => bulk_text.get_result(keyword).await,
+            LauncherType::Api(bulk_text) => bulk_text.get_result(keyword).await,
             _ => None,
         }
     }

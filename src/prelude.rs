@@ -13,7 +13,7 @@ use gio::{
 };
 use gtk4::{
     prelude::WidgetExt, Box as GtkBox, GridView, Image, Label, ListScrollFlags, ListView,
-    SingleSelection, Stack, StackPage,
+    SingleSelection, Stack, StackPage, Widget,
 };
 
 use crate::{
@@ -430,4 +430,8 @@ impl StackHelpers for Stack {
             .collect();
         pages
     }
+}
+
+pub trait TileHandler {
+    fn replace_tile(&mut self, tile: &Widget);
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::object::ObjectExt;
+use gio::glib::object::{Cast, ObjectExt};
 use gio::glib::WeakRef;
 use gtk4::prelude::WidgetExt;
 use gtk4::Box;
@@ -14,7 +14,7 @@ use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::web_launcher::WebLauncher;
 use crate::launcher::Launcher;
-use crate::prelude::IconComp;
+use crate::prelude::{IconComp, TileHandler};
 use crate::ui::tiles::app_tile::AppTile;
 
 impl Tile {
@@ -103,6 +103,13 @@ impl Default for WebTileHandler {
         Self {
             attrs: Rc::new(RefCell::new(HashMap::new())),
             tile: WeakRef::new(),
+        }
+    }
+}
+impl TileHandler for WebTileHandler {
+    fn replace_tile(&mut self, tile: &gtk4::Widget) {
+        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+            self.tile = tile.downgrade();
         }
     }
 }

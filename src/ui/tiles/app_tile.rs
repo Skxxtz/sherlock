@@ -1,6 +1,6 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::WeakRef;
-use gtk4::{prelude::*, Box};
+use gtk4::{prelude::*, Box, Widget};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -10,7 +10,7 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::g_subclasses::tile_item::TileItem;
 use crate::launcher::Launcher;
 use crate::loader::util::AppData;
-use crate::prelude::IconComp;
+use crate::prelude::{IconComp, TileHandler};
 use crate::utils::config::ConfigGuard;
 
 use super::util::update_tag;
@@ -106,6 +106,13 @@ impl AppTileHandler {
     }
     pub fn shortcut(&self) -> Option<Box> {
         self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
+    }
+}
+impl TileHandler for AppTileHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+            self.tile = tile.downgrade()
+        }
     }
 }
 

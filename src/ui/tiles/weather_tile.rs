@@ -9,6 +9,7 @@ use super::Tile;
 use crate::actions::execute_from_attrs;
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::Launcher;
+use crate::prelude::TileHandler;
 
 impl Tile {
     pub fn weather() -> WeatherTile {
@@ -72,7 +73,7 @@ impl WeatherTile {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct WeatherTileHandler {
     tile: WeakRef<WeatherTile>,
     attrs: Rc<RefCell<HashMap<String, String>>>,
@@ -128,5 +129,12 @@ impl WeatherTileHandler {
             None
         });
         row.set_signal_id(signal_id);
+    }
+}
+impl TileHandler for WeatherTileHandler {
+    fn replace_tile(&mut self, tile: &gtk4::Widget) {
+        if let Some(tile) = tile.downcast_ref::<WeatherTile>(){
+            self.tile = tile.downgrade();
+        }
     }
 }

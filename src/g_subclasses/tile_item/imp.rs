@@ -18,7 +18,7 @@ pub struct TileItem {
     pub index: Cell<Option<u16>>,
     pub parent: RefCell<WeakRef<SherlockRow>>,
 
-    pub update_handler: RefCell<UpdateHandler>,
+    pub update_handler: Rc<RefCell<UpdateHandler>>,
 
     // Customs
     pub actions: RefCell<Vec<ApplicationAction>>,

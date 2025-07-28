@@ -11,7 +11,7 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::g_subclasses::tile_item::TileItem;
 use crate::launcher::Launcher;
 use crate::loader::util::AppData;
-use crate::prelude::IconComp;
+use crate::prelude::{IconComp, TileHandler};
 use crate::ui::tiles::util::update_tag;
 
 use super::app_tile::AppTile;
@@ -114,5 +114,12 @@ impl ProcTileHandler {
     }
     pub fn shortcut(&self) -> Option<Box> {
         self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
+    }
+}
+impl TileHandler for ProcTileHandler {
+    fn replace_tile(&mut self, tile: &gtk4::Widget) {
+        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+            self.tile = tile.downgrade();
+        }
     }
 }

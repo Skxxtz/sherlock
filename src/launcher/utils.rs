@@ -3,7 +3,7 @@ use serde::Serialize;
 use zbus::zvariant::DeserializeDict;
 use zbus::zvariant::Type;
 
-#[derive(DeserializeDict, Type, Debug, Clone)]
+#[derive(DeserializeDict, Type, Debug, Clone, Default)]
 #[zvariant(signature = "a{sv}")]
 #[allow(unused)]
 pub struct MprisData {
@@ -13,7 +13,7 @@ pub struct MprisData {
     #[zvariant(rename = "Metadata")]
     pub metadata: MetaData,
 }
-#[derive(DeserializeDict, Type, Debug, Clone)]
+#[derive(DeserializeDict, Type, Debug, Clone, Default)]
 #[zvariant(signature = "a{sv}")]
 #[allow(unused)]
 pub struct MetaData {

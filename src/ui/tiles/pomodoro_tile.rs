@@ -1,13 +1,8 @@
 use crate::{
-    actions::commandlaunch::command_launch,
-    daemon::daemon::SizedMessage,
-    g_subclasses::sherlock_row::SherlockRow,
-    launcher::{
+    actions::commandlaunch::command_launch, daemon::daemon::SizedMessage, g_subclasses::sherlock_row::SherlockRow, launcher::{
         pomodoro_launcher::{Pomodoro, PomodoroStyle},
         Launcher,
-    },
-    sherlock_error,
-    utils::errors::{SherlockError, SherlockErrorType},
+    }, prelude::TileHandler, sherlock_error, utils::errors::{SherlockError, SherlockErrorType}
 };
 use std::os::unix::net::UnixStream;
 use std::{
@@ -34,7 +29,7 @@ impl Tile {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct PomodoroInterface {
     socket: PathBuf,
     exec: PathBuf,
@@ -43,6 +38,7 @@ struct PomodoroInterface {
     handle: Option<SourceId>,
     running: Rc<Cell<bool>>,
     frames: Rc<Option<Vec<Pixbuf>>>,
+    style: PomodoroStyle,
 }
 impl PomodoroInterface {
     fn new(pomodoro: &Pomodoro, label: WeakRef<Label>, anim: WeakRef<Picture>) -> Self {
@@ -54,6 +50,7 @@ impl PomodoroInterface {
             handle: None,
             running: Rc::new(Cell::new(false)),
             frames: Rc::new(Self::get_animation(pomodoro.style.clone())),
+            style: pomodoro.style.clone(),
         };
 
         match pomodoro.style {
@@ -80,6 +77,19 @@ impl PomodoroInterface {
             }
         }
         instance
+    }
+    fn replace_tile(&mut self, remaining: WeakRef<Label>, anim: WeakRef<Picture>) {
+        self.animation = anim;
+        self.update_field = remaining;
+        match self.style {
+            PomodoroStyle::Minimal => {
+                if let Some(label) = self.update_field.upgrade() {
+                    label.set_halign(gtk4::Align::Start);
+                    label.set_width_chars(0);
+                }
+            }
+            _ => {}
+        }
     }
     fn send_message(&self, message: &str) -> Result<(), SherlockError> {
         let mut stream = UnixStream::connect(&self.socket).map_err(|e| {
@@ -347,8 +357,8 @@ mod imp {
 use gdk_pixbuf::{
     prelude::PixbufAnimationExtManual, subclass::prelude::ObjectSubclassIsExt, Pixbuf,
 };
-use gio::glib::{object::ObjectExt, SourceId, WeakRef};
-use gtk4::{gdk::Texture, glib, prelude::WidgetExt, Box, Label, Picture};
+use gio::glib::{object::{Cast, ObjectExt}, SourceId, WeakRef};
+use gtk4::{gdk::Texture, glib, prelude::WidgetExt, Box, Label, Picture, Widget};
 use serde::Deserialize;
 
 glib::wrapper! {
@@ -375,23 +385,22 @@ impl TimerTile {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PomodoroTileHandler {
     tile: WeakRef<TimerTile>,
     api: Rc<RefCell<PomodoroInterface>>,
 }
 impl PomodoroTileHandler {
-    pub fn new(tile: &TimerTile, pomodoro: &Pomodoro) -> Self {
-        let imp = tile.imp();
+    pub fn new(pomodoro: &Pomodoro) -> Self {
         let pomodoro_api = Rc::new(RefCell::new(PomodoroInterface::new(
             pomodoro,
-            imp.remaining_label.downgrade(),
-            imp.animation.downgrade(),
+            WeakRef::new(),
+            WeakRef::new(),
         )));
         pomodoro_api.borrow_mut().update_ui();
 
         Self {
-            tile: tile.downgrade(),
+            tile: WeakRef::new(),
             api: pomodoro_api,
         }
     }
@@ -429,5 +438,16 @@ impl PomodoroTileHandler {
     }
     pub fn shortcut(&self) -> Option<Box> {
         self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
+    }
+}
+impl TileHandler for PomodoroTileHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<TimerTile>(){
+            let imp = tile.imp();
+            let remaining = imp.remaining_label.downgrade();
+            let anim = imp.animation.downgrade();
+            self.api.borrow_mut().replace_tile(remaining, anim);
+            self.tile = tile.downgrade()
+        } 
     }
 }

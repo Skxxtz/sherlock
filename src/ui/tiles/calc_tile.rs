@@ -2,11 +2,11 @@ use super::Tile;
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
     g_subclasses::sherlock_row::SherlockRow,
-    launcher::{calc_launcher::Calculator, Launcher},
+    launcher::{calc_launcher::Calculator, Launcher}, prelude::TileHandler,
 };
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::ObjectExt, WeakRef};
-use gtk4::prelude::WidgetExt;
+use gio::glib::{object::{Cast, ObjectExt}, WeakRef};
+use gtk4::{prelude::WidgetExt, Widget};
 use meval::eval_str;
 use std::{
     cell::RefCell,
@@ -16,8 +16,7 @@ use std::{
 
 impl Tile {
     pub fn calculator() -> CalcTile {
-        let tile = CalcTile::new();
-        tile
+        CalcTile::new()
     }
 }
 
@@ -89,7 +88,7 @@ impl CalcTileHandler {
             result: RefCell::new(None),
         }
     }
-    pub fn based_show(keyword: &str, capabilities: &HashSet<String>) -> bool {
+    pub fn based_show(&self, keyword: &str, capabilities: &HashSet<String>) -> bool {
         if keyword.trim().is_empty() {
             return false;
         }
@@ -136,7 +135,8 @@ impl CalcTileHandler {
             result = Calculator::measurement(&keyword, "currencies");
         }
 
-        !result.is_none()
+        *self.result.borrow_mut() = result;
+        self.result.borrow().is_some()
     }
     pub fn update(&self, search_query: &str) -> Option<()> {
         let tile = self.tile.upgrade()?;
@@ -168,5 +168,12 @@ impl CalcTileHandler {
             None
         });
         row.set_signal_id(signal_id);
+    }
+}
+impl TileHandler for CalcTileHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<CalcTile>(){
+            self.tile = tile.downgrade()
+        }
     }
 }

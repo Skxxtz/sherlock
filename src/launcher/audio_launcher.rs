@@ -13,7 +13,7 @@ use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 use super::utils::MprisData;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MusicPlayerLauncher {
     pub player: String,
     pub mpris: MprisData,

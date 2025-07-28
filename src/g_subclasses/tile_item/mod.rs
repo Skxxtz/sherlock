@@ -1,6 +1,7 @@
 mod imp;
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gio::glib::object::Cast;
 use gio::glib::{object::ObjectExt, WeakRef};
 use glib::Object;
 use gtk4::{glib, Box as GtkBox, Widget};
@@ -11,6 +12,7 @@ use std::{rc::Rc, usize};
 use crate::g_subclasses::sherlock_row::SherlockRowBind;
 use crate::launcher::LauncherType;
 use crate::loader::util::ApplicationAction;
+use crate::prelude::TileHandler;
 use crate::ui::tiles::api_tile::ApiTileHandler;
 use crate::ui::tiles::app_tile::AppTileHandler;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
@@ -22,6 +24,7 @@ use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
 use crate::ui::tiles::process_tile::ProcTileHandler;
 use crate::ui::tiles::weather_tile::WeatherTileHandler;
 use crate::ui::tiles::web_tile::WebTileHandler;
+use crate::ui::tiles::Tile;
 use crate::{g_subclasses::sherlock_row::SherlockRow, launcher::Launcher, loader::util::AppData};
 
 glib::wrapper! {
@@ -67,11 +70,75 @@ impl TileItem {
         Some(key(&data))
     }
 
-    pub fn get_patch(&self) -> Option<(Widget, UpdateHandler)> {
+    pub fn get_patch(&self) -> Option<Widget> {
         let imp = self.imp();
         let launcher = imp.launcher.borrow();
         let index = imp.index.get();
-        launcher.get_tile(index, launcher.clone(), self)
+        match &launcher.launcher_type {
+            // App Tile Based
+            LauncherType::App(_)
+            | LauncherType::Bookmark(_)
+            | LauncherType::Category(_)
+            | LauncherType::Command(_)
+            | LauncherType::Emoji(_)
+            | LauncherType::File(_)
+            | LauncherType::Theme(_) => {
+                // Get app data value
+                let inner = launcher.inner()?;
+                let value = inner.get(index? as usize)?;
+                let tile = Tile::app(value, launcher.clone(), self);
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::Api(api) => {
+                let tile = Tile::api(launcher.clone(), api);
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::Clipboard(clp) => {
+                if let Some((tile, handler)) = Tile::clipboard(launcher.clone(), &clp){
+                    self.imp().update_handler.replace(handler);
+                    Some(tile)
+                } else {
+                    None
+                }
+            }
+            LauncherType::Calc(_) => {
+                let tile = Tile::calculator();
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::Event(evt) => {
+                let tile = Tile::event(evt)?;
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::MusicPlayer(_) => {
+                let tile = Tile::mpris_tile();
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::Pipe(pipe) => {
+                let tile = Tile::pipe(launcher.clone(), pipe)?;
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::Pomodoro(_) => {
+                let tile = Tile::pomodoro(launcher.clone());
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::Process(_) => {
+                // Get app data value
+                let inner = launcher.inner()?;
+                let value = inner.get(index? as usize)?;
+                let tile = Tile::process(value, launcher.clone(), self);
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::Weather(_) => {
+                let tile = Tile::weather();
+                Some(tile.upcast::<Widget>())
+            }
+            LauncherType::Web(web) => {
+                let tile = Tile::web(launcher.clone(), &web);
+                Some(tile.upcast::<Widget>())
+            }
+
+            _ => None,
+        }
     }
     pub fn binds(&self) -> Rc<RefCell<Vec<SherlockRowBind>>> {
         self.imp().binds.clone()
@@ -141,24 +208,13 @@ impl TileItem {
             false
         }
     }
-    pub fn replace_handler(&self, handler: UpdateHandler) {
-        let imp = self.imp();
-        {
-            let current = imp.update_handler.borrow();
-            if !matches!(&*current, UpdateHandler::Default) {
-                return;
-            }
-        }
-        imp.update_handler.replace(handler);
-    }
     pub fn based_show(&self, keyword: &str) -> bool {
         let imp = self.imp();
         match &*imp.update_handler.borrow() {
-            UpdateHandler::Calculator(_) => {
+            UpdateHandler::Calculator(inner) => {
                 let launcher = self.imp().launcher.borrow();
                 if let LauncherType::Calc(clc) = &launcher.launcher_type {
-                    let handler = CalcTileHandler::default();
-                    handler.based_show(keyword, &clc.capabilities)
+                    inner.based_show(keyword, &clc.capabilities)
                 } else {
                     false
                 }
@@ -176,6 +232,9 @@ impl TileItem {
 
             UpdateHandler::ApiTile(_) | UpdateHandler::WebTile(_) => true,
         }
+    }
+    pub fn replace_tile(&self, tile: &Widget) {
+        self.imp().update_handler.borrow_mut().replace_tile(tile);
     }
     pub fn update(&self, keyword: &str) -> Option<()> {
         let imp = self.imp();
@@ -316,5 +375,23 @@ pub enum UpdateHandler {
 impl Default for UpdateHandler {
     fn default() -> Self {
         Self::Default
+    }
+}
+impl UpdateHandler {
+    pub fn replace_tile(&mut self, tile: &Widget){
+        match self {
+            Self::AppTile(inner) => inner.replace_tile(tile),
+            Self::ApiTile(inner) => inner.replace_tile(tile),
+            Self::Calculator(inner) => inner.replace_tile(tile),
+            Self::Clipboard(inner) => inner.replace_tile(tile),
+            Self::Event(inner) => inner.replace_tile(tile),
+            Self::MusicPlayer(inner) => inner.replace_tile(tile),
+            Self::Pipe(inner) => inner.replace_tile(tile),
+            Self::Pomodoro(inner) => inner.replace_tile(tile),
+            Self::Process(inner) => inner.replace_tile(tile),
+            Self::Weather(inner) => inner.replace_tile(tile),
+            Self::WebTile(inner) => inner.replace_tile(tile),
+            Self::Default => {}
+        }
     }
 }

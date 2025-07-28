@@ -8,13 +8,14 @@ use gio::glib::variant::ToVariant;
 use gio::glib::{Bytes, WeakRef};
 use gio::prelude::ListModelExt;
 use gtk4::prelude::{BoxExt, WidgetExt};
-use gtk4::{gdk, Box, Image, Overlay};
+use gtk4::{gdk, Box, Image, Overlay, Widget};
 
 use super::Tile;
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::audio_launcher::MusicPlayerLauncher;
 use crate::launcher::Launcher;
+use crate::prelude::TileHandler;
 use crate::ui::tiles::app_tile::AppTile;
 
 impl Tile {
@@ -59,21 +60,21 @@ impl Tile {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MusicTileHandler {
     tile: WeakRef<AppTile>,
     attrs: Rc<RefCell<HashMap<String, String>>>,
     mpris: Rc<RefCell<MusicPlayerLauncher>>,
 }
 impl MusicTileHandler {
-    pub fn new(tile: &AppTile, mpris: &MusicPlayerLauncher, launcher: Rc<Launcher>) -> Self {
+    pub fn new(mpris: &MusicPlayerLauncher, launcher: Rc<Launcher>) -> Self {
         let attrs = get_attrs_map(vec![
             ("method", Some(&launcher.method)),
             ("exit", Some(&launcher.exit.to_string())),
             ("player", Some(&mpris.player)),
         ]);
         Self {
-            tile: tile.downgrade(),
+            tile: WeakRef::new(),
             attrs: Rc::new(RefCell::new(attrs)),
             mpris: Rc::new(RefCell::new(mpris.clone())),
         }
@@ -173,5 +174,12 @@ impl MusicTileHandler {
     }
     pub fn shortcut(&self) -> Option<Box> {
         self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
+    }
+}
+impl TileHandler for MusicTileHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<AppTile>(){
+            self.tile = tile.downgrade()
+        } 
     }
 }

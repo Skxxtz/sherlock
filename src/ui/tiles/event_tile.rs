@@ -8,6 +8,7 @@ use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::Launcher;
+use crate::prelude::TileHandler;
 
 impl Tile {
     pub fn event(event_launcher: &EventLauncher) -> Option<EventTile> {
@@ -69,7 +70,13 @@ impl EventTileHandler {
         self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }
-
+impl TileHandler for EventTileHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<EventTile>(){
+            self.tile = tile.downgrade()
+        } 
+    }
+}
 mod imp {
     use gtk4::glib;
     use gtk4::subclass::prelude::*;
@@ -116,11 +123,11 @@ mod imp {
 }
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::object::ObjectExt;
+use gio::glib::object::{Cast, ObjectExt};
 use gio::glib::variant::ToVariant;
 use gio::glib::WeakRef;
 use gtk4::prelude::WidgetExt;
-use gtk4::{glib, Box};
+use gtk4::{glib, Box, Widget};
 
 glib::wrapper! {
     pub struct EventTile(ObjectSubclass<imp::EventTile>)

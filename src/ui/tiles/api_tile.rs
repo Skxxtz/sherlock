@@ -1,7 +1,7 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::ObjectExt;
 use gio::glib::WeakRef;
-use gtk4::prelude::*;
+use gtk4::{prelude::*, Widget};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -11,7 +11,7 @@ use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::bulk_text_launcher::{AsyncCommandResponse, BulkTextLauncher};
 use crate::launcher::Launcher;
-use crate::prelude::IconComp;
+use crate::prelude::{IconComp, TileHandler};
 
 use super::Tile;
 
@@ -169,5 +169,12 @@ impl ApiTileHandler {
             }
         });
         row.set_signal_id(signal_id);
+    }
+}
+impl TileHandler for ApiTileHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<ApiTile>(){
+            self.tile = tile.downgrade()
+        }
     }
 }

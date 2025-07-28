@@ -21,3 +21,8 @@ impl FromStr for PomodoroStyle {
         }
     }
 }
+impl Default for PomodoroStyle {
+    fn default() -> Self {
+       Self::Normal
+    }
+}
