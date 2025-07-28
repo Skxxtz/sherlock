@@ -286,11 +286,13 @@ impl SherlockNav for ListView {
     fn execute_by_index(&self, index: u32) {
         if let Some(selection) = self.model().and_downcast::<SingleSelection>() {
             for item in index..selection.n_items() {
-                if let Some(row) = selection.item(item).and_downcast::<SherlockRow>() {
-                    if row.imp().shortcut_holder.get().is_some() {
+                if let Some(item) = selection.item(item).and_downcast::<TileItem>() {
+                    if item.shortcut().is_some() {
                         let exit: u8 = 0;
-                        row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
-                        break;
+                        if let Some(row) = item.parent().upgrade() {
+                            row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
+                            break;
+                        }
                     }
                 }
             }
