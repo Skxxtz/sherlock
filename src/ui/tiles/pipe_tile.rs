@@ -1,101 +1,131 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::io::Cursor;
+use std::rc::Rc;
 
 use crate::actions::execute_from_attrs;
 use crate::actions::get_attrs_map;
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::utils::HomeType;
+use crate::g_subclasses::tile_item::TileItem;
+use crate::launcher::pipe_launcher::PipeLauncher;
+use crate::launcher::Launcher;
 use crate::loader::pipe_loader::PipedElements;
 use crate::prelude::IconComp;
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gdk_pixbuf::Pixbuf;
 use gio::glib::object::ObjectExt;
+use gio::glib::variant::ToVariant;
+use gio::glib::WeakRef;
 use gtk4::prelude::BoxExt;
 use gtk4::prelude::WidgetExt;
+use gtk4::Box;
 use gtk4::Image;
 
 use super::app_tile::AppTile;
 use super::Tile;
 
 impl Tile {
-    pub fn pipe_data(lines: &Vec<PipedElements>, method: &str) -> Vec<SherlockRow> {
-        let mut results: Vec<SherlockRow> = Vec::with_capacity(lines.len());
+    pub fn pipe_items(elements: Vec<PipedElements>, method: &str) -> Vec<TileItem> {
+        elements
+            .into_iter()
+            .map(|piped| {
+                let launcher = Launcher::from_piped_element(piped, method.to_string());
+                let tile = TileItem::new();
+                tile.set_launcher(Rc::new(launcher));
+                tile
+            })
+            .collect()
+    }
+    pub fn pipe(launcher: Rc<Launcher>, pipe: &PipeLauncher) -> Option<AppTile> {
+        let search = format!(
+            "{};{}",
+            launcher.name.as_deref().unwrap_or(""),
+            pipe.description.as_deref().unwrap_or("")
+        );
+        let tile = AppTile::new();
+        let imp = tile.imp();
 
-        for item in lines {
-            let search = format!(
-                "{};{}",
-                item.title.as_deref().unwrap_or(""),
-                item.description.as_deref().unwrap_or("")
-            );
-            if search.as_str() != ";" || item.binary.is_some() {
-                let tile = AppTile::new();
-                let imp = tile.imp();
-                let object = SherlockRow::new();
-                object.append(&tile);
-
-                // Set texts
-                if let Some(title) = &item.title {
-                    imp.title.set_text(&title);
-                }
-                if let Some(name) = &item.description {
-                    imp.category.set_text(&name);
-                } else {
-                    imp.category.set_visible(false);
-                }
-
-                // Set icon
-                imp.icon.set_icon(item.icon.as_deref(), None, None);
-
-                // Custom Image Data
-                if let Some(bin) = item.binary.clone() {
-                    let cursor = Cursor::new(bin);
-                    if let Some(pixbuf) = Pixbuf::from_read(cursor).ok() {
-                        let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
-                        let image = Image::from_paintable(Some(&texture));
-                        imp.icon_holder.append(&image);
-                        if let Some(size) = &item.icon_size {
-                            image.set_pixel_size(*size);
-                        }
-                    }
-                } else {
-                    let opacity: f64 = if item.icon.is_some() { 1.0 } else { 0.0 };
-                    imp.icon.set_opacity(opacity);
-                }
-
-                // Create attributes and enable action capability
-                let method = item.method.as_deref().unwrap_or(method);
-                let result = item.result.as_deref().or(item.title.as_deref());
-                let exit = item.exit.to_string();
-                let mut constructor: Vec<(&str, Option<&str>)> =
-                    item.hidden.as_ref().map_or_else(Vec::new, |a| {
-                        a.iter()
-                            .map(|(k, v)| (k.as_str(), Some(v.as_str())))
-                            .collect()
-                    });
-                constructor.extend(vec![
-                    ("method", Some(method)),
-                    ("result", result),
-                    ("field", item.field.as_deref()),
-                    ("exit", Some(&exit)),
-                ]);
-                let attrs = get_attrs_map(constructor);
-
-                object.set_home(HomeType::Home);
-                object.set_priority(1.0);
-                object.set_search(&search);
-                object.connect_local("row-should-activate", false, move |args| {
-                    let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
-                    let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-                    let param: Option<bool> = match param {
-                        1 => Some(false),
-                        2 => Some(true),
-                        _ => None,
-                    };
-                    execute_from_attrs(&row, &attrs, param);
-                    None
-                });
-                results.push(object);
-            }
+        if search.as_str() == ";" && pipe.binary.is_none() {
+            return None;
         }
-        return results;
+        // Set texts
+        if let Some(title) = &launcher.name {
+            imp.title.set_text(&title);
+        }
+        if let Some(name) = &pipe.description {
+            imp.category.set_text(&name);
+        } else {
+            imp.category.set_visible(false);
+        }
+
+        imp.icon.set_icon(launcher.icon.as_deref(), None, None);
+        // Custom Image Data
+        if let Some(bin) = pipe.binary.clone() {
+            let cursor = Cursor::new(bin);
+            if let Some(pixbuf) = Pixbuf::from_read(cursor).ok() {
+                let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);
+                let image = Image::from_paintable(Some(&texture));
+                imp.icon_holder.append(&image);
+                if let Some(size) = &pipe.icon_size {
+                    image.set_pixel_size(*size);
+                }
+            }
+        } else {
+            let opacity: f64 = if launcher.icon.is_some() { 1.0 } else { 0.0 };
+            imp.icon.set_opacity(opacity);
+        }
+        Some(tile)
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct PipeTileHandler {
+    tile: WeakRef<AppTile>,
+    attrs: Rc<RefCell<HashMap<String, String>>>,
+}
+impl PipeTileHandler {
+    pub fn new(tile: &AppTile, launcher: Rc<Launcher>, pipe: &PipeLauncher) -> Self {
+        let method = launcher.method.as_ref();
+        let result = pipe.result.as_deref().or(launcher.name.as_deref());
+        let exit = launcher.exit.to_string();
+        let mut constructor: Vec<(&str, Option<&str>)> =
+            pipe.hidden.as_ref().map_or_else(Vec::new, |a| {
+                a.iter()
+                    .map(|(k, v)| (k.as_str(), Some(v.as_str())))
+                    .collect()
+            });
+        constructor.extend(vec![
+            ("method", Some(method)),
+            ("result", result),
+            ("field", pipe.field.as_deref()),
+            ("exit", Some(&exit)),
+        ]);
+        let attrs = get_attrs_map(constructor);
+        Self {
+            tile: tile.downgrade(),
+            attrs: Rc::new(RefCell::new(attrs)),
+        }
+    }
+    pub fn bind_signal(&self, row: &SherlockRow) {
+        let signal_id = row.connect_local("row-should-activate", false, {
+            let attrs = self.attrs.clone();
+            move |args| {
+                let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+                let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                let param: Option<bool> = match param {
+                    1 => Some(false),
+                    2 => Some(true),
+                    _ => None,
+                };
+                execute_from_attrs(&row, &attrs.borrow(), param);
+                // To reload ui according to mode
+                let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
+                None
+            }
+        });
+        row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
     }
 }

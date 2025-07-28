@@ -214,7 +214,7 @@ impl SherlockAPI {
         let model = handler.model.as_ref().and_then(|s| s.upgrade())?;
         handler.clear();
 
-        let data = Tile::pipe_data(&content, "print");
+        let data = Tile::pipe_items(content, "print");
         data.into_iter().for_each(|elem| {
             model.append(&elem);
         });

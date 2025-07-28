@@ -10,6 +10,7 @@ pub mod clipboard_launcher;
 pub mod emoji_picker;
 pub mod event_launcher;
 pub mod file_launcher;
+pub mod pipe_launcher;
 pub mod pomodoro_launcher;
 pub mod process_launcher;
 pub mod system_cmd_launcher;
@@ -23,10 +24,14 @@ use crate::{
         sherlock_row::SherlockRowBind,
         tile_item::{TileItem, UpdateHandler},
     },
-    loader::util::{AppData, ApplicationAction, RawLauncher},
+    launcher::pipe_launcher::PipeLauncher,
+    loader::{
+        pipe_loader::PipedElements,
+        util::{AppData, ApplicationAction, RawLauncher},
+    },
     ui::tiles::{
         api_tile::ApiTileHandler, app_tile::AppTileHandler, calc_tile::CalcTileHandler,
-        event_tile::EventTileHandler, mpris_tile::MusicTileHandler,
+        event_tile::EventTileHandler, mpris_tile::MusicTileHandler, pipe_tile::PipeTileHandler,
         pomodoro_tile::PomodoroTileHandler, process_tile::ProcTileHandler,
         weather_tile::WeatherTileHandler, web_tile::WebTileHandler, Tile,
     },
@@ -69,6 +74,7 @@ pub enum LauncherType {
     MusicPlayer(MusicPlayerLauncher),
     Pomodoro(Pomodoro),
     Process(ProcessLauncher),
+    Pipe(PipeLauncher),
     Theme(ThemePicker),
     Weather(WeatherLauncher),
     Web(WebLauncher),
@@ -147,6 +153,35 @@ impl Launcher {
             actions: raw.actions,
             add_actions: raw.add_actions,
             binds: raw.binds,
+        }
+    }
+    pub fn from_piped_element(piped: PipedElements, method: String) -> Self {
+        let launcher_type = LauncherType::Pipe(PipeLauncher {
+            binary: piped.binary,
+            description: piped.description,
+            hidden: piped.hidden,
+            field: piped.field,
+            icon_size: piped.icon_size,
+            result: piped.result,
+        });
+        Self {
+            name: piped.title,
+            icon: piped.icon,
+            alias: None,
+            tag_start: None,
+            tag_end: None,
+            method,
+            exit: piped.exit,
+            next_content: None,
+            priority: 1,
+            r#async: false,
+            home: HomeType::Home,
+            launcher_type,
+            shortcut: false,
+            spawn_focus: true,
+            actions: None,
+            add_actions: None,
+            binds: None,
         }
     }
 }
@@ -272,6 +307,11 @@ impl Launcher {
                     mpris,
                     launcher.clone(),
                 ));
+                Some((tile.upcast::<Widget>(), update))
+            }
+            LauncherType::Pipe(pipe) => {
+                let tile = Tile::pipe(launcher.clone(), pipe)?;
+                let update = UpdateHandler::Pipe(PipeTileHandler::new(&tile, launcher, pipe));
                 Some((tile.upcast::<Widget>(), update))
             }
             LauncherType::Pomodoro(pmd) => {

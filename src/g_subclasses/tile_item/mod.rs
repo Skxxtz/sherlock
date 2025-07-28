@@ -17,6 +17,7 @@ use crate::ui::tiles::calc_tile::CalcTileHandler;
 use crate::ui::tiles::clipboard_tile::ClipboardHandler;
 use crate::ui::tiles::event_tile::EventTileHandler;
 use crate::ui::tiles::mpris_tile::MusicTileHandler;
+use crate::ui::tiles::pipe_tile::PipeTileHandler;
 use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
 use crate::ui::tiles::process_tile::ProcTileHandler;
 use crate::ui::tiles::weather_tile::WeatherTileHandler;
@@ -166,6 +167,7 @@ impl TileItem {
             | UpdateHandler::Clipboard(_)
             | UpdateHandler::Event(_)
             | UpdateHandler::MusicPlayer(_)
+            | UpdateHandler::Pipe(_)
             | UpdateHandler::Pomodoro(_)
             | UpdateHandler::Process(_)
             | UpdateHandler::Weather(_)
@@ -208,13 +210,7 @@ impl TileItem {
                 }
             }
 
-            UpdateHandler::ApiTile(_)
-            | UpdateHandler::Clipboard(_)
-            | UpdateHandler::Event(_)
-            | UpdateHandler::MusicPlayer(_)
-            | UpdateHandler::Pomodoro(_)
-            | UpdateHandler::Default
-            | UpdateHandler::Weather(_) => {}
+            _ => {}
         }
         Some(())
     }
@@ -253,6 +249,7 @@ impl TileItem {
                     inner.bind_signal(row, mpris);
                 }
             }
+            UpdateHandler::Pipe(inner) => inner.bind_signal(row),
             UpdateHandler::Pomodoro(inner) => {
                 if let LauncherType::Pomodoro(pmd) = &self.imp().launcher.borrow().launcher_type {
                     inner.bind_signal(row, pmd);
@@ -274,6 +271,7 @@ impl TileItem {
             UpdateHandler::Clipboard(inner) => inner.shortcut(),
             UpdateHandler::Event(inner) => inner.shortcut(),
             UpdateHandler::MusicPlayer(inner) => inner.shortcut(),
+            UpdateHandler::Pipe(inner) => inner.shortcut(),
             UpdateHandler::Pomodoro(inner) => inner.shortcut(),
             UpdateHandler::Process(inner) => inner.shortcut(),
             UpdateHandler::WebTile(inner) => inner.shortcut(),
@@ -307,6 +305,7 @@ pub enum UpdateHandler {
     Clipboard(ClipboardHandler),
     Event(EventTileHandler),
     MusicPlayer(MusicTileHandler),
+    Pipe(PipeTileHandler),
     Pomodoro(PomodoroTileHandler),
     Process(ProcTileHandler),
     Weather(WeatherTileHandler),
