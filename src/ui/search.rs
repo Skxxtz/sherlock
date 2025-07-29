@@ -602,7 +602,7 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             prio.trunc() + (counters + score).min(0.99)
         }
         move |item_a, item_b| {
-            let search_text = search_text.borrow();
+            let search_text = search_text.borrow().to_ascii_lowercase();
 
             let item_a = item_a.downcast_ref::<TileItem>().unwrap();
             let item_b = item_b.downcast_ref::<TileItem>().unwrap();

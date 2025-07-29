@@ -143,7 +143,7 @@ impl TileItem {
         self.imp().parent.borrow().clone()
     }
     pub fn search(&self) -> Option<String> {
-        self.get_by_key(|data| data.search_string.clone())
+        self.get_by_key(|data| data.search_string.to_lowercase())
     }
     pub fn priority(&self) -> f32 {
         self.get_by_key(|data| data.priority)
