@@ -1,5 +1,6 @@
 use api::call::ApiCall;
 use futures::join;
+use gio::glib::idle_add_local;
 use gio::prelude::*;
 use gtk4::prelude::{GtkApplicationExt, WidgetExt};
 use gtk4::{glib, Application};
@@ -94,7 +95,6 @@ async fn main() {
                         println!("Window shown after {:?}", t0.elapsed());
                     }
                 }
-                post_startup();
             }
         });
 
@@ -178,8 +178,15 @@ async fn main() {
                 let request = ApiCall::SwitchMode(mode);
                 sherlock.await_request(request);
             }
-            sherlock.flush();
         }
+        idle_add_local({
+            let sherlock = Rc::clone(&sherlock);
+            move || {
+                sherlock.borrow_mut().flush();
+                post_startup();
+                false.into()
+            }
+        });
 
         if let Err(error) = Loader::load_css(true) {
             let _result = error.insert(false);
