@@ -92,7 +92,7 @@ pub fn flag_documentation() -> Result<(), SherlockError> {
     let allowed_flags: Vec<(&str, &str)> = vec![
         ("\nBASICS:", ""),
         ("--version", "Print the version of the application."),
-        ("--help", "Show this help message with allowed flags."),
+        ("--help | -h", "Show this help message with allowed flags."),
         ("init", "Writes default configs into your config directory."),
         ("\nFILES:", ""),
         ("--config", "Specify the configuration file to load."),
@@ -107,12 +107,8 @@ pub fn flag_documentation() -> Result<(), SherlockError> {
             "If this flag is set, sherlock will run in daemon mode.",
         ),
         (
-            "--sub-menu",
+            "--sub-menu | -sm",
             "Start sherlock with an alias active already. For example 'pm' for power menu",
-        ),
-        (
-            "--time-inspect",
-            "Show time for loading launchers and from 0 to full content",
         ),
         ("\nPIPE MODE:", ""),
         (
