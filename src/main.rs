@@ -307,8 +307,8 @@ fn post_startup() {
         .filter_map(|f| f.name())
         .map(|s| s.to_string())
         .collect();
-    let required = vec![("svg", "librsvg"), ("png", "gdk-pixbuf2")];
 
+    let required = vec![("svg", "librsvg"), ("png", "gdk-pixbuf2")];
     required
         .into_iter()
         .filter(|(t, _)| !available.contains(*t))
@@ -317,8 +317,8 @@ fn post_startup() {
                 SherlockErrorType::MissingIconParser(t.to_string()),
                 format!(
                     "Icon parser for {} not found.\n\
-                This could hinder Sherlock from rendering .{} icons.\n\
-            Please ensure that \"{}\" is installed correctly.",
+                    This could hinder Sherlock from rendering .{} icons.\n\
+                    Please ensure that \"{}\" is installed correctly.",
                     t, t, d
                 )
             )
