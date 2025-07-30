@@ -142,7 +142,8 @@ impl SherlockAPI {
             .position(|action| action.exec.as_deref() == Some("restart"));
         if let Some(pos) = pos {
             let removed = actions.remove(pos);
-            if removed.on > 2 && start_count % removed.on == 0 {
+            let on = removed.on.max(0).min(2);
+            if start_count % on == 0 {
                 let call = ApiCall::Method("restart".to_string());
                 self.shutdown_queue.push(call);
             }

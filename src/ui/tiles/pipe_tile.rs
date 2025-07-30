@@ -7,8 +7,10 @@ use crate::actions::execute_from_attrs;
 use crate::actions::get_attrs_map;
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::g_subclasses::tile_item::TileItem;
+use crate::g_subclasses::tile_item::UpdateHandler;
 use crate::launcher::pipe_launcher::PipeLauncher;
 use crate::launcher::Launcher;
+use crate::launcher::LauncherType;
 use crate::loader::pipe_loader::PipedElements;
 use crate::prelude::IconComp;
 use crate::prelude::TileHandler;
@@ -16,6 +18,7 @@ use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gdk_pixbuf::Pixbuf;
 use gio::glib::object::Cast;
 use gio::glib::object::ObjectExt;
+use gio::glib::property::PropertySet;
 use gio::glib::variant::ToVariant;
 use gio::glib::WeakRef;
 use gtk4::prelude::BoxExt;
@@ -32,9 +35,11 @@ impl Tile {
         elements
             .into_iter()
             .map(|piped| {
-                let launcher = Launcher::from_piped_element(piped, method.to_string());
+                let launcher = Rc::new(Launcher::from_piped_element(piped, method.to_string()));
                 let tile = TileItem::new();
-                tile.set_launcher(Rc::new(launcher));
+                let handler = PipeTileHandler::new(launcher.clone());
+                tile.imp().update_handler.set(UpdateHandler::Pipe(handler));
+                tile.set_launcher(launcher);
                 tile
             })
             .collect()
@@ -87,7 +92,10 @@ pub struct PipeTileHandler {
     attrs: Rc<RefCell<HashMap<String, String>>>,
 }
 impl PipeTileHandler {
-    pub fn new(launcher: Rc<Launcher>, pipe: &PipeLauncher) -> Self {
+    pub fn new(launcher: Rc<Launcher>) -> Self {
+        let LauncherType::Pipe(pipe) = &launcher.launcher_type else {
+            return Self::default()
+        };
         let method = launcher.method.as_ref();
         let result = pipe.result.as_deref().or(launcher.name.as_deref());
         let exit = launcher.exit.to_string();
