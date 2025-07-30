@@ -139,6 +139,12 @@ pub fn search(
             let modes_clone = Rc::clone(&handler.modes);
             let ui = ui.downgrade();
             move |_, action, parameter| {
+                // Early return to prevent mode switching in submenu mode
+                if let Ok(guard) = ConfigGuard::read() {
+                    if guard.behavior.sub_menu.is_some() {
+                        return;
+                    }
+                }
                 let state = action.state().and_then(|s| s.get::<String>());
                 let parameter = parameter.and_then(|p| p.get::<String>());
                 let ui = match ui.upgrade() {
@@ -793,10 +799,16 @@ fn change_event(
             }
             let trimmed = current_text.trim();
             if !trimmed.is_empty() && modes.borrow().contains_key(&current_text) {
-                // Logic to apply modes
-                let _ = search_bar.activate_action("win.switch-mode", Some(&trimmed.to_variant()));
-                let _ = search_bar.activate_action("win.clear-search", Some(&false.to_variant()));
-                current_text.clear();
+                if let Ok(config) = ConfigGuard::read() {
+                    if config.behavior.sub_menu.is_none() {
+                        // Logic to apply modes
+                        let _ = search_bar
+                            .activate_action("win.switch-mode", Some(&trimmed.to_variant()));
+                        let _ = search_bar
+                            .activate_action("win.clear-search", Some(&false.to_variant()));
+                        current_text.clear();
+                    }
+                }
             }
             *search_query_clone.borrow_mut() = current_text.clone();
             // filter and sort
