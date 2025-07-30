@@ -331,9 +331,9 @@ fn post_startup() {
         if !(0.1..=1.0).contains(&opacity) {
             let _ = sherlock_error!(
                 SherlockErrorType::ConfigError(Some(format!(
-                            "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
-                            opacity,
-                            opacity.clamp(0.1, 1.0)
+                    "The opacity value of {} exceeds the allowed range (0.1 - 1.0) and will be automatically set to {}.",
+                    opacity,
+                    opacity.clamp(0.1, 1.0)
                 ))),
                 ""
             ).insert(false);
