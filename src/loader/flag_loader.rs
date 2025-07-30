@@ -11,11 +11,11 @@ impl Loader {
     pub fn load_flags() -> Result<SherlockFlags, SherlockError> {
         let args: Vec<String> = env::args().collect();
         if args.contains(&"--help".to_string()) {
-            let _ = print_help();
+            let _ = flag_documentation();
             std::process::exit(0);
         }
         if args.contains(&"-h".to_string()) {
-            let _ = print_help();
+            let _ = flag_documentation();
             std::process::exit(0);
         }
         if args.contains(&"--version".to_string()) {
@@ -27,15 +27,32 @@ impl Loader {
     }
 }
 impl SherlockFlags {
-    fn extract_flag_value<T: FromStr>(args: &[String], flag: &str) -> Option<T> {
-        args.iter()
+    fn extract_flag_value<T: FromStr>(
+        args: &[String],
+        flag: &str,
+        short: Option<&str>,
+    ) -> Option<T> {
+        let long = args
+            .iter()
             .position(|arg| arg == flag)
             .and_then(|i| args.get(i + 1))
-            .and_then(|val| val.parse::<T>().ok())
+            .and_then(|val| val.parse::<T>().ok());
+
+        match &long {
+            None => {
+                let flag = short?;
+                args.iter()
+                    .position(|arg| arg == flag)
+                    .and_then(|i| args.get(i + 1))
+                    .and_then(|val| val.parse::<T>().ok())
+            }
+            _ => long,
+        }
     }
     fn new(args: Vec<String>) -> Result<Self, SherlockError> {
         // Helper closure to extract flag values
-        let extract_path_value = |flag: &str| Self::extract_flag_value::<PathBuf>(&args, flag);
+        let extract_path_value =
+            |flag: &str| Self::extract_flag_value::<PathBuf>(&args, flag, None);
         let check_flag_existence = |flag: &str| args.iter().any(|arg| arg == flag);
 
         if check_flag_existence("init") {
@@ -54,12 +71,12 @@ impl SherlockFlags {
             center_raw: check_flag_existence("--center"),
             cache: extract_path_value("--cache"),
             daemonize: check_flag_existence("--daemonize"),
-            sub_menu: Self::extract_flag_value::<String>(&args, "--sub-menu"),
-            method: Self::extract_flag_value::<String>(&args, "--method"),
-            field: Self::extract_flag_value::<String>(&args, "--field"),
+            sub_menu: Self::extract_flag_value::<String>(&args, "--sub-menu", Some("-sm")),
+            method: Self::extract_flag_value::<String>(&args, "--method", None),
+            field: Self::extract_flag_value::<String>(&args, "--field", None),
             multi: check_flag_existence("--multi"),
             photo_mode: check_flag_existence("--photo"),
-            input: Self::extract_flag_value::<bool>(&args, "--input"),
+            input: Self::extract_flag_value::<bool>(&args, "--input", None),
         })
     }
 }
@@ -71,7 +88,7 @@ pub fn print_version() -> Result<(), SherlockError> {
 
     Ok(())
 }
-pub fn print_help() -> Result<(), SherlockError> {
+pub fn flag_documentation() -> Result<(), SherlockError> {
     let allowed_flags: Vec<(&str, &str)> = vec![
         ("\nBASICS:", ""),
         ("--version", "Print the version of the application."),
