@@ -251,9 +251,7 @@ impl Launcher {
                 UpdateHandler::MusicPlayer(MusicTileHandler::new(mpris, launcher.clone()))
             }
             LauncherType::Pomodoro(pmd) => UpdateHandler::Pomodoro(PomodoroTileHandler::new(pmd)),
-            LauncherType::Pipe(_) => {
-                UpdateHandler::Pipe(PipeTileHandler::new(launcher.clone()))
-            }
+            LauncherType::Pipe(_) => UpdateHandler::Pipe(PipeTileHandler::new(launcher.clone())),
             LauncherType::Weather(_) => {
                 UpdateHandler::Weather(WeatherTileHandler::new(launcher.clone()))
             }

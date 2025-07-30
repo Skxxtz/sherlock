@@ -66,10 +66,16 @@ impl Loader {
             .map(|(_, v)| v.to_string().len())
             .unwrap_or(0) as i32;
 
+        let submenu = config.behavior.sub_menu.clone();
         // Parse the launchers
-        let deserialized_launchers: Vec<Result<Launcher, SherlockError>> = raw_launchers
+        let launchers: Vec<Launcher> = raw_launchers
             .into_par_iter()
-            .map(|raw| {
+            .filter_map(|raw| {
+                if submenu.is_some() {
+                    if &submenu != &raw.alias {
+                        return None;
+                    }
+                }
                 let launcher_type: LauncherType = match raw.r#type.as_str() {
                     "app_launcher" => parse_app_launcher(&raw, &counts, max_decimals),
                     "audio_sink" => parse_audio_sink_launcher(),
@@ -77,7 +83,7 @@ impl Loader {
                     "bulk_text" => parse_bulk_text_launcher(&raw),
                     "calculation" => parse_calculator(&raw),
                     "categories" => parse_category_launcher(&raw, &counts, max_decimals),
-                    "clipboard-execution" => parse_clipboard_launcher(&raw)?,
+                    "clipboard-execution" => parse_clipboard_launcher(&raw).ok()?,
                     "command" => parse_command_launcher(&raw, &counts, max_decimals),
                     "debug" => parse_debug_launcher(&raw, &counts, max_decimals),
                     "emoji_picker" => parse_emoji_launcher(&raw),
@@ -100,17 +106,12 @@ impl Loader {
                     .get("icon")
                     .and_then(|s| s.as_str())
                     .map(|s| s.to_string());
-                Ok(Launcher::from_raw(raw, method, launcher_type, icon))
+                Some(Launcher::from_raw(raw, method, launcher_type, icon))
             })
             .collect();
 
         // Get errors and launchers
-        type LauncherResult = Vec<Result<Launcher, SherlockError>>;
-        let (oks, errs): (LauncherResult, LauncherResult) =
-            deserialized_launchers.into_iter().partition(Result::is_ok);
-        let launchers: Vec<Launcher> = oks.into_iter().filter_map(Result::ok).collect();
-        let mut non_breaking: Vec<SherlockError> =
-            errs.into_iter().filter_map(Result::err).collect();
+        let mut non_breaking = Vec::new();
         if counts.is_empty() {
             let counts: HashMap<String, u32> = launchers
                 .iter()

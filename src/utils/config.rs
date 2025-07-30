@@ -348,12 +348,9 @@ impl SherlockConfig {
             Err(e) => {
                 let mut config = SherlockConfig::default();
                 config = SherlockConfig::apply_flags(sherlock_flags, config);
-                let e = sherlock_error!(
-                    SherlockErrorType::FileReadError(path),
-                    e.to_string()
-                );
+                let e = sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string());
                 Ok((config, vec![e]))
-            },
+            }
         }
     }
     pub fn apply_flags(

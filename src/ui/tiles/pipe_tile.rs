@@ -94,7 +94,7 @@ pub struct PipeTileHandler {
 impl PipeTileHandler {
     pub fn new(launcher: Rc<Launcher>) -> Self {
         let LauncherType::Pipe(pipe) = &launcher.launcher_type else {
-            return Self::default()
+            return Self::default();
         };
         let method = launcher.method.as_ref();
         let result = pipe.result.as_deref().or(launcher.name.as_deref());
