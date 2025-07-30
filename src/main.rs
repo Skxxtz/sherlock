@@ -178,15 +178,8 @@ async fn main() {
                 let request = ApiCall::SwitchMode(mode);
                 sherlock.await_request(request);
             }
+            sherlock.flush();
         }
-        idle_add_local({
-            let sherlock = Rc::clone(&sherlock);
-            move || {
-                sherlock.borrow_mut().flush();
-                post_startup();
-                false.into()
-            }
-        });
 
         if let Err(error) = Loader::load_css(true) {
             let _result = error.insert(false);
@@ -203,13 +196,22 @@ async fn main() {
             }
         }
 
-        // Print Timing
-        if let Ok(timing_enabled) = std::env::var("TIMING") {
-            if timing_enabled == "true" {
-                println!("Window creation took {:?}", t1.elapsed());
-                println!("Start to Finish took: {:?}", t0.elapsed());
+        idle_add_local({
+            move || {
+                // Do cleanup after window is shown
+                post_startup();
+
+                // Print Timing
+                if let Ok(timing_enabled) = std::env::var("TIMING") {
+                    if timing_enabled == "true" {
+                        println!("Window creation took {:?}", t1.elapsed());
+                        println!("Start to Finish took: {:?}", t0.elapsed());
+                    }
+                }
+
+                false.into()
             }
-        }
+        });
     });
     application.run();
     drop(lock);

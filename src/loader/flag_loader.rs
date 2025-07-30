@@ -62,6 +62,7 @@ impl SherlockFlags {
         }
 
         Ok(SherlockFlags {
+            config_dir: extract_path_value("--config-dir"),
             config: extract_path_value("--config"),
             fallback: extract_path_value("--fallback"),
             style: extract_path_value("--style"),
@@ -101,6 +102,10 @@ pub fn flag_documentation() -> Result<(), SherlockError> {
         ("--ignore", "Specify the sherlock ignore file"),
         ("--alias", "Specify the sherlock alias file (.json)."),
         ("--cache", "Specify the sherlock cache file (.json)."),
+        (
+            "--config-dir",
+            "Specify the directy Sherlock will look for its configuration in.",
+        ),
         ("\nBEHAVIOR:", ""),
         (
             "--daemonize",

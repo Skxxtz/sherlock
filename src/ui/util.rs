@@ -381,6 +381,7 @@ pub struct SearchUI {
     pub context_menu_first: WeakRef<Label>,
     pub context_menu_second: WeakRef<Label>,
 }
+
 pub fn update_async(
     update_tiles: Vec<WeakRef<TileItem>>,
     current_task: &Rc<RefCell<Option<glib::JoinHandle<()>>>>,

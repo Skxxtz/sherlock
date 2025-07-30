@@ -230,7 +230,9 @@ pub fn search(
                             }
                         };
                     }
-                    update_async(weaks, &current_task, current_text.borrow().clone());
+                    if !weaks.is_empty() {
+                        update_async(weaks, &current_task, current_text.borrow().clone());
+                    }
                 }
             }
         })

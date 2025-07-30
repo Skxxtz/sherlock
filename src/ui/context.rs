@@ -15,7 +15,7 @@ use crate::{g_subclasses::action_entry::ContextAction, utils::config::ConfigGuar
 use super::util::ContextUI;
 
 pub fn make_context() -> (ContextUI, Revealer) {
-    let max_heigth = ConfigGuard::read().map_or(60, |c| c.appearance.height - 200);
+    let max_heigth = ConfigGuard::read().map_or(60, |c| c.appearance.height - 200).max(0);
     let factory = make_factory();
     let model = ListStore::new::<ContextAction>();
     let selection = SingleSelection::new(Some(model.clone()));

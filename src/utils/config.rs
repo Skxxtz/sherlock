@@ -16,6 +16,7 @@ use crate::{actions::util::parse_default_browser, loader::Loader, sherlock_error
 
 #[derive(Clone, Debug, Default)]
 pub struct SherlockFlags {
+    pub config_dir: Option<PathBuf>,
     pub config: Option<PathBuf>,
     pub fallback: Option<PathBuf>,
     pub style: Option<PathBuf>,
@@ -257,11 +258,19 @@ impl SherlockConfig {
     pub fn from_flags(
         sherlock_flags: &SherlockFlags,
     ) -> Result<(SherlockConfig, Vec<SherlockError>), SherlockError> {
-        let home = home_dir()?;
+        // Get location of config file
+        let config_dir = sherlock_flags
+            .config_dir
+            .clone()
+            .unwrap_or(paths::get_config_dir()?);
         let mut path = match &sherlock_flags.config {
-            Some(path) => expand_path(path, &home),
-            _ => paths::get_config_dir()?.join("config.toml"),
+            Some(path) => {
+                let home = home_dir()?;
+                expand_path(path, &home)
+            }
+            _ => config_dir.join("config.toml"),
         };
+
         // logic to either use json or toml
         let mut filetype: String = String::new();
         if let Some(ext) = path.extension() {
@@ -326,7 +335,7 @@ impl SherlockConfig {
                 match config_res {
                     Ok(mut config) => {
                         config = SherlockConfig::apply_flags(sherlock_flags, config);
-                        return Ok((config, vec![]));
+                        Ok((config, vec![]))
                     }
                     Err(e) => {
                         let mut config = SherlockConfig::default();
@@ -336,27 +345,14 @@ impl SherlockConfig {
                     }
                 }
             }
-            Err(e) => match e.kind() {
-                std::io::ErrorKind::NotFound => {
-                    let mut config = SherlockConfig::default();
-                    let config_str = match filetype.as_str() {
-                        "json" => serde_json::to_string_pretty(&config).unwrap(),
-                        _ => toml::to_string(&config).unwrap(),
-                    };
-                    fs::write(&path, config_str).map_err(|e| {
-                        sherlock_error!(
-                            SherlockErrorType::FileWriteError(path.clone()),
-                            e.to_string()
-                        )
-                    })?;
-
-                    config = SherlockConfig::apply_flags(sherlock_flags, config);
-                    Ok((config, vec![]))
-                }
-                _ => Err(sherlock_error!(
+            Err(e) => {
+                let mut config = SherlockConfig::default();
+                config = SherlockConfig::apply_flags(sherlock_flags, config);
+                let e = sherlock_error!(
                     SherlockErrorType::FileReadError(path),
                     e.to_string()
-                ))?,
+                );
+                Ok((config, vec![e]))
             },
         }
     }
