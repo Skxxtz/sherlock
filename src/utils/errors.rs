@@ -141,7 +141,7 @@ pub enum SherlockErrorType {
 impl std::fmt::Display for SherlockError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (title, message) = self.error.get_message();
-        write!(f, "SherlockError: {} - {}", title, message)
+        write!(f, "{}\n{}\n{}", title, message, self.traceback)
     }
 }
 impl SherlockErrorType {

@@ -58,7 +58,7 @@ impl SherlockFlags {
         if check_flag_existence("init") {
             let path = extract_path_value("init").unwrap_or(PathBuf::from("~/.config/sherlock/"));
             let x = SherlockConfig::to_file(path);
-            println!("{:?}", x);
+            eprintln!("{:?}", x);
         }
 
         Ok(SherlockFlags {
