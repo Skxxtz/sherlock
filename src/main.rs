@@ -196,19 +196,18 @@ async fn main() {
             }
         }
 
+        // Print Timing
+        if let Ok(timing_enabled) = std::env::var("TIMING") {
+            if timing_enabled == "true" {
+                println!("Window creation took {:?}", t1.elapsed());
+                println!("Start to Finish took: {:?}", t0.elapsed());
+            }
+        }
+
         idle_add_local({
             move || {
                 // Do cleanup after window is shown
                 post_startup();
-
-                // Print Timing
-                if let Ok(timing_enabled) = std::env::var("TIMING") {
-                    if timing_enabled == "true" {
-                        println!("Window creation took {:?}", t1.elapsed());
-                        println!("Start to Finish took: {:?}", t0.elapsed());
-                    }
-                }
-
                 false.into()
             }
         });
