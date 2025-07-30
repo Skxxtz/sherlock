@@ -259,6 +259,11 @@ impl TileItem {
                     }
                 }
             }
+            UpdateHandler::Weather(inner) => {
+                if let Some(parent) = self.parent().upgrade() {
+                    return inner.update(&parent);
+                }
+            }
             UpdateHandler::WebTile(inner) => {
                 let launcher = imp.launcher.borrow();
                 if let LauncherType::Web(web) = &launcher.launcher_type {

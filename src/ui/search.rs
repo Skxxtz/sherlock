@@ -479,10 +479,10 @@ fn make_factory(search_text: Rc<RefCell<String>>) -> SignalListItemFactory {
 
         if let Some(patch) = tile_item.get_patch() {
             tile_item.replace_tile(&patch);
+            tile_item.set_parent(Some(&row));
             tile_item.based_show(&search_text.borrow());
             tile_item.update(&search_text.borrow());
             tile_item.bind_signal(&row);
-            tile_item.set_parent(Some(&row));
             row.append(&patch);
         }
     });
