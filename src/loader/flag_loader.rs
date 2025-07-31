@@ -92,28 +92,36 @@ pub fn print_version() -> Result<(), SherlockError> {
 pub fn flag_documentation() -> Result<(), SherlockError> {
     let allowed_flags: Vec<(&str, &str)> = vec![
         ("\nBASICS:", ""),
-        ("--version", "Print the version of the application."),
-        ("--help | -h", "Show this help message with allowed flags."),
+        ("-v, --version", "Print the version of the application."),
+        ("-h, --help", "Show this help message with allowed flags."),
         ("init", "Writes default configs into your config directory."),
         ("\nFILES:", ""),
         ("--config", "Specify the configuration file to load."),
         ("--fallback", "Specify the fallback file to load."),
         ("--style", "Set the style configuration file."),
-        ("--ignore", "Specify the sherlock ignore file"),
-        ("--alias", "Specify the sherlock alias file (.json)."),
-        ("--cache", "Specify the sherlock cache file (.json)."),
+        ("--ignore", "Specify the Sherlock ignore file"),
+        ("--alias", "Specify the Sherlock alias file (.json)."),
+        ("--cache", "Specify the Sherlock cache file (.json)."),
         (
             "--config-dir",
-            "Specify the directy Sherlock will look for its configuration in.",
+            "Specify the directly Sherlock will look for its configuration in.",
         ),
         ("\nBEHAVIOR:", ""),
         (
             "--daemonize",
-            "If this flag is set, sherlock will run in daemon mode.",
+            "If this flag is set, Sherlock will run in daemon mode.",
         ),
         (
-            "--sub-menu | -sm",
-            "Start sherlock with an alias active already. For example 'pm' for power menu",
+            "-sm, --sub-menu",
+            "Start Sherlock with an alias active already. For example 'pm' for power menu",
+        ),
+        (
+            "--multi",
+            "Start Sherlock in \"multi mode\". This mode allows to select and execute multiple entries.",
+        ),
+        (
+            "--photo",
+            "Start Sherlock in \"photo mode\". This mode temporarily disables Sherlock from closing on focus loss.",
         ),
         ("\nPIPE MODE:", ""),
         (
@@ -129,12 +137,13 @@ pub fn flag_documentation() -> Result<(), SherlockError> {
             "Specifies which of your fields should be printed on return press",
         ),
     ];
-
-    // Print header
-    println!("{:<15} {}", "Flag", "Description");
+    let longest = allowed_flags
+        .iter()
+        .max_by_key(|item| item.0.len())
+        .map_or(20, |i| i.0.len() + 5);
 
     for (flag, explanation) in allowed_flags {
-        println!("{:<15} {}", flag, explanation);
+        println!("{:<width$} {}", flag, explanation, width = longest);
     }
 
     println!(
