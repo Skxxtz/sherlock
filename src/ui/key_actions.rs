@@ -8,7 +8,7 @@ use gio::{
 };
 use gtk4::{
     prelude::{EditableExt, WidgetExt},
-    Entry, GridView, ListView,
+    Entry, GridView, ListView, SingleSelection,
 };
 use std::{cell::RefCell, rc::Rc};
 
@@ -239,11 +239,9 @@ impl EmojiKeyActions {
                 .results
                 .upgrade()
                 .and_then(|r| r.selected_item())
-                .and_downcast::<TileItem>()
+                .and_downcast::<EmojiObject>()
             {
-                if let Some(row) = item.parent().upgrade() {
-                    row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
-                }
+                item.emit_by_name::<()>("emoji-should-activate", &[]);
             } else {
                 if let Some(current_text) = self.search_bar.upgrade().map(|s| s.text()) {
                     println!("{}", current_text);
@@ -344,15 +342,43 @@ impl EmojiKeyActions {
         None
     }
     fn move_next_context(&self) -> Option<()> {
-        let model = self.context.view.upgrade()?;
-        let x = model.selected_item().and_downcast::<EmojiContextAction>()?;
-        x.focus_next();
+        let model = self
+            .context
+            .view
+            .upgrade()?
+            .model()
+            .and_downcast::<SingleSelection>()?;
+        let context_action = model.selected_item().and_downcast::<EmojiContextAction>()?;
+        let selected = model.selected();
+        if let Some(new_index) = context_action.focus_next() {
+            for i in 0..model.n_items() {
+                if i != selected {
+                    if let Some(tmp) = model.item(i).and_downcast::<EmojiContextAction>() {
+                        tmp.update_index(selected as u8, new_index, true);
+                    }
+                }
+            }
+        }
         None
     }
     fn move_prev_context(&self) -> Option<()> {
-        let model = self.context.view.upgrade()?;
-        let x = model.selected_item().and_downcast::<EmojiContextAction>()?;
-        x.focus_prev();
+        let model = self
+            .context
+            .view
+            .upgrade()?
+            .model()
+            .and_downcast::<SingleSelection>()?;
+        let context_action = model.selected_item().and_downcast::<EmojiContextAction>()?;
+        let selected = model.selected();
+        if let Some(new_index) = context_action.focus_prev() {
+            for i in 0..model.n_items() {
+                if i != selected {
+                    if let Some(tmp) = model.item(i).and_downcast::<EmojiContextAction>() {
+                        tmp.update_index(selected as u8, new_index, true);
+                    }
+                }
+            }
+        }
         None
     }
 }

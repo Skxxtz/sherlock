@@ -1,5 +1,7 @@
 mod imp;
 
+use std::usize;
+
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, variant::ToVariant, SignalHandlerId, WeakRef};
 use glib::Object;
@@ -30,9 +32,9 @@ impl EmojiContextAction {
     pub fn index(&self) -> u8 {
         self.imp().index.get()
     }
-    pub fn focus_next(&self) -> Option<()> {
+    pub fn focus_next(&self) -> Option<u8> {
         let imp = self.imp();
-        let new_index = imp.index.get().checked_add(1)?.clamp(0, 5);
+        let new_index = imp.index.get().checked_add(1)?.clamp(0, 4);
         for (i, item) in imp
             .tones
             .borrow()
@@ -47,9 +49,9 @@ impl EmojiContextAction {
                 item.remove_css_class("active");
             }
         }
-        Some(())
+        Some(new_index)
     }
-    pub fn focus_prev(&self) -> Option<()> {
+    pub fn focus_prev(&self) -> Option<u8> {
         let imp = self.imp();
         let new_index = imp.index.get().checked_sub(1)?;
         for (i, item) in imp
@@ -66,54 +68,77 @@ impl EmojiContextAction {
                 item.remove_css_class("active");
             }
         }
-        Some(())
+        Some(new_index)
     }
-    pub fn new(parent: WeakRef<EmojiObject>, color_index: u8, default_skin_tone: u8) -> Self {
-        let obj: Self = Object::builder().build();
-        let imp = obj.imp();
+    pub fn update_index(&self, color_index: u8, new_index: u8, uniform: bool) -> Option<usize> {
+        let imp = self.imp();
+        let parent = imp.parent.get().and_then(|tmp| tmp.upgrade());
 
-        // Construct raw emoji
-        let mut emoji_raw = parent
-            .upgrade()
-            .map(|i| i.imp().emoji.borrow().emoji())
-            .unwrap_or_default();
-        let mut index = 0;
-        let mut count = 0;
-        let pattern = "{skin_tone}";
-        while let Some(pos) = emoji_raw[index..].find(pattern) {
-            let abs_pos = index + pos;
-            if count == color_index {
-                let tone = "{current}";
-                emoji_raw.replace_range(abs_pos..abs_pos + pattern.len(), tone);
-                index = abs_pos + tone.len(); // skip over inserted tone
-            } else {
-                emoji_raw.replace_range(abs_pos..abs_pos + pattern.len(), "");
-                index = abs_pos; // continue from the same index since we removed the pattern
-            }
-            count += 1;
-        }
-
-        imp.index.set(default_skin_tone);
-        let _ = imp.parent.set(parent);
         let tones = [
-            "",
             "\u{1F3FB}",
             "\u{1F3FC}",
             "\u{1F3FD}",
             "\u{1F3FE}",
             "\u{1F3FF}",
         ];
+        let default = tones.get(new_index as usize).unwrap_or(&"\u{1F3FD}");
+
+        // Construct raw emoji
+        let mut emoji_raw = parent
+            .map(|i| i.imp().emoji.borrow().emoji())
+            .unwrap_or_default();
+        let pattern = "{skin_tone}";
+        let mut count = 0;
+        let mut result = String::new();
+        let mut remaining = emoji_raw.as_str();
+
+        while let Some(pos) = remaining.find(pattern) {
+            result.push_str(&remaining[..pos]);
+            if uniform {
+                if count == color_index {
+                    result.push_str(default);
+                } else {
+                    result.push_str("{current}");
+                }
+            } else {
+                if count == color_index {
+                    result.push_str("{current}");
+                } else {
+                    result.push_str(default);
+                }
+            }
+
+            remaining = &remaining[pos + pattern.len()..];
+            count += 1;
+        }
+
+        result.push_str(remaining);
+        emoji_raw = result;
+
         imp.tones
             .borrow()
             .iter()
             .filter_map(|i| i.upgrade())
             .enumerate()
             .for_each(|(i, label)| {
-                if i as u8 == default_skin_tone {
-                    label.add_css_class("active");
-                }
                 label.set_text(&emoji_raw.replace("{current}", tones.get(i).unwrap_or(&"")));
             });
+
+        Some(new_index as usize)
+    }
+    pub fn new(parent: WeakRef<EmojiObject>, color_index: u8, default_skin_tone: u8) -> Self {
+        let obj: Self = Object::builder().build();
+        let imp = obj.imp();
+        let _ = imp.parent.set(parent);
+
+        if let Some(new_index) = obj.update_index(color_index, default_skin_tone, false) {
+            imp.index.set(default_skin_tone);
+            imp.tones
+                .borrow()
+                .get(new_index)
+                .and_then(|tmp| tmp.upgrade())
+                .map(|tmp| tmp.add_css_class("active"));
+        }
 
         let signal_id = obj.connect_local("context-action-should-activate", false, {
             move |row| {

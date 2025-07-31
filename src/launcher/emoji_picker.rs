@@ -367,8 +367,8 @@ fn make_factory() -> SignalListItemFactory {
             .and_downcast::<Label>()
             .expect("Last child should be a label");
 
-        emoji_label.set_label(&emoji_obj.emoji());
-        emoji_name.set_label(&emoji_obj.title().split(';').next().unwrap_or_default());
+        emoji_label.set_text(&emoji_obj.emoji());
+        emoji_name.set_text(&emoji_obj.title().split(';').next().unwrap_or_default());
     });
     factory.connect_unbind(move |_, item| {
         let item = item

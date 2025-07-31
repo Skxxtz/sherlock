@@ -101,9 +101,8 @@ impl EmojiObject {
     /// ["\u{1F3FB}", "\u{1F3FC}", "\u{1F3FD}", "\u{1F3FE}", "\u{1F3FF}"]
     pub fn emoji(&self) -> String {
         let imp = self.imp();
-        imp.emoji
-            .borrow()
-            .reconstruct(&[imp.default_skin_tone.get().get_ascii(), ""])
+        let default = imp.default_skin_tone.get().get_ascii();
+        imp.emoji.borrow().reconstruct(&[default, default])
     }
 
     pub fn num_actions(&self) -> u8 {

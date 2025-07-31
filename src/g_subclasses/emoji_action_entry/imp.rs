@@ -48,7 +48,7 @@ impl ObjectImpl for EmojiContextAction {
         obj.set_vexpand(true);
         obj.set_spacing(10);
 
-        for _ in 0..6 {
+        for _ in 0..5 {
             // Title label
             let label = Label::builder().wrap(false).single_line_mode(true).build();
             self.tones.borrow_mut().push(label.downgrade());
