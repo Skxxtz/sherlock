@@ -17,7 +17,7 @@ use gtk4::{
 };
 
 use crate::{
-    g_subclasses::{emoji_item::EmojiObject, sherlock_row::SherlockRow, tile_item::TileItem},
+    g_subclasses::{emoji_item::EmojiObject, tile_item::TileItem},
     loader::{icon_loader::IconThemeGuard, pipe_loader::PipedElements},
     ui::search::UserBindHandler,
 };
@@ -317,14 +317,16 @@ impl SherlockNav for ListView {
     }
     fn mark_active(&self) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
-        let current = selection.selected_item().and_downcast::<SherlockRow>()?;
-        current.set_active(!current.imp().active.get());
+        let current = selection.selected_item().and_downcast::<TileItem>()?;
+        let row = current.parent().upgrade()?;
+        row.set_active(!row.imp().active.get());
         Some(())
     }
     fn get_actives<T: IsA<Object>>(&self) -> Option<Vec<T>> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let actives: Vec<T> = (0..selection.n_items())
-            .filter_map(|i| selection.item(i).and_downcast::<SherlockRow>())
+            .filter_map(|i| selection.item(i).and_downcast::<TileItem>())
+            .filter_map(|tile| tile.parent().upgrade())
             .filter(|r| r.active())
             .map(|r| r.upcast::<Object>())
             .filter_map(|r| r.downcast::<T>().ok())

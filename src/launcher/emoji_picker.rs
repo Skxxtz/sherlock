@@ -191,22 +191,26 @@ fn nav_event(
             };
             match key {
                 // Custom up key
-                Key::Up | _ if matches(binds.up, binds.up_mod) => {
+                Key::Up => key_actions.on_up(),
+                _ if matches(binds.up, binds.up_mod) => {
                     key_actions.on_up();
                 }
 
                 // Custom down key
-                Key::Down | _ if matches(binds.down, binds.down_mod) => {
+                Key::Down => key_actions.on_down(),
+                _ if matches(binds.down, binds.down_mod) => {
                     key_actions.on_down();
                 }
 
                 // Custom left key
-                Key::Left | _ if matches(binds.left, binds.left_mod) => {
+                Key::Left => key_actions.on_prev(),
+                _ if matches(binds.left, binds.left_mod) => {
                     key_actions.on_prev();
                 }
 
                 // Custom right key
-                Key::Right | _ if matches(binds.right, binds.right_mod) => {
+                Key::Right => key_actions.on_next(),
+                _ if matches(binds.right, binds.right_mod) => {
                     key_actions.on_next();
                 }
 

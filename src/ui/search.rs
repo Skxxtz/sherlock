@@ -721,7 +721,7 @@ fn nav_event(
                     return false.into();
                 }
                 Key::Return if multi => {
-                    key_actions.on_multi_return();
+                    key_actions.on_multi_return(None);
                 }
                 Key::Return | Key::KP_Enter => {
                     key_actions.on_return(None);

@@ -45,7 +45,7 @@ impl KeyActions {
             custom_handler,
         }
     }
-    pub fn on_multi_return(&self) {
+    pub fn on_multi_return(&self, close: Option<bool>) {
         // no context menu yet
         if self.context.open.get() {
             return;
@@ -56,6 +56,10 @@ impl KeyActions {
             .and_then(|r| r.get_actives::<SherlockRow>())
         {
             let len = actives.len();
+            if len == 0 {
+                self.on_return(close);
+                return
+            }
             actives.into_iter().enumerate().for_each(|(i, row)| {
                 let exit: u8 = if i < len - 1 { 1 } else { 0 };
                 row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
