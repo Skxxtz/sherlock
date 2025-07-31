@@ -1,6 +1,5 @@
 use std::{borrow::Cow, cell::RefCell, collections::HashSet, fmt::Debug, rc::Rc, time::SystemTime};
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::{
     glib::{
         self,
@@ -318,16 +317,15 @@ impl SherlockNav for ListView {
     fn mark_active(&self) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let current = selection.selected_item().and_downcast::<TileItem>()?;
-        let row = current.parent().upgrade()?;
-        row.set_active(!row.imp().active.get());
+        current.toggle_active();
         Some(())
     }
     fn get_actives<T: IsA<Object>>(&self) -> Option<Vec<T>> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let actives: Vec<T> = (0..selection.n_items())
             .filter_map(|i| selection.item(i).and_downcast::<TileItem>())
-            .filter_map(|tile| tile.parent().upgrade())
             .filter(|r| r.active())
+            .filter_map(|tile| tile.parent().upgrade())
             .map(|r| r.upcast::<Object>())
             .filter_map(|r| r.downcast::<T>().ok())
             .collect();

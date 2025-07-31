@@ -1,7 +1,7 @@
 mod imp;
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::ObjectExt, GString, SignalHandlerId};
+use gio::glib::{object::ObjectExt, SignalHandlerId};
 use glib::Object;
 use gtk4::{
     gdk::{Key, ModifierType},
@@ -24,16 +24,6 @@ impl SherlockRow {
         myself
     }
     // setters
-    pub fn set_active(&self, active: bool) {
-        self.imp().active.set(active);
-        let class_name = GString::from("multi-active");
-        let class_exists = self.css_classes().contains(&class_name);
-        if class_exists && !active {
-            self.remove_css_class("multi-active");
-        } else if !class_exists && active {
-            self.add_css_class("multi-active");
-        }
-    }
     pub fn set_signal_id(&self, signal: SignalHandlerId) {
         // Take the previous signal if it exists and disconnect it
         if let Some(old_id) = self.imp().signal_id.borrow_mut().replace(signal) {
@@ -48,10 +38,6 @@ impl SherlockRow {
     pub fn set_actions(&self, actions: Vec<ApplicationAction>) {
         self.imp().num_actions.set(actions.len());
         *self.imp().actions.borrow_mut() = actions;
-    }
-
-    pub fn active(&self) -> bool {
-        self.imp().active.get()
     }
 }
 

@@ -58,7 +58,7 @@ impl KeyActions {
             let len = actives.len();
             if len == 0 {
                 self.on_return(close);
-                return
+                return;
             }
             actives.into_iter().enumerate().for_each(|(i, row)| {
                 let exit: u8 = if i < len - 1 { 1 } else { 0 };

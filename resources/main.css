@@ -282,7 +282,7 @@ row:selected .tile.multi-active,
 .tile.multi-active {
     background: hsla(var(--foreground), 1);
     background-color: hsla(var(--foreground), 1);
-    border: 1px solid hsla(var(--text), 1);
+    border: 1px solid hsla(var(--text), 0.2);
 }
 
 .tile:selected .tag,

@@ -12,16 +12,12 @@ use std::sync::OnceLock;
 use crate::loader::util::ApplicationAction;
 
 /// ## Fields:
-/// * **active**: Whether the row should be shown as active in multi selection
 /// * **gesture**: State to hold and replace double-click gestures.
 /// * **actions**: Additional actions this tile has
 /// * **num_actions**: Number of additional actions
 /// * **terminal**: If the app should be executed using the terminal
 #[derive(Default)]
 pub struct SherlockRow {
-    /// Whether the row should be shown as active in multi selection
-    pub active: Cell<bool>,
-
     /// State to hold and replace double-click gestures
     pub gesture: OnceCell<GestureClick>,
 

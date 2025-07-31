@@ -14,13 +14,13 @@ use crate::loader::util::ApplicationAction;
 #[derive(Default)]
 pub struct TileItem {
     pub launcher: RefCell<Rc<Launcher>>,
-
     pub index: Cell<Option<u16>>,
     pub parent: RefCell<WeakRef<SherlockRow>>,
 
     pub update_handler: Rc<RefCell<UpdateHandler>>,
 
     // Customs
+    pub active: Cell<bool>,
     pub actions: RefCell<Vec<ApplicationAction>>,
     pub binds: Rc<RefCell<Vec<SherlockRowBind>>>,
 }

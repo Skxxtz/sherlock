@@ -4,6 +4,7 @@ use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::Cast;
 use gio::glib::{object::ObjectExt, WeakRef};
 use glib::Object;
+use gtk4::prelude::WidgetExt;
 use gtk4::{glib, Box as GtkBox, Widget};
 use simd_json::prelude::Indexed;
 use std::{rc::Rc, usize};
@@ -38,11 +39,15 @@ impl TileItem {
         self.imp().launcher.replace(launcher);
     }
     pub fn set_parent(&self, parent: Option<&SherlockRow>) {
+        let imp = self.imp();
         if let Some(parent) = parent {
+            if imp.active.get() {
+                parent.add_css_class("multi-active");
+            }
             let weak = parent.downgrade();
-            self.imp().parent.replace(weak);
+            imp.parent.replace(weak);
         } else {
-            self.imp().parent.take();
+            imp.parent.take();
         }
     }
     pub fn set_actions(&self, actions: Vec<ApplicationAction>) {
@@ -203,6 +208,21 @@ impl TileItem {
         } else {
             false
         }
+    }
+    pub fn toggle_active(&self) {
+        let imp = self.imp();
+        let a = imp.active.get();
+        if let Some(parent) = self.parent().upgrade() {
+            if !a {
+                parent.add_css_class("multi-active");
+            } else {
+                parent.remove_css_class("multi-active");
+            }
+        }
+        imp.active.set(!a)
+    }
+    pub fn active(&self) -> bool {
+        self.imp().active.get()
     }
     pub fn based_show(&self, keyword: &str) -> bool {
         let imp = self.imp();
