@@ -118,12 +118,12 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 let tone = launcher
                     .and_then(|l| {
                         if let LauncherType::Emoji(emj) = &l.launcher_type {
-                            Some(emj.default_skin_color.get_name())
+                            Some(emj.default_skin_tone.get_name())
                         } else {
                             None
                         }
                     })
-                    .unwrap_or(String::from("Yellow"));
+                    .unwrap_or(String::from("Simpsons"));
                 let _ = row.activate_action("win.emoji-page", Some(&tone.to_variant()));
                 let _ = row.activate_action(
                     "win.switch-page",

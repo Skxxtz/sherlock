@@ -483,11 +483,22 @@ Has following fields of its own:
 {
     "name": "Emoji Picker",
     "type": "emoji_picker",
-    "args": {},
+    "args": {
+        "default_skin_tone": "Simpsons"
+    },
     "priority": 4,
     "home": "Search"
 }
 ```
+
+### Arguments (args)
+- `default_skin_tone`: Sets the default skin tone for emojies. Can be either one of those:
+    - `Light`
+    - `MediumLight`
+    - `Medium`
+    - `MediumDark`
+    - `Dark`
+    - `Simpsons` (Default)
 
 ## Bulk Text
 

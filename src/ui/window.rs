@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use crate::api::server::SherlockServer;
 use crate::daemon::daemon::close_response;
-use crate::launcher::emoji_picker::{emojies, SkinColor};
+use crate::launcher::emoji_picker::{emojies, SkinTone};
 use crate::utils::config::ConfigGuard;
 
 use super::tiles::util::TextViewTileBuilder;
@@ -215,7 +215,7 @@ pub fn window(
                 // Either show user-specified content or show normal search
                 if let Some(parameter) = param.and_then(|p| p.get::<String>()) {
                     let (emoji_stack, _emoji_model) =
-                        match emojies(&current_stack_page, SkinColor::from_name(&parameter)) {
+                        match emojies(&current_stack_page, SkinTone::from_name(&parameter)) {
                             Ok(r) => r,
                             Err(e) => {
                                 let _ = e.insert(false);

@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
-    launcher::emoji_picker::SkinColor,
+    launcher::emoji_picker::SkinTone,
 };
 
 glib::wrapper! {
@@ -30,8 +30,8 @@ impl EmojiRaw {
     pub fn reconstruct(&self, skin_tones: &[&str]) -> String {
         let mut result = self.emoji.to_string();
         for tone in skin_tones {
-            if let Some(pos) = result.find("{skin_color}") {
-                result.replace_range(pos..pos + "{skin_color}".len(), tone);
+            if let Some(pos) = result.find("{skin_tone}") {
+                result.replace_range(pos..pos + "{skin_tone}".len(), tone);
             }
         }
         result
@@ -100,13 +100,13 @@ impl EmojiObject {
         let imp = self.imp();
         imp.emoji
             .borrow()
-            .reconstruct(&[imp.default_skin_color.get().get_ascii(), ""])
+            .reconstruct(&[imp.default_skin_tone.get().get_ascii(), ""])
     }
 
-    pub fn from(emoji_data: EmojiRaw, skin: &SkinColor) -> Self {
+    pub fn from(emoji_data: EmojiRaw, skin: &SkinTone) -> Self {
         let obj: Self = Object::builder().build();
         let imp = obj.imp();
-        imp.default_skin_color.set(skin.clone());
+        imp.default_skin_tone.set(skin.clone());
 
         imp.gesture.get_or_init(|| {
             let gesture = GestureClick::new();

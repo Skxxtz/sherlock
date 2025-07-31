@@ -7,12 +7,12 @@ use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
 
 use crate::g_subclasses::emoji_item::EmojiRaw;
-use crate::launcher::emoji_picker::SkinColor;
+use crate::launcher::emoji_picker::SkinTone;
 
 /// ## Fields:
 #[derive(Default, Debug)]
 pub struct EmojiObject {
-    pub default_skin_color: Cell<SkinColor>,
+    pub default_skin_tone: Cell<SkinTone>,
     pub emoji: RefCell<EmojiRaw>,
     pub parent: RefCell<Option<WeakRef<gtk4::Box>>>,
 
