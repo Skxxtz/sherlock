@@ -21,6 +21,7 @@ glib::wrapper! {
 pub struct EmojiRaw {
     emoji: String,
     name: String,
+    skin: u8,
 }
 
 impl EmojiObject {

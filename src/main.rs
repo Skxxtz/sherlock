@@ -261,6 +261,7 @@ async fn startup_loading() -> (
         },
     );
 
+    // Setup custom icons
     let _ = ICONS.set(RwLock::new(CustomIconTheme::new()));
     app_config.appearance.icon_paths.iter().for_each(|path| {
         if let Err(e) = IconThemeGuard::add_path(path) {
@@ -268,6 +269,7 @@ async fn startup_loading() -> (
         }
     });
 
+    // Create global config
     let _ = CONFIG.set(RwLock::new(app_config.clone())).map_err(|_| {
         startup_errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
     });
