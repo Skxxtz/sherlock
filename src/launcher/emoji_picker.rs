@@ -190,39 +190,31 @@ fn nav_event(
                 key_matches && mod_matches
             };
             match key {
-                // Custom previous key
-                _ if matches(binds.prev, binds.prev_mod) => {
-                    key_actions.on_prev();
-                    return true.into();
+                // Custom up key
+                Key::Up | _ if matches(binds.up, binds.up_mod) => {
+                    key_actions.on_up();
                 }
-                // Custom next key
-                _ if matches(binds.next, binds.next_mod) => {
+
+                // Custom down key
+                Key::Down | _ if matches(binds.down, binds.down_mod) => {
+                    key_actions.on_down();
+                }
+
+                // Custom left key
+                Key::Left | _ if matches(binds.left, binds.left_mod) => {
+                    key_actions.on_prev();
+                }
+
+                // Custom right key
+                Key::Right | _ if matches(binds.right, binds.right_mod) => {
                     key_actions.on_next();
-                    return true.into();
                 }
 
                 // Context menu opening
                 _ if matches(binds.context, binds.context_mod) => {
                     key_actions.open_context();
-                    return true.into();
                 }
 
-                Key::Up => {
-                    key_actions.on_up();
-                    return true.into();
-                }
-                Key::Down => {
-                    key_actions.on_down();
-                    return true.into();
-                }
-                Key::Left => {
-                    key_actions.on_prev();
-                    return true.into();
-                }
-                Key::Right => {
-                    key_actions.on_next();
-                    return true.into();
-                }
                 Key::BackSpace => {
                     let empty = search_bar.upgrade().map_or(true, |s| s.text().is_empty());
                     if empty {
@@ -236,24 +228,18 @@ fn nav_event(
                                 Some(&String::from("emoji-page").to_variant()),
                             );
                         }
-                        return true.into();
                     } else {
                         return false.into();
                     }
                 }
                 Key::Escape if key_actions.context.open.get() => {
                     key_actions.close_context();
-                    true.into()
                 }
-                Key::Return => {
-                    key_actions.on_return(None);
-                    true.into()
-                }
-                Key::Tab => {
-                    return true.into();
-                }
-                _ => false.into(),
+                Key::Return => key_actions.on_return(None),
+                Key::Tab => return true.into(),
+                _ => return false.into(),
             }
+            true.into()
         }
     });
     search_bar

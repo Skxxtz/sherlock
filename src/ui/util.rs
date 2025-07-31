@@ -32,12 +32,18 @@ use super::tiles::util::TextViewTileBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConfKeys {
-    // Next
-    pub next: Option<Key>,
-    pub next_mod: Option<ModifierType>,
-    // Previous
-    pub prev: Option<Key>,
-    pub prev_mod: Option<ModifierType>,
+    // Up
+    pub up: Option<Key>,
+    pub up_mod: Option<ModifierType>,
+    // Down
+    pub down: Option<Key>,
+    pub down_mod: Option<ModifierType>,
+    // Right
+    pub right: Option<Key>,
+    pub right_mod: Option<ModifierType>,
+    // Left
+    pub left: Option<Key>,
+    pub left_mod: Option<ModifierType>,
     // Inplace execution
     pub exec_inplace: Option<Key>,
     pub exec_inplace_mod: Option<ModifierType>,
@@ -53,12 +59,20 @@ pub struct ConfKeys {
 impl ConfKeys {
     pub fn new() -> Self {
         if let Ok(c) = ConfigGuard::read() {
-            let (prev_mod, prev) = match &c.binds.prev {
-                Some(prev) => ConfKeys::eval_bind_combination(prev),
+            let (up_mod, up) = match &c.binds.up {
+                Some(up) => ConfKeys::eval_bind_combination(up),
                 _ => (None, (None, None)),
             };
-            let (next_mod, next) = match &c.binds.next {
-                Some(next) => ConfKeys::eval_bind_combination(next),
+            let (down_mod, down) = match &c.binds.down {
+                Some(down) => ConfKeys::eval_bind_combination(down),
+                _ => (None, (None, None)),
+            };
+            let (left_mod, left) = match &c.binds.left {
+                Some(left) => ConfKeys::eval_bind_combination(left),
+                _ => (None, (None, None)),
+            };
+            let (right_mod, right) = match &c.binds.right {
+                Some(right) => ConfKeys::eval_bind_combination(right),
                 _ => (None, (None, None)),
             };
             let (exec_inplace_mod, inplace) = match &c.binds.exec_inplace {
@@ -76,10 +90,14 @@ impl ConfKeys {
             let shortcut_modifier_str = ConfKeys::get_mod_str(&shortcut_modifier);
             let context_mod_str = ConfKeys::get_mod_str(&context_mod);
             return ConfKeys {
-                next: next.0,
-                next_mod,
-                prev: prev.0,
-                prev_mod,
+                up: up.0,
+                up_mod,
+                down: down.0,
+                down_mod,
+                right: right.0,
+                right_mod,
+                left: left.0,
+                left_mod,
                 exec_inplace: inplace.0,
                 exec_inplace_mod,
                 context: context.0,
@@ -94,10 +112,14 @@ impl ConfKeys {
     }
     pub fn empty() -> Self {
         ConfKeys {
-            next: None,
-            next_mod: None,
-            prev: None,
-            prev_mod: None,
+            up: None,
+            up_mod: None,
+            down: None,
+            down_mod: None,
+            right: None,
+            right_mod: None,
+            left: None,
+            left_mod: None,
             exec_inplace: None,
             exec_inplace_mod: None,
             context: None,

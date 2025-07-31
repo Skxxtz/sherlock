@@ -655,9 +655,13 @@ impl Default for ConfigFiles {
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct ConfigBinds {
     #[serde(default)]
-    pub prev: Option<String>,
+    pub up: Option<String>,
     #[serde(default)]
-    pub next: Option<String>,
+    pub down: Option<String>,
+    #[serde(default)]
+    pub left: Option<String>,
+    #[serde(default)]
+    pub right: Option<String>,
     #[serde(default = "default_context")]
     pub context: Option<String>,
     #[serde(default)]

@@ -670,13 +670,21 @@ fn nav_event(
 
                 // Custom previous key
                 Key::Up => key_actions.on_prev(),
-                _ if matches(binds.prev, binds.prev_mod) => {
+                Key::Left => key_actions.on_next(),
+                _ if matches(binds.up, binds.up_mod) => {
+                    key_actions.on_prev();
+                }
+                _ if matches(binds.left, binds.left_mod) => {
                     key_actions.on_prev();
                 }
 
                 // Custom next key
                 Key::Down => key_actions.on_next(),
-                _ if matches(binds.next, binds.next_mod) => {
+                Key::Right => key_actions.on_next(),
+                _ if matches(binds.down, binds.down_mod) => {
+                    key_actions.on_next();
+                }
+                _ if matches(binds.right, binds.right_mod) => {
                     key_actions.on_next();
                 }
 
@@ -753,9 +761,9 @@ fn nav_event(
                 _ if i == 23 && mods.contains(ModifierType::SHIFT_MASK) => {
                     let shift = Some(ModifierType::SHIFT_MASK);
                     let tab = Some(Key::Tab);
-                    if binds.prev_mod == shift && binds.prev == tab {
+                    if binds.left_mod == shift && binds.left == tab {
                         key_actions.on_prev();
-                    } else if binds.next_mod == shift && binds.next == tab {
+                    } else if binds.right_mod == shift && binds.right == tab {
                         key_actions.on_next();
                     }
                 }
