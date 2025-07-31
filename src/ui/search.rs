@@ -24,7 +24,7 @@ use super::context::make_context;
 use super::util::*;
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
-    g_subclasses::{sherlock_row::SherlockRow, tile_item::TileItem},
+    g_subclasses::{action_entry::ContextAction, sherlock_row::SherlockRow, tile_item::TileItem},
     launcher::utils::HomeType,
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
@@ -322,7 +322,7 @@ fn construct_window(
         Overlay,
         SearchUiObj,
         SearchHandler,
-        ContextUI,
+        ContextUI<ContextAction>,
     ),
     SherlockError,
 > {
@@ -634,7 +634,7 @@ fn nav_event(
     binds: ConfKeys,
     stack_page: &Rc<RefCell<String>>,
     current_mode: &Rc<RefCell<String>>,
-    context: ContextUI,
+    context: ContextUI<ContextAction>,
     custom_handler: Rc<RefCell<UserBindHandler>>,
 ) {
     let event_controller = EventControllerKey::new();
@@ -660,7 +660,7 @@ fn nav_event(
             match key {
                 // Inplace execution of commands
                 _ if matches(binds.exec_inplace, binds.exec_inplace_mod) => {
-                    key_actions.on_return(key_actions.context.open.get(), Some(false))
+                    key_actions.on_return(Some(false))
                 }
 
                 // Context menu opening
@@ -716,7 +716,7 @@ fn nav_event(
                     key_actions.on_multi_return();
                 }
                 Key::Return | Key::KP_Enter => {
-                    key_actions.on_return(key_actions.context.open.get(), None);
+                    key_actions.on_return(None);
                 }
                 Key::Escape if key_actions.context.open.get() => {
                     key_actions.close_context();

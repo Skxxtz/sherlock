@@ -17,7 +17,7 @@ use gtk4::{
 };
 
 use crate::{
-    g_subclasses::{sherlock_row::SherlockRow, tile_item::TileItem},
+    g_subclasses::{emoji_item::EmojiObject, sherlock_row::SherlockRow, tile_item::TileItem},
     loader::{icon_loader::IconThemeGuard, pipe_loader::PipedElements},
     ui::search::UserBindHandler,
 };
@@ -335,7 +335,7 @@ impl SherlockNav for ListView {
 impl SherlockNav for GridView {
     fn focus_next(
         &self,
-        _context_model: Option<&WeakRef<ListStore>>,
+        context_model: Option<&WeakRef<ListStore>>,
         _custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
     ) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
@@ -345,10 +345,22 @@ impl SherlockNav for GridView {
         }
         let n_items = selection.n_items();
         let new_index = index + 1;
-        if new_index < n_items {
-            selection.set_selected(new_index);
-            self.scroll_to(new_index, ListScrollFlags::NONE, None);
+
+        if new_index != index {
+            if new_index < n_items {
+                selection.set_selected(new_index);
+                self.scroll_to(new_index, ListScrollFlags::NONE, None);
+                let selected = selection.selected_item().and_downcast::<EmojiObject>()?;
+                let _ = self.activate_action(
+                    "win.context-mode",
+                    Some(&(selected.num_actions() > 0).to_variant()),
+                );
+                context_model
+                    .and_then(|tmp| tmp.upgrade())
+                    .map(|ctx| ctx.remove_all());
+            }
         }
+
         None
     }
     fn focus_prev(

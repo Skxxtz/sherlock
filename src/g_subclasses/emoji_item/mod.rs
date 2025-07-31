@@ -36,6 +36,9 @@ impl EmojiRaw {
         }
         result
     }
+    pub fn emoji(&self) -> String {
+        self.emoji.to_string()
+    }
 }
 
 impl EmojiObject {
@@ -101,6 +104,10 @@ impl EmojiObject {
         imp.emoji
             .borrow()
             .reconstruct(&[imp.default_skin_tone.get().get_ascii(), ""])
+    }
+
+    pub fn num_actions(&self) -> u8 {
+        self.imp().emoji.borrow().skin
     }
 
     pub fn from(emoji_data: EmojiRaw, skin: &SkinTone) -> Self {

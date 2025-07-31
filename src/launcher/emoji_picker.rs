@@ -1,10 +1,11 @@
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{self, WeakRef};
 use gio::ListStore;
+use gtk4::gdk::ModifierType;
 use gtk4::{self, gdk::Key, prelude::*, EventControllerKey};
 use gtk4::{
     Box as GtkBox, CustomFilter, CustomSorter, Entry, FilterListModel, GridView, Label, Ordering,
-    SignalListItemFactory, SingleSelection, SortListModel,
+    Overlay, SignalListItemFactory, SingleSelection, SortListModel,
 };
 use levenshtein::levenshtein;
 use serde::{Deserialize, Serialize};
@@ -12,11 +13,14 @@ use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use crate::g_subclasses::emoji_action_entry::EmojiContextAction;
 use crate::g_subclasses::emoji_item::{EmojiObject, EmojiRaw};
 use crate::loader::util::AppData;
 use crate::prelude::{SherlockNav, SherlockSearch};
 use crate::sherlock_error;
-use crate::ui::util::{ConfKeys, SearchHandler};
+use crate::ui::context::make_emoji_context;
+use crate::ui::key_actions::EmojiKeyActions;
+use crate::ui::util::{ConfKeys, ContextUI, SearchHandler};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy)]
@@ -58,6 +62,16 @@ impl SkinTone {
             "MediumDark" => Self::MediumDark,
             "Dark" => Self::Dark,
             _ => Self::Simpsons,
+        }
+    }
+    pub fn index(&self) -> u8 {
+        match self {
+            Self::Light => 0,
+            Self::MediumLight => 1,
+            Self::Medium => 2,
+            Self::MediumDark => 3,
+            Self::Dark => 4,
+            Self::Simpsons => 5,
         }
     }
 }
@@ -113,8 +127,8 @@ impl EmojiPicker {
 pub fn emojies(
     stack_page: &Rc<RefCell<String>>,
     skin_tone: SkinTone,
-) -> Result<(GridSearchUi, WeakRef<ListStore>), SherlockError> {
-    let (search_query, ui, handler) = construct(skin_tone)?;
+) -> Result<(Overlay, WeakRef<ListStore>), SherlockError> {
+    let (search_query, overlay, ui, handler, context) = construct(skin_tone.clone())?;
     let imp = ui.imp();
 
     let search_bar = imp.search_bar.downgrade();
@@ -130,7 +144,14 @@ pub fn emojies(
 
     let custom_binds = ConfKeys::new();
     let view = imp.results.downgrade();
-    nav_event(search_bar.clone(), view.clone(), stack_page, custom_binds);
+    nav_event(
+        search_bar.clone(),
+        view.clone(),
+        stack_page,
+        custom_binds,
+        context.clone(),
+        skin_tone,
+    );
     change_event(
         search_bar.clone(),
         &search_query,
@@ -140,13 +161,15 @@ pub fn emojies(
     );
 
     let model = handler.model.unwrap();
-    return Ok((ui, model.clone()));
+    return Ok((overlay, model.clone()));
 }
 fn nav_event(
     search_bar: WeakRef<Entry>,
     view: WeakRef<GridView>,
     stack_page: &Rc<RefCell<String>>,
-    custom_binds: ConfKeys,
+    binds: ConfKeys,
+    context: ContextUI<EmojiContextAction>,
+    skin_tone: SkinTone,
 ) {
     // Wrap the event controller in an Rc<RefCell> for shared mutability
     let event_controller = EventControllerKey::new();
@@ -154,64 +177,50 @@ fn nav_event(
 
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
-        fn move_prev(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| view.focus_prev(None, None));
-        }
-        fn move_next(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| view.focus_next(None, None));
-        }
-        fn move_up(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| {
-                let width = view.width();
-                let offset = (width / 100).min(7);
-                view.focus_offset(None, -offset)
-            });
-        }
-        fn move_down(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| {
-                let width = view.width();
-                let offset = (width / 100).min(7);
-                view.focus_offset(None, offset)
-            });
-        }
         let search_bar = search_bar.clone();
+        let key_actions =
+            EmojiKeyActions::new(view.clone(), search_bar.clone(), context, skin_tone);
         move |_, key, _, modifiers| {
             if stack_page.borrow().as_str() != "emoji-page" {
                 return false.into();
             }
+            let matches = |comp: Option<Key>, comp_mod: Option<ModifierType>| {
+                let key_matches = Some(key) == comp;
+                let mod_matches = comp_mod.map_or(false, |m| modifiers.contains(m));
+                key_matches && mod_matches
+            };
             match key {
                 // Custom previous key
-                k if Some(k) == custom_binds.prev
-                    && custom_binds
-                        .prev_mod
-                        .map_or(true, |m| modifiers.contains(m)) =>
-                {
-                    move_prev(&view);
+                _ if matches(binds.prev, binds.prev_mod) => {
+                    key_actions.on_prev();
                     return true.into();
                 }
                 // Custom next key
-                k if Some(k) == custom_binds.next
-                    && custom_binds
-                        .next_mod
-                        .map_or(true, |m| modifiers.contains(m)) =>
-                {
-                    move_next(&view);
+                _ if matches(binds.next, binds.next_mod) => {
+                    key_actions.on_next();
                     return true.into();
                 }
+
+                // Context menu opening
+                _ if matches(binds.context, binds.context_mod) => {
+                    key_actions.open_context();
+                    return true.into();
+                }
+
                 Key::Up => {
-                    move_up(&view);
+                    key_actions.on_up();
                     return true.into();
                 }
                 Key::Down => {
-                    move_down(&view);
+                    key_actions.on_down();
                     return true.into();
                 }
                 Key::Left => {
-                    move_prev(&view);
+                    key_actions.on_prev();
                     return true.into();
                 }
                 Key::Right => {
-                    move_next(&view);
+                    key_actions.on_next();
                     return true.into();
                 }
                 Key::BackSpace => {
@@ -233,16 +242,11 @@ fn nav_event(
                     }
                 }
                 Key::Return => {
-                    if let Some(upgr) = view.upgrade() {
-                        if let Some(selection) = upgr.model().and_downcast::<SingleSelection>() {
-                            if let Some(row) =
-                                selection.selected_item().and_downcast::<EmojiObject>()
-                            {
-                                row.emit_by_name::<()>("emoji-should-activate", &[]);
-                            }
-                        }
-                    }
+                    key_actions.on_return(None);
                     true.into()
+                }
+                Key::Tab => {
+                    return true.into();
                 }
                 _ => false.into(),
             }
@@ -255,12 +259,26 @@ fn nav_event(
 
 fn construct(
     skin_tone: SkinTone,
-) -> Result<(Rc<RefCell<String>>, GridSearchUi, SearchHandler), SherlockError> {
+) -> Result<
+    (
+        Rc<RefCell<String>>,
+        Overlay,
+        GridSearchUi,
+        SearchHandler,
+        ContextUI<EmojiContextAction>,
+    ),
+    SherlockError,
+> {
     let emojies = EmojiPicker::load(skin_tone)?;
     let search_text = Rc::new(RefCell::new(String::new()));
     // Initialize the builder with the correct path
     let ui = GridSearchUi::new();
     let imp = ui.imp();
+
+    let (context, revealer) = make_emoji_context();
+    let main_overlay = Overlay::new();
+    main_overlay.set_child(Some(&ui));
+    main_overlay.add_overlay(&revealer);
 
     // Setup model and factory
     let model = ListStore::new::<EmojiObject>();
@@ -289,7 +307,7 @@ fn construct(
         ConfKeys::new(),
         Cell::new(true),
     );
-    Ok((search_text, ui, handler))
+    Ok((search_text, main_overlay, ui, handler, context))
 }
 fn make_factory() -> SignalListItemFactory {
     let factory = SignalListItemFactory::new();

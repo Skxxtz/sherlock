@@ -725,6 +725,16 @@ gridview child:selected box {
     font-size: 10px;
     color: hsla(var(--text), 0.3);
 }
+#context-menu.emoji row {
+    padding: 3px;
+}
+#context-menu.emoji label {
+    padding: 5px;
+    border-radius: 3px;
+}
+#context-menu.emoji label.active {
+    background: hsla(var(--text), 0.1);
+}
 
 /*ANIMATIONS*/
 @keyframes vanish-rotate {

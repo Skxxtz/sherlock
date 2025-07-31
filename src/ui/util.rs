@@ -6,17 +6,18 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::{self, File};
 use std::io::{BufWriter, Read, Write};
+use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::u32;
 
-use gio::glib::{self, WeakRef};
+use gio::glib::{self, Object, WeakRef};
 use gio::ListStore;
 use gtk4::gdk::{Key, ModifierType};
 use gtk4::{
     prelude::*, Box as GtkBox, CustomFilter, CustomSorter, Entry, Justification, Label, ListView,
-    ScrolledWindow, Spinner,
+    ScrolledWindow, SignalListItemFactory, Spinner, Widget,
 };
 use serde::Deserialize;
 
@@ -354,10 +355,40 @@ impl SearchHandler {
 }
 
 #[derive(Clone)]
-pub struct ContextUI {
+pub struct ContextUI<T> {
     pub model: WeakRef<ListStore>,
     pub view: WeakRef<ListView>,
     pub open: Rc<Cell<bool>>,
+    _phantom: PhantomData<T>,
+}
+impl<T: IsA<Object> + IsA<Widget>> ContextUI<T> {
+    pub fn new(model: WeakRef<ListStore>, view: WeakRef<ListView>, open: Rc<Cell<bool>>) -> Self {
+        Self {
+            model,
+            view,
+            open,
+            _phantom: PhantomData,
+        }
+    }
+    pub fn make_factory(&self) -> Option<()> {
+        let factory = self
+            .view
+            .upgrade()?
+            .factory()
+            .and_downcast::<SignalListItemFactory>()?;
+        factory.connect_bind(|_, item| {
+            let item = item
+                .downcast_ref::<gtk4::ListItem>()
+                .expect("Item mut be a ListItem");
+            let row = item
+                .item()
+                .clone()
+                .and_downcast::<T>()
+                .expect("Row should be ContextAction");
+            item.set_child(Some(&row));
+        });
+        Some(())
+    }
 }
 
 #[allow(dead_code)]
