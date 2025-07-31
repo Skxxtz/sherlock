@@ -245,13 +245,25 @@ fn make_factory() -> SignalListItemFactory {
             .downcast_ref::<gtk4::ListItem>()
             .expect("Should be a list item");
         let box_ = GtkBox::new(gtk4::Orientation::Vertical, 0);
-        box_.set_size_request(50, 50);
+        box_.set_size_request(100, 100);
+        box_.add_css_class("emoji-item");
 
         let emoji_label = Label::new(Some(""));
         emoji_label.set_valign(gtk4::Align::Center);
         emoji_label.set_halign(gtk4::Align::Center);
         emoji_label.set_vexpand(true);
+
+        let emoji_title = Label::builder()
+            .ellipsize(gtk4::pango::EllipsizeMode::End)
+            .valign(gtk4::Align::Center)
+            .halign(gtk4::Align::Center)
+            .vexpand(false)
+            .margin_bottom(2)
+            .name("emoji-name")
+            .build();
+
         box_.append(&emoji_label);
+        box_.append(&emoji_title);
 
         list_item.set_child(Some(&box_));
     });
@@ -275,7 +287,13 @@ fn make_factory() -> SignalListItemFactory {
             .and_downcast::<Label>()
             .expect("First child should be a label");
 
+        let emoji_name = box_
+            .last_child()
+            .and_downcast::<Label>()
+            .expect("Last child should be a label");
+
         emoji_label.set_label(&emoji_obj.emoji());
+        emoji_name.set_label(&emoji_obj.title().split(';').next().unwrap_or_default());
     });
     factory.connect_unbind(move |_, item| {
         let item = item
@@ -336,7 +354,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>) -> CustomFilter {
         let counter = Rc::clone(&counter);
         move |entry| {
             let current = counter.get();
-            if current >= 80 {
+            if current >= 77 {
                 return false;
             }
             let item = entry.downcast_ref::<EmojiObject>().unwrap();

@@ -717,6 +717,15 @@ gridview child:selected box {
     filter: brightness(10) saturate(100%) contrast(100%); /* black */
 }
 
+/* EMOJIES */
+.emoji-item {
+    padding: 20px;
+}
+.emoji-item #emoji-name{
+    font-size: 10px;
+    color: hsla(var(--text), 0.3);
+}
+
 /*ANIMATIONS*/
 @keyframes vanish-rotate {
     from {
