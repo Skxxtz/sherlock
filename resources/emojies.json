@@ -3780,9 +3780,9 @@
     "skin": 0
   },
   {
-    "emoji": "👨‍❤‍💋‍👨",
+    "emoji": "👨{skin_tone}‍❤‍💋‍👨{skin_tone}",
     "name": "Kiss Man Man",
-    "skin": 0
+    "skin": 2
   },
   {
     "emoji": "🙋{skin_tone}",

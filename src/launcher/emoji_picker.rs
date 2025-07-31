@@ -241,6 +241,10 @@ fn nav_event(
                         return false.into();
                     }
                 }
+                Key::Escape if key_actions.context.open.get() => {
+                    key_actions.close_context();
+                    true.into()
+                }
                 Key::Return => {
                     key_actions.on_return(None);
                     true.into()
