@@ -6191,7 +6191,12 @@
   },
   {
     "emoji": "❤",
-    "name": "Red Heart;Love",
+    "name": "Heart",
+    "skin": 0
+  },
+  {
+    "emoji": "❤️",
+    "name": "Red Heart;Love;Love You",
     "skin": 0
   },
   {
