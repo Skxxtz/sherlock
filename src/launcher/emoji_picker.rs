@@ -7,6 +7,7 @@ use gtk4::{
     SignalListItemFactory, SingleSelection, SortListModel,
 };
 use levenshtein::levenshtein;
+use serde::Deserialize;
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -18,10 +19,38 @@ use crate::sherlock_error;
 use crate::ui::util::{ConfKeys, SearchHandler};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
+pub enum SkinColor {
+    Light,
+    MediumLight,
+    Medium,
+    MediumDark,
+    Dark,
+    Yellow,
+}
+impl SkinColor {
+    pub fn get_ascii(&self) -> &'static str {
+        match self {
+            Self::Light => "\u{1F3FB}",
+            Self::MediumLight => "\u{1F3FC}",
+            Self::Medium => "\u{1F3FD}",
+            Self::MediumDark => "\u{1F3FE}",
+            Self::Dark => "\u{1F3FF}",
+            Self::Yellow => "",
+        }
+    }
+}
+impl Default for SkinColor {
+    fn default() -> Self {
+        Self::Yellow
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct EmojiPicker {
     pub rows: u32,
     pub cols: u32,
+    pub default_skin_color: SkinColor,
     pub data: Vec<AppData>,
 }
 

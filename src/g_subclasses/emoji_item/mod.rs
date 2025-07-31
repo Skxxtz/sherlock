@@ -94,7 +94,10 @@ impl EmojiObject {
     /// Skin colors for emojies are defined as:
     /// ["\u{1F3FB}", "\u{1F3FC}", "\u{1F3FD}", "\u{1F3FE}", "\u{1F3FF}"]
     pub fn emoji(&self) -> String {
-        self.imp().emoji.borrow().reconstruct(&["", ""])
+        let imp = self.imp();
+        imp.emoji
+            .borrow()
+            .reconstruct(&[imp.launcher.borrow().default_skin_color.get_ascii(), ""])
     }
 
     pub fn from(emoji_data: EmojiRaw) -> Self {

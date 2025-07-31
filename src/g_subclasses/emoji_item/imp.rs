@@ -4,13 +4,16 @@ use gtk4::subclass::prelude::*;
 use gtk4::{glib, GestureClick};
 use once_cell::sync::OnceCell;
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::OnceLock;
 
 use crate::g_subclasses::emoji_item::EmojiRaw;
+use crate::launcher::emoji_picker::EmojiPicker;
 
 /// ## Fields:
 #[derive(Default, Debug)]
 pub struct EmojiObject {
+    pub launcher: Rc<RefCell<EmojiPicker>>,
     pub emoji: RefCell<EmojiRaw>,
     pub parent: RefCell<Option<WeakRef<gtk4::Box>>>,
 

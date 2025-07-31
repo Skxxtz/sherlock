@@ -15,7 +15,7 @@ use crate::launcher::audio_launcher::AudioLauncherFunctions;
 use crate::launcher::bookmark_launcher::BookmarkLauncher;
 use crate::launcher::calc_launcher::{CalculatorLauncher, Currency, CURRENCIES};
 use crate::launcher::category_launcher::CategoryLauncher;
-use crate::launcher::emoji_picker::EmojiPicker;
+use crate::launcher::emoji_picker::{EmojiPicker, SkinColor};
 use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::file_launcher::FileLauncher;
 use crate::launcher::pomodoro_launcher::{Pomodoro, PomodoroStyle};
@@ -375,9 +375,16 @@ fn parse_emoji_launcher(raw: &RawLauncher) -> LauncherType {
     if app_data.icon.is_none() {
         app_data.icon = Some(String::from("sherlock-emoji"))
     }
+    let default_skin_color: SkinColor = raw
+        .args
+        .get("default_skin_color")
+        .and_then(|val| serde_json::from_value(val.clone()).ok())
+        .unwrap_or(SkinColor::Medium);
+
     LauncherType::Emoji(EmojiPicker {
         rows: 4,
         cols: 5,
+        default_skin_color,
         data: vec![app_data],
     })
 }
