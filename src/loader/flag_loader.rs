@@ -22,6 +22,10 @@ impl Loader {
             let _ = print_version();
             std::process::exit(0);
         }
+        if args.contains(&"-v".to_string()) {
+            let _ = print_version();
+            std::process::exit(0);
+        }
 
         SherlockFlags::new(args)
     }
