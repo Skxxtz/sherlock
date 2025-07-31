@@ -112,14 +112,14 @@ fn nav_event(
         fn move_up(view: &WeakRef<GridView>) {
             view.upgrade().map(|view| {
                 let width = view.width();
-                let offset = (width / 50).min(10);
+                let offset = (width / 100).min(7);
                 view.focus_offset(None, -offset)
             });
         }
         fn move_down(view: &WeakRef<GridView>) {
             view.upgrade().map(|view| {
                 let width = view.width();
-                let offset = (width / 50).min(10);
+                let offset = (width / 100).min(7);
                 view.focus_offset(None, offset)
             });
         }

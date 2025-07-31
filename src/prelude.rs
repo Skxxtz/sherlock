@@ -394,7 +394,7 @@ impl SherlockNav for GridView {
         let n_items = selection.n_items() as i32;
         let new_index = offset.checked_add(current_index)?.clamp(0, n_items - 1);
         selection.set_selected(new_index as u32);
-        self.scroll_to(0, ListScrollFlags::NONE, None);
+        self.scroll_to(new_index as u32, ListScrollFlags::NONE, None);
         Some(())
     }
     fn execute_by_index(&self, _index: u32) {}
