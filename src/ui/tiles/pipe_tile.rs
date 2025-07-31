@@ -128,7 +128,7 @@ impl PipeTileHandler {
                     2 => Some(true),
                     _ => None,
                 };
-                execute_from_attrs(&row, &attrs.borrow(), param);
+                execute_from_attrs(&row, &attrs.borrow(), param, None);
                 // To reload ui according to mode
                 let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
                 None

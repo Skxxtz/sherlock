@@ -133,7 +133,7 @@ impl WeatherTileHandler {
         }
         Some(())
     }
-    pub fn bind_signal(&self, row: &SherlockRow) {
+    pub fn bind_signal(&self, row: &SherlockRow, launcher: Rc<Launcher>) {
         row.add_css_class("tile");
         row.add_css_class("weather-tile");
         let attrs = self.attrs.clone();
@@ -146,7 +146,7 @@ impl WeatherTileHandler {
                 2 => Some(true),
                 _ => None,
             };
-            execute_from_attrs(&row, &attrs.borrow(), param);
+            execute_from_attrs(&row, &attrs.borrow(), param, Some(launcher.clone()));
             None
         });
         row.set_signal_id(signal_id);

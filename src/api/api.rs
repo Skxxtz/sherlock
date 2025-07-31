@@ -157,7 +157,7 @@ impl SherlockAPI {
                     ("method", Some(&action.action)),
                     ("exec", action.exec.as_deref()),
                 ]);
-                execute_from_attrs(&window, &attrs, None);
+                execute_from_attrs(&window, &attrs, None, None);
             });
 
         open_window.present();

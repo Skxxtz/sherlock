@@ -122,7 +122,12 @@ impl MusicTileHandler {
         }
         Some(())
     }
-    pub fn bind_signal(&self, row: &SherlockRow, mpris: &MusicPlayerLauncher) -> Option<()> {
+    pub fn bind_signal(
+        &self,
+        row: &SherlockRow,
+        mpris: &MusicPlayerLauncher,
+        launcher: Rc<Launcher>,
+    ) -> Option<()> {
         row.add_css_class("mpris-tile");
         let attrs = self.attrs.clone();
         let mpris_rc = Rc::new(RefCell::new(mpris.clone()));
@@ -162,7 +167,7 @@ impl MusicTileHandler {
                 }
                 "unbind" => return None,
                 _ => {
-                    execute_from_attrs(&row, &attrs.borrow(), exit);
+                    execute_from_attrs(&row, &attrs.borrow(), exit, Some(launcher.clone()));
                 }
             }
             // To reload ui according to mode

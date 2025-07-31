@@ -3,17 +3,16 @@ use gio::glib::{SignalHandlerId, WeakRef};
 use gtk4::subclass::prelude::*;
 use gtk4::{glib, GestureClick};
 use once_cell::sync::OnceCell;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
 
 use crate::g_subclasses::emoji_item::EmojiRaw;
-use crate::launcher::emoji_picker::EmojiPicker;
+use crate::launcher::emoji_picker::SkinColor;
 
 /// ## Fields:
 #[derive(Default, Debug)]
 pub struct EmojiObject {
-    pub launcher: Rc<RefCell<EmojiPicker>>,
+    pub default_skin_color: Cell<SkinColor>,
     pub emoji: RefCell<EmojiRaw>,
     pub parent: RefCell<Option<WeakRef<gtk4::Box>>>,
 

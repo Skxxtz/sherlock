@@ -10,7 +10,10 @@ use gtk4::{
 };
 use serde::Deserialize;
 
-use crate::actions::{execute_from_attrs, get_attrs_map};
+use crate::{
+    actions::{execute_from_attrs, get_attrs_map},
+    launcher::emoji_picker::SkinColor,
+};
 
 glib::wrapper! {
     pub struct EmojiObject(ObjectSubclass<imp::EmojiObject>)
@@ -76,7 +79,7 @@ impl EmojiObject {
             move |_attrs| {
                 let attrs = get_attrs_map(vec![("method", Some("copy")), ("result", Some(&emoji))]);
                 let parent = parent.borrow().clone().and_then(|tmp| tmp.upgrade())?;
-                execute_from_attrs(&parent, &attrs, None);
+                execute_from_attrs(&parent, &attrs, None, None);
                 None
             }
         });
@@ -97,12 +100,13 @@ impl EmojiObject {
         let imp = self.imp();
         imp.emoji
             .borrow()
-            .reconstruct(&[imp.launcher.borrow().default_skin_color.get_ascii(), ""])
+            .reconstruct(&[imp.default_skin_color.get().get_ascii(), ""])
     }
 
-    pub fn from(emoji_data: EmojiRaw) -> Self {
+    pub fn from(emoji_data: EmojiRaw, skin: &SkinColor) -> Self {
         let obj: Self = Object::builder().build();
         let imp = obj.imp();
+        imp.default_skin_color.set(skin.clone());
 
         imp.gesture.get_or_init(|| {
             let gesture = GestureClick::new();

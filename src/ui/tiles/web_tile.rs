@@ -77,7 +77,7 @@ impl WebTileHandler {
 
         Some(())
     }
-    pub fn bind_signal(&self, row: &SherlockRow) {
+    pub fn bind_signal(&self, row: &SherlockRow, launcher: Rc<Launcher>) {
         let signal_id = row.connect_local("row-should-activate", false, {
             let attrs = self.attrs.clone();
             move |args| {
@@ -88,7 +88,7 @@ impl WebTileHandler {
                     2 => Some(true),
                     _ => None,
                 };
-                execute_from_attrs(&row, &attrs.borrow(), param);
+                execute_from_attrs(&row, &attrs.borrow(), param, Some(launcher.clone()));
                 None
             }
         });

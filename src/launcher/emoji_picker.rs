@@ -7,7 +7,7 @@ use gtk4::{
     SignalListItemFactory, SingleSelection, SortListModel,
 };
 use levenshtein::levenshtein;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -19,7 +19,7 @@ use crate::sherlock_error;
 use crate::ui::util::{ConfKeys, SearchHandler};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Copy)]
 pub enum SkinColor {
     Light,
     MediumLight,
@@ -39,6 +39,27 @@ impl SkinColor {
             Self::Yellow => "",
         }
     }
+    pub fn get_name(&self) -> String {
+        let raw = match self {
+            Self::Light => "Light",
+            Self::MediumLight => "MediumLight",
+            Self::Medium => "Medium",
+            Self::MediumDark => "MediumDark",
+            Self::Dark => "Dark",
+            Self::Yellow => "Yellow",
+        };
+        raw.to_string()
+    }
+    pub fn from_name(name: &str) -> Self {
+        match name {
+            "Light" => Self::Light,
+            "MediumLight" => Self::MediumLight,
+            "Medium" => Self::Medium,
+            "MediumDark" => Self::MediumDark,
+            "Dark" => Self::Dark,
+            _ => Self::Yellow,
+        }
+    }
 }
 impl Default for SkinColor {
     fn default() -> Self {
@@ -55,7 +76,7 @@ pub struct EmojiPicker {
 }
 
 impl EmojiPicker {
-    pub fn load() -> Result<Vec<EmojiObject>, SherlockError> {
+    pub fn load(default_skin_color: SkinColor) -> Result<Vec<EmojiObject>, SherlockError> {
         // Loads default fallback.json file and loads the launcher configurations within.
         let data = gio::resources_lookup_data(
             "/dev/skxxtz/sherlock/emojies.json",
@@ -83,7 +104,7 @@ impl EmojiPicker {
         })?;
         let emojies: Vec<EmojiObject> = emojies
             .into_iter()
-            .map(|emj| EmojiObject::from(emj))
+            .map(|emj| EmojiObject::from(emj, &default_skin_color))
             .collect();
         Ok(emojies)
     }
@@ -91,8 +112,9 @@ impl EmojiPicker {
 
 pub fn emojies(
     stack_page: &Rc<RefCell<String>>,
+    skin_color: SkinColor,
 ) -> Result<(GridSearchUi, WeakRef<ListStore>), SherlockError> {
-    let (search_query, ui, handler) = construct()?;
+    let (search_query, ui, handler) = construct(skin_color)?;
     let imp = ui.imp();
 
     let search_bar = imp.search_bar.downgrade();
@@ -231,8 +253,10 @@ fn nav_event(
         .map(|entry| entry.add_controller(event_controller));
 }
 
-fn construct() -> Result<(Rc<RefCell<String>>, GridSearchUi, SearchHandler), SherlockError> {
-    let emojies = EmojiPicker::load()?;
+fn construct(
+    skin_color: SkinColor,
+) -> Result<(Rc<RefCell<String>>, GridSearchUi, SearchHandler), SherlockError> {
+    let emojies = EmojiPicker::load(skin_color)?;
     let search_text = Rc::new(RefCell::new(String::new()));
     // Initialize the builder with the correct path
     let ui = GridSearchUi::new();

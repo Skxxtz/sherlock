@@ -1,10 +1,11 @@
 use gio::glib::{object::IsA, variant::ToVariant};
 use gtk4::{prelude::*, Widget};
-use std::collections::HashMap;
 use std::fs::File;
+use std::{collections::HashMap, rc::Rc};
 use teamslaunch::teamslaunch;
 use util::{clear_cached_files, reset_app_counter};
 
+use crate::launcher::{Launcher, LauncherType};
 use crate::{
     actions::commandlaunch::command_launch,
     api::{call::ApiCall, server::SherlockServer},
@@ -26,6 +27,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
     row: &T,
     attrs: &HashMap<String, String>,
     do_exit: Option<bool>,
+    launcher: Option<Rc<Launcher>>,
 ) {
     //construct HashMap
     let attrs: HashMap<String, String> = attrs
@@ -112,7 +114,17 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             }
             "emoji_picker" => {
                 exit = false;
-                let _ = row.activate_action("win.emoji-page", None);
+
+                let tone = launcher
+                    .and_then(|l| {
+                        if let LauncherType::Emoji(emj) = &l.launcher_type {
+                            Some(emj.default_skin_color.get_name())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(String::from("Yellow"));
+                let _ = row.activate_action("win.emoji-page", Some(&tone.to_variant()));
                 let _ = row.activate_action(
                     "win.switch-page",
                     Some(&String::from("search-page->emoji-page").to_variant()),

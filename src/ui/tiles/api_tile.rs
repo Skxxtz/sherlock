@@ -150,7 +150,7 @@ impl ApiTileHandler {
         }
         Some(())
     }
-    pub fn bind_signal(&self, row: &SherlockRow) {
+    pub fn bind_signal(&self, row: &SherlockRow, launcher: Rc<Launcher>) {
         row.add_css_class("bulk-text");
         let signal_id = row.connect_local("row-should-activate", false, {
             let attrs = self.attrs.clone();
@@ -162,7 +162,7 @@ impl ApiTileHandler {
                     2 => Some(true),
                     _ => None,
                 };
-                execute_from_attrs(&row, &attrs.borrow(), param);
+                execute_from_attrs(&row, &attrs.borrow(), param, Some(launcher.clone()));
                 // To reload ui according to mode
                 let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
                 None

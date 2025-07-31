@@ -297,17 +297,18 @@ impl TileItem {
         }
     }
     pub fn bind_signal(&self, row: &SherlockRow) {
+        let launcher = self.imp().launcher.borrow().clone();
         match &*self.imp().update_handler.borrow() {
-            UpdateHandler::ApiTile(inner) => inner.bind_signal(row),
-            UpdateHandler::AppTile(inner) => inner.bind_signal(row),
-            UpdateHandler::Calculator(inner) => inner.bind_signal(row),
-            UpdateHandler::Clipboard(inner) => inner.bind_signal(row),
-            UpdateHandler::Event(inner) => inner.bind_signal(row),
+            UpdateHandler::ApiTile(inner) => inner.bind_signal(row, launcher),
+            UpdateHandler::AppTile(inner) => inner.bind_signal(row, launcher),
+            UpdateHandler::Calculator(inner) => inner.bind_signal(row, launcher),
+            UpdateHandler::Clipboard(inner) => inner.bind_signal(row, launcher),
+            UpdateHandler::Event(inner) => inner.bind_signal(row, launcher),
             UpdateHandler::MusicPlayer(inner) => {
                 if let LauncherType::MusicPlayer(mpris) =
                     &self.imp().launcher.borrow().launcher_type
                 {
-                    inner.bind_signal(row, mpris);
+                    inner.bind_signal(row, mpris, launcher);
                 }
             }
             UpdateHandler::Pipe(inner) => inner.bind_signal(row),
@@ -316,9 +317,9 @@ impl TileItem {
                     inner.bind_signal(row, pmd);
                 }
             }
-            UpdateHandler::Process(inner) => inner.bind_signal(row),
-            UpdateHandler::Weather(inner) => inner.bind_signal(row),
-            UpdateHandler::WebTile(inner) => inner.bind_signal(row),
+            UpdateHandler::Process(inner) => inner.bind_signal(row, launcher),
+            UpdateHandler::Weather(inner) => inner.bind_signal(row, launcher),
+            UpdateHandler::WebTile(inner) => inner.bind_signal(row, launcher),
             UpdateHandler::Default => {}
         }
     }

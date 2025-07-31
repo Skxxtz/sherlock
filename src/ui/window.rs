@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use crate::api::server::SherlockServer;
 use crate::daemon::daemon::close_response;
-use crate::launcher::emoji_picker::emojies;
+use crate::launcher::emoji_picker::{emojies, SkinColor};
 use crate::utils::config::ConfigGuard;
 
 use super::tiles::util::TextViewTileBuilder;
@@ -207,20 +207,24 @@ pub fn window(
         .build();
 
     let emoji_action = ActionEntry::builder("emoji-page")
+        .parameter_type(Some(&String::static_variant_type()))
         .activate({
             let stack_clone = stack_ref.clone();
             let current_stack_page = current_stack_page.clone();
-            move |_: &ApplicationWindow, _, _| {
+            move |_: &ApplicationWindow, _, param| {
                 // Either show user-specified content or show normal search
-                let (emoji_stack, _emoji_model) = match emojies(&current_stack_page) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        let _ = e.insert(false);
-                        return;
+                if let Some(parameter) = param.and_then(|p| p.get::<String>()) {
+                    let (emoji_stack, _emoji_model) =
+                        match emojies(&current_stack_page, SkinColor::from_name(&parameter)) {
+                            Ok(r) => r,
+                            Err(e) => {
+                                let _ = e.insert(false);
+                                return;
+                            }
+                        };
+                    if let Some(stack) = stack_clone.upgrade() {
+                        stack.add_named(&emoji_stack, Some("emoji-page"));
                     }
-                };
-                if let Some(stack) = stack_clone.upgrade() {
-                    stack.add_named(&emoji_stack, Some("emoji-page"));
                 }
             }
         })

@@ -157,7 +157,7 @@ impl CalcTileHandler {
 
         Some(())
     }
-    pub fn bind_signal(&self, row: &SherlockRow) {
+    pub fn bind_signal(&self, row: &SherlockRow, launcher: Rc<Launcher>) {
         row.add_css_class("calc-tile");
         let attrs = self.attrs.clone();
         let signal_id = row.connect_local("row-should-activate", false, move |args| {
@@ -168,7 +168,7 @@ impl CalcTileHandler {
                 2 => Some(true),
                 _ => None,
             };
-            execute_from_attrs(&row, &attrs.borrow(), param);
+            execute_from_attrs(&row, &attrs.borrow(), param, Some(launcher.clone()));
             None
         });
         row.set_signal_id(signal_id);
