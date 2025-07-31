@@ -6,6 +6,7 @@ use gtk4::{
     Box as GtkBox, CustomFilter, CustomSorter, Entry, FilterListModel, GridView, Label, Ordering,
     SignalListItemFactory, SingleSelection, SortListModel,
 };
+use levenshtein::levenshtein;
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -355,19 +356,52 @@ fn make_filter(search_text: &Rc<RefCell<String>>) -> CustomFilter {
 }
 fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
     CustomSorter::new({
+        fn search_score(query: &str, match_in: &str) -> f32 {
+            if match_in.len() == 0 {
+                return 0.0;
+            }
+            let (distance, element) = match_in
+                .split(';')
+                .map(|elem| {
+                    let leven = levenshtein(query, elem) as f32;
+                    let fract = (leven / elem.len() as f32 * 100.0) as u16;
+                    (fract, elem)
+                })
+                .min_by_key(|(dist, _)| *dist)
+                .unwrap_or((u16::MAX, ""));
+
+            let normed = (distance as f32 / 100.0).clamp(0.2, 1.0);
+            let starts_with = if element.starts_with(query) {
+                -0.2
+            } else {
+                0.0
+            };
+            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
+                if var == "true" {
+                    println!(
+                        "Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}",
+                        element,
+                        query,
+                        distance,
+                        normed,
+                        normed + starts_with
+                    );
+                }
+            }
+            normed + starts_with
+        }
         let search_text = Rc::clone(search_text);
         move |item_a, item_b| {
             let search_text = search_text.borrow();
+            if search_text.is_empty() {
+                return Ordering::Equal;
+            }
 
             let item_a = item_a.downcast_ref::<EmojiObject>().unwrap();
             let item_b = item_b.downcast_ref::<EmojiObject>().unwrap();
 
-            let priority_a = levenshtein::levenshtein(&item_a.title(), &search_text) as f32;
-            let priority_b = levenshtein::levenshtein(&item_b.title(), &search_text) as f32;
-
-            if !search_text.is_empty() {
-                return Ordering::Equal;
-            }
+            let priority_a = search_score(&search_text, &item_a.title());
+            let priority_b = search_score(&search_text, &item_b.title());
 
             priority_a.total_cmp(&priority_b).into()
         }

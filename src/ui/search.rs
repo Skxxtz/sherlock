@@ -796,10 +796,8 @@ fn change_event(
             let trimmed = current_text.trim();
             if !trimmed.is_empty() && modes.borrow().contains_key(&current_text) {
                 // Logic to apply modes
-                let _ =
-                    search_bar.activate_action("win.switch-mode", Some(&trimmed.to_variant()));
-                let _ =
-                    search_bar.activate_action("win.clear-search", Some(&false.to_variant()));
+                let _ = search_bar.activate_action("win.switch-mode", Some(&trimmed.to_variant()));
+                let _ = search_bar.activate_action("win.clear-search", Some(&false.to_variant()));
                 current_text.clear();
             }
             *search_query_clone.borrow_mut() = current_text.clone();

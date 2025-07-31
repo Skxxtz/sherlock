@@ -1,7 +1,7 @@
 mod imp;
 
 use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::ObjectExt, SignalHandlerId, WeakRef};
+use gio::glib::{object::ObjectExt, property::PropertySet, SignalHandlerId, WeakRef};
 use glib::Object;
 use gtk4::{
     glib,
@@ -17,11 +17,22 @@ glib::wrapper! {
         @extends gtk4::Box;
 }
 /// For deserialization
-#[derive(Deserialize)]
+#[derive(Deserialize, Default, Debug)]
 pub struct EmojiRaw {
     emoji: String,
     name: String,
     skin: u8,
+}
+impl EmojiRaw {
+    pub fn reconstruct(&self, skin_tones: &[&str]) -> String {
+        let mut result = self.emoji.to_string();
+        for tone in skin_tones {
+            if let Some(pos) = result.find("{skin_color}") {
+                result.replace_range(pos..pos + "{skin_color}".len(), tone);
+            }
+        }
+        result
+    }
 }
 
 impl EmojiObject {
@@ -78,10 +89,12 @@ impl EmojiObject {
 
     // Getters
     pub fn title(&self) -> String {
-        self.imp().title.borrow().to_string()
+        self.imp().emoji.borrow().name.to_string()
     }
+    /// Skin colors for emojies are defined as:
+    /// ["\u{1F3FB}", "\u{1F3FC}", "\u{1F3FD}", "\u{1F3FE}", "\u{1F3FF}"]
     pub fn emoji(&self) -> String {
-        self.imp().emoji.borrow().to_string()
+        self.imp().emoji.borrow().reconstruct(&["", ""])
     }
 
     pub fn from(emoji_data: EmojiRaw) -> Self {
@@ -103,9 +116,7 @@ impl EmojiObject {
             });
             gesture
         });
-
-        *imp.title.borrow_mut() = emoji_data.name;
-        *imp.emoji.borrow_mut() = emoji_data.emoji;
+        imp.emoji.set(emoji_data);
         obj
     }
     pub fn new() -> Self {
