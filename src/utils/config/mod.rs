@@ -13,16 +13,6 @@ pub use defaults::{BindDefaults, ConstantDefaults, OtherDefaults};
 pub use flags::SherlockFlags;
 pub use guard::ConfigGuard;
 
-/// Configuration sections:
-///
-/// - **default_apps**: User-defined default applications (e.g., terminal, calendar).
-/// - **units**: Preferred measurement units (e.g., length, temperature).
-/// - **debug**: Debugging preferences (e.g., whether to display errors).
-/// - **appearance**: UI preferences (e.g., show/hide status bar).
-/// - **behavior**: Runtime behavior settings (e.g., daemon mode, caching).
-/// - **binds**: Custom key or action bindings (supplementing defaults).
-/// - **files**: User-specified overrides for default config file paths.
-/// - **pipe** *(internal)*: Internal settings for JSON piping (e.g., default return action).
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct SherlockConfig {
     /// User-defined default applications (e.g., terminal, calendar)
@@ -141,8 +131,6 @@ pub struct ConfigBehavior {
     #[serde(default = "OtherDefaults::bool_true")]
     pub animate: bool,
     #[serde(default)]
-    pub field: Option<String>,
-    #[serde(default)]
     pub global_prefix: Option<String>,
     #[serde(default)]
     pub global_flags: Option<String>,
@@ -200,6 +188,8 @@ pub struct Runtime {
     pub sub_menu: Option<String>,
     #[serde(default)]
     pub daemonize: bool,
+    #[serde(default)]
+    pub field: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

@@ -80,7 +80,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             }
             "copy" => {
                 if let Ok(config) = ConfigGuard::read() {
-                    let field = attrs.get("field").or(config.behavior.field.as_ref());
+                    let field = attrs.get("field").or(config.runtime.field.as_ref());
                     if let Some(field) = field {
                         if let Some(output) = attrs.get(field) {
                             let _ = util::copy_to_clipboard(output.as_str());

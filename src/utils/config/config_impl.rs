@@ -189,7 +189,7 @@ impl SherlockConfig {
         config.runtime.multi = sherlock_flags.multi;
         config.runtime.display_raw = sherlock_flags.display_raw;
         config.runtime.photo_mode = sherlock_flags.photo_mode;
-        config.behavior.field = sherlock_flags.field.take();
+        config.runtime.field = sherlock_flags.field.take();
         config.runtime.daemonize = sherlock_flags.daemonize;
 
         config

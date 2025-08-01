@@ -66,7 +66,6 @@ impl Default for ConfigBehavior {
         Self {
             use_xdg_data_dir_icons: false,
             animate: true,
-            field: None,
             global_prefix: None,
             global_flags: None,
         }

@@ -174,7 +174,7 @@ impl PipedData {
                     icon_size: None,
                     binary: None,
                     method: None,
-                    field: config.behavior.field.clone(),
+                    field: config.runtime.field.clone(),
                     hidden: None,
                     exit: true,
                 });
@@ -187,7 +187,7 @@ impl PipedData {
                     icon: None,
                     icon_size: None,
                     binary: Some(chunk.to_vec()),
-                    field: config.behavior.field.clone(),
+                    field: config.runtime.field.clone(),
                     method: None,
                     hidden: None,
                     exit: true,
