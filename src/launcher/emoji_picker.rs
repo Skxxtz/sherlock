@@ -134,11 +134,16 @@ pub fn emojies(
     let search_bar = imp.search_bar.downgrade();
     ui.connect_realize({
         let search_bar = search_bar.clone();
+        let results = imp.results.downgrade();
+        let context_model = context.model.clone();
         move |_| {
             // Focus search bar as soon as it's visible
             search_bar
                 .upgrade()
                 .map(|search_bar| search_bar.grab_focus());
+            if let Some(results) = results.upgrade() {
+                results.context_action(Some(&context_model));
+            }
         }
     });
 
@@ -158,6 +163,7 @@ pub fn emojies(
         handler.sorter.clone(),
         handler.filter.clone(),
         view.clone(),
+        context.model.clone(),
     );
 
     let model = handler.model.unwrap();
@@ -392,6 +398,7 @@ fn change_event(
     sorter: WeakRef<CustomSorter>,
     filter: WeakRef<CustomFilter>,
     view: WeakRef<GridView>,
+    context_model: WeakRef<ListStore>,
 ) -> Option<()> {
     let search_bar = search_bar.upgrade()?;
     search_bar.connect_changed({
@@ -407,7 +414,7 @@ fn change_event(
                 .upgrade()
                 .map(|filter| filter.changed(gtk4::FilterChange::Different));
             view.upgrade()
-                .map(|view| view.focus_first(None, None, None));
+                .map(|view| view.focus_first(Some(&context_model), None, None));
         }
     });
     Some(())

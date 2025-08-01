@@ -122,6 +122,7 @@ impl ShortCut for GtkBox {
 /// Navigation for elements within a ListView
 pub trait SherlockNav {
     // fn assign_binds(&self, context_model: Option<&WeakRef<ListStore>>, binds: &SherlockRowBinds, listener: Rc<EventControllerKey> ) -> Option<()>;
+    fn context_action(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()>;
     fn focus_next(
         &self,
         context_model: Option<&WeakRef<ListStore>>,
@@ -146,6 +147,18 @@ pub trait SherlockNav {
     fn get_actives<T: IsA<Object>>(&self) -> Option<Vec<T>>;
 }
 impl SherlockNav for ListView {
+    fn context_action(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
+        let selection = self.model().and_downcast::<SingleSelection>()?;
+        let selected = selection.selected_item().and_downcast::<TileItem>()?;
+        let _ = self.activate_action(
+            "win.context-mode",
+            Some(&(selected.num_actions() > 0).to_variant()),
+        );
+        context_model
+            .and_then(|tmp| tmp.upgrade())
+            .map(|ctx| ctx.remove_all());
+        Some(())
+    }
     fn focus_offset(
         &self,
         _context_model: Option<&WeakRef<ListStore>>,
@@ -333,6 +346,18 @@ impl SherlockNav for ListView {
     }
 }
 impl SherlockNav for GridView {
+    fn context_action(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
+        let selection = self.model().and_downcast::<SingleSelection>()?;
+        let selected = selection.selected_item().and_downcast::<EmojiObject>()?;
+        let _ = self.activate_action(
+            "win.context-mode",
+            Some(&(selected.num_actions() > 0).to_variant()),
+        );
+        context_model
+            .and_then(|tmp| tmp.upgrade())
+            .map(|ctx| ctx.remove_all());
+        Some(())
+    }
     fn focus_next(
         &self,
         context_model: Option<&WeakRef<ListStore>>,
@@ -350,23 +375,16 @@ impl SherlockNav for GridView {
             if new_index < n_items {
                 selection.set_selected(new_index);
                 self.scroll_to(new_index, ListScrollFlags::NONE, None);
-                let selected = selection.selected_item().and_downcast::<EmojiObject>()?;
-                let _ = self.activate_action(
-                    "win.context-mode",
-                    Some(&(selected.num_actions() > 0).to_variant()),
-                );
-                context_model
-                    .and_then(|tmp| tmp.upgrade())
-                    .map(|ctx| ctx.remove_all());
             }
         }
+        self.context_action(context_model);
 
         None
     }
     fn focus_prev(
         &self,
-        _context_model: Option<&WeakRef<ListStore>>,
-        _: Option<Rc<RefCell<UserBindHandler>>>,
+        context_model: Option<&WeakRef<ListStore>>,
+        _custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
     ) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let index = selection.selected();
@@ -380,13 +398,14 @@ impl SherlockNav for GridView {
         if new_index != index {
             if new_index < n_items {
                 self.scroll_to(new_index, ListScrollFlags::NONE, None);
+                self.context_action(context_model);
             }
         }
         None
     }
     fn focus_first(
         &self,
-        _context_model: Option<&WeakRef<ListStore>>,
+        context_model: Option<&WeakRef<ListStore>>,
         _current_mode: Option<Rc<RefCell<String>>>,
         _: Option<Rc<RefCell<UserBindHandler>>>,
     ) -> Option<()> {
@@ -394,19 +413,22 @@ impl SherlockNav for GridView {
         let current_index = selection.selected();
         let n_items = selection.n_items();
         if n_items == 0 || current_index == 0 {
+            self.context_action(context_model);
             return None;
         }
         selection.set_selected(0);
         self.scroll_to(0, ListScrollFlags::NONE, None);
+        self.context_action(context_model);
         Some(())
     }
-    fn focus_offset(&self, _context_model: Option<&WeakRef<ListStore>>, offset: i32) -> Option<()> {
+    fn focus_offset(&self, context_model: Option<&WeakRef<ListStore>>, offset: i32) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let current_index = selection.selected() as i32;
         let n_items = selection.n_items() as i32;
         let new_index = offset.checked_add(current_index)?.clamp(0, n_items - 1);
         selection.set_selected(new_index as u32);
         self.scroll_to(new_index as u32, ListScrollFlags::NONE, None);
+        self.context_action(context_model);
         Some(())
     }
     fn execute_by_index(&self, _index: u32) {}
