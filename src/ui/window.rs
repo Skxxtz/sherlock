@@ -165,16 +165,19 @@ pub fn window(
 
     // Action to display or hide context menu shortcut
     let action_context = ActionEntry::builder("context-mode")
-        .parameter_type(Some(&bool::static_variant_type()))
+        .parameter_type(Some(&String::static_variant_type()))
         .activate({
             let desc = imp.context_action_desc.downgrade();
             let first = imp.context_action_first.downgrade();
             let second = imp.context_action_second.downgrade();
             move |_: &ApplicationWindow, _, parameter| {
-                let parameter = parameter.and_then(|p| p.get::<bool>());
+                let parameter = parameter.and_then(|p| p.get::<String>());
                 parameter.map(|p| {
-                    if p {
-                        desc.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
+                    if !p.is_empty() {
+                        if let Some(tmp) = desc.upgrade() {
+                            tmp.set_css_classes(&["active"]);
+                            tmp.set_text(&p);
+                        }
                         first.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
                         second.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
                     } else {

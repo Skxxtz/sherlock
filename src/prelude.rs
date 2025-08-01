@@ -150,10 +150,14 @@ impl SherlockNav for ListView {
     fn context_action(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let selected = selection.selected_item().and_downcast::<TileItem>()?;
-        let _ = self.activate_action(
-            "win.context-mode",
-            Some(&(selected.num_actions() > 0).to_variant()),
-        );
+        if selected.num_actions() > 0 {
+            let _ = self.activate_action(
+                "win.context-mode",
+                Some(&"Additional Actions".to_string().to_variant()),
+            );
+        } else {
+            let _ = self.activate_action("win.context-mode", Some(&"".to_string().to_variant()));
+        }
         context_model
             .and_then(|tmp| tmp.upgrade())
             .map(|ctx| ctx.remove_all());
@@ -191,15 +195,8 @@ impl SherlockNav for ListView {
                     handler.set_handler(id);
                 }
             }
-
-            let _ = self.activate_action(
-                "win.context-mode",
-                Some(&(selected.num_actions() > 0).to_variant()),
-            );
+            self.context_action(context_model);
         }
-        context_model
-            .and_then(|tmp| tmp.upgrade())
-            .map(|ctx| ctx.remove_all());
         None
     }
     fn focus_prev(
@@ -229,15 +226,8 @@ impl SherlockNav for ListView {
                         handler.set_handler(id);
                     }
                 }
-
-                let _ = self.activate_action(
-                    "win.context-mode",
-                    Some(&(selected.num_actions() > 0).to_variant()),
-                );
+                self.context_action(context_model);
             }
-            context_model
-                .and_then(|tmp| tmp.upgrade())
-                .map(|ctx| ctx.remove_all());
         }
         None
     }
@@ -284,14 +274,7 @@ impl SherlockNav for ListView {
                 handler.set_handler(id);
             }
         }
-
-        let _ = self.activate_action(
-            "win.context-mode",
-            Some(&(selected.num_actions() > 0).to_variant()),
-        );
-        context_model
-            .and_then(|tmp| tmp.upgrade())
-            .map(|ctx| ctx.remove_all());
+        self.context_action(context_model);
 
         (changed || selected.alias() == *current_mode.borrow().trim()).then_some(())
     }
@@ -349,10 +332,14 @@ impl SherlockNav for GridView {
     fn context_action(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let selected = selection.selected_item().and_downcast::<EmojiObject>()?;
-        let _ = self.activate_action(
-            "win.context-mode",
-            Some(&(selected.num_actions() > 0).to_variant()),
-        );
+        if selected.num_actions() > 0 {
+            let _ = self.activate_action(
+                "win.context-mode",
+                Some(&"Additional Skin Tones".to_string().to_variant()),
+            );
+        } else {
+            let _ = self.activate_action("win.context-mode", Some(&"".to_string().to_variant()));
+        }
         context_model
             .and_then(|tmp| tmp.upgrade())
             .map(|ctx| ctx.remove_all());
