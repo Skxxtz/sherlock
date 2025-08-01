@@ -2,45 +2,78 @@
 teams = "teams-for-linux --enable-features=UseOzonePlatform --ozone-platform=wayland --url {meeting_url}"
 calendar_client = "thunderbird"
 terminal = "kitty"
-
-[debug]
-try_suppress_errors     =   false                                   
-try_suppress_warnings   =   true                                    
-app_paths               =   ["~/.local/share/applications/"]        
+browser = "/opt/zen-browser-bin/zen-bin %u"
 
 [units]
-lengths                 =   "meter"
-weights                 =   "kg"
-volumes                 =   "l"
-temperatures            =   "C"
+lengths = "meters"
+weights = "kg"
+volumes = "l"
+temperatures = "C"
+currency = "eur"
+
+[debug]
+try_suppress_errors = false
+try_suppress_warnings = false
+app_paths = []
 
 [appearance]
-width                   =   900                                       
-height                  =   593                                       
-gsk_renderer            =   "cairo"                                   
-recolor_icons           =   false                                     
-icon_paths              =   [ "~/.config/sherlock/icons"]             
-icon_size               =   22                                        
-search_icon             =   true                                        
-use_base_css            =   true
-status_bar              =   true
-opacity                 =   1.0
+width = 900
+height = 593
+gsk_renderer = "cairo"
+icon_paths = ["testconfig/icons"]
+icon_size = 22
+use_base_css = true
+opacity = 1.0
+mod_key_ascii = ["⇧", "⇧", "⌘", "⌘", "⎇", "✦", "✦", "⌘"]
 
 [behavior]
-caching                 =   true                                    
-cache                   =   "~/.cache/sherlock_desktop_cache.json"  
-daemonize               =   false                                   
-animate                 =   true                                    
-global_prefix           =   ""                                   
-global_flags            =   ""                                    
+use_xdg_data_dir_icons = false
+animate = true
 
 [binds]
-prev                    =   "None"                                  
-next                    =   "None"                                  
-modifier                =   "control"                               
+up = "control-k"
+down = "control-j"
+left = "control-ih"
+right = "control-l"
+context = "control-i"
+modifier = "control"
+exec_inplace = "control-return"
 
 [files]
-fallback                =   "~/.config/sherlock/fallback.json"
-css                     =   "~/.config/sherlock/gruvbox.css"
-alias                   =   "~/.config/sherlock/sherlock_alias.json"
-ignore                  =   "~/.config/sherlock/sherlockignore"
+config = "/home/user/.config/sherlock/config.toml"
+css = "/home/user/.config/sherlock/main.css"
+fallback = "/home/user/.config/sherlock/fallback.json"
+alias = "/home/user/.config/sherlock/sherlock_alias.json"
+ignore = "/home/user/.config/sherlock/sherlockignore"
+actions = "/home/user/.config/sherlock/sherlock_actions.json"
+
+[runtime]
+multi = false
+center = false
+photo_mode = false
+display_raw = false
+daemonize = false
+
+[caching]
+enable = true
+cache = "/home/user/.cache/sherlock/sherlock_desktop_cache.json"
+
+[expand]
+enable = false
+edge = "top"
+margin = 0
+
+[backdrop]
+enable = false
+opacity = 0.6
+edge = "top"
+
+[status_bar]
+enable = true
+
+[search_bar_icon]
+enable = true
+icon = "system-search-symbolic"
+icon_back = "go-previous-symbolic"
+size = 22
+
