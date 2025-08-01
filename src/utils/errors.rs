@@ -1,12 +1,12 @@
 use std::{fmt::Debug, os::unix::net::UnixStream, path::PathBuf};
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::prelude::{BoxExt, WidgetExt};
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     api::call::ApiCall, daemon::daemon::SizedMessage, g_subclasses::sherlock_row::SherlockRow,
-    ui::tiles::error_tile::ErrorTile, SOCKET_PATH,
+    ui::g_templates::ErrorTile, SOCKET_PATH,
 };
 
 #[macro_export]

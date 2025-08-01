@@ -1,10 +1,10 @@
 mod imp;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::Cast;
 use gio::glib::{object::ObjectExt, WeakRef};
 use glib::Object;
 use gtk4::prelude::WidgetExt;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{glib, Box as GtkBox, Widget};
 use simd_json::prelude::Indexed;
 use std::{rc::Rc, usize};

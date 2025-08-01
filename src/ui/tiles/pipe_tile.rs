@@ -14,7 +14,7 @@ use crate::launcher::LauncherType;
 use crate::loader::pipe_loader::PipedElements;
 use crate::prelude::IconComp;
 use crate::prelude::TileHandler;
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use crate::ui::g_templates::AppTile;
 use gdk_pixbuf::Pixbuf;
 use gio::glib::object::Cast;
 use gio::glib::object::ObjectExt;
@@ -23,11 +23,11 @@ use gio::glib::variant::ToVariant;
 use gio::glib::WeakRef;
 use gtk4::prelude::BoxExt;
 use gtk4::prelude::WidgetExt;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::Box;
 use gtk4::Image;
 use gtk4::Widget;
 
-use super::app_tile::AppTile;
 use super::Tile;
 
 impl Tile {

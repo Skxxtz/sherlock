@@ -1,8 +1,8 @@
 mod imp;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, property::PropertySet, SignalHandlerId, WeakRef};
 use glib::Object;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     glib,
     prelude::{GestureSingleExt, WidgetExt},

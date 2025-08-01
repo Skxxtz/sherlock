@@ -1,4 +1,3 @@
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::{
     glib::{
         object::{CastNone, ObjectExt},
@@ -6,6 +5,7 @@ use gio::{
     },
     prelude::ListModelExt,
 };
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     prelude::{EditableExt, WidgetExt},
     Entry, GridView, ListView, SingleSelection,

@@ -1,8 +1,8 @@
 mod imp;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, SignalHandlerId};
 use glib::Object;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     gdk::{Key, ModifierType},
     glib,

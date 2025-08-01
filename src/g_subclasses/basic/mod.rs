@@ -2,7 +2,7 @@ mod imp;
 
 use std::rc::Rc;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use glib::Object;
 use gtk4::{
     glib,

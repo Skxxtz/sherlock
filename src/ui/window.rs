@@ -1,6 +1,9 @@
+use gio::glib::object::ObjectExt;
 use gio::glib::WeakRef;
 use gio::ActionEntry;
 use gtk4::gdk::Key;
+use gtk4::prelude::{EventControllerExt, GtkWindowExt, WidgetExt};
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::Stack;
 use gtk4::{
     prelude::*, Application, ApplicationWindow, EventControllerFocus, EventControllerKey,
@@ -13,7 +16,7 @@ use std::rc::Rc;
 use crate::api::server::SherlockServer;
 use crate::daemon::daemon::close_response;
 use crate::launcher::emoji_picker::{emojies, SkinTone};
-use crate::ui::util::ConfKeys;
+use crate::ui::g_templates::MainWindow;
 use crate::utils::config::ConfigGuard;
 
 use super::tiles::util::TextViewTileBuilder;
@@ -356,85 +359,4 @@ fn make_backdrop(
     });
 
     Some(backdrop)
-}
-
-mod imp {
-    use gtk4::subclass::prelude::*;
-    use gtk4::{glib, ApplicationWindow};
-    use gtk4::{Box, CompositeTemplate, Label, Spinner, Stack};
-
-    #[derive(CompositeTemplate, Default)]
-    #[template(resource = "/dev/skxxtz/sherlock/ui/window.ui")]
-    pub struct MainWindow {
-        #[template_child(id = "stack")]
-        pub stack: TemplateChild<Stack>,
-
-        // Status bar and its children
-        #[template_child(id = "status-bar")]
-        pub status_bar: TemplateChild<Box>,
-        #[template_child(id = "context-menu-desc")]
-        pub context_action_desc: TemplateChild<Label>,
-        #[template_child(id = "context-menu-first")]
-        pub context_action_first: TemplateChild<Label>,
-        #[template_child(id = "context-menu-second")]
-        pub context_action_second: TemplateChild<Label>,
-        #[template_child(id = "status-bar-spinner")]
-        pub spinner: TemplateChild<Spinner>,
-    }
-
-    #[glib::object_subclass]
-    impl ObjectSubclass for MainWindow {
-        const NAME: &'static str = "MainWindow";
-        type Type = super::MainWindow;
-        type ParentType = ApplicationWindow;
-
-        fn class_init(klass: &mut Self::Class) {
-            Self::bind_template(klass);
-        }
-
-        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
-            obj.init_template();
-        }
-    }
-
-    impl ObjectImpl for MainWindow {}
-    impl WidgetImpl for MainWindow {}
-    impl WindowImpl for MainWindow {}
-    impl ApplicationWindowImpl for MainWindow {}
-}
-
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::object::ObjectExt;
-use gtk4::{
-    glib,
-    prelude::{EventControllerExt, GtkWindowExt, WidgetExt},
-};
-
-glib::wrapper! {
-    pub struct MainWindow(ObjectSubclass<imp::MainWindow>)
-        @extends gtk4::Widget, gtk4::Window, gtk4::ApplicationWindow,
-        @implements gtk4::Buildable;
-}
-
-impl MainWindow {
-    pub fn new(application: &Application, width: i32, opacity: f64) -> Self {
-        let obj = glib::Object::new::<Self>();
-        let imp = obj.imp();
-
-        let custom_binds = ConfKeys::new();
-        if let Some(context_str) = &custom_binds.context_str {
-            imp.context_action_first
-                .set_text(&custom_binds.context_mod_str);
-            imp.context_action_second.set_text(context_str);
-        } else {
-            imp.context_action_first.set_visible(false);
-            imp.context_action_second.set_visible(false);
-        }
-
-        obj.set_opacity(opacity);
-        obj.set_default_width(width);
-        obj.set_application(Some(application));
-
-        obj
-    }
 }

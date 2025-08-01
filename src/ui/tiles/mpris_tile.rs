@@ -2,12 +2,12 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::{Cast, ObjectExt};
 use gio::glib::variant::ToVariant;
 use gio::glib::{Bytes, WeakRef};
 use gio::prelude::ListModelExt;
 use gtk4::prelude::{BoxExt, WidgetExt};
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{gdk, Box, Image, Overlay, Widget};
 
 use super::Tile;
@@ -16,7 +16,7 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::audio_launcher::MusicPlayerLauncher;
 use crate::launcher::Launcher;
 use crate::prelude::TileHandler;
-use crate::ui::tiles::app_tile::AppTile;
+use crate::ui::g_templates::AppTile;
 
 impl Tile {
     pub fn mpris_tile() -> AppTile {

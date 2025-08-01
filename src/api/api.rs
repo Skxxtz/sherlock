@@ -1,8 +1,8 @@
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::{
     glib::{object::ObjectExt, variant::ToVariant, MainContext, WeakRef},
     ListStore,
 };
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     prelude::{EntryExt, GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, Stack,
@@ -21,8 +21,7 @@ use crate::{
     prelude::StackHelpers,
     sher_log,
     ui::{
-        input_window::InputWindow,
-        search::SearchUiObj,
+        g_templates::{InputWindow, SearchUiObj},
         tiles::Tile,
         util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
     },
@@ -58,7 +57,6 @@ impl SherlockAPI {
             shutdown_queue: vec![],
         }
     }
-
     /// Best use await_request() followed by flush() instead
     pub fn request(&mut self, api_call: ApiCall) {
         self.flush();
@@ -87,7 +85,6 @@ impl SherlockAPI {
         self.queue.push(request);
         Some(())
     }
-
     pub fn match_action(&mut self, api_call: &ApiCall) -> Option<()> {
         match api_call {
             ApiCall::Obfuscate(vis) => self.obfuscate(*vis),
@@ -231,7 +228,6 @@ impl SherlockAPI {
         model.append(tiles.first()?);
         Some(())
     }
-
     fn load_pipe_elements<T: AsRef<[u8]>>(&mut self, msg: T) -> Option<()> {
         let elements = if let Some(elements) = PipedData::elements(&msg) {
             Some(elements)
@@ -277,7 +273,6 @@ impl SherlockAPI {
 
         Some(())
     }
-
     fn search_view(&self) -> Option<()> {
         let handler = self.search_handler.as_ref()?.clone();
 
@@ -296,7 +291,6 @@ impl SherlockAPI {
 
         Some(())
     }
-
     fn spawn_input(&self, obfuscate: bool) -> Option<()> {
         let app = self.app.upgrade()?;
         let win = InputWindow::new(obfuscate);

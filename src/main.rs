@@ -6,7 +6,7 @@ use gtk4::prelude::{GtkApplicationExt, WidgetExt};
 use gtk4::{glib, Application};
 use loader::pipe_loader::PipedData;
 use once_cell::sync::OnceCell;
-use simd_json::prelude::{ArrayMut, ArrayTrait};
+use simd_json::prelude::ArrayTrait;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -123,7 +123,7 @@ async fn main() {
             .errors
             .replace(error_backend.model.downgrade());
 
-        // Either show user-specified content or show normal search
+        // Show search frame
         match ui::search::search(&window, &current_stack_page, Rc::clone(&sherlock)) {
             Ok(search_frame) => {
                 stack.add_named(&search_frame, Some("search-page"));

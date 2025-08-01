@@ -7,3 +7,5 @@ pub mod key_actions;
 pub mod search;
 pub mod util;
 pub mod window;
+
+pub mod g_templates;

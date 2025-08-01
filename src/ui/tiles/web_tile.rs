@@ -2,10 +2,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::{Cast, ObjectExt};
 use gio::glib::WeakRef;
 use gtk4::prelude::WidgetExt;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::Box;
 
 use super::util::update_tag;
@@ -15,7 +15,7 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::web_launcher::WebLauncher;
 use crate::launcher::Launcher;
 use crate::prelude::{IconComp, TileHandler};
-use crate::ui::tiles::app_tile::AppTile;
+use crate::ui::g_templates::AppTile;
 
 impl Tile {
     pub fn web(launcher: Rc<Launcher>, web: &WebLauncher) -> AppTile {

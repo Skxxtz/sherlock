@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::WeakRef;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{prelude::*, Box};
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
@@ -12,9 +12,9 @@ use crate::g_subclasses::tile_item::TileItem;
 use crate::launcher::Launcher;
 use crate::loader::util::AppData;
 use crate::prelude::{IconComp, TileHandler};
+use crate::ui::g_templates::AppTile;
 use crate::ui::tiles::util::update_tag;
 
-use super::app_tile::AppTile;
 use super::Tile;
 
 impl Tile {

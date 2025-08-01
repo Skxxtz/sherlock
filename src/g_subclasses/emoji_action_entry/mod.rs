@@ -2,9 +2,9 @@ mod imp;
 
 use std::usize;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::{object::ObjectExt, variant::ToVariant, SignalHandlerId, WeakRef};
 use glib::Object;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{glib, prelude::WidgetExt};
 use simd_json::prelude::ArrayTrait;
 
