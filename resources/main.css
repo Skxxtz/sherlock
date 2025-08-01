@@ -565,7 +565,6 @@ gridview child:selected box {
     min-width: 50px;
     padding: 5px;
     margin: 4px;
-    margin-bottom: 35px;
     background: hsl(var(--background));
     border: 1px solid hsl(var(--border));
     border-radius: 5px;

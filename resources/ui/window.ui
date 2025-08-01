@@ -1,6 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <object class="GtkStack" id="stack">
+    <template class="MainWindow" parent="GtkApplicationWindow">
+        <child>
+            <object class="GtkBox" id="_box">
+                <property name="orientation">vertical</property>
+                <child>
+                    <object class="GtkStack" id="stack">
 
-    </object>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkBox" id="status-bar">
+                        <property name="name">status-bar</property>
+                        <property name="orientation">horizontal</property>
+                        <style>
+                            <class name="status-bar"/>
+                        </style>
+
+                        <child>
+                            <object class="GtkLabel">
+                                <property name="name">logo</property>
+                                <property name="hexpand">true</property>
+                                <property name="label">Sherlock</property>
+                                <property name="xalign">0.0</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="context-menu-desc">
+                                <style>
+                                    <class name="inactive"/>
+                                </style>
+                                <property name="name">shortcut-description</property>
+                                <property name="hexpand">false</property>
+                                <property name="label">Additional actions</property>
+                                <property name="xalign">0.0</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="context-menu-first">
+                                <style>
+                                    <class name="inactive"/>
+                                </style>
+                                <property name="name">shortcut-modifier</property>
+                                <property name="hexpand">false</property>
+                                <property name="label">⌘</property>
+                                <property name="xalign">0.0</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="context-menu-second">
+                                <style>
+                                    <class name="inactive"/>
+                                </style>
+                                <property name="name">shortcut-key</property>
+                                <property name="hexpand">false</property>
+                                <property name="label">L</property>
+                                <property name="xalign">0.0</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkSpinner" id="status-bar-spinner">
+                                <property name="name">spinner</property>
+                                <property name="spinning">false</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+    </template>
 </interface>

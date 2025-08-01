@@ -207,7 +207,6 @@ impl SherlockAPI {
         imp.mode_title.set_visible(false);
         imp.mode_title.unparent();
         imp.all.set_visible(false);
-        imp.status_bar.set_visible(false);
         Some(())
     }
     pub fn display_pipe(&self, content: Vec<PipedElements>) -> Option<()> {

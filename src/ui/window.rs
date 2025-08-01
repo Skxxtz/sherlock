@@ -1,11 +1,11 @@
 use gio::glib::WeakRef;
 use gio::ActionEntry;
 use gtk4::gdk::Key;
+use gtk4::Stack;
 use gtk4::{
     prelude::*, Application, ApplicationWindow, EventControllerFocus, EventControllerKey,
     StackTransitionType,
 };
-use gtk4::{Builder, Stack};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -13,6 +13,7 @@ use std::rc::Rc;
 use crate::api::server::SherlockServer;
 use crate::daemon::daemon::close_response;
 use crate::launcher::emoji_picker::{emojies, SkinTone};
+use crate::ui::util::ConfKeys;
 use crate::utils::config::ConfigGuard;
 
 use super::tiles::util::TextViewTileBuilder;
@@ -28,21 +29,20 @@ pub fn window(
 ) {
     // 617 with, 593 without notification bar
     let config = ConfigGuard::read().map(|c| c.clone()).unwrap_or_default();
-    let (width, height, opacity) = (
+    let (width, height, opacity, status_bar) = (
         config.appearance.width,
         config.appearance.height,
         config.appearance.opacity,
+        config.status_bar.enable,
     );
 
-    let current_stack_page = Rc::new(RefCell::new(String::from("search-page")));
+    let window = MainWindow::new(application, width, opacity);
+    let imp = window.imp();
 
-    let window: ApplicationWindow = ApplicationWindow::builder()
-        .application(application)
-        .default_width(width)
-        .resizable(false)
-        .decorated(false)
-        .opacity(opacity.clamp(0.1, 1.0))
-        .build();
+    // Set status bar
+    imp.status_bar.set_visible(status_bar);
+
+    let current_stack_page = Rc::new(RefCell::new(String::from("search-page")));
 
     window.init_layer_shell();
     window.set_namespace("sherlock");
@@ -98,9 +98,7 @@ pub fn window(
     };
 
     //Build main fame here that holds logic for stacking
-    let builder = Builder::from_resource("/dev/skxxtz/sherlock/ui/window.ui");
-    let stack: Stack = builder.object("stack").unwrap();
-    let stack_ref = stack.downgrade();
+    let stack_ref = imp.stack.downgrade();
 
     // Setup action to close the window
     let action_close = ActionEntry::builder("close")
@@ -160,6 +158,57 @@ pub fn window(
                         stack.set_visible_child(&child);
                         *page_clone.borrow_mut() = to.to_string();
                     }
+                });
+            }
+        })
+        .build();
+
+    // Action to display or hide context menu shortcut
+    let action_context = ActionEntry::builder("context-mode")
+        .parameter_type(Some(&bool::static_variant_type()))
+        .activate({
+            let desc = imp.context_action_desc.downgrade();
+            let first = imp.context_action_first.downgrade();
+            let second = imp.context_action_second.downgrade();
+            move |_: &ApplicationWindow, _, parameter| {
+                let parameter = parameter.and_then(|p| p.get::<bool>());
+                parameter.map(|p| {
+                    if p {
+                        desc.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
+                        first.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
+                        second.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
+                    } else {
+                        desc.upgrade().map(|tmp| tmp.set_css_classes(&["inactive"]));
+                        first
+                            .upgrade()
+                            .map(|tmp| tmp.set_css_classes(&["inactive"]));
+                        second
+                            .upgrade()
+                            .map(|tmp| tmp.set_css_classes(&["inactive"]));
+                    };
+                });
+            }
+        })
+        .build();
+
+    // Spinner action
+    let action_spinner = ActionEntry::builder("spinner-mode")
+        .parameter_type(Some(&bool::static_variant_type()))
+        .activate({
+            let spinner = imp.spinner.downgrade();
+            move |_: &ApplicationWindow, _, parameter| {
+                let parameter = parameter.and_then(|p| p.get::<bool>());
+                parameter.map(|p| {
+                    if p {
+                        spinner
+                            .upgrade()
+                            .map(|spinner| spinner.set_css_classes(&["spinner-appear"]));
+                    } else {
+                        spinner
+                            .upgrade()
+                            .map(|spinner| spinner.set_css_classes(&["spinner-disappear"]));
+                    };
+                    spinner.upgrade().map(|spinner| spinner.set_spinning(p));
                 });
             }
         })
@@ -230,8 +279,11 @@ pub fn window(
         })
         .build();
 
-    window.set_child(Some(&stack));
+    let stack = imp.stack.get();
+    let window = window.upcast::<ApplicationWindow>();
     window.add_action_entries([
+        action_context,
+        action_spinner,
         action_close,
         action_stack_switch,
         action_next_page,
@@ -245,7 +297,7 @@ pub fn window(
 
 fn make_backdrop(
     application: &Application,
-    main_window: &ApplicationWindow,
+    main_window: &MainWindow,
     opacity: f64,
     edge: Edge,
 ) -> Option<ApplicationWindow> {
@@ -301,4 +353,85 @@ fn make_backdrop(
     });
 
     Some(backdrop)
+}
+
+mod imp {
+    use gtk4::subclass::prelude::*;
+    use gtk4::{glib, ApplicationWindow};
+    use gtk4::{Box, CompositeTemplate, Label, Spinner, Stack};
+
+    #[derive(CompositeTemplate, Default)]
+    #[template(resource = "/dev/skxxtz/sherlock/ui/window.ui")]
+    pub struct MainWindow {
+        #[template_child(id = "stack")]
+        pub stack: TemplateChild<Stack>,
+
+        // Status bar and its children
+        #[template_child(id = "status-bar")]
+        pub status_bar: TemplateChild<Box>,
+        #[template_child(id = "context-menu-desc")]
+        pub context_action_desc: TemplateChild<Label>,
+        #[template_child(id = "context-menu-first")]
+        pub context_action_first: TemplateChild<Label>,
+        #[template_child(id = "context-menu-second")]
+        pub context_action_second: TemplateChild<Label>,
+        #[template_child(id = "status-bar-spinner")]
+        pub spinner: TemplateChild<Spinner>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for MainWindow {
+        const NAME: &'static str = "MainWindow";
+        type Type = super::MainWindow;
+        type ParentType = ApplicationWindow;
+
+        fn class_init(klass: &mut Self::Class) {
+            Self::bind_template(klass);
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for MainWindow {}
+    impl WidgetImpl for MainWindow {}
+    impl WindowImpl for MainWindow {}
+    impl ApplicationWindowImpl for MainWindow {}
+}
+
+use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
+use gio::glib::object::ObjectExt;
+use gtk4::{
+    glib,
+    prelude::{EventControllerExt, GtkWindowExt, WidgetExt},
+};
+
+glib::wrapper! {
+    pub struct MainWindow(ObjectSubclass<imp::MainWindow>)
+        @extends gtk4::Widget, gtk4::Window, gtk4::ApplicationWindow,
+        @implements gtk4::Buildable;
+}
+
+impl MainWindow {
+    pub fn new(application: &Application, width: i32, opacity: f64) -> Self {
+        let obj = glib::Object::new::<Self>();
+        let imp = obj.imp();
+
+        let custom_binds = ConfKeys::new();
+        if let Some(context_str) = &custom_binds.context_str {
+            imp.context_action_first
+                .set_text(&custom_binds.context_mod_str);
+            imp.context_action_second.set_text(context_str);
+        } else {
+            imp.context_action_first.set_visible(false);
+            imp.context_action_second.set_visible(false);
+        }
+
+        obj.set_opacity(opacity);
+        obj.set_default_width(width);
+        obj.set_application(Some(application));
+
+        obj
+    }
 }

@@ -232,57 +232,6 @@ pub fn search(
         })
         .build();
 
-    // Spinner action
-    let spinner_clone = imp.spinner.downgrade();
-    let action_spinner = ActionEntry::builder("spinner-mode")
-        .parameter_type(Some(&bool::static_variant_type()))
-        .activate(move |_, _, parameter| {
-            let parameter = parameter.and_then(|p| p.get::<bool>());
-            parameter.map(|p| {
-                if p {
-                    spinner_clone
-                        .upgrade()
-                        .map(|spinner| spinner.set_css_classes(&["spinner-appear"]));
-                } else {
-                    spinner_clone
-                        .upgrade()
-                        .map(|spinner| spinner.set_css_classes(&["spinner-disappear"]));
-                };
-                spinner_clone
-                    .upgrade()
-                    .map(|spinner| spinner.set_spinning(p));
-            });
-        })
-        .build();
-
-    // Action to display or hide context menu shortcut
-    let context_action = ActionEntry::builder("context-mode")
-        .parameter_type(Some(&bool::static_variant_type()))
-        .activate({
-            let desc = imp.context_action_desc.downgrade();
-            let first = imp.context_action_first.downgrade();
-            let second = imp.context_action_second.downgrade();
-            move |_, _, parameter| {
-                let parameter = parameter.and_then(|p| p.get::<bool>());
-                parameter.map(|p| {
-                    if p {
-                        desc.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
-                        first.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
-                        second.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
-                    } else {
-                        desc.upgrade().map(|tmp| tmp.set_css_classes(&["inactive"]));
-                        first
-                            .upgrade()
-                            .map(|tmp| tmp.set_css_classes(&["inactive"]));
-                        second
-                            .upgrade()
-                            .map(|tmp| tmp.set_css_classes(&["inactive"]));
-                    };
-                });
-            }
-        })
-        .build();
-
     let action_clear_win = ActionEntry::builder("clear-search")
         .parameter_type(Some(&bool::static_variant_type()))
         .activate({
@@ -303,13 +252,7 @@ pub fn search(
             }
         })
         .build();
-    window.add_action_entries([
-        mode_action,
-        action_clear_win,
-        action_spinner,
-        context_action,
-        sorter_actions,
-    ]);
+    window.add_action_entries([mode_action, action_clear_win, sorter_actions]);
 
     return Ok((stack_page, handler));
 }
@@ -413,15 +356,6 @@ fn construct_window(
     imp.results.set_model(Some(&selection));
     imp.results.set_factory(Some(&factory));
 
-    if let Some(context_str) = &custom_binds.context_str {
-        imp.context_action_first
-            .set_text(&custom_binds.context_mod_str);
-        imp.context_action_second.set_text(context_str);
-    } else {
-        imp.context_action_first.set_visible(false);
-        imp.context_action_second.set_visible(false);
-    }
-
     let handler = SearchHandler::new(
         model.downgrade(),
         mode,
@@ -438,10 +372,6 @@ fn construct_window(
         imp.result_viewport.set_propagate_natural_height(true);
     }
 
-    // disable status bar
-    if !config.status_bar.enable {
-        imp.status_bar.set_visible(false);
-    }
     // enable or disable search bar icons
     imp.search_icon_holder
         .set_visible(config.search_bar_icon.enable);
@@ -821,7 +751,7 @@ fn change_event(
 mod imp {
     use gtk4::subclass::prelude::*;
     use gtk4::CompositeTemplate;
-    use gtk4::{glib, Entry, Image, ListView, ScrolledWindow, Spinner};
+    use gtk4::{glib, Entry, Image, ListView, ScrolledWindow};
     use gtk4::{Box as GtkBox, Label};
 
     #[derive(CompositeTemplate, Default)]
@@ -829,9 +759,6 @@ mod imp {
     pub struct SearchUiObj {
         #[template_child(id = "split-view")]
         pub all: TemplateChild<GtkBox>,
-
-        #[template_child(id = "status-bar-spinner")]
-        pub spinner: TemplateChild<Spinner>,
 
         #[template_child(id = "preview_box")]
         pub preview_box: TemplateChild<GtkBox>,
@@ -847,18 +774,6 @@ mod imp {
 
         #[template_child(id = "category-type-label")]
         pub mode_title: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-desc")]
-        pub context_action_desc: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-first")]
-        pub context_action_first: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-second")]
-        pub context_action_second: TemplateChild<Label>,
-
-        #[template_child(id = "status-bar")]
-        pub status_bar: TemplateChild<GtkBox>,
 
         #[template_child(id = "search-icon-holder")]
         pub search_icon_holder: TemplateChild<GtkBox>,

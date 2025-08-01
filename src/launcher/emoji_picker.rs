@@ -493,7 +493,7 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
 
 mod imp {
     use gtk4::subclass::prelude::*;
-    use gtk4::{glib, Entry, Image, ScrolledWindow, Spinner};
+    use gtk4::{glib, Entry, Image, ScrolledWindow};
     use gtk4::{Box as GtkBox, Label};
     use gtk4::{CompositeTemplate, GridView};
 
@@ -502,9 +502,6 @@ mod imp {
     pub struct GridSearchUi {
         #[template_child(id = "split-view")]
         pub all: TemplateChild<GtkBox>,
-
-        #[template_child(id = "status-bar-spinner")]
-        pub spinner: TemplateChild<Spinner>,
 
         #[template_child(id = "preview_box")]
         pub preview_box: TemplateChild<GtkBox>,
@@ -520,18 +517,6 @@ mod imp {
 
         #[template_child(id = "category-type-label")]
         pub mode_title: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-desc")]
-        pub context_action_desc: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-first")]
-        pub context_action_first: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-second")]
-        pub context_action_second: TemplateChild<Label>,
-
-        #[template_child(id = "status-bar")]
-        pub status_bar: TemplateChild<GtkBox>,
 
         #[template_child(id = "search-icon-holder")]
         pub search_icon_holder: TemplateChild<GtkBox>,
