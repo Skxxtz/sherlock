@@ -1,10 +1,10 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, path::{Path, PathBuf}};
 
-use crate::utils::config::{
+use crate::utils::{config::{
     defaults::{BindDefaults, ConstantDefaults, FileDefaults, OtherDefaults},
     ConfigAppearance, ConfigBackdrop, ConfigBehavior, ConfigBinds, ConfigDebug, ConfigDefaultApps,
     ConfigExpand, ConfigFiles, ConfigUnits, SearchBarIcon, StatusBar,
-};
+}, files::home_dir};
 
 impl Default for ConfigDefaultApps {
     fn default() -> Self {
@@ -131,5 +131,62 @@ impl Default for SearchBarIcon {
 impl Default for StatusBar {
     fn default() -> Self {
         Self { enable: true }
+    }
+}
+
+// With Root Implementations
+pub trait WithRoot {
+    fn with_root(root: &PathBuf) -> Self;
+}
+impl WithRoot for ConfigAppearance {
+    fn with_root(root: &PathBuf) -> Self {
+        let mut root = root.clone();
+        if root.ends_with("/") {
+            root.pop();
+        }
+        let root = root.to_str();
+        fn use_root(root: Option<&str>, path: PathBuf) -> Option<PathBuf> {
+            let root = root?;
+            let home = home_dir().ok()?;
+            let base = home.join(".config/sherlock");
+
+            if let Ok(suffix) = path.strip_prefix(&base) {
+                Some(Path::new(root).join(suffix))
+            } else {
+                None
+            }
+        }
+        let icon_paths: Vec<PathBuf> = FileDefaults::icon_paths()
+            .into_iter()
+            .filter_map(|s| use_root(root, s))
+            .collect();
+        let mut default = Self::default();
+        default.icon_paths = icon_paths;
+        default
+    }
+}
+
+impl WithRoot for ConfigFiles {
+    fn with_root(root: &PathBuf) -> Self {
+        let mut root = root.clone();
+        if root.ends_with("/") {
+            root.pop();
+        }
+        fn use_root(root: &PathBuf, path: PathBuf) -> PathBuf {
+            if let Ok(stripped) = path.strip_prefix("~/.config/sherlock") {
+                root.join(stripped)
+            } else {
+                path
+            }
+        }
+
+        Self {
+            config: use_root(&root, FileDefaults::config()),
+            css: use_root(&root, FileDefaults::css()),
+            fallback: use_root(&root, FileDefaults::fallback()),
+            alias: use_root(&root, FileDefaults::alias()),
+            ignore: use_root(&root, FileDefaults::ignore()),
+            actions: use_root(&root, FileDefaults::actions()),
+        }
     }
 }
