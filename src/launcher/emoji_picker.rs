@@ -5,7 +5,7 @@ use gtk4::gdk::ModifierType;
 use gtk4::{self, gdk::Key, prelude::*, EventControllerKey};
 use gtk4::{
     Box as GtkBox, CustomFilter, CustomSorter, Entry, FilterListModel, GridView, Label, Ordering,
-    Overlay, SignalListItemFactory, SingleSelection, SortListModel,
+    Overlay, SignalListItemFactory, SingleSelection, SortListModel, Widget,
 };
 use levenshtein::levenshtein;
 use serde::{Deserialize, Serialize};
@@ -304,6 +304,7 @@ fn construct(
         WeakRef::new(),
         filter.downgrade(),
         sorter.downgrade(),
+        imp.results.get().upcast::<Widget>().downgrade(),
         ConfKeys::new(),
         Cell::new(true),
     );

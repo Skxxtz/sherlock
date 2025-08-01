@@ -22,6 +22,7 @@ use gtk4::{
 use serde::Deserialize;
 
 use crate::g_subclasses::tile_item::TileItem;
+use crate::launcher::{Launcher, LauncherType};
 use crate::loader::Loader;
 use crate::sherlock_error;
 use crate::utils::config::{BindDefaults, ConfigGuard};
@@ -284,11 +285,12 @@ impl SherlockCounter {
 pub struct SearchHandler {
     pub model: Option<WeakRef<ListStore>>,
     pub mode: Rc<RefCell<String>>,
-    pub modes: Rc<RefCell<HashMap<String, Option<String>>>>,
+    pub modes: Rc<RefCell<HashMap<String, Vec<Rc<Launcher>>>>>,
     pub task: Rc<RefCell<Option<glib::JoinHandle<()>>>>,
     pub error_model: WeakRef<ListStore>,
     pub filter: WeakRef<CustomFilter>,
     pub sorter: WeakRef<CustomSorter>,
+    pub results: WeakRef<Widget>,
     pub binds: ConfKeys,
     pub first_iter: Cell<bool>,
 }
@@ -299,6 +301,7 @@ impl SearchHandler {
         error_model: WeakRef<ListStore>,
         filter: WeakRef<CustomFilter>,
         sorter: WeakRef<CustomSorter>,
+        results: WeakRef<Widget>,
         binds: ConfKeys,
         first_iter: Cell<bool>,
     ) -> Self {
@@ -310,6 +313,7 @@ impl SearchHandler {
             error_model,
             filter,
             sorter,
+            results,
             binds,
             first_iter,
         }
@@ -342,23 +346,40 @@ impl SearchHandler {
         }
 
         if let Some(model) = self.model.as_ref().and_then(|m| m.upgrade()) {
-            let mut holder: HashMap<String, Option<String>> = HashMap::new();
+            let mut holder: HashMap<String, Vec<Rc<Launcher>>> = HashMap::new();
             let futures = launchers.into_iter().map(|launcher| {
                 let alias = launcher.alias.clone();
-                let name = launcher.name.clone();
                 let launcher = Rc::new(launcher);
                 async move {
                     let patch = launcher.bind_obj(launcher.clone());
-                    (alias, name, patch)
+                    (alias, launcher, patch)
                 }
             });
             let patches = join_all(futures).await;
 
+            // Check if only one launcher exists
+            if patches.len() == 1 {
+                let (_, launcher, _) = patches.get(0).unwrap();
+                if let LauncherType::Emoji(emj) = &launcher.launcher_type {
+                    if let Some(results) = self.results.upgrade() {
+                        let tone = emj.default_skin_tone.get_name();
+                        let _ = results.activate_action("win.emoji-page", Some(&tone.to_variant()));
+                        let _ = results.activate_action(
+                            "win.switch-page",
+                            Some(&String::from("x->emoji-page").to_variant()),
+                        );
+                    }
+                }
+            }
+
             // Collect rows and holder
             let mut rows: Vec<TileItem> = Vec::new();
-            for (alias, name, patch) in patches {
+            for (alias, launcher, patch) in patches {
                 if let Some(alias) = alias {
-                    holder.insert(format!("{} ", alias), name);
+                    holder
+                        .entry(format!("{} ", alias))
+                        .and_modify(|s| s.push(launcher.clone()))
+                        .or_insert(vec![launcher]);
                 }
                 rows.extend(patch);
             }

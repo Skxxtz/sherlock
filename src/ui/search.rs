@@ -8,7 +8,7 @@ use gtk4::{
     gdk::{Key, ModifierType},
     prelude::*,
     CustomFilter, CustomSorter, EventControllerKey, FilterListModel, ListView, Overlay,
-    SignalListItemFactory, SingleSelection, SortListModel,
+    SignalListItemFactory, SingleSelection, SortListModel, Widget,
 };
 use gtk4::{glib, ApplicationWindow, Entry};
 use levenshtein::levenshtein;
@@ -25,7 +25,7 @@ use super::util::*;
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
     g_subclasses::{action_entry::ContextAction, sherlock_row::SherlockRow, tile_item::TileItem},
-    launcher::utils::HomeType,
+    launcher::{utils::HomeType, Launcher},
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
     utils::config::OtherDefaults,
@@ -69,9 +69,9 @@ pub fn search(
         let search_bar = imp.search_bar.downgrade();
         move |_| {
             // Focus search bar as soon as it's visible
-            search_bar
-                .upgrade()
-                .map(|search_bar| search_bar.grab_focus());
+            if let Some(search_bar) = search_bar.upgrade() {
+                search_bar.grab_focus();
+            }
         }
     });
     if let Some(model) = handler.model.as_ref().and_then(|tmp| tmp.upgrade()) {
@@ -155,14 +155,17 @@ pub fn search(
                         }
                         _ => {
                             parameter.push_str(" ");
-                            let mode_name = modes_clone.borrow().get(&parameter).cloned();
-                            match mode_name {
-                                Some(name) => {
-                                    imp.search_icon_holder.set_css_classes(&["back"]);
-                                    imp.mode_title.set_text(name.as_deref().unwrap_or_default());
+                            match modes_clone.borrow().get(&parameter) {
+                                Some(launchers) if launchers.len() > 0 => {
+                                    if let Some(launcher) = launchers.get(0) {
+                                        imp.search_icon_holder.set_css_classes(&["back"]);
+                                        if let Some(name) = &launcher.name {
+                                            imp.mode_title.set_text(name);
+                                        }
 
-                                    *mode_clone.borrow_mut() = parameter.clone();
-                                    state = parameter;
+                                        *mode_clone.borrow_mut() = parameter.clone();
+                                        state = parameter;
+                                    }
                                 }
                                 _ => {
                                     imp.search_icon_holder.set_css_classes(&["search"]);
@@ -362,6 +365,7 @@ fn construct_window(
         error_model,
         filter.downgrade(),
         sorter.downgrade(),
+        imp.results.get().upcast::<Widget>().downgrade(),
         custom_binds,
         first_iter,
     );
@@ -713,7 +717,7 @@ fn nav_event(
 fn change_event(
     search_bar: WeakRef<Entry>,
     results: WeakRef<ListView>,
-    modes: Rc<RefCell<HashMap<String, Option<String>>>>,
+    modes: Rc<RefCell<HashMap<String, Vec<Rc<Launcher>>>>>,
     mode: &Rc<RefCell<String>>,
     search_query: &Rc<RefCell<String>>,
 ) -> Option<()> {

@@ -71,6 +71,7 @@ impl Loader {
         let launchers: Vec<Launcher> = raw_launchers
             .into_par_iter()
             .filter_map(|raw| {
+                // Logic to restrict in submenu mode
                 if submenu.is_some() {
                     if &submenu != &raw.alias {
                         return None;
