@@ -6,7 +6,7 @@ use gtk4::prelude::{GtkApplicationExt, WidgetExt};
 use gtk4::{glib, Application};
 use loader::pipe_loader::PipedData;
 use once_cell::sync::OnceCell;
-use simd_json::prelude::ArrayTrait;
+use simd_json::prelude::{ArrayMut, ArrayTrait};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -63,7 +63,7 @@ async fn main() {
                 println!("GTK Activation took {:?}", t01.elapsed());
             }
         }
-        let errors = startup_errors.clone();
+        let mut errors = startup_errors.clone();
         let warnings = non_breaking.clone();
 
         if app_config.behavior.use_xdg_data_dir_icons {
@@ -77,6 +77,10 @@ async fn main() {
                     }
                 }
             });
+        }
+
+        if let Err(error) = Loader::load_css(true) {
+            errors.push(error);
         }
 
         // Main logic for the Search-View
@@ -112,29 +116,36 @@ async fn main() {
                 .request(ApiCall::Show("all".to_string()));
         }
 
+        // Initialize error backend
+        let error_backend = ui::error_view::ErrorBackend::new();
+        sherlock
+            .borrow_mut()
+            .errors
+            .replace(error_backend.model.downgrade());
+
         // Either show user-specified content or show normal search
-        let (error_stack, error_model) = ui::error_view::errors(
-            &errors,
-            &warnings,
-            &current_stack_page,
-            Rc::clone(&sherlock),
-        );
-        let (search_frame, _handler) = match ui::search::search(
-            &window,
-            &current_stack_page,
-            error_model.clone(),
-            Rc::clone(&sherlock),
-        ) {
-            Ok(r) => r,
+        match ui::search::search(&window, &current_stack_page, Rc::clone(&sherlock)) {
+            Ok(search_frame) => {
+                stack.add_named(&search_frame, Some("search-page"));
+            }
             Err(e) => {
-                error_model
-                    .upgrade()
-                    .map(|stack| stack.append(&e.tile("ERROR")));
-                return;
+                errors.push(e);
             }
         };
-        stack.add_named(&search_frame, Some("search-page"));
-        stack.add_named(&error_stack, Some("error-page"));
+
+        // Lazy load error view
+        idle_add_local({
+            let backend = error_backend;
+            let stack = stack.downgrade();
+            let stack_page = current_stack_page.clone();
+            move || {
+                if let Some(stack) = stack.upgrade() {
+                    let error_stack = ui::error_view::errors(&backend, &stack_page);
+                    stack.add_named(&error_stack, Some("error-page"));
+                }
+                false.into()
+            }
+        });
 
         // Mode switching
         // Logic for the Error-View
@@ -174,15 +185,20 @@ async fn main() {
                 sherlock.await_request(request);
             }
             if error_view_active {
+                // Insert errors and show error page
+                errors.into_iter().for_each(|err| {
+                    let request = ApiCall::SherlockError(err);
+                    sherlock.await_request(request);
+                });
+                warnings.into_iter().for_each(|warn| {
+                    let request = ApiCall::SherlockWarning(warn);
+                    sherlock.await_request(request);
+                });
                 let mode = SherlockModes::Error;
                 let request = ApiCall::SwitchMode(mode);
                 sherlock.await_request(request);
             }
             sherlock.flush();
-        }
-
-        if let Err(error) = Loader::load_css(true) {
-            let _result = error.insert(false);
         }
 
         // Spawn api listener

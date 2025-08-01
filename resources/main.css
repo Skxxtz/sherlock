@@ -209,44 +209,44 @@ image {
     animation: fadeInUp 0.2s ease-out forwards;
 }
 
-row:nth-child(1) .tile.animate{
+row:nth-child(1) .tile.animate {
     animation-delay: 0.05s;
 }
 
-row:nth-child(2) .tile.animate{
+row:nth-child(2) .tile.animate {
     animation-delay: 0.1s;
 }
 
 
-row:nth-child(3) .tile.animate{
+row:nth-child(3) .tile.animate {
     animation-delay: 0.15s;
 }
 
-row:nth-child(4) .tile.animate{
+row:nth-child(4) .tile.animate {
     animation-delay: 0.2s;
 }
 
-row:nth-child(5) .tile.animate{
+row:nth-child(5) .tile.animate {
     animation-delay: 0.25s;
 }
 
-row:nth-child(6) .tile.animate{
+row:nth-child(6) .tile.animate {
     animation-delay: 0.3s;
 }
 
-row:nth-child(7) .tile.animate{
+row:nth-child(7) .tile.animate {
     animation-delay: 0.35s;
 }
 
-row:nth-child(8) .tile.animate{
+row:nth-child(8) .tile.animate {
     animation-delay: 0.4s;
 }
 
-row:nth-child(9) .tile.animate{
+row:nth-child(9) .tile.animate {
     animation-delay: 0.45s;
 }
 
-row:nth-child(10) .tile.animate{
+row:nth-child(10) .tile.animate {
     animation-delay: 0.5s;
 }
 
@@ -278,6 +278,7 @@ row:selected .tile {
     background: hsla(var(--foreground), 1);
     background-color: hsla(var(--foreground), 1);
 }
+
 row:selected .tile.multi-active,
 .tile.multi-active {
     background: hsla(var(--foreground), 1);
@@ -703,6 +704,7 @@ gridview child:selected box {
     font-size: 2.5em;
     padding: 1.25em;
 }
+
 .tile.timer-tile.minimal #timer-count {
     font-size: 1.5em;
 }
@@ -711,26 +713,32 @@ gridview child:selected box {
     color: hsla(var(--text), 0.7);
     font-size: 11px;
 }
+
 #timer-image {
     /* -gtk-icon-filter: brightness(10) saturate(100%) contrast(100%); /1* white *1/ */
-    filter: brightness(10) saturate(100%) contrast(100%); /* black */
+    filter: brightness(10) saturate(100%) contrast(100%);
+    /* black */
 }
 
 /* EMOJIES */
 .emoji-item {
     padding: 20px;
 }
-.emoji-item #emoji-name{
+
+.emoji-item #emoji-name {
     font-size: 10px;
     color: hsla(var(--text), 0.3);
 }
+
 #context-menu.emoji row {
     padding: 3px;
 }
+
 #context-menu.emoji label {
     padding: 5px;
     border-radius: 3px;
 }
+
 #context-menu.emoji label.active {
     background: hsla(var(--text), 0.1);
 }

@@ -39,9 +39,10 @@ use crate::{
 pub fn search(
     window: &ApplicationWindow,
     stack_page_ref: &Rc<RefCell<String>>,
-    error_model: WeakRef<ListStore>,
     sherlock: Rc<RefCell<SherlockAPI>>,
-) -> Result<(Overlay, SearchHandler), SherlockError> {
+) -> Result<Overlay, SherlockError> {
+    let error_model = sherlock.borrow().errors.clone().unwrap_or_default();
+
     // Initialize the view to show all apps
     let (search_query, stack_page, ui, handler, context) = construct_window(error_model)?;
     let imp = ui.imp();
@@ -257,7 +258,7 @@ pub fn search(
         .build();
     window.add_action_entries([mode_action, action_clear_win, sorter_actions]);
 
-    return Ok((stack_page, handler));
+    return Ok(stack_page);
 }
 
 fn construct_window(
