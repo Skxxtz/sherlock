@@ -61,7 +61,9 @@ impl SherlockFlags {
 
         if check_flag_existence("init") {
             let path = extract_path_value("init").unwrap_or(PathBuf::from("~/.config/sherlock/"));
-            let x = SherlockConfig::to_file(path);
+            let extension = Self::extract_flag_value::<String>(&args, "--file-type", Some("-f"))
+                .unwrap_or(String::from("toml"));
+            let x = SherlockConfig::to_file(path, &extension);
             eprintln!("{:?}", x);
         }
 

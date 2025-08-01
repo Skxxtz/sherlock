@@ -17,7 +17,7 @@ impl SherlockConfig {
     /// # Arguments
     /// loc: PathBuf
     /// Pathbuf should be a directory **not** a file
-    pub fn to_file(loc: PathBuf) -> Result<(), SherlockError> {
+    pub fn to_file(loc: PathBuf, ext: &str) -> Result<(), SherlockError> {
         // create config location
         let home = home_dir()?;
         let path = expand_path(&loc, &home);
@@ -59,15 +59,6 @@ impl SherlockConfig {
             }
         };
 
-        // build default config
-        let config = SherlockConfig::with_root(&loc);
-        let toml_str = toml::to_string(&config).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileWriteError(path.clone()),
-                e.to_string()
-            )
-        })?;
-
         // mkdir -p
         fs::create_dir_all(&path).map_err(|e| {
             sherlock_error!(
@@ -80,8 +71,24 @@ impl SherlockConfig {
         ensure_dir(&path.join("scripts/"), "scripts");
         ensure_dir(&path.join("themes/"), "themes");
 
+        // build default config
+        let config = SherlockConfig::with_root(&loc);
+        match ext {
+            "json" => {
+                let json_str = serde_json::to_string_pretty(&config).map_err(|e| {
+                    sherlock_error!(SherlockErrorType::SerializationError, e.to_string())
+                })?;
+                write_file("config.json", &json_str);
+            }
+            _ => {
+                let toml_str = toml::to_string(&config).map_err(|e| {
+                    sherlock_error!(SherlockErrorType::SerializationError, e.to_string())
+                })?;
+                write_file("config.toml", &toml_str);
+            }
+        }
+
         // Write basic config files
-        write_file("config.toml", &toml_str);
         write_file("sherlockignore", "");
         write_file("sherlock_actions.json", "[]");
         write_file("sherlock_alias.json", "{}");

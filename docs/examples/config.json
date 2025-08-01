@@ -2,48 +2,98 @@
     "default_apps": {
         "teams": "teams-for-linux --enable-features=UseOzonePlatform --ozone-platform=wayland --url {meeting_url}",
         "calendar_client": "thunderbird",
-        "terminal": "kitty"
-    },
-    "debug": {
-        "try_suppress_errors": true,
-        "try_suppress_warnings": false,
-        "app_paths": ["~/.local/share/applications/"]
+        "terminal": "kitty",
+        "browser": "/opt/zen-browser-bin/zen-bin %u",
+        "mpris": null
     },
     "units": {
-        "lengths": "meter",
+        "lengths": "meters",
         "weights": "kg",
         "volumes": "l",
-        "temperatures": "C"
+        "temperatures": "C",
+        "currency": "eur"
+    },
+    "debug": {
+        "try_suppress_errors": false,
+        "try_suppress_warnings": false,
+        "app_paths": []
     },
     "appearance": {
         "width": 900,
         "height": 593,
         "gsk_renderer": "cairo",
-        "recolor_icons": false,
-        "icon_paths": ["~/.config/sherlock/icons/"],
+        "icon_paths": [
+            "/home/basti/testconfig/icons"
+        ],
         "icon_size": 22,
-        "search_icon": true,
         "use_base_css": true,
-        "status_bar": true,
-        "opacity": 1.0
+        "opacity": 1.0,
+        "mod_key_ascii": [
+            "\u21e7",
+            "\u21e7",
+            "\u2318",
+            "\u2318",
+            "\u2387",
+            "\u2726",
+            "\u2726",
+            "\u2318"
+        ]
     },
     "behavior": {
-        "caching": true,
-        "cache": "~/.cache/sherlock_desktop_cache.json",
-        "daemonize": false,
+        "use_xdg_data_dir_icons": false,
         "animate": true,
-        "global_prefix": "",
-        "global_flags": ""
+        "global_prefix": null,
+        "global_flags": null
     },
     "binds": {
-        "next": "None",
-        "prev": "None",
-        "modifier": "control"
+        "up": "control-k",
+        "down": "control-j",
+        "left": "control-ih",
+        "right": "control-l",
+        "context": "control-i",
+        "modifier": "control",
+        "exec_inplace": "control-return"
     },
     "files": {
-        "css": "~/.config/sherlock/main.css",
-        "fallback": "~/.config/sherlock/fallback.json",
-        "alias": "~/.config/sherlock/sherlock_alias.json",
-        "ignore": "~/.config/sherlock/sherlockignore"
+        "config": "/home/basti/.config/sherlock/config.toml",
+        "css": "/home/basti/.config/sherlock/main.css",
+        "fallback": "/home/basti/.config/sherlock/fallback.json",
+        "alias": "/home/basti/.config/sherlock/sherlock_alias.json",
+        "ignore": "/home/basti/.config/sherlock/sherlockignore",
+        "actions": "/home/basti/.config/sherlock/sherlock_actions.json"
+    },
+    "runtime": {
+        "method": null,
+        "multi": false,
+        "center": false,
+        "photo_mode": false,
+        "display_raw": false,
+        "input": null,
+        "sub_menu": null,
+        "daemonize": false,
+        "field": null
+    },
+    "caching": {
+        "enable": true,
+        "cache": "/home/basti/.cache/sherlock/sherlock_desktop_cache.json"
+    },
+    "expand": {
+        "enable": false,
+        "edge": "top",
+        "margin": 0
+    },
+    "backdrop": {
+        "enable": false,
+        "opacity": 0.6,
+        "edge": "top"
+    },
+    "status_bar": {
+        "enable": true
+    },
+    "search_bar_icon": {
+        "enable": true,
+        "icon": "system-search-symbolic",
+        "icon_back": "go-previous-symbolic",
+        "size": 22
     }
 }
