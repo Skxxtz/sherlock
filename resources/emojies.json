@@ -166,12 +166,12 @@
   },
   {
     "emoji": "😮‍💨",
-    "name": "Face Exhaling",
+    "name": "Face Exhaling;Sigh;Phew;Relieved",
     "skin": 0
   },
   {
     "emoji": "🍽",
-    "name": "Fork and Knife with Plate",
+    "name": "Fork and Knife with Plate;Food",
     "skin": 0
   },
   {
@@ -386,7 +386,7 @@
   },
   {
     "emoji": "😧",
-    "name": "Anguished Face",
+    "name": "Anguished Face;Shock;Dismay;Panic",
     "skin": 0
   },
   {
@@ -406,7 +406,7 @@
   },
   {
     "emoji": "😠",
-    "name": "Angry Face",
+    "name": "Angry Face;Mad;Fuming",
     "skin": 0
   },
   {
@@ -456,7 +456,7 @@
   },
   {
     "emoji": "🤦{skin_tone}",
-    "name": "Person Facepalming",
+    "name": "Person Facepalming;Disbelief;I Can't Believe This",
     "skin": 1
   },
   {
@@ -471,7 +471,7 @@
   },
   {
     "emoji": "😂",
-    "name": "Face with Tears of Joy;Funny",
+    "name": "Face with Tears of Joy;Funny;Lol;Laughing",
     "skin": 0
   },
   {
@@ -561,7 +561,7 @@
   },
   {
     "emoji": "😢",
-    "name": "Crying Face",
+    "name": "Crying Face;Oh;Grief",
     "skin": 0
   },
   {
@@ -661,7 +661,7 @@
   },
   {
     "emoji": "😓",
-    "name": "Downcast Face with Sweat",
+    "name": "Downcast Face with Sweat;Stress;Exhaustion;Whew",
     "skin": 0
   },
   {
@@ -721,7 +721,7 @@
   },
   {
     "emoji": "🙁",
-    "name": "Slightly Frowning Face",
+    "name": "Slightly Frowning Face;Sad;Worried",
     "skin": 0
   },
   {
@@ -851,7 +851,7 @@
   },
   {
     "emoji": "🫤",
-    "name": "Face with Diagonal Mouth",
+    "name": "Face with Diagonal Mouth;Meh;Unsure;Awkward",
     "skin": 0
   },
   {
@@ -871,7 +871,7 @@
   },
   {
     "emoji": "😬",
-    "name": "Grimacing Face",
+    "name": "Grimacing Face;Teeth-clench;Yikes",
     "skin": 0
   },
   {
@@ -886,7 +886,7 @@
   },
   {
     "emoji": "😊",
-    "name": "Smiling Face with Smiling Eyes",
+    "name": "Smiling Face with Smiling Eyes;Smiley;Happy",
     "skin": 0
   },
   {
@@ -941,7 +941,7 @@
   },
   {
     "emoji": "😔",
-    "name": "Pensive Face",
+    "name": "Pensive Face;Sad;Disappointed;Down",
     "skin": 0
   },
   {
@@ -986,7 +986,7 @@
   },
   {
     "emoji": "😑",
-    "name": "Expressionless Face",
+    "name": "Expressionless Face;Blank;Unimpressed;Meh",
     "skin": 0
   },
   {
@@ -1001,7 +1001,7 @@
   },
   {
     "emoji": "🥱",
-    "name": "Yawning Face",
+    "name": "Yawning Face;Tired",
     "skin": 0
   },
   {
@@ -1156,7 +1156,7 @@
   },
   {
     "emoji": "🤬",
-    "name": "Face with Symbols on Mouth",
+    "name": "Face with Symbols on Mouth;Wtf;Angry;Mad;Fuming",
     "skin": 0
   },
   {
@@ -1181,7 +1181,7 @@
   },
   {
     "emoji": "🙄",
-    "name": "Face with Rolling Eyes",
+    "name": "Face with Rolling Eyes;Seriously;Ugh;Whatever",
     "skin": 0
   },
   {
@@ -1236,7 +1236,7 @@
   },
   {
     "emoji": "😴",
-    "name": "Sleeping Face",
+    "name": "Sleeping Face;Tired;Snooze;Zzz",
     "skin": 0
   },
   {
@@ -1251,7 +1251,7 @@
   },
   {
     "emoji": "👿",
-    "name": "Angry Face with Horns;Angry Devil",
+    "name": "Angry Face with Horns;Angry Devil;Evil",
     "skin": 0
   },
   {
@@ -1276,7 +1276,7 @@
   },
   {
     "emoji": "🧐",
-    "name": "Face with Monocle",
+    "name": "Face with Monocle;Curious;Skeptical",
     "skin": 0
   },
   {
@@ -1391,7 +1391,7 @@
   },
   {
     "emoji": "🫨",
-    "name": "Shaking Face",
+    "name": "Shaking Face;Shocked;Speechless;Omg",
     "skin": 0
   },
   {
@@ -1521,7 +1521,7 @@
   },
   {
     "emoji": "😆",
-    "name": "Grinning Squinting Face",
+    "name": "Grinning Squinting Face;Lol",
     "skin": 0
   },
   {
@@ -1636,7 +1636,7 @@
   },
   {
     "emoji": "😌",
-    "name": "Relieved Face",
+    "name": "Relieved Face;Chill;Peaceful",
     "skin": 0
   },
   {
@@ -1731,7 +1731,7 @@
   },
   {
     "emoji": "😩",
-    "name": "Weary Face",
+    "name": "Weary Face;Stress;Over it",
     "skin": 0
   },
   {
@@ -1781,7 +1781,7 @@
   },
   {
     "emoji": "🥴",
-    "name": "Woozy Face",
+    "name": "Woozy Face;Drunk;Wobbly;Dizzy",
     "skin": 0
   },
   {
@@ -1821,7 +1821,7 @@
   },
   {
     "emoji": "😍",
-    "name": "Smiling Face with Heart Eyes",
+    "name": "Smiling Face with Heart Eyes;Pretty;In love;Adore",
     "skin": 0
   },
   {
@@ -1881,7 +1881,7 @@
   },
   {
     "emoji": "😐",
-    "name": "Neutral Face",
+    "name": "Neutral Face;Unimpressed;Whatever",
     "skin": 0
   },
   {
@@ -1941,7 +1941,7 @@
   },
   {
     "emoji": "🥰",
-    "name": "Smiling Face with Hearts",
+    "name": "Smiling Face with Hearts;Love;Blush",
     "skin": 0
   },
   {
@@ -2016,7 +2016,7 @@
   },
   {
     "emoji": "🤭",
-    "name": "Face with Hand Over Mouth;Oops",
+    "name": "Face with Hand Over Mouth;Oops;Blush;Shy",
     "skin": 0
   },
   {
@@ -2041,7 +2041,7 @@
   },
   {
     "emoji": "😘",
-    "name": "Face Blowing a Kiss",
+    "name": "Face Blowing a Kiss;Blowing Kiss",
     "skin": 0
   },
   {
@@ -2241,7 +2241,7 @@
   },
   {
     "emoji": "😵‍💫",
-    "name": "Face with Spiral Eyes",
+    "name": "Face with Spiral Eyes;Hypnosed;Dizzy",
     "skin": 0
   },
   {
@@ -2276,7 +2276,7 @@
   },
   {
     "emoji": "🤮",
-    "name": "Face Vomiting",
+    "name": "Face Vomiting;Eww;Puke",
     "skin": 0
   },
   {
@@ -2356,7 +2356,7 @@
   },
   {
     "emoji": "😵",
-    "name": "Face with Crossed Out Eyes",
+    "name": "Face with Crossed Out Eyes;Dead",
     "skin": 0
   },
   {
@@ -2476,7 +2476,7 @@
   },
   {
     "emoji": "😰",
-    "name": "Anxious Face with Sweat",
+    "name": "Anxious Face with Sweat;Nervous",
     "skin": 0
   },
   {
@@ -2526,7 +2526,7 @@
   },
   {
     "emoji": "🤫",
-    "name": "Shushing Face",
+    "name": "Shushing Face;Pssta;Silence",
     "skin": 0
   },
   {
@@ -2571,7 +2571,7 @@
   },
   {
     "emoji": "😨",
-    "name": "Fearful Face",
+    "name": "Fearful Face;Scared;Worried;Oh no",
     "skin": 0
   },
   {
@@ -2626,7 +2626,7 @@
   },
   {
     "emoji": "😥",
-    "name": "Sad But Relieved Face",
+    "name": "Sad But Relieved Face;Tearful relief",
     "skin": 0
   },
   {
@@ -2696,7 +2696,7 @@
   },
   {
     "emoji": "😇",
-    "name": "Smiling Face with Halo",
+    "name": "Angel;Smiling Face with Halo;Innocent;Saint",
     "skin": 0
   },
   {
@@ -2721,7 +2721,7 @@
   },
   {
     "emoji": "🙂",
-    "name": "Slightly Smiling Face;Grin",
+    "name": "Simple Smile;Slightly Smiling Face;Grin",
     "skin": 0
   },
   {
@@ -2741,7 +2741,7 @@
   },
   {
     "emoji": "😀",
-    "name": "Grinning Face;Smile",
+    "name": "Big Smile;Grinning Face;Joy",
     "skin": 0
   },
   {
@@ -2751,7 +2751,7 @@
   },
   {
     "emoji": "🥹",
-    "name": "Face Holding Back Tears",
+    "name": "Face Holding Back Tears;Emotional;Puppy Eyes;Begging",
     "skin": 0
   },
   {
@@ -2801,7 +2801,7 @@
   },
   {
     "emoji": "🫥",
-    "name": "Dotted Line Face",
+    "name": "Dotted Line Face;Silent;Quiet;Invisible",
     "skin": 0
   },
   {
@@ -2871,7 +2871,7 @@
   },
   {
     "emoji": "🫣",
-    "name": "Face with Peeking Eye",
+    "name": "Covering Eyes;Face with Peeking Eye;Peekabo;Sneaky",
     "skin": 0
   },
   {
@@ -2916,7 +2916,7 @@
   },
   {
     "emoji": "😋",
-    "name": "Face Savoring Food",
+    "name": "Tasty;Face Savoring Food;Yummy;Delicious",
     "skin": 0
   },
   {
@@ -3021,7 +3021,7 @@
   },
   {
     "emoji": "🥵",
-    "name": "Hot Face",
+    "name": "Hot Face;Burning up",
     "skin": 0
   },
   {
@@ -3261,7 +3261,7 @@
   },
   {
     "emoji": "🥸",
-    "name": "Disguised Face",
+    "name": "Disguised Face;Sneaky;Incognito;Disguise",
     "skin": 0
   },
   {
@@ -3461,7 +3461,7 @@
   },
   {
     "emoji": "😒",
-    "name": "Unamused Face",
+    "name": "Unamused Face;Annoyed;Side-eye",
     "skin": 0
   },
   {
@@ -3491,7 +3491,7 @@
   },
   {
     "emoji": "🤠",
-    "name": "Cowboy Hat Face",
+    "name": "Cowboy;Howdy;Cowboy Hat;Western",
     "skin": 0
   },
   {
@@ -3551,7 +3551,7 @@
   },
   {
     "emoji": "🤥",
-    "name": "Lying Face",
+    "name": "Lying Face;Pinocchio",
     "skin": 0
   },
   {
@@ -3561,7 +3561,7 @@
   },
   {
     "emoji": "😳",
-    "name": "Flushed Face",
+    "name": "Flushed Face;Disbelief",
     "skin": 0
   },
   {
@@ -3731,7 +3731,7 @@
   },
   {
     "emoji": "😞",
-    "name": "Disappointed Face",
+    "name": "Disappointed Face;Sad",
     "skin": 0
   },
   {
@@ -3886,7 +3886,7 @@
   },
   {
     "emoji": "🤪",
-    "name": "Zany Face",
+    "name": "Zany Face;Crazy;Silly",
     "skin": 0
   },
   {
@@ -3896,7 +3896,7 @@
   },
   {
     "emoji": "🤦{skin_tone}‍♂",
-    "name": "Man Facepalming",
+    "name": "Man Facepalming;Stupid;Dumb;Fail",
     "skin": 1
   },
   {
@@ -4261,7 +4261,7 @@
   },
   {
     "emoji": "😶",
-    "name": "Face Without Mouth",
+    "name": "Speechless;Face Without Mouth;No Comment",
     "skin": 0
   },
   {
@@ -4301,7 +4301,7 @@
   },
   {
     "emoji": "🫢",
-    "name": "Face with Open Eyes and Hand Over Mouth",
+    "name": "Covering Mouth;Silent",
     "skin": 0
   },
   {
@@ -4376,7 +4376,7 @@
   },
   {
     "emoji": "😖",
-    "name": "Confounded Face",
+    "name": "Confounded Face;Cold",
     "skin": 0
   },
   {
@@ -4476,7 +4476,7 @@
   },
   {
     "emoji": "😕",
-    "name": "Confused Face",
+    "name": "Confused Face;Mild Sadness",
     "skin": 0
   },
   {
@@ -4581,7 +4581,7 @@
   },
   {
     "emoji": "😃",
-    "name": "Grinning Face with Big Eyes;Smile",
+    "name": "Grinning Face;Smile;Excited",
     "skin": 0
   },
   {
@@ -4621,7 +4621,7 @@
   },
   {
     "emoji": "🥲",
-    "name": "Smiling Face with Tear",
+    "name": "Smiling Face with Tear;Bittersweet Smile;Tearful",
     "skin": 0
   },
   {
@@ -4736,7 +4736,7 @@
   },
   {
     "emoji": "😙",
-    "name": "Kissing Face with Smiling Eyes",
+    "name": "Kissing Face with Smiling Eyes;Whistle;Kiss",
     "skin": 0
   },
   {
@@ -4801,7 +4801,7 @@
   },
   {
     "emoji": "😛",
-    "name": "Face with Tongue",
+    "name": "Face with Tongue;Playful;Cheeky",
     "skin": 0
   },
   {
@@ -4871,7 +4871,7 @@
   },
   {
     "emoji": "🤕",
-    "name": "Face with Head Bandage",
+    "name": "Face with Head Bandage;Injured;Hurt",
     "skin": 0
   },
   {
@@ -4961,7 +4961,7 @@
   },
   {
     "emoji": "🥀",
-    "name": "Wilted Flower",
+    "name": "Wilted Flower;Rose",
     "skin": 0
   },
   {
@@ -5006,7 +5006,7 @@
   },
   {
     "emoji": "🤓",
-    "name": "Nerd Face",
+    "name": "Nerd Face;Smart",
     "skin": 0
   },
   {
@@ -5266,7 +5266,7 @@
   },
   {
     "emoji": "🙃",
-    "name": "Upside Down Face",
+    "name": "Upside Down Face;Silly;Playful",
     "skin": 0
   },
   {
@@ -5371,7 +5371,7 @@
   },
   {
     "emoji": "🥺",
-    "name": "Pleading Face",
+    "name": "Pleading Face;Puppy Eyes",
     "skin": 0
   },
   {
@@ -5391,7 +5391,7 @@
   },
   {
     "emoji": "😱",
-    "name": "Face Screaming in Fear",
+    "name": "Face Screaming in Fear;Scared;Scream",
     "skin": 0
   },
   {
@@ -5531,7 +5531,7 @@
   },
   {
     "emoji": "😤",
-    "name": "Face with Steam From Nose",
+    "name": "Face with Steam From Nose;Angry;Mad",
     "skin": 0
   },
   {
@@ -5756,7 +5756,7 @@
   },
   {
     "emoji": "🥳",
-    "name": "Partying Face",
+    "name": "Partying Face;Birthday;Celebration",
     "skin": 0
   },
   {
@@ -5776,7 +5776,7 @@
   },
   {
     "emoji": "😶‍🌫",
-    "name": "Face in Clouds",
+    "name": "Face in Clouds;Incognito;Vanishing;Fog",
     "skin": 0
   },
   {
@@ -8176,7 +8176,7 @@
   },
   {
     "emoji": "💩",
-    "name": "Pile of Poo",
+    "name": "Pile of Poo;Shit;Turd",
     "skin": 0
   },
   {
