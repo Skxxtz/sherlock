@@ -36,9 +36,9 @@ pub fn clear_cached_files() -> Result<(), SherlockError> {
     })?;
 
     // Clear app cache
-    fs::remove_file(&config.behavior.cache).map_err(|e| {
+    fs::remove_file(&config.caching.cache).map_err(|e| {
         sherlock_error!(
-            SherlockErrorType::FileRemoveError(config.behavior.cache.clone()),
+            SherlockErrorType::FileRemoveError(config.caching.cache.clone()),
             e.to_string()
         )
     })?;

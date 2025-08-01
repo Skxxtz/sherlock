@@ -167,7 +167,7 @@ impl SherlockAPI {
         match method {
             "restart" => {
                 if let Ok(config) = ConfigGuard::read() {
-                    if config.behavior.daemonize {
+                    if config.runtime.daemonize {
                         if let Err(err) = command_launch("sherlock --take-over --daemonize", "") {
                             let _result = err.insert(true);
                         }

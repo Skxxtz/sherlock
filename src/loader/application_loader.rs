@@ -230,13 +230,13 @@ impl Loader {
     ) -> Result<Vec<AppData>, SherlockError> {
         let config = ConfigGuard::read()?;
         // check if sherlock_alias was modified
-        let changed = file_has_changed(&config.files.alias, &config.behavior.cache)
-            || file_has_changed(&config.files.ignore, &config.behavior.cache)
-            || file_has_changed(&config.files.config, &config.behavior.cache);
+        let changed = file_has_changed(&config.files.alias, &config.caching.cache)
+            || file_has_changed(&config.files.ignore, &config.caching.cache)
+            || file_has_changed(&config.files.config, &config.caching.cache);
 
         if !changed {
             let _ = sher_log!("Loading cached apps");
-            let cached_apps: Option<Vec<AppData>> = File::open(&config.behavior.cache)
+            let cached_apps: Option<Vec<AppData>> = File::open(&config.caching.cache)
                 .ok()
                 .and_then(|f| simd_json::from_reader(f).ok());
 
@@ -258,8 +258,8 @@ impl Loader {
 
                 // Refresh cache in the background
                 let old_apps = apps.clone();
-                let last_changed = config.behavior.cache.modtime();
-                let cache = config.behavior.cache.clone();
+                let last_changed = config.caching.cache.modtime();
+                let cache = config.caching.cache.clone();
                 rayon::spawn_fifo({
                     let counts_clone = counts.clone();
                     move || {
@@ -282,7 +282,7 @@ impl Loader {
         let apps = Loader::load_applications_from_disk(None, priority, counts, decimals)?;
         // Write the cache in the background
         let app_clone = apps.clone();
-        let cache = config.behavior.cache.clone();
+        let cache = config.caching.cache.clone();
         rayon::spawn_fifo(move || Loader::write_cache(&app_clone, cache));
         Ok(apps)
     }

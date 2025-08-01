@@ -113,7 +113,7 @@ pub fn window(
             let _result = close_response();
 
             if let Ok(c) = ConfigGuard::read() {
-                match c.behavior.daemonize {
+                match c.runtime.daemonize {
                     true => {
                         window.set_visible(false);
                         let _ = gtk4::prelude::WidgetExt::activate_action(

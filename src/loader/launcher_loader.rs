@@ -155,7 +155,7 @@ fn parse_app_launcher(
         || Vec::new(),
         |config| {
             let prio = raw.priority;
-            match config.behavior.caching {
+            match config.caching.enable {
                 true => Loader::load_applications(prio, counts, max_decimals).unwrap_or_default(),
                 false => Loader::load_applications_from_disk(None, prio, counts, max_decimals)
                     .unwrap_or_default(),

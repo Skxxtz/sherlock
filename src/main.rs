@@ -189,7 +189,7 @@ async fn main() {
         let _server = SherlockServer::listen(sherlock);
 
         // Logic for handling the daemonization
-        if app_config.behavior.daemonize {
+        if app_config.runtime.daemonize {
             // Used to cache render
             if let Some(window) = open_win.upgrade() {
                 let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);

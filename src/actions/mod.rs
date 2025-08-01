@@ -213,7 +213,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                     "restart" => {
                         // start new sherlock instance
                         if let Ok(config) = ConfigGuard::read() {
-                            if config.behavior.daemonize {
+                            if config.runtime.daemonize {
                                 if let Err(err) =
                                     command_launch("sherlock --take-over --daemonize", "")
                                 {

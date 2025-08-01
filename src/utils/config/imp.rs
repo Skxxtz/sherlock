@@ -1,10 +1,16 @@
-use std::{collections::HashSet, path::{Path, PathBuf}};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
-use crate::utils::{config::{
-    defaults::{BindDefaults, ConstantDefaults, FileDefaults, OtherDefaults},
-    ConfigAppearance, ConfigBackdrop, ConfigBehavior, ConfigBinds, ConfigDebug, ConfigDefaultApps,
-    ConfigExpand, ConfigFiles, ConfigUnits, SearchBarIcon, StatusBar,
-}, files::home_dir};
+use crate::utils::{
+    config::{
+        defaults::{BindDefaults, ConstantDefaults, FileDefaults, OtherDefaults},
+        ConfigAppearance, ConfigBackdrop, ConfigBehavior, ConfigBinds, ConfigCaching, ConfigDebug,
+        ConfigDefaultApps, ConfigExpand, ConfigFiles, ConfigUnits, SearchBarIcon, StatusBar,
+    },
+    files::home_dir,
+};
 
 impl Default for ConfigDefaultApps {
     fn default() -> Self {
@@ -59,9 +65,6 @@ impl Default for ConfigBehavior {
     fn default() -> Self {
         Self {
             use_xdg_data_dir_icons: false,
-            cache: FileDefaults::cache(),
-            caching: false,
-            daemonize: false,
             animate: true,
             field: None,
             global_prefix: None,
@@ -93,6 +96,15 @@ impl Default for ConfigBinds {
             context: BindDefaults::context(),
             modifier: BindDefaults::modifier(),
             exec_inplace: BindDefaults::exec_inplace(),
+        }
+    }
+}
+
+impl Default for ConfigCaching {
+    fn default() -> Self {
+        Self {
+            enable: true,
+            cache: FileDefaults::cache(),
         }
     }
 }

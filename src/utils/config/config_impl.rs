@@ -175,11 +175,11 @@ impl SherlockConfig {
                 .unwrap_or(&config.files.ignore),
             &home,
         );
-        config.behavior.cache = expand_path(
+        config.caching.cache = expand_path(
             &sherlock_flags
                 .cache
                 .as_deref()
-                .unwrap_or(&config.behavior.cache),
+                .unwrap_or(&config.caching.cache),
             &home,
         );
         config.runtime.sub_menu = sherlock_flags.sub_menu.take();
@@ -190,10 +190,8 @@ impl SherlockConfig {
         config.runtime.display_raw = sherlock_flags.display_raw;
         config.runtime.photo_mode = sherlock_flags.photo_mode;
         config.behavior.field = sherlock_flags.field.take();
+        config.runtime.daemonize = sherlock_flags.daemonize;
 
-        if sherlock_flags.daemonize {
-            config.behavior.daemonize = true;
-        }
         config
     }
 }

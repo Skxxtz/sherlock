@@ -1,22 +1,17 @@
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashSet,
-    path::{PathBuf},
-    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
-};
+use std::{collections::HashSet, path::PathBuf};
 
-use super::{
-    errors::{SherlockError, SherlockErrorType},
-};
-use crate::{sherlock_error, utils::config::defaults::FileDefaults, CONFIG};
+use crate::utils::config::defaults::FileDefaults;
 
 mod config_impl;
 mod defaults;
 mod flags;
+mod guard;
 mod imp;
 
 pub use defaults::{BindDefaults, ConstantDefaults, OtherDefaults};
 pub use flags::SherlockFlags;
+pub use guard::ConfigGuard;
 
 /// Configuration sections:
 ///
@@ -61,6 +56,10 @@ pub struct SherlockConfig {
     /// Internal settings for JSON piping (e.g., default return action)
     #[serde(default)]
     pub runtime: Runtime,
+
+    /// Configures caching feature
+    #[serde(default)]
+    pub caching: ConfigCaching,
 
     /// Configures expand feature
     #[serde(default)]
@@ -139,12 +138,6 @@ pub struct ConfigAppearance {
 pub struct ConfigBehavior {
     #[serde(default)]
     pub use_xdg_data_dir_icons: bool,
-    #[serde(default = "FileDefaults::cache")]
-    pub cache: PathBuf,
-    #[serde(default = "OtherDefaults::bool_true")]
-    pub caching: bool,
-    #[serde(default)]
-    pub daemonize: bool,
     #[serde(default = "OtherDefaults::bool_true")]
     pub animate: bool,
     #[serde(default)]
@@ -193,24 +186,28 @@ pub struct ConfigBinds {
 pub struct Runtime {
     #[serde(default)]
     pub method: Option<String>,
-
     #[serde(default)]
     pub multi: bool,
-
     #[serde(default)]
     pub center: bool,
-
     #[serde(default)]
     pub photo_mode: bool,
-
     #[serde(default)]
     pub display_raw: bool,
-
     #[serde(default)]
     pub input: Option<bool>,
-
     #[serde(default)]
     pub sub_menu: Option<String>,
+    #[serde(default)]
+    pub daemonize: bool,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ConfigCaching {
+    #[serde(default = "OtherDefaults::bool_true")]
+    pub enable: bool,
+    #[serde(default = "FileDefaults::cache")]
+    pub cache: PathBuf,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -252,47 +249,4 @@ pub struct SearchBarIcon {
 pub struct StatusBar {
     #[serde(default = "OtherDefaults::bool_true")]
     pub enable: bool,
-}
-
-pub struct ConfigGuard;
-impl<'g> ConfigGuard {
-    fn get_config() -> Result<&'g RwLock<SherlockConfig>, SherlockError> {
-        CONFIG.get().ok_or_else(|| {
-            sherlock_error!(
-                SherlockErrorType::ConfigError(None),
-                "Config not initialized".to_string()
-            )
-        })
-    }
-
-    fn get_read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
-        Self::get_config()?.read().map_err(|_| {
-            sherlock_error!(
-                SherlockErrorType::ConfigError(None),
-                "Failed to acquire write lock on config".to_string()
-            )
-        })
-    }
-
-    fn _get_write() -> Result<RwLockWriteGuard<'g, SherlockConfig>, SherlockError> {
-        Self::get_config()?.write().map_err(|_| {
-            sherlock_error!(
-                SherlockErrorType::ConfigError(None),
-                "Failed to acquire write lock on config".to_string()
-            )
-        })
-    }
-
-    pub fn read() -> Result<RwLockReadGuard<'g, SherlockConfig>, SherlockError> {
-        Self::get_read()
-    }
-
-    pub fn write_key<F>(key_fn: F) -> Result<(), SherlockError>
-    where
-        F: FnOnce(&mut SherlockConfig),
-    {
-        let mut config = Self::_get_write()?;
-        key_fn(&mut config);
-        Ok(())
-    }
 }
