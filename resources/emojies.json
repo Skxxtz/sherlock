@@ -26,7 +26,7 @@
   },
   {
     "emoji": "🧘{skin_tone}‍♂",
-    "name": "Man in Lotus Position",
+    "name": "Man in Lotus Position;Yoga;Zen",
     "skin": 1
   },
   {
@@ -36,7 +36,7 @@
   },
   {
     "emoji": "😈",
-    "name": "Smiling Face with Horns",
+    "name": "Smiling Face with Horns;Devil",
     "skin": 0
   },
   {
@@ -61,12 +61,12 @@
   },
   {
     "emoji": "🕛",
-    "name": "Twelve O’clock",
+    "name": "Twelve O’clock;Time",
     "skin": 0
   },
   {
     "emoji": "💥",
-    "name": "Collision",
+    "name": "Collision;Explode;Explosion",
     "skin": 0
   },
   {
@@ -376,7 +376,7 @@
   },
   {
     "emoji": "🕐",
-    "name": "One O’clock",
+    "name": "One O’clock:Time",
     "skin": 0
   },
   {
@@ -541,7 +541,7 @@
   },
   {
     "emoji": "{skin_tone}",
-    "name": "Medium Skin Tone",
+    "name": "Skin Tone",
     "skin": 1
   },
   {
@@ -856,7 +856,7 @@
   },
   {
     "emoji": "♥",
-    "name": "Heart Suit",
+    "name": "Heart Suit;Card",
     "skin": 0
   },
   {
@@ -1081,7 +1081,7 @@
   },
   {
     "emoji": "🏃{skin_tone}‍♂",
-    "name": "Man Running",
+    "name": "Man Running;Jogging;Jogger;Runner",
     "skin": 1
   },
   {
@@ -1251,7 +1251,7 @@
   },
   {
     "emoji": "👿",
-    "name": "Angry Face with Horns",
+    "name": "Angry Face with Horns;Angry Devil",
     "skin": 0
   },
   {
@@ -1356,12 +1356,12 @@
   },
   {
     "emoji": "🕓",
-    "name": "Four O’clock",
+    "name": "Four O’clock;Time",
     "skin": 0
   },
   {
     "emoji": "🕑",
-    "name": "Two O’clock",
+    "name": "Two O’clock;Time",
     "skin": 0
   },
   {
@@ -1501,7 +1501,7 @@
   },
   {
     "emoji": "♦",
-    "name": "Diamond Suit",
+    "name": "Diamond Suit;Card",
     "skin": 0
   },
   {
@@ -1896,7 +1896,7 @@
   },
   {
     "emoji": "♠",
-    "name": "Spade Suit",
+    "name": "Spade Suit;Card",
     "skin": 0
   },
   {
@@ -1916,7 +1916,7 @@
   },
   {
     "emoji": "👟",
-    "name": "Running Shoe",
+    "name": "Running Shoe;Jogging",
     "skin": 0
   },
   {
@@ -2156,7 +2156,7 @@
   },
   {
     "emoji": "🕕",
-    "name": "Six O’clock",
+    "name": "Six O’clock;Time",
     "skin": 0
   },
   {
@@ -2341,7 +2341,7 @@
   },
   {
     "emoji": "🕙",
-    "name": "Ten O’clock",
+    "name": "Ten O’clock;Time",
     "skin": 0
   },
   {
@@ -2555,11 +2555,6 @@
     "skin": 0
   },
   {
-    "emoji": "{skin_tone}",
-    "name": "Light Skin Tone",
-    "skin": 1
-  },
-  {
     "emoji": "🙎{skin_tone}",
     "name": "Person Pouting",
     "skin": 1
@@ -2626,7 +2621,7 @@
   },
   {
     "emoji": "🔍",
-    "name": "Magnifying Glass Tilted Left",
+    "name": "Magnifying Glass Tilted Left;Sherlock;Search",
     "skin": 0
   },
   {
@@ -3320,11 +3315,6 @@
     "skin": 1
   },
   {
-    "emoji": "{skin_tone}",
-    "name": "Medium Dark Skin Tone",
-    "skin": 1
-  },
-  {
     "emoji": "🍗",
     "name": "Poultry Leg",
     "skin": 0
@@ -3506,7 +3496,7 @@
   },
   {
     "emoji": "🕒",
-    "name": "Three O’clock",
+    "name": "Three O’clock;Time",
     "skin": 0
   },
   {
@@ -3791,7 +3781,7 @@
   },
   {
     "emoji": "🕚",
-    "name": "Eleven O’clock",
+    "name": "Eleven O’clock;Time",
     "skin": 0
   },
   {
@@ -3921,7 +3911,7 @@
   },
   {
     "emoji": "🕔",
-    "name": "Five O’clock",
+    "name": "Five O’clock;Time",
     "skin": 0
   },
   {
@@ -4376,7 +4366,7 @@
   },
   {
     "emoji": "🕘",
-    "name": "Nine O’clock",
+    "name": "Nine O’clock;Time",
     "skin": 0
   },
   {
@@ -4901,7 +4891,7 @@
   },
   {
     "emoji": "🏃{skin_tone}‍♀",
-    "name": "Woman Running",
+    "name": "Woman Running;Track;Jogging;Jogger;Runner",
     "skin": 1
   },
   {
@@ -5216,7 +5206,7 @@
   },
   {
     "emoji": "🏃{skin_tone}",
-    "name": "Person Running",
+    "name": "Person Running;Jogging;Jogger;Runner",
     "skin": 1
   },
   {
@@ -5331,7 +5321,7 @@
   },
   {
     "emoji": "🏃{skin_tone}‍♂‍➡",
-    "name": "Man Running Facing Right",
+    "name": "Man Running Facing Right;Jogging;Jogger;Runner",
     "skin": 1
   },
   {
@@ -5521,7 +5511,7 @@
   },
   {
     "emoji": "🏃{skin_tone}‍➡",
-    "name": "Person Running Facing Right",
+    "name": "Person Running Facing Right;Jogging;Jogger;Runner",
     "skin": 1
   },
   {
@@ -6341,7 +6331,7 @@
   },
   {
     "emoji": "♣",
-    "name": "Club Suit",
+    "name": "Club Suit;Card",
     "skin": 0
   },
   {
@@ -6711,7 +6701,7 @@
   },
   {
     "emoji": "🕗",
-    "name": "Eight O’clock",
+    "name": "Eight O’clock;Time",
     "skin": 0
   },
   {
@@ -7596,7 +7586,7 @@
   },
   {
     "emoji": "🏃{skin_tone}‍♀‍➡",
-    "name": "Woman Running Facing Right",
+    "name": "Woman Running Facing Right;Jogging;Jogger;Runner",
     "skin": 1
   },
   {
@@ -7668,11 +7658,6 @@
     "emoji": "🅿",
     "name": "P Button",
     "skin": 0
-  },
-  {
-    "emoji": "{skin_tone}",
-    "name": "Dark Skin Tone",
-    "skin": 1
   },
   {
     "emoji": "🪆",
@@ -7901,7 +7886,7 @@
   },
   {
     "emoji": "👹",
-    "name": "Ogre",
+    "name": "Ogre;Devil",
     "skin": 0
   },
   {
@@ -8088,11 +8073,6 @@
     "emoji": "🎠",
     "name": "Carousel Horse",
     "skin": 0
-  },
-  {
-    "emoji": "{skin_tone}",
-    "name": "Medium Light Skin Tone",
-    "skin": 1
   },
   {
     "emoji": "🤤",
@@ -9196,7 +9176,7 @@
   },
   {
     "emoji": "🕖",
-    "name": "Seven O’clock",
+    "name": "Seven O’clock;Time",
     "skin": 0
   },
   {
