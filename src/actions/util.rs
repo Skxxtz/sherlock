@@ -1,16 +1,12 @@
-use std::{fs, process::Command};
+use std::fs;
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 
 use crate::sherlock_error;
 use crate::utils::config::ConfigGuard;
-use crate::{
-    loader::application_loader::{get_applications_dir, get_desktop_files},
-    utils::{
-        errors::{SherlockError, SherlockErrorType},
-        files::read_lines,
-        paths,
-    },
+use crate::utils::{
+    errors::{SherlockError, SherlockErrorType},
+    paths,
 };
 
 pub fn copy_to_clipboard(string: &str) -> Result<(), SherlockError> {
@@ -59,52 +55,4 @@ pub fn reset_app_counter() -> Result<(), SherlockError> {
             e.to_string()
         )
     })
-}
-pub fn parse_default_browser() -> Result<String, SherlockError> {
-    // Find default browser desktop file
-    let output = Command::new("xdg-settings")
-        .arg("get")
-        .arg("default-web-browser")
-        .output()
-        .map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError(String::from("default browser")),
-                e.to_string()
-            )
-        })?;
-
-    let desktop_file: String = if output.status.success() {
-        String::from_utf8_lossy(&output.stdout).trim().to_string()
-    } else {
-        return Err(sherlock_error!(
-            SherlockErrorType::EnvVarNotFoundError("default browser".to_string()),
-            ""
-        ));
-    };
-    let desktop_dirs = get_applications_dir();
-    let desktop_files = get_desktop_files(desktop_dirs);
-    let browser_file = desktop_files
-        .iter()
-        .find(|f| f.ends_with(&desktop_file))
-        .ok_or_else(|| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("default browser".to_string()),
-                ""
-            )
-        })?;
-    // read default browser desktop file
-    let browser = read_lines(browser_file)
-        .map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileReadError(browser_file.clone()),
-                e.to_string()
-            )
-        })?
-        .filter_map(Result::ok)
-        .find(|line| line.starts_with("Exec="))
-        .and_then(|line| line.strip_prefix("Exec=").map(|l| l.to_string()))
-        .ok_or_else(|| {
-            sherlock_error!(SherlockErrorType::FileParseError(browser_file.clone()), "")
-        })?;
-    Ok(browser)
 }

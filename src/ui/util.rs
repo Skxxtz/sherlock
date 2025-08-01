@@ -24,7 +24,7 @@ use serde::Deserialize;
 use crate::g_subclasses::tile_item::TileItem;
 use crate::loader::Loader;
 use crate::sherlock_error;
-use crate::utils::config::{default_modkey_ascii, ConfigGuard};
+use crate::utils::config::{BindDefaults, ConfigGuard};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::paths;
 
@@ -179,7 +179,7 @@ impl ConfKeys {
                     None
                 }
             })
-            .unwrap_or_else(default_modkey_ascii);
+            .unwrap_or_else(BindDefaults::modkey_ascii);
 
         let k = match mod_key {
             Some(ModifierType::SHIFT_MASK) => 0,

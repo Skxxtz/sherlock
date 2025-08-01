@@ -245,15 +245,15 @@ async fn startup_loading() -> (
         startup_errors.push(e);
     }
 
-    let sherlock_flags = flags_result
+    let mut sherlock_flags = flags_result
         .map_err(|e| startup_errors.push(e))
         .unwrap_or_default();
 
-    let app_config = SherlockConfig::from_flags(&sherlock_flags).map_or_else(
+    let app_config = sherlock_flags.to_config().map_or_else(
         |e| {
             startup_errors.push(e);
             let defaults = SherlockConfig::default();
-            SherlockConfig::apply_flags(&sherlock_flags, defaults)
+            SherlockConfig::apply_flags(&mut sherlock_flags, defaults)
         },
         |(cfg, non_crit)| {
             non_breaking.extend(non_crit);

@@ -10,7 +10,7 @@ use simd_json::base::ValueTryAsMutObject;
 use simd_json::OwnedValue;
 
 use crate::api::call::ApiCall;
-use crate::utils::config::{default_true, ConfigGuard};
+use crate::utils::config::{ConfigGuard, OtherDefaults};
 
 use super::Loader;
 
@@ -41,7 +41,7 @@ pub struct PipedElements {
     pub method: Option<String>,
     pub field: Option<String>,
     pub hidden: Option<HashMap<String, String>>,
-    #[serde(default = "default_true")]
+    #[serde(default = "OtherDefaults::bool_true")]
     pub exit: bool,
 }
 

@@ -10,7 +10,7 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use crate::actions::util::{parse_default_browser, read_from_clipboard};
+use crate::actions::util::read_from_clipboard;
 use crate::launcher::audio_launcher::AudioLauncherFunctions;
 use crate::launcher::bookmark_launcher::BookmarkLauncher;
 use crate::launcher::calc_launcher::{CalculatorLauncher, Currency, CURRENCIES};
@@ -28,7 +28,7 @@ use crate::launcher::{
 };
 use crate::loader::util::{CounterReader, JsonCache};
 use crate::ui::tiles::calc_tile::CalcTileHandler;
-use crate::utils::config::ConfigGuard;
+use crate::utils::config::{ConfigGuard, ConstantDefaults};
 use crate::utils::errors::SherlockError;
 use crate::utils::errors::SherlockErrorType;
 use crate::utils::files::{expand_path, home_dir};
@@ -66,7 +66,7 @@ impl Loader {
             .map(|(_, v)| v.to_string().len())
             .unwrap_or(0) as i32;
 
-        let submenu = config.behavior.sub_menu.clone();
+        let submenu = config.runtime.sub_menu.clone();
         // Parse the launchers
         let launchers: Vec<Launcher> = raw_launchers
             .into_par_iter()
@@ -181,7 +181,7 @@ fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
     if let Some(browser) = ConfigGuard::read()
         .ok()
         .and_then(|c| c.default_apps.browser.clone())
-        .or_else(|| parse_default_browser().ok())
+        .or_else(|| ConstantDefaults::browser().ok())
     {
         match BookmarkLauncher::find_bookmarks(&browser, raw) {
             Ok(bookmarks) => {

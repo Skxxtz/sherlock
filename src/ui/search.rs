@@ -28,7 +28,7 @@ use crate::{
     launcher::utils::HomeType,
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::key_actions::KeyActions,
-    utils::config::{default_search_icon, default_search_icon_back},
+    utils::config::OtherDefaults,
 };
 use crate::{
     g_subclasses::sherlock_row::SherlockRowBind,
@@ -329,7 +329,7 @@ fn construct_window(
     // Collect Modes
     let custom_binds = ConfKeys::new();
     let config = ConfigGuard::read()?;
-    let original_mode = config.behavior.sub_menu.as_deref().unwrap_or("all");
+    let original_mode = config.runtime.sub_menu.as_deref().unwrap_or("all");
     let mode = Rc::new(RefCell::new(original_mode.to_string()));
     let search_text = Rc::new(RefCell::new(String::from("")));
 
@@ -344,21 +344,20 @@ fn construct_window(
 
     // Update the search icon
     imp.search_icon.set_icon(
-        Some(&config.appearance.search_bar_icon),
+        Some(&config.search_bar_icon.icon),
         None,
-        Some(&default_search_icon()),
+        Some(&OtherDefaults::search_icon()),
     );
-    imp.search_icon
-        .set_pixel_size(config.appearance.search_icon_size);
+    imp.search_icon.set_pixel_size(config.search_bar_icon.size);
 
     // Create the back arrow
     imp.search_icon_back.set_icon(
-        Some(&config.appearance.search_bar_icon_back),
+        Some(&config.search_bar_icon.icon_back),
         None,
-        Some(&default_search_icon_back()),
+        Some(&OtherDefaults::search_icon_back()),
     );
     imp.search_icon_back
-        .set_pixel_size(config.appearance.search_icon_size);
+        .set_pixel_size(config.search_bar_icon.size);
 
     // Setup model and factory
     let model = ListStore::new::<TileItem>();
@@ -440,12 +439,12 @@ fn construct_window(
     }
 
     // disable status bar
-    if !config.appearance.status_bar {
+    if !config.status_bar.enable {
         imp.status_bar.set_visible(false);
     }
     // enable or disable search bar icons
     imp.search_icon_holder
-        .set_visible(config.appearance.search_icon);
+        .set_visible(config.search_bar_icon.enable);
 
     Ok((search_text, main_overlay, ui, handler, context))
 }
