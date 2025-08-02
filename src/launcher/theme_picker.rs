@@ -1,21 +1,19 @@
-use std::collections::HashSet;
 use std::fs::write;
 use std::path::Path;
 use std::path::PathBuf;
-use tokio::fs::create_dir_all;
 
 use crate::loader::util::AppData;
 use crate::loader::Loader;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::utils::files::home_dir;
+use crate::utils::paths;
 
 use super::LauncherType;
 
 #[derive(Clone, Debug)]
 pub struct ThemePicker {
     pub location: PathBuf,
-    pub themes: HashSet<AppData>,
+    pub themes: Vec<AppData>,
 }
 impl ThemePicker {
     pub fn new<T: AsRef<Path>>(loc: T, prio: f32) -> LauncherType {
@@ -23,7 +21,7 @@ impl ThemePicker {
         if !absolute.is_dir() {
             return LauncherType::Empty;
         }
-        let mut themes: HashSet<AppData> = absolute
+        let mut themes: Vec<AppData> = absolute
             .read_dir()
             .ok()
             .map(|entries| {
@@ -42,7 +40,7 @@ impl ThemePicker {
                     .collect()
             })
             .unwrap_or_default();
-        themes.insert(AppData::new_for_theme("Unset", Some(""), prio));
+        themes.push(AppData::new_for_theme("Unset", Some(""), prio));
 
         if themes.is_empty() {
             return LauncherType::Empty;
@@ -64,7 +62,6 @@ impl ThemePicker {
                 e.to_string()
             )
         })?;
-        println!("{:?}", exit);
         if !exit {
             if let Err(error) = Loader::load_css(false) {
                 let _result = error.insert(false);
@@ -74,10 +71,15 @@ impl ThemePicker {
     }
 
     pub fn get_cached() -> Result<PathBuf, SherlockError> {
-        let home = home_dir()?;
-        let absolute = home.join(".sherlock/theme.txt");
+        let config_dir = paths::get_config_dir()?;
+        let absolute = config_dir.join("theme.txt");
         if let Some(parents) = absolute.parent() {
-            let _ = create_dir_all(parents);
+            std::fs::create_dir_all(parents).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::DirCreateError(parents.to_string_lossy().to_string()),
+                    e.to_string()
+                )
+            })?;
         }
         Ok(absolute)
     }

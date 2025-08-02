@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use super::commandlaunch::command_launch;
-use super::util::parse_default_browser;
-use crate::utils::errors::SherlockError;
+use crate::utils::{config::ConstantDefaults, errors::SherlockError};
 
 pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
     let engines: HashMap<&str, &str> = HashMap::from([
@@ -27,7 +26,7 @@ pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
         engine
     };
 
-    let mut browser = parse_default_browser()?;
+    let mut browser = ConstantDefaults::browser()?;
 
     let url = url_template.replace("{keyword}", &query.replace(" ", "+"));
     let command = if browser.contains("%u") {

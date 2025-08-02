@@ -4,9 +4,11 @@ use gio::glib::{SignalHandlerId, WeakRef};
 use gtk4::prelude::{BoxExt, GestureSingleExt, WidgetExt};
 use gtk4::subclass::prelude::*;
 use gtk4::{glib, prelude::*, GestureClick, Image, Label};
-use once_cell::unsync::OnceCell;
+use once_cell::sync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
+
+use crate::g_subclasses::tile_item::TileItem;
 
 /// ## Fields:
 #[derive(Default)]
@@ -22,6 +24,8 @@ pub struct ContextAction {
     pub icon: OnceCell<WeakRef<Image>>,
     pub modkey: OnceCell<WeakRef<Label>>,
     pub title: OnceCell<WeakRef<Label>>,
+
+    pub parent: OnceCell<WeakRef<TileItem>>,
 }
 
 // The central trait for subclassing a GObject
@@ -79,7 +83,7 @@ impl ObjectImpl for ContextAction {
                 if n_clicks >= 2 {
                     if let Some(obj) = obj.upgrade() {
                         let exit: u8 = 0;
-                        obj.emit_by_name::<()>("context-action-should-activate", &[&exit]);
+                        obj.emit_by_name::<()>("context-action-should-activate", &[&exit, &""]);
                     }
                 }
             });

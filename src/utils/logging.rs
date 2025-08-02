@@ -5,19 +5,18 @@ use chrono::Local;
 use once_cell::sync::Lazy;
 
 use crate::sherlock_error;
-use crate::utils::{errors::SherlockError, errors::SherlockErrorType, files::home_dir};
+use crate::utils::{errors::SherlockError, errors::SherlockErrorType, paths};
 
 static LOG_FILE: Lazy<Result<Mutex<std::fs::File>, SherlockError>> = Lazy::new(|| {
-    let sherlock_dir = home_dir()?.join(".sherlock/");
-    fs::create_dir_all(&sherlock_dir).map_err(|e| {
+    let cache_dir = paths::get_cache_dir()?;
+    fs::create_dir_all(&cache_dir).map_err(|e| {
         sherlock_error!(
-            SherlockErrorType::DirCreateError(sherlock_dir.display().to_string()),
+            SherlockErrorType::DirCreateError(cache_dir.display().to_string()),
             e.to_string()
         )
     })?;
 
-    let location = sherlock_dir.join("sherlock.log");
-
+    let location = cache_dir.join("sherlock.log");
     let file = OpenOptions::new()
         .create(true)
         .append(true)

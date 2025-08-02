@@ -1,19 +1,23 @@
+use gio::glib::object::ObjectExt;
 use gio::glib::WeakRef;
 use gio::ActionEntry;
-use gtk4::gdk::{Display, Key, Monitor};
+use gtk4::gdk::Key;
+use gtk4::prelude::{EventControllerExt, GtkWindowExt, WidgetExt};
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::Stack;
 use gtk4::{
     prelude::*, Application, ApplicationWindow, EventControllerFocus, EventControllerKey,
     StackTransitionType,
 };
-use gtk4::{Builder, Stack};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::api::server::SherlockServer;
 use crate::daemon::daemon::close_response;
-use crate::launcher::emoji_picker::emojies;
-use crate::utils::config::SherlockConfig;
-use crate::CONFIG;
+use crate::launcher::emoji_picker::{emojies, SkinTone};
+use crate::ui::g_templates::MainWindow;
+use crate::utils::config::ConfigGuard;
 
 use super::tiles::util::TextViewTileBuilder;
 
@@ -27,25 +31,21 @@ pub fn window(
     WeakRef<ApplicationWindow>,
 ) {
     // 617 with, 593 without notification bar
-    let config = match CONFIG.get() {
-        Some(c) => c,
-        _ => &SherlockConfig::default(),
-    };
-    let (width, height, opacity) = (
+    let config = ConfigGuard::read().map(|c| c.clone()).unwrap_or_default();
+    let (width, height, opacity, status_bar) = (
         config.appearance.width,
         config.appearance.height,
         config.appearance.opacity,
+        config.status_bar.enable,
     );
 
-    let current_stack_page = Rc::new(RefCell::new(String::from("search-page")));
+    let window = MainWindow::new(application, width, opacity);
+    let imp = window.imp();
 
-    let window: ApplicationWindow = ApplicationWindow::builder()
-        .application(application)
-        .default_width(width)
-        .resizable(false)
-        .decorated(false)
-        .opacity(opacity.clamp(0.1, 1.0))
-        .build();
+    // Set status bar
+    imp.status_bar.set_visible(status_bar);
+
+    let current_stack_page = Rc::new(RefCell::new(String::from("search-page")));
 
     window.init_layer_shell();
     window.set_namespace("sherlock");
@@ -62,11 +62,8 @@ pub fn window(
     if !config.runtime.photo_mode {
         let focus_controller = EventControllerFocus::new();
         focus_controller.connect_leave({
-            let window_ref = window.downgrade();
             move |_| {
-                if let Some(window) = window_ref.upgrade() {
-                    let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
-                }
+                let _ = SherlockServer::send_action(crate::api::call::ApiCall::Close);
             }
         });
         window.add_controller(focus_controller);
@@ -76,12 +73,9 @@ pub fn window(
     let key_controller = EventControllerKey::new();
     key_controller.set_propagation_phase(gtk4::PropagationPhase::Bubble);
     key_controller.connect_key_pressed({
-        let window_clone = window.downgrade();
         move |_, keyval, _, _| {
             if keyval == Key::Escape {
-                window_clone
-                    .upgrade()
-                    .map(|win| gtk4::prelude::WidgetExt::activate_action(&win, "win.close", None));
+                let _ = SherlockServer::send_action(crate::api::call::ApiCall::Close);
             }
             false.into()
         }
@@ -89,7 +83,7 @@ pub fn window(
     window.add_controller(key_controller);
 
     // Make backdrop if config key is set
-    let backdrop = if let Some(c) = CONFIG.get() {
+    let backdrop = if let Ok(c) = ConfigGuard::read() {
         if c.backdrop.enable {
             let edge = match c.backdrop.edge.to_lowercase().as_str() {
                 "top" => Edge::Top,
@@ -107,9 +101,7 @@ pub fn window(
     };
 
     //Build main fame here that holds logic for stacking
-    let builder = Builder::from_resource("/dev/skxxtz/sherlock/ui/window.ui");
-    let stack: Stack = builder.object("stack").unwrap();
-    let stack_ref = stack.downgrade();
+    let stack_ref = imp.stack.downgrade();
 
     // Setup action to close the window
     let action_close = ActionEntry::builder("close")
@@ -121,14 +113,19 @@ pub fn window(
             // Send close message to possible instance
             let _result = close_response();
 
-            if let Some(c) = CONFIG.get() {
-                match c.behavior.daemonize {
+            if let Ok(c) = ConfigGuard::read() {
+                match c.runtime.daemonize {
                     true => {
                         window.set_visible(false);
                         let _ = gtk4::prelude::WidgetExt::activate_action(
                             window,
                             "win.clear-search",
-                            None,
+                            Some(&true.to_variant()),
+                        );
+                        let _ = gtk4::prelude::WidgetExt::activate_action(
+                            window,
+                            "win.switch-page",
+                            Some(&"->search-page".to_variant()),
                         );
                     }
                     false => window.destroy(),
@@ -164,6 +161,60 @@ pub fn window(
                         stack.set_visible_child(&child);
                         *page_clone.borrow_mut() = to.to_string();
                     }
+                });
+            }
+        })
+        .build();
+
+    // Action to display or hide context menu shortcut
+    let action_context = ActionEntry::builder("context-mode")
+        .parameter_type(Some(&String::static_variant_type()))
+        .activate({
+            let desc = imp.context_action_desc.downgrade();
+            let first = imp.context_action_first.downgrade();
+            let second = imp.context_action_second.downgrade();
+            move |_: &ApplicationWindow, _, parameter| {
+                let parameter = parameter.and_then(|p| p.get::<String>());
+                parameter.map(|p| {
+                    if !p.is_empty() {
+                        if let Some(tmp) = desc.upgrade() {
+                            tmp.set_css_classes(&["active"]);
+                            tmp.set_text(&p);
+                        }
+                        first.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
+                        second.upgrade().map(|tmp| tmp.set_css_classes(&["active"]));
+                    } else {
+                        desc.upgrade().map(|tmp| tmp.set_css_classes(&["inactive"]));
+                        first
+                            .upgrade()
+                            .map(|tmp| tmp.set_css_classes(&["inactive"]));
+                        second
+                            .upgrade()
+                            .map(|tmp| tmp.set_css_classes(&["inactive"]));
+                    };
+                });
+            }
+        })
+        .build();
+
+    // Spinner action
+    let action_spinner = ActionEntry::builder("spinner-mode")
+        .parameter_type(Some(&bool::static_variant_type()))
+        .activate({
+            let spinner = imp.spinner.downgrade();
+            move |_: &ApplicationWindow, _, parameter| {
+                let parameter = parameter.and_then(|p| p.get::<bool>());
+                parameter.map(|p| {
+                    if p {
+                        spinner
+                            .upgrade()
+                            .map(|spinner| spinner.set_css_classes(&["spinner-appear"]));
+                    } else {
+                        spinner
+                            .upgrade()
+                            .map(|spinner| spinner.set_css_classes(&["spinner-disappear"]));
+                    };
+                    spinner.upgrade().map(|spinner| spinner.set_spinning(p));
                 });
             }
         })
@@ -211,27 +262,34 @@ pub fn window(
         .build();
 
     let emoji_action = ActionEntry::builder("emoji-page")
+        .parameter_type(Some(&String::static_variant_type()))
         .activate({
             let stack_clone = stack_ref.clone();
             let current_stack_page = current_stack_page.clone();
-            move |_: &ApplicationWindow, _, _| {
+            move |_: &ApplicationWindow, _, param| {
                 // Either show user-specified content or show normal search
-                let (emoji_stack, _emoji_model) = match emojies(&current_stack_page) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        println!("{:?}", e);
-                        return;
+                if let Some(parameter) = param.and_then(|p| p.get::<String>()) {
+                    let (emoji_stack, _emoji_model) =
+                        match emojies(&current_stack_page, SkinTone::from_name(&parameter)) {
+                            Ok(r) => r,
+                            Err(e) => {
+                                let _ = e.insert(false);
+                                return;
+                            }
+                        };
+                    if let Some(stack) = stack_clone.upgrade() {
+                        stack.add_named(&emoji_stack, Some("emoji-page"));
                     }
-                };
-                if let Some(stack) = stack_clone.upgrade() {
-                    stack.add_named(&emoji_stack, Some("emoji-page"));
                 }
             }
         })
         .build();
 
-    window.set_child(Some(&stack));
+    let stack = imp.stack.get();
+    let window = window.upcast::<ApplicationWindow>();
     window.add_action_entries([
+        action_context,
+        action_spinner,
         action_close,
         action_stack_switch,
         action_next_page,
@@ -245,26 +303,34 @@ pub fn window(
 
 fn make_backdrop(
     application: &Application,
-    main_window: &ApplicationWindow,
+    main_window: &MainWindow,
     opacity: f64,
     edge: Edge,
 ) -> Option<ApplicationWindow> {
-    let monitor = Display::default()
-        .map(|d| d.monitors())
-        .and_then(|m| m.item(0).and_downcast::<Monitor>())?;
-    let rect = monitor.geometry();
     let backdrop = ApplicationWindow::builder()
         .application(application)
         .decorated(false)
         .title("Backdrop")
+        .default_width(10)
+        .default_height(10)
         .opacity(opacity)
-        .default_width(rect.width()) // Adjust to your screen resolution or use monitor API
-        .default_height(rect.height())
         .resizable(false)
         .build();
+
+    backdrop.init_layer_shell();
+
+    // Set backdrop dimensions
+    backdrop.connect_realize(|window| {
+        if let Some(surf) = window.surface() {
+            if let Some(monitor) = surf.display().monitor_at_surface(&surf) {
+                let rect = monitor.geometry();
+                window.set_default_size(rect.width(), rect.height());
+            }
+        }
+    });
+
     // Initialize layershell
     backdrop.set_widget_name("backdrop");
-    backdrop.init_layer_shell();
     backdrop.set_namespace("sherlock-backdrop");
     backdrop.set_exclusive_zone(0);
     backdrop.set_layer(gtk4_layer_shell::Layer::Overlay);

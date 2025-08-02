@@ -1,7 +1,9 @@
+use serde::Deserialize;
+use serde::Serialize;
 use zbus::zvariant::DeserializeDict;
 use zbus::zvariant::Type;
 
-#[derive(DeserializeDict, Type, Debug, Clone)]
+#[derive(DeserializeDict, Type, Debug, Clone, Default)]
 #[zvariant(signature = "a{sv}")]
 #[allow(unused)]
 pub struct MprisData {
@@ -11,7 +13,7 @@ pub struct MprisData {
     #[zvariant(rename = "Metadata")]
     pub metadata: MetaData,
 }
-#[derive(DeserializeDict, Type, Debug, Clone)]
+#[derive(DeserializeDict, Type, Debug, Clone, Default)]
 #[zvariant(signature = "a{sv}")]
 #[allow(unused)]
 pub struct MetaData {
@@ -48,4 +50,16 @@ pub fn to_title_case(input_str: &str) -> String {
         }
     }
     result
+}
+
+#[derive(Debug, Copy, Clone, Deserialize, PartialEq, Serialize)]
+pub enum HomeType {
+    OnlyHome,
+    Home,
+    Search,
+}
+impl Default for HomeType {
+    fn default() -> Self {
+        HomeType::Search
+    }
 }

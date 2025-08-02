@@ -10,7 +10,7 @@ use simd_json::base::ValueTryAsMutObject;
 use simd_json::OwnedValue;
 
 use crate::api::call::ApiCall;
-use crate::CONFIG;
+use crate::utils::config::{ConfigGuard, OtherDefaults};
 
 use super::Loader;
 
@@ -41,8 +41,10 @@ pub struct PipedElements {
     pub method: Option<String>,
     pub field: Option<String>,
     pub hidden: Option<HashMap<String, String>>,
+    #[serde(default = "OtherDefaults::bool_true")]
     pub exit: bool,
 }
+
 impl PipedElements {
     pub fn clean(&mut self) {
         if let Some(title) = &self.title {
@@ -111,7 +113,7 @@ impl PipedData {
         let elements_val = obj.remove("elements")?;
         let mut elements =
             simd_json::serde::from_owned_value::<Vec<PipedElements>>(elements_val).ok()?;
-        let config = CONFIG.get()?;
+        let config = ConfigGuard::read().ok()?;
         for item in elements.iter_mut() {
             item.clean();
             if item.method.is_none() {
@@ -121,9 +123,10 @@ impl PipedData {
         Some(elements)
     }
     pub fn deserialize_pipe<T: AsRef<[u8]>>(buf: T) -> Option<Vec<PipedElements>> {
+        let config = ConfigGuard::read().ok()?;
+
         let buf = buf.as_ref().to_vec();
 
-        let config = CONFIG.get()?;
         let icon_theme = IconTheme::for_display(Display::default().as_ref().unwrap());
         let mut result = Vec::new();
         let mut start = 0;
@@ -171,7 +174,7 @@ impl PipedData {
                     icon_size: None,
                     binary: None,
                     method: None,
-                    field: config.behavior.field.clone(),
+                    field: config.runtime.field.clone(),
                     hidden: None,
                     exit: true,
                 });
@@ -184,7 +187,7 @@ impl PipedData {
                     icon: None,
                     icon_size: None,
                     binary: Some(chunk.to_vec()),
-                    field: config.behavior.field.clone(),
+                    field: config.runtime.field.clone(),
                     method: None,
                     hidden: None,
                     exit: true,

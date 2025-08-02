@@ -1,6 +1,5 @@
 use std::{borrow::Cow, cell::RefCell, collections::HashSet, fmt::Debug, rc::Rc, time::SystemTime};
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::{
     glib::{
         self,
@@ -13,10 +12,14 @@ use gio::{
 };
 use gtk4::{
     prelude::WidgetExt, Box as GtkBox, GridView, Image, Label, ListScrollFlags, ListView,
-    SingleSelection, Stack, StackPage,
+    SingleSelection, Stack, StackPage, Widget,
 };
 
-use crate::{g_subclasses::sherlock_row::SherlockRow, loader::pipe_loader::PipedElements};
+use crate::{
+    g_subclasses::{emoji_item::EmojiObject, tile_item::TileItem},
+    loader::{icon_loader::IconThemeGuard, pipe_loader::PipedElements},
+    ui::search::UserBindHandler,
+};
 
 /// Custom string matching
 pub trait SherlockSearch {
@@ -68,6 +71,11 @@ pub trait IconComp {
 impl IconComp for Image {
     fn set_icon(&self, icon_name: Option<&str>, icon_class: Option<&str>, fallback: Option<&str>) {
         if let Some(icon_name) = icon_name.or(fallback) {
+            if let Ok(Some(icon)) = IconThemeGuard::lookup_icon(icon_name) {
+                self.set_from_file(Some(icon));
+                return;
+            }
+
             if icon_name.starts_with("/") {
                 self.set_from_file(Some(icon_name));
             } else {
@@ -113,21 +121,48 @@ impl ShortCut for GtkBox {
 
 /// Navigation for elements within a ListView
 pub trait SherlockNav {
-    fn focus_next(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()>;
-    fn focus_prev(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()>;
+    // fn assign_binds(&self, context_model: Option<&WeakRef<ListStore>>, binds: &SherlockRowBinds, listener: Rc<EventControllerKey> ) -> Option<()>;
+    fn context_action(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()>;
+    fn focus_next(
+        &self,
+        context_model: Option<&WeakRef<ListStore>>,
+        custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
+    ) -> Option<()>;
+    fn focus_prev(
+        &self,
+        context_model: Option<&WeakRef<ListStore>>,
+        custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
+    ) -> Option<()>;
     fn focus_first(
         &self,
         context_model: Option<&WeakRef<ListStore>>,
         current_mode: Option<Rc<RefCell<String>>>,
+        custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
     ) -> Option<()>;
     fn focus_offset(&self, context_model: Option<&WeakRef<ListStore>>, offset: i32) -> Option<()>;
     fn execute_by_index(&self, index: u32);
     fn selected_item(&self) -> Option<glib::Object>;
-    fn get_weaks(&self) -> Option<Vec<WeakRef<SherlockRow>>>;
+    fn get_weaks(&self) -> Option<Vec<WeakRef<TileItem>>>;
     fn mark_active(&self) -> Option<()>;
     fn get_actives<T: IsA<Object>>(&self) -> Option<Vec<T>>;
 }
 impl SherlockNav for ListView {
+    fn context_action(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
+        let selection = self.model().and_downcast::<SingleSelection>()?;
+        let selected = selection.selected_item().and_downcast::<TileItem>()?;
+        if selected.num_actions() > 0 {
+            let _ = self.activate_action(
+                "win.context-mode",
+                Some(&"Additional Actions".to_string().to_variant()),
+            );
+        } else {
+            let _ = self.activate_action("win.context-mode", Some(&"".to_string().to_variant()));
+        }
+        context_model
+            .and_then(|tmp| tmp.upgrade())
+            .map(|ctx| ctx.remove_all());
+        Some(())
+    }
     fn focus_offset(
         &self,
         _context_model: Option<&WeakRef<ListStore>>,
@@ -135,7 +170,11 @@ impl SherlockNav for ListView {
     ) -> Option<()> {
         None
     }
-    fn focus_next(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
+    fn focus_next(
+        &self,
+        context_model: Option<&WeakRef<ListStore>>,
+        custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
+    ) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let index = selection.selected();
         if index == u32::MAX {
@@ -146,18 +185,25 @@ impl SherlockNav for ListView {
         if new_index < n_items {
             selection.set_selected(new_index);
             self.scroll_to(new_index, ListScrollFlags::NONE, None);
-            let selected = selection.selected_item().and_downcast::<SherlockRow>()?;
-            let _ = self.activate_action(
-                "win.context-mode",
-                Some(&(selected.num_actions() > 0).to_variant()),
-            );
+            let selected = selection.selected_item().and_downcast::<TileItem>()?;
+
+            // Logic to handle custom user binds
+            if let Some(handler) = custom_handler {
+                let mut handler = handler.borrow_mut();
+                let custom_binds = selected.binds();
+                if let Some(id) = handler.set_binds(custom_binds, selected.downgrade()) {
+                    handler.set_handler(id);
+                }
+            }
+            self.context_action(context_model);
         }
-        context_model
-            .and_then(|tmp| tmp.upgrade())
-            .map(|ctx| ctx.remove_all());
         None
     }
-    fn focus_prev(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
+    fn focus_prev(
+        &self,
+        context_model: Option<&WeakRef<ListStore>>,
+        custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
+    ) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let index = selection.selected();
         let n_items = selection.n_items();
@@ -170,15 +216,18 @@ impl SherlockNav for ListView {
         if new_index != index {
             if new_index < n_items {
                 self.scroll_to(new_index, ListScrollFlags::NONE, None);
-                let selected = selection.selected_item().and_downcast::<SherlockRow>()?;
-                let _ = self.activate_action(
-                    "win.context-mode",
-                    Some(&(selected.num_actions() > 0).to_variant()),
-                );
+                let selected = selection.selected_item().and_downcast::<TileItem>()?;
+
+                // Logic to handle custom user binds
+                if let Some(handler) = custom_handler {
+                    let mut handler = handler.borrow_mut();
+                    let custom_binds = selected.binds();
+                    if let Some(id) = handler.set_binds(custom_binds, selected.downgrade()) {
+                        handler.set_handler(id);
+                    }
+                }
+                self.context_action(context_model);
             }
-            context_model
-                .and_then(|tmp| tmp.upgrade())
-                .map(|ctx| ctx.remove_all());
         }
         None
     }
@@ -186,6 +235,7 @@ impl SherlockNav for ListView {
         &self,
         context_model: Option<&WeakRef<ListStore>>,
         current_mode: Option<Rc<RefCell<String>>>,
+        custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
     ) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let current_mode = current_mode.unwrap_or(Rc::new(RefCell::new(String::from("all"))));
@@ -196,8 +246,8 @@ impl SherlockNav for ListView {
             return None;
         }
         while new_index < n_items {
-            if let Some(item) = selection.item(new_index).and_downcast::<SherlockRow>() {
-                if item.imp().spawn_focus.get() {
+            if let Some(item) = selection.item(new_index).and_downcast::<TileItem>() {
+                if item.spawn_focus() {
                     break;
                 } else {
                     new_index += 1;
@@ -214,25 +264,30 @@ impl SherlockNav for ListView {
             self.scroll_to(0, ListScrollFlags::NONE, None);
         }
         // Update context mode shortcuts
-        let selected = selection.selected_item().and_downcast::<SherlockRow>()?;
-        let _ = self.activate_action(
-            "win.context-mode",
-            Some(&(selected.num_actions() > 0).to_variant()),
-        );
-        context_model
-            .and_then(|tmp| tmp.upgrade())
-            .map(|ctx| ctx.remove_all());
+        let selected = selection.selected_item().and_downcast::<TileItem>()?;
+
+        // Logic to handle custom user binds
+        if let Some(handler) = custom_handler {
+            let mut handler = handler.borrow_mut();
+            let custom_binds = selected.binds();
+            if let Some(id) = handler.set_binds(custom_binds, selected.downgrade()) {
+                handler.set_handler(id);
+            }
+        }
+        self.context_action(context_model);
 
         (changed || selected.alias() == *current_mode.borrow().trim()).then_some(())
     }
     fn execute_by_index(&self, index: u32) {
         if let Some(selection) = self.model().and_downcast::<SingleSelection>() {
             for item in index..selection.n_items() {
-                if let Some(row) = selection.item(item).and_downcast::<SherlockRow>() {
-                    if row.imp().shortcut.get() {
+                if let Some(item) = selection.item(item).and_downcast::<TileItem>() {
+                    if item.shortcut().is_some() {
                         let exit: u8 = 0;
-                        row.emit_by_name::<()>("row-should-activate", &[&exit]);
-                        break;
+                        if let Some(row) = item.parent().upgrade() {
+                            row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
+                            break;
+                        }
                     }
                 }
             }
@@ -245,30 +300,28 @@ impl SherlockNav for ListView {
         }
         selection.selected_item()
     }
-    fn get_weaks(&self) -> Option<Vec<WeakRef<SherlockRow>>> {
+    fn get_weaks(&self) -> Option<Vec<WeakRef<TileItem>>> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let n_items = selection.n_items();
         let weaks = (0..n_items)
-            .filter_map(|i| {
-                selection
-                    .item(i)
-                    .and_downcast::<SherlockRow>()
-                    .map(|row| row.downgrade())
-            })
+            .filter_map(|i| selection.item(i).and_downcast::<TileItem>())
+            .filter(|r| r.is_async() && r.parent().upgrade().is_some())
+            .map(|row| row.downgrade())
             .collect();
         Some(weaks)
     }
     fn mark_active(&self) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
-        let current = selection.selected_item().and_downcast::<SherlockRow>()?;
-        current.set_active(!current.imp().active.get());
+        let current = selection.selected_item().and_downcast::<TileItem>()?;
+        current.toggle_active();
         Some(())
     }
     fn get_actives<T: IsA<Object>>(&self) -> Option<Vec<T>> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let actives: Vec<T> = (0..selection.n_items())
-            .filter_map(|i| selection.item(i).and_downcast::<SherlockRow>())
+            .filter_map(|i| selection.item(i).and_downcast::<TileItem>())
             .filter(|r| r.active())
+            .filter_map(|tile| tile.parent().upgrade())
             .map(|r| r.upcast::<Object>())
             .filter_map(|r| r.downcast::<T>().ok())
             .collect();
@@ -276,7 +329,27 @@ impl SherlockNav for ListView {
     }
 }
 impl SherlockNav for GridView {
-    fn focus_next(&self, _context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
+    fn context_action(&self, context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
+        let selection = self.model().and_downcast::<SingleSelection>()?;
+        let selected = selection.selected_item().and_downcast::<EmojiObject>()?;
+        if selected.num_actions() > 0 {
+            let _ = self.activate_action(
+                "win.context-mode",
+                Some(&"Additional Skin Tones".to_string().to_variant()),
+            );
+        } else {
+            let _ = self.activate_action("win.context-mode", Some(&"".to_string().to_variant()));
+        }
+        context_model
+            .and_then(|tmp| tmp.upgrade())
+            .map(|ctx| ctx.remove_all());
+        Some(())
+    }
+    fn focus_next(
+        &self,
+        context_model: Option<&WeakRef<ListStore>>,
+        _custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
+    ) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let index = selection.selected();
         if index == u32::MAX {
@@ -284,13 +357,22 @@ impl SherlockNav for GridView {
         }
         let n_items = selection.n_items();
         let new_index = index + 1;
-        if new_index < n_items {
-            selection.set_selected(new_index);
-            self.scroll_to(new_index, ListScrollFlags::NONE, None);
+
+        if new_index != index {
+            if new_index < n_items {
+                selection.set_selected(new_index);
+                self.scroll_to(new_index, ListScrollFlags::NONE, None);
+            }
         }
+        self.context_action(context_model);
+
         None
     }
-    fn focus_prev(&self, _context_model: Option<&WeakRef<ListStore>>) -> Option<()> {
+    fn focus_prev(
+        &self,
+        context_model: Option<&WeakRef<ListStore>>,
+        _custom_handler: Option<Rc<RefCell<UserBindHandler>>>,
+    ) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let index = selection.selected();
         let n_items = selection.n_items();
@@ -303,32 +385,37 @@ impl SherlockNav for GridView {
         if new_index != index {
             if new_index < n_items {
                 self.scroll_to(new_index, ListScrollFlags::NONE, None);
+                self.context_action(context_model);
             }
         }
         None
     }
     fn focus_first(
         &self,
-        _context_model: Option<&WeakRef<ListStore>>,
+        context_model: Option<&WeakRef<ListStore>>,
         _current_mode: Option<Rc<RefCell<String>>>,
+        _: Option<Rc<RefCell<UserBindHandler>>>,
     ) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let current_index = selection.selected();
         let n_items = selection.n_items();
         if n_items == 0 || current_index == 0 {
+            self.context_action(context_model);
             return None;
         }
         selection.set_selected(0);
         self.scroll_to(0, ListScrollFlags::NONE, None);
+        self.context_action(context_model);
         Some(())
     }
-    fn focus_offset(&self, _context_model: Option<&WeakRef<ListStore>>, offset: i32) -> Option<()> {
+    fn focus_offset(&self, context_model: Option<&WeakRef<ListStore>>, offset: i32) -> Option<()> {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         let current_index = selection.selected() as i32;
         let n_items = selection.n_items() as i32;
         let new_index = offset.checked_add(current_index)?.clamp(0, n_items - 1);
         selection.set_selected(new_index as u32);
-        self.scroll_to(0, ListScrollFlags::NONE, None);
+        self.scroll_to(new_index as u32, ListScrollFlags::NONE, None);
+        self.context_action(context_model);
         Some(())
     }
     fn execute_by_index(&self, _index: u32) {}
@@ -336,7 +423,7 @@ impl SherlockNav for GridView {
         let selection = self.model().and_downcast::<SingleSelection>()?;
         selection.selected_item()
     }
-    fn get_weaks(&self) -> Option<Vec<WeakRef<SherlockRow>>> {
+    fn get_weaks(&self) -> Option<Vec<WeakRef<TileItem>>> {
         None
     }
     fn mark_active(&self) -> Option<()> {
@@ -364,4 +451,8 @@ impl StackHelpers for Stack {
             .collect();
         pages
     }
+}
+
+pub trait TileHandler {
+    fn replace_tile(&mut self, tile: &Widget);
 }

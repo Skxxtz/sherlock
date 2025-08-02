@@ -1,17 +1,20 @@
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::Bytes;
-use gtk4::{gdk, prelude::*, Image};
+use gio::glib::{Bytes, WeakRef};
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::{gdk, prelude::*, Box, Image, Widget};
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::calc_launcher::CalculatorLauncher;
+use crate::g_subclasses::tile_item::UpdateHandler;
 use crate::launcher::clipboard_launcher::ClipboardLauncher;
 use crate::launcher::Launcher;
-use crate::prelude::IconComp;
+use crate::prelude::{IconComp, TileHandler};
+use crate::ui::g_templates::{AppTile, CalcTile};
+use crate::ui::tiles::calc_tile::CalcTileHandler;
 
-use super::app_tile::AppTile;
 use super::Tile;
 
 struct RGB {
@@ -90,25 +93,20 @@ impl RGB {
 }
 
 impl Tile {
-    pub fn clipboard_tile(
-        launcher: &Launcher,
+    pub fn clipboard(
+        launcher: Rc<Launcher>,
         clp: &ClipboardLauncher,
-        calc: &CalculatorLauncher,
-    ) -> Vec<SherlockRow> {
-        let mut results: Vec<SherlockRow> = Vec::with_capacity(1);
-        let mut clipboard_content: String = clp.clipboard_content.clone();
-        let capabilities: HashSet<&str> = match &clp.capabilities {
-            Some(c) => c.iter().map(|s| s.as_str()).collect(),
-            _ => HashSet::from(["url", "calc.math", "calc.units", "colors.all"]),
-        };
+    ) -> Option<(Widget, UpdateHandler)> {
+        let clipboard_content = clp.clipboard_content.clone();
+        if clipboard_content.is_empty() {
+            return None;
+        }
+        let capabilities = &clp.capabilities;
 
-        //TODO implement searchstring before clipboard content
-        if !clipboard_content.is_empty() {
-            let mut app_tile: Option<AppTile> = None;
-            let mut row: Option<SherlockRow> = None;
-            let name = "From Clipboard";
-            let mut method = "";
-            let mut icon = "";
+        // Url Capabilities
+        if capabilities.contains("url") {
+            let url_raw = r"^(https?:\/\/)?(www\.)?([\da-z\.-]+)\.([a-z]{2,6})([\/\w\.-]*)*\/?$";
+            let url_re = Regex::new(url_raw).unwrap();
 
             let known_pages = HashMap::from([
                 ("google", "google"),
@@ -116,176 +114,194 @@ impl Tile {
                 ("youtube", "sherlock-youtube"),
             ]);
 
-            // Check if clipboard content is a url:
-            let url_raw = r"^(https?:\/\/)?(www\.)?([\da-z\.-]+)\.([a-z]{2,6})([\/\w\.-]*)*\/?$";
+            if let Some(captures) = url_re.captures(&clipboard_content) {
+                if let Some(main_domain) = captures.get(3) {
+                    // setting up builder
+                    let tile = AppTile::new();
+                    let attrs = get_attrs_map(vec![
+                        ("method", Some("web_launcher")),
+                        ("keyword", Some(&clipboard_content)),
+                        ("engine", Some("plain")),
+                    ]);
+                    // TODO: Add Handler
+                    let main_domain = main_domain.as_str();
+                    let icon = known_pages.get(main_domain).map_or("sherlock-link", |m| m);
+
+                    let imp = tile.imp();
+                    imp.icon.set_icon(Some(icon), None, Some("sherlock-link"));
+                    imp.title.set_text(clipboard_content.trim());
+                    imp.category.set_text("From Clipboard");
+
+                    let handler = ClipboardHandler::new(&tile, attrs);
+
+                    return Some((tile.upcast::<Widget>(), UpdateHandler::Clipboard(handler)));
+                }
+            };
+        }
+
+        // Color Capabilities
+        if capabilities
+            .iter()
+            .find(|c| c.starts_with("colors."))
+            .is_some()
+            && clipboard_content.len() <= 20
+        {
             let color_raw = r"^(rgb|hsl)*\(?(\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3})\)?|\(?(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}\s*%\w*)\)?|^#([a-fA-F0-9]{6,8})$";
-            let url_re = Regex::new(url_raw).unwrap();
             let color_re = Regex::new(color_raw).unwrap();
-            if capabilities.contains("url") {
-                if let Some(captures) = url_re.captures(&clipboard_content) {
-                    if let Some(main_domain) = captures.get(3) {
-                        // setting up builder
-                        let tile = AppTile::new();
-                        let object = SherlockRow::new();
-                        object.append(&tile);
+            let all = capabilities.contains("colors.all");
+            let attrs = get_attrs_map(vec![
+                ("method", None),
+                ("keyword", Some(&clipboard_content)),
+            ]);
 
-                        object.with_launcher(launcher);
-                        object.set_search(&clipboard_content);
-
-                        method = "web_launcher";
-                        let main_domain = main_domain.as_str();
-                        icon = known_pages.get(main_domain).map_or("sherlock-link", |m| m);
-                        app_tile = Some(tile);
-                        row = Some(object);
-                    }
-                };
-            };
-            if app_tile.is_none() {
-                if let Some(captures) = color_re.captures(&clipboard_content) {
-                    // Groups: 2: RGB, 3: HSL, 4: HEX
-                    let rgb = if clipboard_content.len() > 20 {
-                        None
-                    } else if let Some(rgb) = captures.get(2) {
-                        if capabilities.contains("colors.rgb")
-                            || capabilities.contains("colors.all")
-                        {
-                            Some((
-                                RGB::from_str(rgb.as_str()),
-                                format!("rbg({})", rgb.as_str().trim()),
-                            ))
-                        } else {
-                            None
-                        }
-                    } else if let Some(hsl) = captures.get(3) {
-                        if capabilities.contains("colors.hsl")
-                            || capabilities.contains("colors.all")
-                        {
-                            let mut res: Vec<u32> = Vec::with_capacity(3);
-                            let mut tmp = 0;
-                            let mut was_changed: u8 = 0;
-                            hsl.as_str()
-                                .chars()
-                                .filter(|s| !s.is_whitespace())
-                                .for_each(|s| {
-                                    if let Some(digit) = s.to_digit(10) {
-                                        tmp = tmp * 10 + digit;
-                                        was_changed = 1;
-                                    } else if was_changed > 0 {
-                                        res.push(tmp);
-                                        was_changed = 0;
-                                        tmp = 0;
-                                    }
-                                });
-                            Some((RGB::from_hsl(res), format!("hsl({})", hsl.as_str().trim())))
-                        } else {
-                            None
-                        }
-                    } else if let Some(hex) = captures.get(4) {
-                        if capabilities.contains("colors.hex")
-                            || capabilities.contains("colors.all")
-                        {
-                            Some((
-                                RGB::from_hex(hex.as_str()),
-                                format!("#{}", hex.as_str().trim()),
-                            ))
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    };
-
-                    if let Some((rgb, raw)) = rgb {
-                        let tile = AppTile::new();
-                        let imp = tile.imp();
-                        let object = SherlockRow::new();
-                        object.append(&tile);
-
-                        object.with_launcher(launcher);
-                        object.set_spawn_focus(false);
-                        object.set_search(&raw);
-
-                        clipboard_content = raw;
-
-                        let pix_buf = rgb.to_vec();
-                        let image_buf = gdk::gdk_pixbuf::Pixbuf::from_bytes(
-                            &Bytes::from_owned(pix_buf),
-                            gdk::gdk_pixbuf::Colorspace::Rgb,
-                            false,
-                            8,
-                            1,
-                            1,
-                            3,
-                        );
-                        if let Some(image_buf) =
-                            image_buf.scale_simple(30, 30, gdk::gdk_pixbuf::InterpType::Nearest)
-                        {
-                            let texture = gtk4::gdk::Texture::for_pixbuf(&image_buf);
-                            let image = Image::from_paintable(Some(&texture));
-                            image.set_widget_name("icon");
-                            image.set_pixel_size(22);
-
-                            let holder = &imp.icon_holder;
-                            holder.append(&image);
-                            holder.set_overflow(gtk4::Overflow::Hidden);
-                            holder.set_widget_name("color-icon-holder");
-
-                            imp.icon.set_visible(false);
-
-                            app_tile = Some(tile);
-                            row = Some(object)
-                        };
+            if let Some(captures) = color_re.captures(&clipboard_content) {
+                if all || capabilities.contains("colors.rgb") {
+                    if let Some(rgb) = captures.get(2) {
+                        let color = RGB::from_str(rgb.as_str());
+                        let label = format!("rbg({})", rgb.as_str().trim());
+                        let tile = color_tile(color, label);
+                        let handler = ClipboardHandler::new(&tile, attrs);
+                        return Some((tile.upcast::<Widget>(), UpdateHandler::Clipboard(handler)));
                     }
                 }
-            };
-            if let (Some(tile), Some(object)) = (app_tile, row) {
-                let imp = tile.imp();
-                imp.category.set_visible(!name.is_empty());
-                imp.category.set_text(name);
 
-                imp.title.set_text(&clipboard_content);
-
-                imp.icon.set_icon(Some(icon), None, None);
-                imp.icon.set_pixel_size(15);
-
-                // Add action capabilities
-                let attrs = get_attrs_map(vec![
-                    ("method", Some(method)),
-                    ("keyword", Some(&clipboard_content)),
-                    ("engine", Some("plain")),
-                ]);
-
-                object.connect_local("row-should-activate", false, move |args| {
-                    let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
-                    let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-                    let param: Option<bool> = match param {
-                        1 => Some(false),
-                        2 => Some(true),
-                        _ => None,
-                    };
-                    execute_from_attrs(&row, &attrs, param);
-                    None
-                });
-
-                if launcher.shortcut {
-                    object.set_shortcut_holder(Some(imp.shortcut_holder.downgrade()));
+                if all || capabilities.contains("colors.hsl") {
+                    if let Some(hsl) = captures.get(3) {
+                        let mut res: Vec<u32> = Vec::with_capacity(3);
+                        let mut tmp = 0;
+                        let mut was_changed: u8 = 0;
+                        hsl.as_str()
+                            .chars()
+                            .filter(|s| !s.is_whitespace())
+                            .for_each(|s| {
+                                if let Some(digit) = s.to_digit(10) {
+                                    tmp = tmp * 10 + digit;
+                                    was_changed = 1;
+                                } else if was_changed > 0 {
+                                    res.push(tmp);
+                                    was_changed = 0;
+                                    tmp = 0;
+                                }
+                            });
+                        let color = RGB::from_hsl(res);
+                        let label = format!("hls({})", hsl.as_str().trim());
+                        let tile = color_tile(color, label);
+                        let handler = ClipboardHandler::new(&tile, attrs);
+                        return Some((tile.upcast::<Widget>(), UpdateHandler::Clipboard(handler)));
+                    }
                 }
-                results.push(object);
-            } else {
-                // calc capabilities will be checked inside of calc tile
-                let mut calc_tile = Tile::calc_tile(launcher, calc);
-                if calc_tile.len() >= 1 {
-                    let tile = calc_tile.remove(0);
-                    // first update checks if the content is valid. then unsets
-                    if tile.update(&clipboard_content) {
-                        tile.set_only_home(true);
-                        tile.set_update(|_| false);
-                        results.push(tile)
+
+                if all || capabilities.contains("colors.hex") {
+                    if let Some(hex) = captures.get(4) {
+                        let color = RGB::from_hex(hex.as_str());
+                        let label = format!("#{}", hex.as_str().trim());
+                        let tile = color_tile(color, label);
+                        let handler = ClipboardHandler::new(&tile, attrs);
+                        return Some((tile.upcast::<Widget>(), UpdateHandler::Clipboard(handler)));
                     }
                 }
             }
         }
 
-        return results;
+        // Calculator Capabilities
+        if capabilities
+            .iter()
+            .find(|c| c.starts_with("calc."))
+            .is_some()
+        {
+            let tile = CalcTile::new();
+            let handler = CalcTileHandler::new(launcher);
+            if handler.based_show(&clipboard_content, &capabilities) {
+                handler.update(&clipboard_content);
+                return Some((tile.upcast::<Widget>(), UpdateHandler::Calculator(handler)));
+            }
+        }
+
+        None
+    }
+}
+
+fn color_tile(rgb: RGB, label: String) -> AppTile {
+    let tile = AppTile::new();
+    let imp = tile.imp();
+
+    imp.title.set_text(&label);
+    imp.category.set_text("From Clipboard");
+    let pix_buf = rgb.to_vec();
+    let image_buf = gdk::gdk_pixbuf::Pixbuf::from_bytes(
+        &Bytes::from_owned(pix_buf),
+        gdk::gdk_pixbuf::Colorspace::Rgb,
+        false,
+        8,
+        1,
+        1,
+        3,
+    );
+    if let Some(image_buf) = image_buf.scale_simple(30, 30, gdk::gdk_pixbuf::InterpType::Nearest) {
+        let texture = gtk4::gdk::Texture::for_pixbuf(&image_buf);
+        let image = Image::from_paintable(Some(&texture));
+        image.set_widget_name("icon");
+        image.set_pixel_size(22);
+
+        let holder = &imp.icon_holder;
+        holder.append(&image);
+        holder.set_overflow(gtk4::Overflow::Hidden);
+        holder.set_widget_name("color-icon-holder");
+
+        imp.icon.set_visible(false);
+    };
+
+    tile
+}
+
+#[derive(Debug)]
+pub struct ClipboardHandler {
+    tile: WeakRef<AppTile>,
+    attrs: Rc<RefCell<HashMap<String, String>>>,
+}
+
+impl ClipboardHandler {
+    fn new(tile: &AppTile, attrs: HashMap<String, String>) -> Self {
+        Self {
+            tile: tile.downgrade(),
+            attrs: Rc::new(RefCell::new(attrs)),
+        }
+    }
+    pub fn bind_signal(&self, row: &SherlockRow, launcher: Rc<Launcher>) {
+        let signal_id = row.connect_local("row-should-activate", false, {
+            let attrs = self.attrs.clone();
+            move |args| {
+                let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+                let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                let param: Option<bool> = match param {
+                    1 => Some(false),
+                    2 => Some(true),
+                    _ => None,
+                };
+                execute_from_attrs(&row, &attrs.borrow(), param, Some(launcher.clone()));
+                // To reload ui according to mode
+                let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
+                None
+            }
+        });
+        row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
+    }
+}
+impl Default for ClipboardHandler {
+    fn default() -> Self {
+        Self {
+            tile: WeakRef::new(),
+            attrs: Rc::new(RefCell::new(HashMap::new())),
+        }
+    }
+}
+impl TileHandler for ClipboardHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<AppTile>() {
+            self.tile = tile.downgrade()
+        }
     }
 }

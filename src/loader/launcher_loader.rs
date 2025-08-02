@@ -1,19 +1,24 @@
+use gio::glib::{idle_add, MainContext};
+use rayon::prelude::*;
+use regex::Regex;
 use serde::de::IntoDeserializer;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 
-use std::env::home_dir;
 use std::fs::File;
 use std::path::PathBuf;
+use std::str::FromStr;
 
-use crate::actions::util::{parse_default_browser, read_from_clipboard};
+use crate::actions::util::read_from_clipboard;
 use crate::launcher::audio_launcher::AudioLauncherFunctions;
 use crate::launcher::bookmark_launcher::BookmarkLauncher;
 use crate::launcher::calc_launcher::{CalculatorLauncher, Currency, CURRENCIES};
 use crate::launcher::category_launcher::CategoryLauncher;
-use crate::launcher::emoji_picker::EmojiPicker;
+use crate::launcher::emoji_picker::{EmojiPicker, SkinTone};
 use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::file_launcher::FileLauncher;
+use crate::launcher::pomodoro_launcher::{Pomodoro, PomodoroStyle};
 use crate::launcher::process_launcher::ProcessLauncher;
 use crate::launcher::theme_picker::ThemePicker;
 use crate::launcher::weather_launcher::WeatherLauncher;
@@ -22,8 +27,11 @@ use crate::launcher::{
     Launcher, LauncherType,
 };
 use crate::loader::util::{CounterReader, JsonCache};
+use crate::ui::tiles::calc_tile::CalcTileHandler;
+use crate::utils::config::{ConfigGuard, ConstantDefaults};
 use crate::utils::errors::SherlockError;
 use crate::utils::errors::SherlockErrorType;
+use crate::utils::files::{expand_path, home_dir};
 
 use app_launcher::AppLauncher;
 use bulk_text_launcher::BulkTextLauncher;
@@ -38,14 +46,12 @@ use super::util::deserialize_named_appdata;
 use super::util::AppData;
 use super::util::RawLauncher;
 use super::Loader;
-use crate::{sherlock_error, CONFIG};
+use crate::sherlock_error;
 
 impl Loader {
     #[sherlock_macro::timing(name = "Loading launchers")]
     pub fn load_launchers() -> Result<(Vec<Launcher>, Vec<SherlockError>), SherlockError> {
-        let config = CONFIG
-            .get()
-            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+        let config = ConfigGuard::read()?;
 
         // Read fallback data here:
         let (raw_launchers, n) = parse_launcher_configs(&config.files.fallback)?;
@@ -60,10 +66,17 @@ impl Loader {
             .map(|(_, v)| v.to_string().len())
             .unwrap_or(0) as i32;
 
+        let submenu = config.runtime.sub_menu.clone();
         // Parse the launchers
-        let deserialized_launchers: Vec<Result<Launcher, SherlockError>> = raw_launchers
-            .into_iter()
-            .map(|raw| {
+        let launchers: Vec<Launcher> = raw_launchers
+            .into_par_iter()
+            .filter_map(|raw| {
+                // Logic to restrict in submenu mode
+                if submenu.is_some() {
+                    if &submenu != &raw.alias {
+                        return None;
+                    }
+                }
                 let launcher_type: LauncherType = match raw.r#type.as_str() {
                     "app_launcher" => parse_app_launcher(&raw, &counts, max_decimals),
                     "audio_sink" => parse_audio_sink_launcher(),
@@ -71,7 +84,7 @@ impl Loader {
                     "bulk_text" => parse_bulk_text_launcher(&raw),
                     "calculation" => parse_calculator(&raw),
                     "categories" => parse_category_launcher(&raw, &counts, max_decimals),
-                    "clipboard-execution" => parse_clipboard_launcher(&raw)?,
+                    "clipboard-execution" => parse_clipboard_launcher(&raw).ok()?,
                     "command" => parse_command_launcher(&raw, &counts, max_decimals),
                     "debug" => parse_debug_launcher(&raw, &counts, max_decimals),
                     "emoji_picker" => parse_emoji_launcher(&raw),
@@ -79,6 +92,7 @@ impl Loader {
                     "teams_event" => parse_event_launcher(&raw),
                     "theme_picker" => parse_theme_launcher(&raw),
                     "process" => parse_process_launcher(&raw),
+                    "pomodoro" => parse_pomodoro(&raw),
                     "weather" => parse_weather_launcher(&raw),
                     "web_launcher" => parse_web_launcher(&raw),
                     _ => LauncherType::Empty,
@@ -93,17 +107,12 @@ impl Loader {
                     .get("icon")
                     .and_then(|s| s.as_str())
                     .map(|s| s.to_string());
-                Ok(Launcher::from_raw(raw, method, launcher_type, icon))
+                Some(Launcher::from_raw(raw, method, launcher_type, icon))
             })
             .collect();
 
         // Get errors and launchers
-        type LauncherResult = Vec<Result<Launcher, SherlockError>>;
-        let (oks, errs): (LauncherResult, LauncherResult) =
-            deserialized_launchers.into_iter().partition(Result::is_ok);
-        let launchers: Vec<Launcher> = oks.into_iter().filter_map(Result::ok).collect();
-        let mut non_breaking: Vec<SherlockError> =
-            errs.into_iter().filter_map(Result::err).collect();
+        let mut non_breaking = Vec::new();
         if counts.is_empty() {
             let counts: HashMap<String, u32> = launchers
                 .iter()
@@ -123,7 +132,7 @@ fn parse_appdata(
     prio: f32,
     counts: &HashMap<String, f32>,
     max_decimals: i32,
-) -> HashSet<AppData> {
+) -> Vec<AppData> {
     let data: HashSet<AppData> =
         deserialize_named_appdata(value.clone().into_deserializer()).unwrap_or_default();
     data.into_iter()
@@ -135,7 +144,7 @@ fn parse_appdata(
                 .unwrap_or(&0.0);
             c.with_priority(parse_priority(prio, *count, max_decimals))
         })
-        .collect::<HashSet<AppData>>()
+        .collect::<Vec<AppData>>()
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_app_launcher(
@@ -143,11 +152,11 @@ fn parse_app_launcher(
     counts: &HashMap<String, f32>,
     max_decimals: i32,
 ) -> LauncherType {
-    let apps: HashSet<AppData> = CONFIG.get().map_or_else(
-        || HashSet::new(),
+    let apps: Vec<AppData> = ConfigGuard::read().ok().map_or_else(
+        || Vec::new(),
         |config| {
             let prio = raw.priority;
-            match config.behavior.caching {
+            match config.caching.enable {
                 true => Loader::load_applications(prio, counts, max_decimals).unwrap_or_default(),
                 false => Loader::load_applications_from_disk(None, prio, counts, max_decimals)
                     .unwrap_or_default(),
@@ -170,10 +179,10 @@ fn parse_audio_sink_launcher() -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
-    if let Some(browser) = CONFIG
-        .get()
+    if let Some(browser) = ConfigGuard::read()
+        .ok()
         .and_then(|c| c.default_apps.browser.clone())
-        .or_else(|| parse_default_browser().ok())
+        .or_else(|| ConstantDefaults::browser().ok())
     {
         match BookmarkLauncher::find_bookmarks(&browser, raw) {
             Ok(bookmarks) => {
@@ -188,7 +197,7 @@ fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_bulk_text_launcher(raw: &RawLauncher) -> LauncherType {
-    LauncherType::BulkText(BulkTextLauncher {
+    LauncherType::Api(BulkTextLauncher {
         icon: raw
             .args
             .get("icon")
@@ -209,7 +218,6 @@ fn parse_bulk_text_launcher(raw: &RawLauncher) -> LauncherType {
             .to_string(),
     })
 }
-#[sherlock_macro::timing(level = "launchers")]
 fn parse_calculator(raw: &RawLauncher) -> LauncherType {
     let capabilities: HashSet<String> = match raw.args.get("capabilities") {
         Some(Value::Array(arr)) => arr
@@ -225,9 +233,13 @@ fn parse_calculator(raw: &RawLauncher) -> LauncherType {
         .get("currency_update_interval")
         .and_then(|interval| interval.as_u64())
         .unwrap_or(60 * 60 * 24);
-    tokio::spawn(async move {
-        let result = Currency::get_exchange(update_interval).await.ok();
-        let _result = CURRENCIES.set(result);
+
+    idle_add(move || {
+        MainContext::default().spawn_local(async move {
+            let result = Currency::get_exchange(update_interval).await.ok();
+            let _result = CURRENCIES.set(result);
+        });
+        false.into()
     });
 
     LauncherType::Calc(CalculatorLauncher { capabilities })
@@ -246,43 +258,67 @@ fn parse_category_launcher(
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_clipboard_launcher(raw: &RawLauncher) -> Result<LauncherType, SherlockError> {
     let clipboard_content: String = read_from_clipboard()?;
-    let capabilities: Option<HashSet<String>> = match raw.args.get("capabilities") {
+
+    if clipboard_content.trim().is_empty() {
+        return Ok(LauncherType::Empty);
+    }
+
+    let capabilities: HashSet<String> = match raw.args.get("capabilities") {
         Some(Value::Array(arr)) => {
             let strings: HashSet<String> = arr
                 .iter()
                 .filter_map(|v| v.as_str().map(|s| s.to_string()))
                 .collect();
-            Some(strings)
+            strings
         }
-        _ => None,
+        _ => vec!["url", "calc.math", "calc.units", "colors.all"]
+            .into_iter()
+            .map(String::from)
+            .collect::<HashSet<_>>(),
     };
+
     if clipboard_content.is_empty() {
         Ok(LauncherType::Empty)
     } else {
-        if capabilities.is_none() {
-            // initialize currencies
-            let update_interval = raw
-                .args
-                .get("currency_update_interval")
-                .and_then(|interval| interval.as_u64())
-                .unwrap_or(60 * 60 * 24);
-            tokio::spawn(async move {
-                let result = Currency::get_exchange(update_interval).await.ok();
-                let _result = CURRENCIES.set(result);
-            });
+        // Check if the content is in a suitable format
+
+        let mut is_empty = true;
+        if capabilities.contains("url") {
+            let url_raw = r"^(https?:\/\/)?(www\.)?([\da-z\.-]+)\.([a-z]{2,6})([\/\w\.-]*)*\/?$";
+            let url_re = Regex::new(url_raw).unwrap();
+            is_empty = url_re.is_match(&clipboard_content);
         }
-        Ok(LauncherType::Clipboard((
-            ClipboardLauncher {
-                clipboard_content,
-                capabilities: capabilities.clone(),
-            },
-            CalculatorLauncher {
-                capabilities: capabilities.unwrap_or(HashSet::from([
-                    String::from("calc.math"),
-                    String::from("calc.units"),
-                ])),
-            },
-        )))
+
+        if !is_empty
+            && capabilities
+                .iter()
+                .find(|c| c.starts_with("colors."))
+                .is_some()
+            && clipboard_content.len() <= 20
+        {
+            let color_raw = r"^(rgb|hsl)*\(?(\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3})\)?|\(?(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}\s*%\w*)\)?|^#([a-fA-F0-9]{6,8})$";
+            let color_re = Regex::new(color_raw).unwrap();
+            is_empty = color_re.is_match(&clipboard_content);
+        }
+
+        if !is_empty
+            && capabilities
+                .iter()
+                .find(|c| c.starts_with("calc."))
+                .is_some()
+        {
+            let handler = CalcTileHandler::default();
+            is_empty = handler.based_show(&clipboard_content, &capabilities);
+        }
+
+        if !is_empty {
+            return Ok(LauncherType::Empty);
+        }
+
+        Ok(LauncherType::Clipboard(ClipboardLauncher {
+            clipboard_content,
+            capabilities: capabilities.clone(),
+        }))
     }
 }
 #[sherlock_macro::timing(level = "launchers")]
@@ -295,6 +331,33 @@ fn parse_command_launcher(
     let value = &raw.args["commands"];
     let commands = parse_appdata(value, prio, counts, max_decimals);
     LauncherType::Command(CommandLauncher { commands })
+}
+
+#[sherlock_macro::timing(level = "launchers")]
+fn parse_pomodoro(raw: &RawLauncher) -> LauncherType {
+    let home = match home_dir() {
+        Ok(dir) => dir,
+        Err(_) => return LauncherType::Empty,
+    };
+    let program_raw = raw
+        .args
+        .get("program")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let program = expand_path(program_raw, &home);
+    let socket = PathBuf::from(raw.args.get("socket").and_then(Value::as_str).unwrap_or(""));
+    let style_raw = raw
+        .args
+        .get("style")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_lowercase();
+    let style = PomodoroStyle::from_str(&style_raw).unwrap(); // cant panic
+    LauncherType::Pomodoro(Pomodoro {
+        program,
+        socket,
+        style,
+    })
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_debug_launcher(
@@ -309,16 +372,21 @@ fn parse_debug_launcher(
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_emoji_launcher(raw: &RawLauncher) -> LauncherType {
-    let mut data: HashSet<AppData> = HashSet::with_capacity(1);
     let mut app_data = AppData::from_raw_launcher(raw);
     if app_data.icon.is_none() {
         app_data.icon = Some(String::from("sherlock-emoji"))
     }
-    data.insert(app_data);
+    let default_skin_tone: SkinTone = raw
+        .args
+        .get("default_skin_tone")
+        .and_then(|val| serde_json::from_value(val.clone()).ok())
+        .unwrap_or(SkinTone::Medium);
+
     LauncherType::Emoji(EmojiPicker {
         rows: 4,
         cols: 5,
-        data,
+        default_skin_tone,
+        data: vec![app_data],
     })
 }
 #[sherlock_macro::timing(level = "launchers")]
@@ -344,8 +412,10 @@ fn parse_event_launcher(raw: &RawLauncher) -> LauncherType {
         .get("event_end")
         .and_then(Value::as_str)
         .unwrap_or("+15 minutes");
-    let event = EventLauncher::get_event(date, event_start, event_end);
-    LauncherType::Event(EventLauncher { event, icon })
+    match EventLauncher::get_event(date, event_start, event_end) {
+        Some(event) => LauncherType::Event(EventLauncher { event, icon }),
+        _ => LauncherType::Empty,
+    }
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_theme_launcher(raw: &RawLauncher) -> LauncherType {
@@ -356,20 +426,20 @@ fn parse_theme_launcher(raw: &RawLauncher) -> LauncherType {
         .unwrap_or("~/.config/sherlock/themes/");
     let relative = relative.strip_prefix("~/").unwrap_or(relative);
     let home = match home_dir() {
-        Some(dir) => dir,
-        _ => return LauncherType::Empty,
+        Ok(dir) => dir,
+        Err(_) => return LauncherType::Empty,
     };
     let absolute = home.join(relative);
     ThemePicker::new(absolute, raw.priority)
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_file_launcher(raw: &RawLauncher) -> LauncherType {
-    let mut data: HashSet<AppData> = HashSet::with_capacity(1);
+    let mut data: Vec<AppData> = Vec::with_capacity(1);
     let mut app_data = AppData::from_raw_launcher(raw);
     if app_data.icon.is_none() {
         app_data.icon = Some(String::from("files"))
     }
-    data.insert(app_data);
+    data.push(app_data);
     let value = &raw.args["dirs"];
     match value.as_array() {
         Some(arr) => {
@@ -390,12 +460,7 @@ fn parse_file_launcher(raw: &RawLauncher) -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_process_launcher(raw: &RawLauncher) -> LauncherType {
-    let icon = raw
-        .args
-        .get("icon")
-        .and_then(Value::as_str)
-        .unwrap_or("sherlock-process");
-    let launcher = ProcessLauncher::new(icon);
+    let launcher = ProcessLauncher::new(raw.priority);
     if let Some(launcher) = launcher {
         LauncherType::Process(launcher)
     } else {
@@ -455,13 +520,24 @@ fn parse_launcher_configs(
                     e.to_string()
                 )
             }),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(sherlock_error!(
-                SherlockErrorType::FileExistError(fallback_path.clone()),
-                format!(
-                    "The file \"{}\" does not exist in the specified location.",
-                    fallback_path.to_string_lossy()
-                )
-            )),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                let mut non_breaking: Vec<SherlockError> = Vec::new();
+                let config = match load_default_fallback()
+                    .map_err(|e| non_breaking.push(e))
+                    .ok()
+                {
+                    Some(v) => v,
+                    None => load_default_fallback()?,
+                };
+                let content = serde_json::to_string_pretty(&config).unwrap();
+                fs::write(fallback_path, content).map_err(|e| {
+                    sherlock_error!(
+                        SherlockErrorType::FileWriteError(fallback_path.clone()),
+                        e.to_string()
+                    )
+                })?;
+                Ok(config)
+            }
             Err(e) => Err(sherlock_error!(
                 SherlockErrorType::FileReadError(fallback_path.clone()),
                 e.to_string()

@@ -1,59 +1,64 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 use std::vec;
 
-use gio::glib::object::ObjectExt;
+use gio::glib::object::{Cast, ObjectExt};
+use gio::glib::variant::ToVariant;
+use gio::glib::WeakRef;
 use gtk4::prelude::WidgetExt;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::{Box, Widget};
 
-use super::util::EventTileBuilder;
 use super::Tile;
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::Launcher;
+use crate::prelude::TileHandler;
+use crate::ui::g_templates::EventTile;
 
 impl Tile {
-    pub fn event_tile(launcher: &Launcher, event_launcher: &EventLauncher) -> Vec<SherlockRow> {
-        let event = match &event_launcher.event {
-            Some(event) => event,
-            None => return vec![],
-        };
-        let builder = EventTileBuilder::new("/dev/skxxtz/sherlock/ui/event_tile.ui");
+    pub fn event(event_launcher: &EventLauncher) -> Option<EventTile> {
+        let event = event_launcher.event.clone();
+        let tile = EventTile::new();
+        let imp = tile.imp();
 
-        builder
-            .title
-            .as_ref()
-            .and_then(|tmp| tmp.upgrade())
-            .map(|title| {
-                title.set_text(&event.title);
-            });
+        imp.title.set_text(&event.title);
+        imp.icon.set_icon_name(Some(event_launcher.icon.as_ref()));
+        imp.start_time.set_text(&event.start_time);
+        imp.end_time
+            .set_text(format!(".. {}", event.end_time).as_str());
 
-        builder
-            .icon
-            .as_ref()
-            .and_then(|tmp| tmp.upgrade())
-            .map(|ico| ico.set_icon_name(Some(event_launcher.icon.as_ref())));
-        builder
-            .start_time
-            .as_ref()
-            .and_then(|tmp| tmp.upgrade())
-            .map(|start_time| start_time.set_text(&event.start_time));
-        builder
-            .end_time
-            .as_ref()
-            .and_then(|tmp| tmp.upgrade())
-            .map(|end_time| end_time.set_text(format!(".. {}", event.end_time).as_str()));
+        Some(tile)
+    }
+}
 
+#[derive(Default, Debug)]
+pub struct EventTileHandler {
+    tile: WeakRef<EventTile>,
+    attrs: Rc<RefCell<HashMap<String, String>>>,
+}
+impl EventTileHandler {
+    pub fn new(launcher: Rc<Launcher>, event: &EventLauncher) -> Self {
+        let meeting_url = event.event.meeting_url.as_str();
         let attrs = get_attrs_map(vec![
             ("method", Some(&launcher.method)),
-            ("meeting_url", Some(&event.meeting_url)),
+            ("meeting_url", Some(meeting_url)),
             ("next_content", launcher.next_content.as_deref()),
             ("exit", Some(&launcher.exit.to_string())),
         ]);
 
-        builder.object.add_css_class("event-tile");
-        builder.object.with_launcher(launcher);
-        builder
-            .object
-            .connect_local("row-should-activate", false, move |args| {
+        Self {
+            tile: WeakRef::new(),
+            attrs: Rc::new(RefCell::new(attrs)),
+        }
+    }
+    pub fn bind_signal(&self, row: &SherlockRow, launcher: Rc<Launcher>) {
+        row.add_css_class("event-tile");
+        let signal_id = row.connect_local("row-should-activate", false, {
+            let attrs = self.attrs.clone();
+            move |args| {
                 let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
                 let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
                 let param: Option<bool> = match param {
@@ -61,13 +66,22 @@ impl Tile {
                     2 => Some(true),
                     _ => None,
                 };
-                execute_from_attrs(&row, &attrs, param);
+                execute_from_attrs(&row, &attrs.borrow(), param, Some(launcher.clone()));
+                // To reload ui according to mode
+                let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
                 None
-            });
-
-        if launcher.shortcut {
-            builder.object.set_shortcut_holder(builder.shortcut_holder);
+            }
+        });
+        row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
+    }
+}
+impl TileHandler for EventTileHandler {
+    fn replace_tile(&mut self, tile: &Widget) {
+        if let Some(tile) = tile.downcast_ref::<EventTile>() {
+            self.tile = tile.downgrade()
         }
-        return vec![builder.object];
     }
 }

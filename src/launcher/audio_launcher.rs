@@ -7,12 +7,13 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use zbus::blocking::{Connection, Proxy};
 
+use crate::sherlock_error;
+use crate::utils::config::ConfigGuard;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{sherlock_error, CONFIG};
 
 use super::utils::MprisData;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MusicPlayerLauncher {
     pub player: String,
     pub mpris: MprisData,
@@ -133,6 +134,15 @@ impl MusicPlayerLauncher {
         Ok(buffer.into())
     }
     pub fn playpause(player: &str) -> Result<(), SherlockError> {
+        Self::player_method(player, "PlayPause")
+    }
+    pub fn next(player: &str) -> Result<(), SherlockError> {
+        Self::player_method(player, "Next")
+    }
+    pub fn previous(player: &str) -> Result<(), SherlockError> {
+        Self::player_method(player, "Previous")
+    }
+    fn player_method(player: &str, method: &str) -> Result<(), SherlockError> {
         let conn = Connection::session()
             .map_err(|e| sherlock_error!(SherlockErrorType::DBusConnectionError, e.to_string()))?;
         let proxy = Proxy::new(
@@ -147,7 +157,7 @@ impl MusicPlayerLauncher {
                 e.to_string()
             )
         })?;
-        proxy.call_method("PlayPause", &()).map_err(|e| {
+        proxy.call_method(method, &()).map_err(|e| {
             sherlock_error!(
                 SherlockErrorType::DBusMessageSendError(format!("PlayPause to {}", player)),
                 e.to_string()
@@ -186,10 +196,12 @@ impl AudioLauncherFunctions {
         let mut names: Vec<String> = proxy.call("ListNames", &()).ok()?;
         names.retain(|n| n.starts_with("org.mpris.MediaPlayer2."));
         let first = names.first().cloned();
-        if let Some(m) = CONFIG.get().and_then(|c| c.default_apps.mpris.as_deref()) {
-            let preffered = names.into_iter().find(|name| name.contains(m));
-            if preffered.is_some() {
-                return preffered;
+        if let Ok(config) = ConfigGuard::read() {
+            if let Some(m) = config.default_apps.mpris.as_ref() {
+                let preferred = names.into_iter().find(|name| name.contains(m));
+                if preferred.is_some() {
+                    return preferred;
+                }
             }
         }
         first

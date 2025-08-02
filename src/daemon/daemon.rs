@@ -54,10 +54,22 @@ impl SherlockDaemon {
         // Send pipe request
         let pipe = Loader::load_pipe_args();
         if pipe.is_empty() {
-            stream.write_sized(br#""Show""#)?;
+            if let Some(flags) = Loader::load_flags().ok().as_ref() {
+                if let Some(submenu) = flags.sub_menu.as_deref() {
+                    return stream.write_sized(format!(r#"{{"Show":"{}"}}"#, submenu).as_bytes());
+                }
+                if let Some(input) = flags.input {
+                    return stream.write_sized(
+                        format!(r#"{{"SwitchMode": {{"Input": {}}}}}"#, input).as_bytes(),
+                    );
+                }
+                stream.write_sized(br#"{"Show": "all"}"#)?;
+            } else {
+                stream.write_sized(br#"{"Show": "all"}"#)?;
+            }
         } else {
             // Send return pipe request
-            let addr = format!("{}sherlock-pipe.socket", SOCKET_DIR);
+            let addr = format!("{}sherlock-pipe.sock", SOCKET_DIR);
 
             // remove existing socket
             let _ = remove_file(&addr);
@@ -74,7 +86,7 @@ impl SherlockDaemon {
 
             // Send piped content and show
             stream.write_sized(&pipe)?;
-            stream.write_sized(br#""Show""#)?;
+            stream.write_sized(br#"{"Show": "all"}"#)?;
 
             // Close so it wont block main
             drop(stream);

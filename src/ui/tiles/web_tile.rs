@@ -1,25 +1,26 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::object::ObjectExt;
-use gtk4::prelude::{BoxExt, WidgetExt};
+use gio::glib::object::{Cast, ObjectExt};
+use gio::glib::WeakRef;
+use gtk4::prelude::WidgetExt;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::Box;
 
-use super::app_tile::AppTile;
 use super::util::update_tag;
 use super::Tile;
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::web_launcher::WebLauncher;
 use crate::launcher::Launcher;
-use crate::prelude::IconComp;
+use crate::prelude::{IconComp, TileHandler};
+use crate::ui::g_templates::AppTile;
 
 impl Tile {
-    pub fn web_tile(launcher: &Launcher, web: &WebLauncher) -> Vec<SherlockRow> {
+    pub fn web(launcher: Rc<Launcher>, web: &WebLauncher) -> AppTile {
         let tile = AppTile::new();
         let imp = tile.imp();
-        let object = SherlockRow::new();
-        object.append(&tile);
 
         if let Some(name) = &launcher.name {
             imp.category.set_text(&name);
@@ -29,18 +30,25 @@ impl Tile {
 
         imp.icon.set_icon(Some(&web.icon), None, None);
 
-        // Construct attrs and enable action capabilities
-        object.with_launcher(&launcher);
-        object.set_keyword_aware(true);
+        tile
+    }
+}
 
-        let update_closure = {
-            let tag_start = imp.tag_start.downgrade();
-            let tag_end = imp.tag_end.downgrade();
-            let tag_start_content = launcher.tag_start.clone();
-            let tag_end_content = launcher.tag_end.clone();
-            let title = imp.title.downgrade();
-            let row_weak = object.downgrade();
-            let tile_name = web.display_name.clone();
+#[derive(Debug)]
+pub struct WebTileHandler {
+    attrs: Rc<RefCell<HashMap<String, String>>>,
+    tile: WeakRef<AppTile>,
+}
+impl WebTileHandler {
+    pub fn new(tile: &AppTile) -> Self {
+        Self {
+            attrs: Rc::new(RefCell::new(HashMap::new())),
+            tile: tile.downgrade(),
+        }
+    }
+    pub fn update(&self, keyword: &str, launcher: Rc<Launcher>, web: &WebLauncher) -> Option<()> {
+        let tile_name = web.display_name.clone();
+        if self.attrs.borrow().is_empty() {
             let mut attrs = get_attrs_map(vec![
                 ("method", Some(&launcher.method)),
                 ("engine", Some(&web.engine)),
@@ -49,52 +57,59 @@ impl Tile {
             if let Some(next) = launcher.next_content.as_deref() {
                 attrs.insert(String::from("next_content"), next.to_string());
             }
-            let attrs_rc = Rc::new(RefCell::new(attrs));
-            move |keyword: &str| -> bool {
-                let attrs_clone = Rc::clone(&attrs_rc);
-
-                // Update title
-                if let Some(title) = title.upgrade() {
-                    title.set_text(&tile_name.replace("{keyword}", keyword));
-                }
-
-                // update first tag
-                update_tag(&tag_start, &tag_start_content, keyword);
-
-                // update second tag
-                update_tag(&tag_end, &tag_end_content, keyword);
-
-                // update attributes to activate correct action
-                let keyword_clone = keyword.to_string();
-                row_weak.upgrade().map(|row| {
-                    let signal_id = row.connect_local("row-should-activate", false, move |args| {
-                        let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
-                        let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-                        let param: Option<bool> = match param {
-                            1 => Some(false),
-                            2 => Some(true),
-                            _ => None,
-                        };
-                        {
-                            let mut attrs = attrs_clone.borrow_mut();
-                            attrs.insert("keyword".to_string(), keyword_clone.clone());
-                            attrs.insert("result".to_string(), keyword_clone.clone());
-                        }
-                        execute_from_attrs(&row, &attrs_clone.borrow(), param);
-                        None
-                    });
-                    row.set_signal_id(signal_id);
-                });
-
-                // Set to false to not always show this tile
-                false
-            }
-        };
-        object.set_update(update_closure);
-
-        if launcher.shortcut {
-            object.set_shortcut_holder(Some(imp.shortcut_holder.downgrade()));
+            *self.attrs.borrow_mut() = attrs;
         }
-        return vec![object];
+        {
+            let mut attrs = self.attrs.borrow_mut();
+            attrs.insert("keyword".to_string(), keyword.to_string());
+            attrs.insert("result".to_string(), keyword.to_string());
+        }
+        let tile = self.tile.upgrade()?;
+        let imp = tile.imp();
+        // Update title
+        imp.title.set_text(&tile_name.replace("{keyword}", keyword));
+
+        // update first tag
+        update_tag(&imp.tag_start, &launcher.tag_start, keyword);
+
+        // update second tag
+        update_tag(&imp.tag_end, &launcher.tag_end, keyword);
+
+        Some(())
+    }
+    pub fn bind_signal(&self, row: &SherlockRow, launcher: Rc<Launcher>) {
+        let signal_id = row.connect_local("row-should-activate", false, {
+            let attrs = self.attrs.clone();
+            move |args| {
+                let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
+                let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                let param: Option<bool> = match param {
+                    1 => Some(false),
+                    2 => Some(true),
+                    _ => None,
+                };
+                execute_from_attrs(&row, &attrs.borrow(), param, Some(launcher.clone()));
+                None
+            }
+        });
+        row.set_signal_id(signal_id);
+    }
+    pub fn shortcut(&self) -> Option<Box> {
+        self.tile.upgrade().map(|t| t.imp().shortcut_holder.get())
+    }
+}
+impl Default for WebTileHandler {
+    fn default() -> Self {
+        Self {
+            attrs: Rc::new(RefCell::new(HashMap::new())),
+            tile: WeakRef::new(),
+        }
+    }
+}
+impl TileHandler for WebTileHandler {
+    fn replace_tile(&mut self, tile: &gtk4::Widget) {
+        if let Some(tile) = tile.downcast_ref::<AppTile>() {
+            self.tile = tile.downgrade();
+        }
     }
 }

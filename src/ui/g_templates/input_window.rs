@@ -31,8 +31,8 @@ mod imp {
     impl ApplicationWindowImpl for InputWindow {}
 }
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gio::glib::object::ObjectExt;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     gdk::Key,
     glib,

@@ -1,8 +1,8 @@
 mod imp;
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{object::ObjectExt, SignalHandlerId, WeakRef};
+use gio::glib::{object::ObjectExt, property::PropertySet, SignalHandlerId, WeakRef};
 use glib::Object;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     glib,
     prelude::{GestureSingleExt, WidgetExt},
@@ -10,17 +10,35 @@ use gtk4::{
 };
 use serde::Deserialize;
 
-use crate::actions::{execute_from_attrs, get_attrs_map};
+use crate::{
+    actions::{execute_from_attrs, get_attrs_map},
+    launcher::emoji_picker::SkinTone,
+};
 
 glib::wrapper! {
     pub struct EmojiObject(ObjectSubclass<imp::EmojiObject>)
         @extends gtk4::Box;
 }
 /// For deserialization
-#[derive(Deserialize)]
+#[derive(Deserialize, Default, Debug)]
 pub struct EmojiRaw {
     emoji: String,
     name: String,
+    skin: u8,
+}
+impl EmojiRaw {
+    pub fn reconstruct(&self, skin_tones: &[&str]) -> String {
+        let mut result = self.emoji.to_string();
+        for tone in skin_tones {
+            if let Some(pos) = result.find("{skin_tone}") {
+                result.replace_range(pos..pos + "{skin_tone}".len(), tone);
+            }
+        }
+        result
+    }
+    pub fn emoji(&self) -> String {
+        self.emoji.to_string()
+    }
 }
 
 impl EmojiObject {
@@ -28,8 +46,8 @@ impl EmojiObject {
     pub fn set_parent(&self, parent: WeakRef<Box>) {
         let imp = self.imp();
         if let Some(gesture) = imp.gesture.get() {
-            if let Some(parent) = imp.parent.borrow().as_ref().and_then(|tmp| tmp.upgrade()) {
-                parent.remove_controller(gesture);
+            if let Some(old_parent) = imp.parent.borrow().as_ref().and_then(|tmp| tmp.upgrade()) {
+                old_parent.remove_controller(gesture);
             }
             parent
                 .upgrade()
@@ -64,7 +82,7 @@ impl EmojiObject {
             move |_attrs| {
                 let attrs = get_attrs_map(vec![("method", Some("copy")), ("result", Some(&emoji))]);
                 let parent = parent.borrow().clone().and_then(|tmp| tmp.upgrade())?;
-                execute_from_attrs(&parent, &attrs, None);
+                execute_from_attrs(&parent, &attrs, None, None);
                 None
             }
         });
@@ -77,15 +95,24 @@ impl EmojiObject {
 
     // Getters
     pub fn title(&self) -> String {
-        self.imp().title.borrow().to_string()
+        self.imp().emoji.borrow().name.to_string()
     }
+    /// Skin colors for emojies are defined as:
+    /// ["\u{1F3FB}", "\u{1F3FC}", "\u{1F3FD}", "\u{1F3FE}", "\u{1F3FF}"]
     pub fn emoji(&self) -> String {
-        self.imp().emoji.borrow().to_string()
+        let imp = self.imp();
+        let default = imp.default_skin_tone.get().get_ascii();
+        imp.emoji.borrow().reconstruct(&[default, default])
     }
 
-    pub fn from(emoji_data: EmojiRaw) -> Self {
+    pub fn num_actions(&self) -> u8 {
+        self.imp().emoji.borrow().skin
+    }
+
+    pub fn from(emoji_data: EmojiRaw, skin: &SkinTone) -> Self {
         let obj: Self = Object::builder().build();
         let imp = obj.imp();
+        imp.default_skin_tone.set(skin.clone());
 
         imp.gesture.get_or_init(|| {
             let gesture = GestureClick::new();
@@ -102,9 +129,7 @@ impl EmojiObject {
             });
             gesture
         });
-
-        *imp.title.borrow_mut() = emoji_data.name;
-        *imp.emoji.borrow_mut() = emoji_data.emoji;
+        imp.emoji.set(emoji_data);
         obj
     }
     pub fn new() -> Self {

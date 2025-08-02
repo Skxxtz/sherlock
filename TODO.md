@@ -3,7 +3,6 @@
     - [x] spotify 
     - [x] weather
     - [ ] most used apps widget
-    - [ ] tile
 - [ ] Create a widget that uses `gtk4::Builder::from_string(ui_string)`.
 - [x] Make more widgets asynchronous.
 - [ ] Add a callback type for a command to execute another command.
@@ -17,6 +16,8 @@
 - [ ] Markdown parser: Markdown > GTK ui
 - [ ] Currency calculator function / clipboard function
 - [x] Sherlock flag to clear cache like mpris cache
+- [ ] Multiple Keyword arguments
+- [ ] Required argument field (when pressing return and a required argument is activated, clear search and use search input as argument)
 
 - X Consider changing the alias for each command in `commandlauncher` (if possible). -> Not viable
 

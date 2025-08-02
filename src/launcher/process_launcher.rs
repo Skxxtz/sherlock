@@ -4,19 +4,19 @@ use procfs::process::{all_processes, Process};
 use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 
+use crate::loader::util::AppData;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 #[derive(Clone, Debug)]
 pub struct ProcessLauncher {
-    pub icon: String,
+    pub processes: Vec<AppData>,
 }
 
 impl ProcessLauncher {
-    pub fn new(icon: &str) -> Option<Self> {
-        return Some(Self {
-            icon: icon.to_string(),
-        });
+    pub fn new(prio: f32) -> Option<Self> {
+        let processes = Self::get_all_processes(prio)?;
+        return Some(Self { processes });
     }
     pub fn kill(pid: (i32, i32)) -> Result<(), SherlockError> {
         if pid.0 != pid.1 {
@@ -36,7 +36,7 @@ impl ProcessLauncher {
             )
         })
     }
-    pub fn get_all_processes() -> Option<HashMap<(i32, i32), String>> {
+    pub fn get_all_processes(prio: f32) -> Option<Vec<AppData>> {
         match all_processes() {
             Ok(procs) => {
                 let user_processes: Vec<Process> = procs
@@ -61,7 +61,7 @@ impl ProcessLauncher {
                     .filter_map(|p| p.stat().ok())
                     .collect();
                 let mut tmp: HashMap<i32, i32> = HashMap::new();
-                let collected: HashMap<(i32, i32), String> = stats
+                let collected: Vec<AppData> = stats
                     .into_iter()
                     .rev()
                     .filter_map(|item| {
@@ -83,6 +83,14 @@ impl ProcessLauncher {
                         } else {
                             None
                         }
+                    })
+                    .map(|((ppid, pid), name)| {
+                        let mut data = AppData::new();
+                        data.name = name.clone();
+                        data.search_string = name;
+                        data.priority = prio;
+                        data.exec = Some(format!("{},{}", ppid, pid));
+                        data
                     })
                     .collect();
                 Some(collected)

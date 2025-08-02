@@ -13,23 +13,22 @@ use std::time::SystemTime;
 use super::util::ApplicationAction;
 use super::{util, Loader};
 use crate::prelude::PathHelpers;
+use crate::utils::config::ConfigGuard;
 use crate::utils::{
     errors::{SherlockError, SherlockErrorType},
     files::read_lines,
 };
-use crate::{sherlock_error, CONFIG};
+use crate::{sher_log, sherlock_error};
 use util::{AppData, SherlockAlias};
 
 impl Loader {
     pub fn load_applications_from_disk(
-        applications: Option<HashSet<PathBuf>>,
+        applications: Option<Vec<PathBuf>>,
         priority: f32,
         counts: &HashMap<String, f32>,
         decimals: i32,
-    ) -> Result<HashSet<AppData>, SherlockError> {
-        let config = CONFIG
-            .get()
-            .ok_or(sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+    ) -> Result<Vec<AppData>, SherlockError> {
+        let config = ConfigGuard::read()?;
 
         // Define required paths for application parsing
         let system_apps = get_applications_dir();
@@ -64,13 +63,13 @@ impl Loader {
         let aliases = Arc::new(Mutex::new(aliases));
 
         // Gather '.desktop' files
-        let desktop_files: HashSet<PathBuf> = match applications {
+        let desktop_files: Vec<PathBuf> = match applications {
             Some(apps) => apps,
             _ => get_desktop_files(system_apps),
         };
 
         // Parellize opening of all .desktop files and parsing them into AppData
-        let apps: HashSet<AppData> = desktop_files
+        let apps: Vec<AppData> = desktop_files
             .into_par_iter()
             .filter_map(|entry| {
                 let r_path = entry.to_str()?;
@@ -164,12 +163,12 @@ impl Loader {
     }
 
     fn get_new_applications(
-        mut apps: HashSet<AppData>,
+        mut apps: Vec<AppData>,
         priority: f32,
         counts: &HashMap<String, f32>,
         decimals: i32,
         last_changed: Option<SystemTime>,
-    ) -> Result<HashSet<AppData>, SherlockError> {
+    ) -> Result<Vec<AppData>, SherlockError> {
         let system_apps = get_applications_dir();
 
         // get all desktop files
@@ -208,7 +207,7 @@ impl Loader {
         return Ok(apps);
     }
 
-    fn write_cache<T: AsRef<Path>>(apps: &HashSet<AppData>, cache_loc: T) {
+    fn write_cache<T: AsRef<Path>>(apps: &Vec<AppData>, cache_loc: T) {
         let path = cache_loc.as_ref();
         if let Some(parent) = path.parent() {
             let _ = fs::create_dir_all(parent);
@@ -228,28 +227,23 @@ impl Loader {
         priority: f32,
         counts: &HashMap<String, f32>,
         decimals: i32,
-    ) -> Result<HashSet<AppData>, SherlockError> {
-        let config = CONFIG
-            .get()
-            .ok_or_else(|| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
+    ) -> Result<Vec<AppData>, SherlockError> {
+        let config = ConfigGuard::read()?;
         // check if sherlock_alias was modified
-        let alias_path = Path::new(&config.files.alias);
-        let ignore_path = Path::new(&config.files.ignore);
-        let config_path = Path::new(&config.files.config);
-        let cache_path = Path::new(&config.behavior.cache);
-        let changed = file_has_changed(&alias_path, &cache_path)
-            || file_has_changed(&ignore_path, &cache_path)
-            || file_has_changed(&config_path, &cache_path);
+        let changed = file_has_changed(&config.files.alias, &config.caching.cache)
+            || file_has_changed(&config.files.ignore, &config.caching.cache)
+            || file_has_changed(&config.files.config, &config.caching.cache);
 
         if !changed {
-            let cached_apps: Option<HashSet<AppData>> = File::open(&config.behavior.cache)
+            let _ = sher_log!("Loading cached apps");
+            let cached_apps: Option<Vec<AppData>> = File::open(&config.caching.cache)
                 .ok()
                 .and_then(|f| simd_json::from_reader(f).ok());
 
             if let Some(mut apps) = cached_apps {
                 // apply the current counts
                 apps = apps
-                    .drain()
+                    .drain(..)
                     .map(|mut v| {
                         let count = v
                             .exec
@@ -264,7 +258,8 @@ impl Loader {
 
                 // Refresh cache in the background
                 let old_apps = apps.clone();
-                let last_changed = config.behavior.cache.modtime();
+                let last_changed = config.caching.cache.modtime();
+                let cache = config.caching.cache.clone();
                 rayon::spawn_fifo({
                     let counts_clone = counts.clone();
                     move || {
@@ -275,7 +270,7 @@ impl Loader {
                             decimals,
                             last_changed,
                         ) {
-                            Loader::write_cache(&new_apps, &config.behavior.cache);
+                            Loader::write_cache(&new_apps, cache);
                         }
                     }
                 });
@@ -283,10 +278,12 @@ impl Loader {
             }
         }
 
+        let _ = sher_log!("Updating cached apps");
         let apps = Loader::load_applications_from_disk(None, priority, counts, decimals)?;
         // Write the cache in the background
         let app_clone = apps.clone();
-        rayon::spawn_fifo(move || Loader::write_cache(&app_clone, &config.behavior.cache));
+        let cache = config.caching.cache.clone();
+        rayon::spawn_fifo(move || Loader::write_cache(&app_clone, cache));
         Ok(apps)
     }
 }
@@ -297,9 +294,9 @@ fn should_ignore(ignore_apps: &Vec<Pattern>, app: &str) -> bool {
 }
 pub fn parse_priority(priority: f32, count: f32, decimals: i32) -> f32 {
     if count == 0.0 {
-        priority + 1.0
+        priority + 0.99
     } else {
-        priority + 1.0 - count * 10f32.powi(-decimals)
+        priority + 0.99 - count * 10f32.powi(-decimals)
     }
 }
 
@@ -319,7 +316,7 @@ pub fn get_applications_dir() -> HashSet<PathBuf> {
         String::from("/usr/share/applications/"),
         String::from("~/.local/share/applications/"),
     ];
-    if let Some(c) = CONFIG.get() {
+    if let Ok(c) = ConfigGuard::read() {
         default_paths.extend(c.debug.app_paths.clone());
     };
 
@@ -332,7 +329,7 @@ pub fn get_applications_dir() -> HashSet<PathBuf> {
     paths
 }
 
-pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> HashSet<PathBuf> {
+pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> Vec<PathBuf> {
     dirs.into_par_iter()
         .filter(|dir| dir.is_dir())
         .filter_map(|dir| {
@@ -352,14 +349,15 @@ pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> HashSet<PathBuf> {
             })
         })
         .flatten()
-        .collect::<HashSet<PathBuf>>()
+        .collect()
 }
+
 pub fn file_has_changed(file_path: &Path, compare_to: &Path) -> bool {
     match (&file_path.modtime(), &compare_to.modtime()) {
-        (Some(t1), Some(t2)) if t1 >= t2 => return true,
-        _ => {}
+        (Some(t1), Some(t2)) if t1 > t2 => true, // t1 is newer than t2
+        (Some(t1), Some(t2)) if t1 < t2 => false, // t1 is older than t2
+        _ => true,                               // if there is a modtime missing
     }
-    false
 }
 
 #[test]

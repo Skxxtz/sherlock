@@ -1,32 +1,97 @@
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
-use gio::glib::{self, WeakRef};
+use gio::glib::WeakRef;
 use gio::ListStore;
+use gtk4::gdk::ModifierType;
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{self, gdk::Key, prelude::*, EventControllerKey};
 use gtk4::{
     Box as GtkBox, CustomFilter, CustomSorter, Entry, FilterListModel, GridView, Label, Ordering,
-    SignalListItemFactory, SingleSelection, SortListModel,
+    Overlay, SignalListItemFactory, SingleSelection, SortListModel, Widget,
 };
+use levenshtein::levenshtein;
+use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use crate::g_subclasses::emoji_action_entry::EmojiContextAction;
 use crate::g_subclasses::emoji_item::{EmojiObject, EmojiRaw};
 use crate::loader::util::AppData;
 use crate::prelude::{SherlockNav, SherlockSearch};
 use crate::sherlock_error;
-use crate::ui::util::{ConfKeys, SearchHandler};
+use crate::ui::context::make_emoji_context;
+use crate::ui::g_templates::GridSearchUi;
+use crate::ui::key_actions::EmojiKeyActions;
+use crate::ui::util::{ConfKeys, ContextUI, SearchHandler};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize, Copy)]
+pub enum SkinTone {
+    Light,
+    MediumLight,
+    Medium,
+    MediumDark,
+    Dark,
+    Simpsons,
+}
+impl SkinTone {
+    pub fn get_ascii(&self) -> &'static str {
+        match self {
+            Self::Light => "\u{1F3FB}",
+            Self::MediumLight => "\u{1F3FC}",
+            Self::Medium => "\u{1F3FD}",
+            Self::MediumDark => "\u{1F3FE}",
+            Self::Dark => "\u{1F3FF}",
+            Self::Simpsons => "",
+        }
+    }
+    pub fn get_name(&self) -> String {
+        let raw = match self {
+            Self::Light => "Light",
+            Self::MediumLight => "MediumLight",
+            Self::Medium => "Medium",
+            Self::MediumDark => "MediumDark",
+            Self::Dark => "Dark",
+            Self::Simpsons => "Yellow",
+        };
+        raw.to_string()
+    }
+    pub fn from_name(name: &str) -> Self {
+        match name {
+            "Light" => Self::Light,
+            "MediumLight" => Self::MediumLight,
+            "Medium" => Self::Medium,
+            "MediumDark" => Self::MediumDark,
+            "Dark" => Self::Dark,
+            _ => Self::Simpsons,
+        }
+    }
+    pub fn index(&self) -> u8 {
+        match self {
+            Self::Light => 0,
+            Self::MediumLight => 1,
+            Self::Medium => 2,
+            Self::MediumDark => 3,
+            Self::Dark => 4,
+            Self::Simpsons => 5,
+        }
+    }
+}
+impl Default for SkinTone {
+    fn default() -> Self {
+        Self::Simpsons
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct EmojiPicker {
     pub rows: u32,
     pub cols: u32,
-    pub data: HashSet<AppData>,
+    pub default_skin_tone: SkinTone,
+    pub data: Vec<AppData>,
 }
 
 impl EmojiPicker {
-    pub fn load() -> Result<Vec<EmojiObject>, SherlockError> {
+    pub fn load(default_skin_tone: SkinTone) -> Result<Vec<EmojiObject>, SherlockError> {
         // Loads default fallback.json file and loads the launcher configurations within.
         let data = gio::resources_lookup_data(
             "/dev/skxxtz/sherlock/emojies.json",
@@ -54,7 +119,7 @@ impl EmojiPicker {
         })?;
         let emojies: Vec<EmojiObject> = emojies
             .into_iter()
-            .map(|emj| EmojiObject::from(emj))
+            .map(|emj| EmojiObject::from(emj, &default_skin_tone))
             .collect();
         Ok(emojies)
     }
@@ -62,40 +127,56 @@ impl EmojiPicker {
 
 pub fn emojies(
     stack_page: &Rc<RefCell<String>>,
-) -> Result<(GridSearchUi, WeakRef<ListStore>), SherlockError> {
-    let (search_query, ui, handler) = construct()?;
+    skin_tone: SkinTone,
+) -> Result<(Overlay, WeakRef<ListStore>), SherlockError> {
+    let (search_query, overlay, ui, handler, context) = construct(skin_tone.clone())?;
     let imp = ui.imp();
 
     let search_bar = imp.search_bar.downgrade();
     ui.connect_realize({
         let search_bar = search_bar.clone();
+        let results = imp.results.downgrade();
+        let context_model = context.model.clone();
         move |_| {
             // Focus search bar as soon as it's visible
             search_bar
                 .upgrade()
                 .map(|search_bar| search_bar.grab_focus());
+            if let Some(results) = results.upgrade() {
+                results.context_action(Some(&context_model));
+            }
         }
     });
 
     let custom_binds = ConfKeys::new();
     let view = imp.results.downgrade();
-    nav_event(search_bar.clone(), view.clone(), stack_page, custom_binds);
+    nav_event(
+        search_bar.clone(),
+        view.clone(),
+        stack_page,
+        custom_binds,
+        context.clone(),
+        skin_tone,
+    );
     change_event(
         search_bar.clone(),
         &search_query,
         handler.sorter.clone(),
         handler.filter.clone(),
         view.clone(),
+        context.model.clone(),
     );
 
     let model = handler.model.unwrap();
-    return Ok((ui, model.clone()));
+    return Ok((overlay, model.clone()));
 }
 fn nav_event(
     search_bar: WeakRef<Entry>,
     view: WeakRef<GridView>,
     stack_page: &Rc<RefCell<String>>,
-    custom_binds: ConfKeys,
+    binds: ConfKeys,
+    context: ContextUI<EmojiContextAction>,
+    skin_tone: SkinTone,
 ) {
     // Wrap the event controller in an Rc<RefCell> for shared mutability
     let event_controller = EventControllerKey::new();
@@ -103,66 +184,48 @@ fn nav_event(
 
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
-        fn move_prev(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| view.focus_prev(None));
-        }
-        fn move_next(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| view.focus_next(None));
-        }
-        fn move_up(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| {
-                let width = view.width();
-                let offset = (width / 50).min(10);
-                view.focus_offset(None, -offset)
-            });
-        }
-        fn move_down(view: &WeakRef<GridView>) {
-            view.upgrade().map(|view| {
-                let width = view.width();
-                let offset = (width / 50).min(10);
-                view.focus_offset(None, offset)
-            });
-        }
         let search_bar = search_bar.clone();
+        let key_actions =
+            EmojiKeyActions::new(view.clone(), search_bar.clone(), context, skin_tone);
         move |_, key, _, modifiers| {
             if stack_page.borrow().as_str() != "emoji-page" {
                 return false.into();
             }
+            let matches = |comp: Option<Key>, comp_mod: Option<ModifierType>| {
+                let key_matches = Some(key) == comp;
+                let mod_matches = comp_mod.map_or(false, |m| modifiers.contains(m));
+                key_matches && mod_matches
+            };
             match key {
-                // Custom previous key
-                k if Some(k) == custom_binds.prev
-                    && custom_binds
-                        .prev_mod
-                        .map_or(true, |m| modifiers.contains(m)) =>
-                {
-                    move_prev(&view);
-                    return true.into();
+                // Custom up key
+                Key::Up => key_actions.on_up(),
+                _ if matches(binds.up, binds.up_mod) => {
+                    key_actions.on_up();
                 }
-                // Custom next key
-                k if Some(k) == custom_binds.next
-                    && custom_binds
-                        .next_mod
-                        .map_or(true, |m| modifiers.contains(m)) =>
-                {
-                    move_next(&view);
-                    return true.into();
+
+                // Custom down key
+                Key::Down => key_actions.on_down(),
+                _ if matches(binds.down, binds.down_mod) => {
+                    key_actions.on_down();
                 }
-                Key::Up => {
-                    move_up(&view);
-                    return true.into();
+
+                // Custom left key
+                Key::Left => key_actions.on_prev(),
+                _ if matches(binds.left, binds.left_mod) => {
+                    key_actions.on_prev();
                 }
-                Key::Down => {
-                    move_down(&view);
-                    return true.into();
+
+                // Custom right key
+                Key::Right => key_actions.on_next(),
+                _ if matches(binds.right, binds.right_mod) => {
+                    key_actions.on_next();
                 }
-                Key::Left => {
-                    move_prev(&view);
-                    return true.into();
+
+                // Context menu opening
+                _ if matches(binds.context, binds.context_mod) => {
+                    key_actions.open_context();
                 }
-                Key::Right => {
-                    move_next(&view);
-                    return true.into();
-                }
+
                 Key::BackSpace => {
                     let empty = search_bar.upgrade().map_or(true, |s| s.text().is_empty());
                     if empty {
@@ -176,25 +239,18 @@ fn nav_event(
                                 Some(&String::from("emoji-page").to_variant()),
                             );
                         }
-                        return true.into();
                     } else {
                         return false.into();
                     }
                 }
-                Key::Return => {
-                    if let Some(upgr) = view.upgrade() {
-                        if let Some(selection) = upgr.model().and_downcast::<SingleSelection>() {
-                            if let Some(row) =
-                                selection.selected_item().and_downcast::<EmojiObject>()
-                            {
-                                row.emit_by_name::<()>("emoji-should-activate", &[]);
-                            }
-                        }
-                    }
-                    true.into()
+                Key::Escape if key_actions.context.open.get() => {
+                    key_actions.close_context();
                 }
-                _ => false.into(),
+                Key::Return => key_actions.on_return(None),
+                Key::Tab => return true.into(),
+                _ => return false.into(),
             }
+            true.into()
         }
     });
     search_bar
@@ -202,12 +258,28 @@ fn nav_event(
         .map(|entry| entry.add_controller(event_controller));
 }
 
-fn construct() -> Result<(Rc<RefCell<String>>, GridSearchUi, SearchHandler), SherlockError> {
-    let emojies = EmojiPicker::load()?;
+fn construct(
+    skin_tone: SkinTone,
+) -> Result<
+    (
+        Rc<RefCell<String>>,
+        Overlay,
+        GridSearchUi,
+        SearchHandler,
+        ContextUI<EmojiContextAction>,
+    ),
+    SherlockError,
+> {
+    let emojies = EmojiPicker::load(skin_tone)?;
     let search_text = Rc::new(RefCell::new(String::new()));
     // Initialize the builder with the correct path
     let ui = GridSearchUi::new();
     let imp = ui.imp();
+
+    let (context, revealer) = make_emoji_context();
+    let main_overlay = Overlay::new();
+    main_overlay.set_child(Some(&ui));
+    main_overlay.add_overlay(&revealer);
 
     // Setup model and factory
     let model = ListStore::new::<EmojiObject>();
@@ -229,13 +301,15 @@ fn construct() -> Result<(Rc<RefCell<String>>, GridSearchUi, SearchHandler), She
 
     let handler = SearchHandler::new(
         model_ref,
+        Rc::new(RefCell::new(String::new())),
         WeakRef::new(),
         filter.downgrade(),
         sorter.downgrade(),
+        imp.results.get().upcast::<Widget>().downgrade(),
         ConfKeys::new(),
         Cell::new(true),
     );
-    Ok((search_text, ui, handler))
+    Ok((search_text, main_overlay, ui, handler, context))
 }
 fn make_factory() -> SignalListItemFactory {
     let factory = SignalListItemFactory::new();
@@ -244,13 +318,25 @@ fn make_factory() -> SignalListItemFactory {
             .downcast_ref::<gtk4::ListItem>()
             .expect("Should be a list item");
         let box_ = GtkBox::new(gtk4::Orientation::Vertical, 0);
-        box_.set_size_request(50, 50);
+        box_.set_size_request(100, 100);
+        box_.add_css_class("emoji-item");
 
         let emoji_label = Label::new(Some(""));
         emoji_label.set_valign(gtk4::Align::Center);
         emoji_label.set_halign(gtk4::Align::Center);
         emoji_label.set_vexpand(true);
+
+        let emoji_title = Label::builder()
+            .ellipsize(gtk4::pango::EllipsizeMode::End)
+            .valign(gtk4::Align::Center)
+            .halign(gtk4::Align::Center)
+            .vexpand(false)
+            .margin_bottom(2)
+            .name("emoji-name")
+            .build();
+
         box_.append(&emoji_label);
+        box_.append(&emoji_title);
 
         list_item.set_child(Some(&box_));
     });
@@ -274,7 +360,13 @@ fn make_factory() -> SignalListItemFactory {
             .and_downcast::<Label>()
             .expect("First child should be a label");
 
-        emoji_label.set_label(&emoji_obj.emoji());
+        let emoji_name = box_
+            .last_child()
+            .and_downcast::<Label>()
+            .expect("Last child should be a label");
+
+        emoji_label.set_text(&emoji_obj.emoji());
+        emoji_name.set_text(&emoji_obj.title().split(';').next().unwrap_or_default());
     });
     factory.connect_unbind(move |_, item| {
         let item = item
@@ -308,6 +400,7 @@ fn change_event(
     sorter: WeakRef<CustomSorter>,
     filter: WeakRef<CustomFilter>,
     view: WeakRef<GridView>,
+    context_model: WeakRef<ListStore>,
 ) -> Option<()> {
     let search_bar = search_bar.upgrade()?;
     search_bar.connect_changed({
@@ -322,7 +415,8 @@ fn change_event(
             filter
                 .upgrade()
                 .map(|filter| filter.changed(gtk4::FilterChange::Different));
-            view.upgrade().map(|view| view.focus_first(None, None));
+            view.upgrade()
+                .map(|view| view.focus_first(Some(&context_model), None, None));
         }
     });
     Some(())
@@ -334,7 +428,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>) -> CustomFilter {
         let counter = Rc::clone(&counter);
         move |entry| {
             let current = counter.get();
-            if current >= 80 {
+            if current >= 77 {
                 return false;
             }
             let item = entry.downcast_ref::<EmojiObject>().unwrap();
@@ -354,112 +448,54 @@ fn make_filter(search_text: &Rc<RefCell<String>>) -> CustomFilter {
 }
 fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
     CustomSorter::new({
+        fn search_score(query: &str, match_in: &str) -> f32 {
+            if match_in.len() == 0 {
+                return 0.0;
+            }
+            let (distance, element) = match_in
+                .split(';')
+                .map(|elem| {
+                    let leven = levenshtein(query, elem) as f32;
+                    let fract = (leven / elem.len() as f32 * 100.0) as u16;
+                    (fract, elem)
+                })
+                .min_by_key(|(dist, _)| *dist)
+                .unwrap_or((u16::MAX, ""));
+
+            let normed = (distance as f32 / 100.0).clamp(0.2, 1.0);
+            let starts_with = if element.starts_with(query) {
+                -0.2
+            } else {
+                0.0
+            };
+            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
+                if var == "true" {
+                    println!(
+                        "Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}",
+                        element,
+                        query,
+                        distance,
+                        normed,
+                        normed + starts_with
+                    );
+                }
+            }
+            normed + starts_with
+        }
         let search_text = Rc::clone(search_text);
         move |item_a, item_b| {
             let search_text = search_text.borrow();
+            if search_text.is_empty() {
+                return Ordering::Equal;
+            }
 
             let item_a = item_a.downcast_ref::<EmojiObject>().unwrap();
             let item_b = item_b.downcast_ref::<EmojiObject>().unwrap();
 
-            let priority_a = levenshtein::levenshtein(&item_a.title(), &search_text) as f32;
-            let priority_b = levenshtein::levenshtein(&item_b.title(), &search_text) as f32;
-
-            if !search_text.is_empty() {
-                return Ordering::Equal;
-            }
+            let priority_a = search_score(&search_text, &item_a.title());
+            let priority_b = search_score(&search_text, &item_b.title());
 
             priority_a.total_cmp(&priority_b).into()
         }
     })
-}
-
-mod imp {
-    use gtk4::subclass::prelude::*;
-    use gtk4::{glib, Entry, Image, ScrolledWindow, Spinner};
-    use gtk4::{Box as GtkBox, Label};
-    use gtk4::{CompositeTemplate, GridView};
-
-    #[derive(CompositeTemplate, Default)]
-    #[template(resource = "/dev/skxxtz/sherlock/ui/grid_search.ui")]
-    pub struct GridSearchUi {
-        #[template_child(id = "split-view")]
-        pub all: TemplateChild<GtkBox>,
-
-        #[template_child(id = "status-bar-spinner")]
-        pub spinner: TemplateChild<Spinner>,
-
-        #[template_child(id = "preview_box")]
-        pub preview_box: TemplateChild<GtkBox>,
-
-        #[template_child(id = "search-bar")]
-        pub search_bar: TemplateChild<Entry>,
-
-        #[template_child(id = "scrolled-window")]
-        pub result_viewport: TemplateChild<ScrolledWindow>,
-
-        #[template_child(id = "category-type-holder")]
-        pub mode_title_holder: TemplateChild<GtkBox>,
-
-        #[template_child(id = "category-type-label")]
-        pub mode_title: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-desc")]
-        pub context_action_desc: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-first")]
-        pub context_action_first: TemplateChild<Label>,
-
-        #[template_child(id = "context-menu-second")]
-        pub context_action_second: TemplateChild<Label>,
-
-        #[template_child(id = "status-bar")]
-        pub status_bar: TemplateChild<GtkBox>,
-
-        #[template_child(id = "search-icon-holder")]
-        pub search_icon_holder: TemplateChild<GtkBox>,
-
-        #[template_child(id = "search-icon")]
-        pub search_icon: TemplateChild<Image>,
-
-        #[template_child(id = "search-icon-back")]
-        pub search_icon_back: TemplateChild<Image>,
-
-        #[template_child(id = "result-frame")]
-        pub results: TemplateChild<GridView>,
-    }
-
-    #[glib::object_subclass]
-    impl ObjectSubclass for GridSearchUi {
-        const NAME: &'static str = "GridSearchUI";
-        type Type = super::GridSearchUi;
-        type ParentType = GtkBox;
-
-        fn class_init(klass: &mut Self::Class) {
-            Self::bind_template(klass);
-        }
-
-        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
-            obj.init_template();
-        }
-    }
-
-    impl ObjectImpl for GridSearchUi {}
-    impl WidgetImpl for GridSearchUi {}
-    impl BoxImpl for GridSearchUi {}
-}
-
-glib::wrapper! {
-    pub struct GridSearchUi(ObjectSubclass<imp::GridSearchUi>)
-        @extends gtk4::Widget, gtk4::Box,
-        @implements gtk4::Buildable;
-}
-
-impl GridSearchUi {
-    pub fn new() -> Self {
-        let ui = glib::Object::new::<Self>();
-        let imp = ui.imp();
-        imp.search_icon_holder.add_css_class("search");
-        imp.results.set_focusable(false);
-        ui
-    }
 }

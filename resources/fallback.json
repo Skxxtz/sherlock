@@ -3,26 +3,62 @@
         "name": "Weather",
         "type": "weather",
         "args": {
-            "location": "berlin",
+            "location": "bremen",
             "update_interval": 60
         },
+        "actions": [
+            {
+                "name": "Show in Web",
+                "exec": "https://www.wttr.in/bremen",
+                "icon": "sherlock-link",
+                "method": "web_launcher"
+            }
+        ],
         "priority": 1,
-        "home": true,
-        "only_home": true,
+        "home": "OnlyHome",
         "async": true,
         "shortcut": false,
         "spawn_focus": false
     },
     {
-        "name": "Teams Event",
-        "type": "teams_event",
-        "args": {
-            "event_date": "now",
-            "event_start": "-5 minutes",
-            "event_end": "+15 minutes"
-        },
+        "name": "Spotify",
+        "type": "audio_sink",
+        "args": {},
+        "async": true,
         "priority": 1,
-        "home": true
+        "home": "OnlyHome",
+        "spawn_focus": false,
+        "binds": [
+            {
+                "bind": "Return",
+                "callback": "playpause",
+                "exit": false
+            },
+            {
+                "bind": "control+l",
+                "callback": "next",
+                "exit": false
+            },
+            {
+                "bind": "control+h",
+                "callback": "previous",
+                "exit": false
+            }
+        ],
+        "actions": [
+            {
+                "name": "Skip",
+                "icon": "media-seek-forward",
+                "method": "inner.next",
+                "exit": false
+            },
+            {
+                "name": "Previous",
+                "icon": "media-seek-backward",
+                "method": "inner.previous",
+                "exit": false
+            }
+        ]
     },
     {
         "name": "Calculator",
@@ -33,64 +69,16 @@
                 "calc.units"
             ]
         },
-        "priority": 1
-    },
-    {
-        "name": "Spotify",
-        "type": "audio_sink",
-        "args": {},
-        "async": true,
         "priority": 1,
-        "home": true,
-        "only_home": true,
-        "spawn_focus": false
-    },
-    {
-        "name": "Clipboard",
-        "type": "clipboard-execution",
-        "args": {
-            "capabilities": [
-                "url",
-                "colors.hex",
-                "colors.rgb",
-                "colors.hsl",
-                "calc.math",
-                "calc.lengths",
-                "calc.weights",
-                "calc.temperatures"
-            ]
-        },
-        "priority": 1,
-        "home": true
+        "on_return": "copy"
     },
     {
         "name": "App Launcher",
         "alias": "app",
         "type": "app_launcher",
         "args": {},
-        "priority": 2,
-        "home": true
-    },
-    {
-        "name": "Categories",
-        "alias": "cat",
-        "type": "categories",
-        "args": {
-            "Kill Processes": {
-                "icon": "sherlock-process",
-                "icon_class": "reactive",
-                "exec": "kill",
-                "search_string": "terminate;kill;process"
-            },
-            "Power Menu": {
-                "icon": "battery-full-symbolic",
-                "icon_class": "reactive",
-                "exec": "pm",
-                "search_string": "powermenu;"
-            }
-        },
         "priority": 3,
-        "home": true
+        "home": "Home"
     },
     {
         "name": "Kill Process",
@@ -100,50 +88,9 @@
         "priority": 0
     },
     {
-        "name": "Power Management",
-        "alias": "pm",
-        "type": "command",
-        "args": {
-            "commands": {
-                "Shutdown": {
-                    "icon": "system-shutdown",
-                    "icon_class": "reactive",
-                    "exec": "systemctl poweroff",
-                    "search_string": "Poweroff;Shutdown"
-                },
-                "Sleep": {
-                    "icon": "system-suspend",
-                    "icon_class": "reactive",
-                    "exec": "systemctl suspend",
-                    "search_string": "Sleep;"
-                },
-                "Lock": {
-                    "icon": "system-lock-screen",
-                    "icon_class": "reactive",
-                    "exec": "systemctl suspend & swaylock",
-                    "search_string": "Lock Screen;"
-                },
-                "Reboot": {
-                    "icon": "system-reboot",
-                    "icon_class": "reactive",
-                    "exec": "systemctl reboot",
-                    "search_string": "reboot;restart"
-                },
-                "Log Oout": {
-                    "icon": "system-log-out",
-                    "icon_class": "reactive",
-                    "exec": "hyprctl dispatch exit",
-                    "search_string": "logout;exit"
-                }
-            }
-        },
-        "priority": 5
-    },
-    {
         "name": "Web Search",
         "display_name": "Google Search",
         "tag_start": "{keyword}",
-        "tag_end": "{keyword}",
         "alias": "gg",
         "type": "web_launcher",
         "args": {
@@ -151,58 +98,6 @@
             "icon": "google"
         },
         "priority": 100
-    },
-    {
-        "name": "Debug",
-        "type": "debug",
-        "alias": "debug",
-        "args": {
-            "commands": {
-                "Show Errors": {
-                    "icon": "sherlock-process",
-                    "exec": "show_errors",
-                    "search_string": "debug;errors"
-                },
-                "Clear Cache": {
-                    "icon": "sherlock-process",
-                    "exec": "clear_cache",
-                    "search_string": "clear;cache;"
-                },
-                "Reset App Counts": {
-                    "icon": "sherlock-process",
-                    "exec": "reset_counts",
-                    "search_string": "reset;clear;counts;appcounts"
-                }
-            }
-        },
-        "priority": 0
-    },
-    {
-        "name": "Categories",
-        "alias": "cat",
-        "type": "categories",
-        "args": {
-            "categories": {
-                "Kill Processes": {
-                    "icon": "sherlock-process",
-                    "exec": "kill",
-                    "search_string": "terminate;kill;process"
-                },
-                "Power Menu": {
-                    "icon": "battery-full-symbolic",
-                    "icon_class": "reactive",
-                    "exec": "pm",
-                    "search_string": "powermenu;"
-                },
-                "Debug": {
-                    "icon": "tools-report-bug",
-                    "icon_class": "reactive",
-                    "exec": "debug",
-                    "search_string": "debug;error"
-                }
-            }
-        },
-        "priority": 3,
-        "home": true
     }
 ]
+

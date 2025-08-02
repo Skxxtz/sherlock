@@ -1,37 +1,50 @@
 use futures::future::join_all;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::fs::{self, File};
 use std::io::{BufWriter, Read, Write};
+use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::u32;
 
-use gio::glib::{self, WeakRef};
+use gio::glib::{self, Object, WeakRef};
 use gio::ListStore;
 use gtk4::gdk::{Key, ModifierType};
 use gtk4::{
     prelude::*, Box as GtkBox, CustomFilter, CustomSorter, Entry, Justification, Label, ListView,
-    ScrolledWindow, Spinner,
+    ScrolledWindow, SignalListItemFactory, Spinner, Widget,
 };
 use serde::Deserialize;
 
-use crate::g_subclasses::sherlock_row::SherlockRow;
+use crate::g_subclasses::tile_item::TileItem;
+use crate::launcher::{Launcher, LauncherType};
 use crate::loader::Loader;
-use crate::utils::config::default_modkey_ascii;
+use crate::sherlock_error;
+use crate::utils::config::{BindDefaults, ConfigGuard};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{sherlock_error, CONFIG};
+use crate::utils::paths;
 
 use super::tiles::util::TextViewTileBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConfKeys {
-    // Next
-    pub next: Option<Key>,
-    pub next_mod: Option<ModifierType>,
-    // Previous
-    pub prev: Option<Key>,
-    pub prev_mod: Option<ModifierType>,
+    // Up
+    pub up: Option<Key>,
+    pub up_mod: Option<ModifierType>,
+    // Down
+    pub down: Option<Key>,
+    pub down_mod: Option<ModifierType>,
+    // Right
+    pub right: Option<Key>,
+    pub right_mod: Option<ModifierType>,
+    // Left
+    pub left: Option<Key>,
+    pub left_mod: Option<ModifierType>,
     // Inplace execution
     pub exec_inplace: Option<Key>,
     pub exec_inplace_mod: Option<ModifierType>,
@@ -46,13 +59,21 @@ pub struct ConfKeys {
 }
 impl ConfKeys {
     pub fn new() -> Self {
-        if let Some(c) = CONFIG.get() {
-            let (prev_mod, prev) = match &c.binds.prev {
-                Some(prev) => ConfKeys::eval_bind_combination(prev),
+        if let Ok(c) = ConfigGuard::read() {
+            let (up_mod, up) = match &c.binds.up {
+                Some(up) => ConfKeys::eval_bind_combination(up),
                 _ => (None, (None, None)),
             };
-            let (next_mod, next) = match &c.binds.next {
-                Some(next) => ConfKeys::eval_bind_combination(next),
+            let (down_mod, down) = match &c.binds.down {
+                Some(down) => ConfKeys::eval_bind_combination(down),
+                _ => (None, (None, None)),
+            };
+            let (left_mod, left) = match &c.binds.left {
+                Some(left) => ConfKeys::eval_bind_combination(left),
+                _ => (None, (None, None)),
+            };
+            let (right_mod, right) = match &c.binds.right {
+                Some(right) => ConfKeys::eval_bind_combination(right),
                 _ => (None, (None, None)),
             };
             let (exec_inplace_mod, inplace) = match &c.binds.exec_inplace {
@@ -70,10 +91,14 @@ impl ConfKeys {
             let shortcut_modifier_str = ConfKeys::get_mod_str(&shortcut_modifier);
             let context_mod_str = ConfKeys::get_mod_str(&context_mod);
             return ConfKeys {
-                next: next.0,
-                next_mod,
-                prev: prev.0,
-                prev_mod,
+                up: up.0,
+                up_mod,
+                down: down.0,
+                down_mod,
+                right: right.0,
+                right_mod,
+                left: left.0,
+                left_mod,
                 exec_inplace: inplace.0,
                 exec_inplace_mod,
                 context: context.0,
@@ -88,10 +113,14 @@ impl ConfKeys {
     }
     pub fn empty() -> Self {
         ConfKeys {
-            next: None,
-            next_mod: None,
-            prev: None,
-            prev_mod: None,
+            up: None,
+            up_mod: None,
+            down: None,
+            down_mod: None,
+            right: None,
+            right_mod: None,
+            left: None,
+            left_mod: None,
             exec_inplace: None,
             exec_inplace_mod: None,
             context: None,
@@ -141,8 +170,8 @@ impl ConfKeys {
         }
     }
     fn get_mod_str(mod_key: &Option<ModifierType>) -> String {
-        let strings = CONFIG
-            .get()
+        let strings = ConfigGuard::read()
+            .ok()
             .and_then(|c| {
                 let s = &c.appearance.mod_key_ascii;
                 if s.len() == 8 {
@@ -151,7 +180,7 @@ impl ConfKeys {
                     None
                 }
             })
-            .unwrap_or_else(default_modkey_ascii);
+            .unwrap_or_else(BindDefaults::modkey_ascii);
 
         let k = match mod_key {
             Some(ModifierType::SHIFT_MASK) => 0,
@@ -173,23 +202,32 @@ pub struct SherlockAction {
     pub action: String,
     pub exec: Option<String>,
 }
+impl Display for SherlockAction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            r#"{{"on": {}, "action": "{}", "exec": {} }}"#,
+            self.on,
+            self.action,
+            match &self.exec {
+                Some(s) => format!(r#""{}""#, s),
+                None => "null".to_string(),
+            }
+        )
+    }
+}
+
 pub struct SherlockCounter {
     path: PathBuf,
 }
 impl SherlockCounter {
     pub fn new() -> Result<Self, SherlockError> {
-        let home = std::env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
-        })?;
-        let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".cache/sherlock/sherlock_count");
+        let cache_dir = paths::get_cache_dir()?;
+        let path = cache_dir.join("sherlock_count");
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
-                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    SherlockErrorType::DirCreateError(parent.to_string_lossy().to_string()),
                     e.to_string()
                 )
             })?;
@@ -246,30 +284,36 @@ impl SherlockCounter {
 #[derive(Clone, Debug)]
 pub struct SearchHandler {
     pub model: Option<WeakRef<ListStore>>,
-    pub modes: Rc<RefCell<HashMap<String, Option<String>>>>,
+    pub mode: Rc<RefCell<String>>,
+    pub modes: Rc<RefCell<HashMap<String, Vec<Rc<Launcher>>>>>,
     pub task: Rc<RefCell<Option<glib::JoinHandle<()>>>>,
     pub error_model: WeakRef<ListStore>,
     pub filter: WeakRef<CustomFilter>,
     pub sorter: WeakRef<CustomSorter>,
+    pub results: WeakRef<Widget>,
     pub binds: ConfKeys,
     pub first_iter: Cell<bool>,
 }
 impl SearchHandler {
     pub fn new(
         model: WeakRef<ListStore>,
+        mode: Rc<RefCell<String>>,
         error_model: WeakRef<ListStore>,
         filter: WeakRef<CustomFilter>,
         sorter: WeakRef<CustomSorter>,
+        results: WeakRef<Widget>,
         binds: ConfKeys,
         first_iter: Cell<bool>,
     ) -> Self {
         Self {
             model: Some(model),
+            mode,
             modes: Rc::new(RefCell::new(HashMap::new())),
             task: Rc::new(RefCell::new(None)),
             error_model,
             filter,
             sorter,
+            results,
             binds,
             first_iter,
         }
@@ -280,7 +324,7 @@ impl SearchHandler {
         }
     }
 
-    pub fn populate(&self) {
+    pub async fn populate(&self) {
         // clear potentially stuck rows
         self.clear();
         self.first_iter.set(true);
@@ -302,21 +346,51 @@ impl SearchHandler {
         }
 
         if let Some(model) = self.model.as_ref().and_then(|m| m.upgrade()) {
-            let mut holder: HashMap<String, Option<String>> = HashMap::new();
-            let rows: Vec<SherlockRow> = launchers
-                .into_iter()
-                .map(|mut launcher| {
-                    let patch = launcher.get_patch();
-                    if let Some(alias) = &launcher.alias {
-                        holder.insert(format!("{} ", alias), launcher.name);
+            let mut holder: HashMap<String, Vec<Rc<Launcher>>> = HashMap::new();
+            let futures = launchers.into_iter().map(|launcher| {
+                let alias = launcher.alias.clone();
+                let launcher = Rc::new(launcher);
+                async move {
+                    let patch = launcher.bind_obj(launcher.clone());
+                    (alias, launcher, patch)
+                }
+            });
+            let patches = join_all(futures).await;
+
+            // Check if only one launcher exists
+            if patches.len() == 1 {
+                let (_, launcher, _) = patches.get(0).unwrap();
+                if let LauncherType::Emoji(emj) = &launcher.launcher_type {
+                    if let Some(results) = self.results.upgrade() {
+                        let tone = emj.default_skin_tone.get_name();
+                        let _ = results.activate_action("win.emoji-page", Some(&tone.to_variant()));
+                        let _ = results.activate_action(
+                            "win.switch-page",
+                            Some(&String::from("x->emoji-page").to_variant()),
+                        );
                     }
-                    patch
-                })
-                .flatten()
-                .collect();
+                }
+            }
+
+            // Collect rows and holder
+            let mut rows: Vec<TileItem> = Vec::new();
+            for (alias, launcher, patch) in patches {
+                if let Some(alias) = alias {
+                    holder
+                        .entry(format!("{} ", alias))
+                        .and_modify(|s| s.push(launcher.clone()))
+                        .or_insert(vec![launcher]);
+                }
+                rows.extend(patch);
+            }
+
             model.splice(0, model.n_items(), &rows);
-            let weaks: Vec<WeakRef<SherlockRow>> =
-                rows.into_iter().map(|row| row.downgrade()).collect();
+            let _freeze_guard = model.freeze_notify();
+            let weaks: Vec<WeakRef<TileItem>> = rows
+                .into_iter()
+                .filter(|t| t.is_async())
+                .map(|row| row.downgrade())
+                .collect();
             update_async(weaks, &self.task, String::new());
             *self.modes.borrow_mut() = holder;
         }
@@ -324,10 +398,40 @@ impl SearchHandler {
 }
 
 #[derive(Clone)]
-pub struct ContextUI {
+pub struct ContextUI<T> {
     pub model: WeakRef<ListStore>,
     pub view: WeakRef<ListView>,
     pub open: Rc<Cell<bool>>,
+    _phantom: PhantomData<T>,
+}
+impl<T: IsA<Object> + IsA<Widget>> ContextUI<T> {
+    pub fn new(model: WeakRef<ListStore>, view: WeakRef<ListView>, open: Rc<Cell<bool>>) -> Self {
+        Self {
+            model,
+            view,
+            open,
+            _phantom: PhantomData,
+        }
+    }
+    pub fn make_factory(&self) -> Option<()> {
+        let factory = self
+            .view
+            .upgrade()?
+            .factory()
+            .and_downcast::<SignalListItemFactory>()?;
+        factory.connect_bind(|_, item| {
+            let item = item
+                .downcast_ref::<gtk4::ListItem>()
+                .expect("Item mut be a ListItem");
+            let row = item
+                .item()
+                .clone()
+                .and_downcast::<T>()
+                .expect("Row should be ContextAction");
+            item.set_child(Some(&row));
+        });
+        Some(())
+    }
 }
 
 #[allow(dead_code)]
@@ -351,39 +455,49 @@ pub struct SearchUI {
     pub context_menu_first: WeakRef<Label>,
     pub context_menu_second: WeakRef<Label>,
 }
+
 pub fn update_async(
-    update_tiles: Vec<WeakRef<SherlockRow>>,
+    update_tiles: Vec<WeakRef<TileItem>>,
     current_task: &Rc<RefCell<Option<glib::JoinHandle<()>>>>,
     keyword: String,
 ) {
-    let current_task_clone = Rc::clone(current_task);
+    if update_tiles.is_empty() {
+        return;
+    }
+
+    // Cancel outstanding task
     if let Some(t) = current_task.borrow_mut().take() {
         t.abort();
     };
+
+    let current_task_clone = Rc::clone(current_task);
+    let keyword = Arc::new(keyword);
+    let spinner_row = update_tiles
+        .get(0)
+        .and_then(|item| item.upgrade())
+        .and_then(|row| row.parent().upgrade());
     let task = glib::MainContext::default().spawn_local({
         async move {
-            // Set spinner active
-            let spinner_row = update_tiles.get(0).cloned();
-            if let Some(row) = spinner_row.as_ref().and_then(|row| row.upgrade()) {
+            if let Some(row) = &spinner_row {
                 let _ = row.activate_action("win.spinner-mode", Some(&true.to_variant()));
             }
             // Make async tiles update concurrently
-            let futures: Vec<_> = update_tiles
+            let mut futures = update_tiles
                 .into_iter()
-                .map(|row| {
+                .map(|item| {
                     let current_text = keyword.clone();
                     async move {
                         // Process text tile
-                        if let Some(row) = row.upgrade() {
-                            row.async_update(&current_text).await
+                        if let Some(row) = item.upgrade() {
+                            row.update_async(&current_text).await;
                         }
                     }
                 })
-                .collect();
+                .collect::<FuturesUnordered<_>>();
+            while futures.next().await.is_some() {}
 
-            let _ = join_all(futures).await;
             // Set spinner inactive
-            if let Some(row) = spinner_row.as_ref().and_then(|row| row.upgrade()) {
+            if let Some(row) = spinner_row {
                 let _ = row.activate_action("win.spinner-mode", Some(&false.to_variant()));
             }
             *current_task_clone.borrow_mut() = None;

@@ -6,7 +6,6 @@ use serde_json::Value;
 use std::{
     borrow::Cow,
     collections::{BTreeSet, HashMap, HashSet},
-    env,
     fmt::Debug,
     fs::{self, File},
     hash::{Hash, Hasher},
@@ -14,14 +13,17 @@ use std::{
 };
 
 use crate::{
+    g_subclasses::sherlock_row::SherlockRowBind,
+    launcher::utils::HomeType,
     sherlock_error,
     utils::{
         errors::{SherlockError, SherlockErrorType},
         files::{expand_path, home_dir},
+        paths,
     },
 };
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct RawLauncher {
     pub name: Option<String>,
     pub alias: Option<String>,
@@ -42,11 +44,11 @@ pub struct RawLauncher {
     #[serde(default)]
     pub r#async: bool,
     #[serde(default)]
-    pub home: bool,
-    #[serde(default)]
-    pub only_home: bool,
+    pub home: HomeType,
     #[serde(default)]
     pub args: serde_json::Value,
+    #[serde(default)]
+    pub binds: Option<Vec<SherlockRowBind>>,
     #[serde(default)]
     pub actions: Option<Vec<ApplicationAction>>,
     #[serde(default)]
@@ -261,18 +263,12 @@ pub struct CounterReader {
 }
 impl CounterReader {
     pub fn new() -> Result<Self, SherlockError> {
-        let home = env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
-        })?;
-        let home_dir = PathBuf::from(home);
-        let path = home_dir.join(".sherlock/counts.json");
+        let data_dir = paths::get_data_dir()?;
+        let path = data_dir.join("counts.json");
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
-                    SherlockErrorType::DirCreateError(".sherlock".to_string()),
+                    SherlockErrorType::DirCreateError(parent.to_string_lossy().to_string()),
                     e.to_string()
                 )
             })?;

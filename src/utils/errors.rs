@@ -1,12 +1,12 @@
 use std::{fmt::Debug, os::unix::net::UnixStream, path::PathBuf};
 
-use gdk_pixbuf::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::prelude::{BoxExt, WidgetExt};
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     api::call::ApiCall, daemon::daemon::SizedMessage, g_subclasses::sherlock_row::SherlockRow,
-    ui::tiles::error_tile::ErrorTile, SOCKET_PATH,
+    ui::g_templates::ErrorTile, SOCKET_PATH,
 };
 
 #[macro_export]
@@ -134,11 +134,14 @@ pub enum SherlockErrorType {
 
     // Icons
     MissingIconParser(String),
+
+    // Actions
+    InvalidAction,
 }
 impl std::fmt::Display for SherlockError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (title, message) = self.error.get_message();
-        write!(f, "SherlockError: {} - {}", title, message)
+        write!(f, "{}\n{}\n{}", title, message, self.traceback)
     }
 }
 impl SherlockErrorType {
@@ -247,6 +250,11 @@ impl SherlockErrorType {
             // Icon Parsers
             SherlockErrorType::MissingIconParser(parser) => {
                 format!(r#"Missing Icon Parser for <i>"{}"</i>"#, parser)
+            }
+
+            // Actions
+            SherlockErrorType::InvalidAction => {
+                format!(r#"Invalid Action Defined"#)
             }
         };
         (variant_name(self), message)
