@@ -205,7 +205,6 @@ impl EmojiKeyActions {
         if self.context.open.get() {
             if let Some(selection) = self.context.model.upgrade() {
                 let tones = [
-                    "",
                     "\u{1F3FB}",
                     "\u{1F3FC}",
                     "\u{1F3FD}",
