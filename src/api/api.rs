@@ -219,7 +219,7 @@ impl SherlockAPI {
     }
     pub fn insert_msg(&self, error: &SherlockError, is_error: bool) -> Option<()> {
         let (icon, msg) = if is_error {
-            ("", "")
+            ("❗", "ERROR")
         } else {
             ("⚠️", "WARNING")
         };
