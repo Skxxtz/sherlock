@@ -240,3 +240,12 @@ pub struct StatusBar {
     #[serde(default = "OtherDefaults::bool_true")]
     pub enable: bool,
 }
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ConfigSourceFiles {
+    pub source: Vec<ConfigSource>,
+}
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ConfigSource {
+    pub file: PathBuf,
+}
