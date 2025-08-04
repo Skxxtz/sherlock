@@ -99,12 +99,17 @@ impl AppTileHandler {
             move |args| {
                 let row = args.first().map(|f| f.get::<SherlockRow>().ok())??;
                 let param: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
-                let param: Option<bool> = match param {
+                let method: String = args.get(2).and_then(|v| v.get::<String>().ok())?;
+
+                let exit: Option<bool> = match param {
                     1 => Some(false),
                     2 => Some(true),
                     _ => None,
                 };
-                execute_from_attrs(&row, &attrs.borrow(), param, Some(launcher.clone()));
+                if !method.is_empty() {
+                    attrs.borrow_mut().insert("method".to_string(), method);
+                }
+                execute_from_attrs(&row, &attrs.borrow(), exit, Some(launcher.clone()));
                 // To reload ui according to mode
                 let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
                 None
