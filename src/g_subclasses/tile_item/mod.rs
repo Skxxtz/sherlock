@@ -250,7 +250,11 @@ impl TileItem {
         }
     }
     pub fn replace_tile(&self, tile: &Widget) {
-        self.imp().update_handler.borrow_mut().replace_tile(tile);
+        if let Ok(mut handler) = self.imp().update_handler.try_borrow_mut() {
+            handler.replace_tile(tile);
+        } else {
+            eprintln!("Warning: Could not borrow update_handler mutably in replace_tile");
+        }
     }
     pub fn update(&self, keyword: &str) -> Option<()> {
         let imp = self.imp();
