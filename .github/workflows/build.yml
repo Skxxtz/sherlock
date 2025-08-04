@@ -18,6 +18,7 @@ on:
       - "**.gif"
       - "**.svg"
       - "**.toml"
+      - "LICENSE"
       
   pull_request:
     branches: [ "**" ]
