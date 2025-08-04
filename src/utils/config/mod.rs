@@ -135,7 +135,7 @@ pub struct ConfigBehavior {
     #[serde(default)]
     pub global_flags: Option<String>,
     #[serde(default = "OtherDefaults::bool_true")]
-    pub use_leftright_arrows_insearchbar: bool,
+    pub lr_arror_nav: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

@@ -576,7 +576,7 @@ fn nav_event(
     let stack_page = Rc::clone(stack_page);
     let multi = ConfigGuard::read().map_or(false, |c| c.runtime.multi);
     let use_leftright_arrows_insearchbar =
-        ConfigGuard::read().map_or(false, |c| c.behavior.use_leftright_arrows_insearchbar);
+        ConfigGuard::read().map_or(false, |c| c.behavior.lr_arror_nav);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         let search_bar = search_bar.clone();
