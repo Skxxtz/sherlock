@@ -575,6 +575,8 @@ fn nav_event(
     let custom_controller = custom_handler.borrow().get_controller();
     let stack_page = Rc::clone(stack_page);
     let multi = ConfigGuard::read().map_or(false, |c| c.runtime.multi);
+    let use_leftright_arrows_insearchbar =
+        ConfigGuard::read().map_or(false, |c| c.behavior.use_leftright_arrows_insearchbar);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         let search_bar = search_bar.clone();
@@ -604,7 +606,7 @@ fn nav_event(
 
                 // Custom previous key
                 Key::Up => key_actions.on_prev(),
-                Key::Left => key_actions.on_prev(),
+                Key::Left if use_leftright_arrows_insearchbar => key_actions.on_prev(),
                 _ if matches(binds.up, binds.up_mod) => {
                     key_actions.on_prev();
                 }
@@ -614,7 +616,7 @@ fn nav_event(
 
                 // Custom next key
                 Key::Down => key_actions.on_next(),
-                Key::Right => key_actions.on_next(),
+                Key::Right if use_leftright_arrows_insearchbar => key_actions.on_next(),
                 _ if matches(binds.down, binds.down_mod) => {
                     key_actions.on_next();
                 }
