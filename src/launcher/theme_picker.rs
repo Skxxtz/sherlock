@@ -1,4 +1,5 @@
 use std::fs::write;
+use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -77,6 +78,14 @@ impl ThemePicker {
             std::fs::create_dir_all(parents).map_err(|e| {
                 sherlock_error!(
                     SherlockErrorType::DirCreateError(parents.to_string_lossy().to_string()),
+                    e.to_string()
+                )
+            })?;
+        }
+        if !absolute.is_file() {
+            File::create(&absolute).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::FileWriteError(absolute.clone()),
                     e.to_string()
                 )
             })?;

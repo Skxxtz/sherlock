@@ -604,7 +604,7 @@ fn nav_event(
 
                 // Custom previous key
                 Key::Up => key_actions.on_prev(),
-                Key::Left => key_actions.on_next(),
+                Key::Left => key_actions.on_prev(),
                 _ if matches(binds.up, binds.up_mod) => {
                     key_actions.on_prev();
                 }

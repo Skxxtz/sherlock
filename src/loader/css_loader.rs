@@ -50,10 +50,15 @@ impl Loader {
 
         // Load the user css
         let theme = match ThemePicker::get_cached() {
-            Ok(loc) => read_to_string(loc).map(|s| PathBuf::from(s.trim())).ok(),
+            Ok(loc) => read_to_string(loc)
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .map(PathBuf::from),
             _ => None,
         }
-        .unwrap_or(config.files.css.clone());
+        .unwrap_or_else(|| config.files.css.clone());
+
         if Path::new(&theme).exists() {
             let usr_provider = CssProvider::new();
             usr_provider.load_from_path(&theme);

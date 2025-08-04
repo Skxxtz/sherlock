@@ -206,7 +206,7 @@ Make sure you have the following dependencies installed:
     Once the package is built, you can install it using:
 
     ```bash
-    sudo dpkg -i target/debian/sherlock-launcher_1.0._amd64.deb
+    sudo dpkg -i target/debian/sherlock-launcher_0.1.14_amd64.deb
     ```
 
     (Make sure to replace the filename if the version number is different.)

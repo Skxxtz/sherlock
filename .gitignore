@@ -8,3 +8,5 @@
 # direnv files
 /.direnv
 .envrc
+
+*.gresources
