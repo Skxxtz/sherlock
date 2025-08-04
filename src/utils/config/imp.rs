@@ -68,7 +68,7 @@ impl Default for ConfigBehavior {
             animate: true,
             global_prefix: None,
             global_flags: None,
-            lr_arror_nav: false,
+            lr_arrow_nav: false,
         }
     }
 }
