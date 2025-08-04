@@ -61,7 +61,6 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | **Keyword**           | **Default** | **Explanation**| **Documentation** |
 |-----------------------|-------------|---------------------------------------------------------------------------------|-------------------|
 | `use_xdg_data_dir_icons` | `false`     | If set to `true`, Sherlock will append all paths contained in the `XDG_DATA_DIRS` environment variable to the search paths for the `IconTheme`. **This will result in a noticeable delay on startup.** ||
-| `daemonize` | `false`     | If set to `true`, Sherlock will run in daemon mode. This will consume more memory because the rendered application will be kept in memory. Daemonizing will allow faster startup times. Send the `open` message to socket `/tmp/sherlock_daemon.socket` to open the window. |[Daemonizing](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
 | `animate` | `true`   | Sets if startup animation should play. (Temporarily deprecated) ||
 | `global_prefix` | `None`   | Prepends this to every command. ||
 | `global_flags` | `None`   | Appends these flags to every command. ||
@@ -129,13 +128,13 @@ This section holds the location for the config files.<br>
 
 Here you can configure runtime settings. These can be overwritten by flags and are mainly for internal use.
 
-| **Keyword**           | **Default** | **Explanation**|
-|-----------------------|-------------|-----------------------------------|
-| `multi` | `false` | If set to true, `<TAB>` will select items in your list which will then all be executed on return. |
-| `display_raw` | `false` | When piping content into Sherlock, this flag will make Sherlock interpret the piped string asa continuous one instead of splitting it at "\n" or trying to parse it as json. |
-| `center` | `false` | This only works in combination with the `display_raw` key and piping. If enabled, it will center the input. |
-| `photo_mode` | `false` | If enabled, will disable Sherlock from closing whenever focus is lost. |
-| `daemonize` | `false` | If enabled, will run Sherlock in daemon mode. |
+| **Keyword**           | **Default** | **Explanation**| **Documentation** |
+|-----------------------|-------------|---------------------------------------------------------------------------------|-------------------|
+| `multi` | `false` | If set to true, `<TAB>` will select items in your list which will then all be executed on return. ||
+| `display_raw` | `false` | When piping content into Sherlock, this flag will make Sherlock interpret the piped string asa continuous one instead of splitting it at "\n" or trying to parse it as json. ||
+| `center` | `false` | This only works in combination with the `display_raw` key and piping. If enabled, it will center the input. ||
+| `photo_mode` | `false` | If enabled, will disable Sherlock from closing whenever focus is lost. ||
+| `daemonize` | `false`     | If set to `true`, Sherlock will run in daemon mode. This will consume more memory because the rendered application will be kept in memory. Daemonizing will allow faster startup times. Send the `open` message to socket `/tmp/sherlock_daemon.socket` to open the window. |[Daemonizing](https://github.com/Skxxtz/sherlock/blob/documentation/docs/features/daemonizing.md)|
 
 ## Backdrop Section `[backdrop]`
 
@@ -189,4 +188,3 @@ This section configures the icon next to the search bar.
 | `enable` | `false` | If set to `true`, enables the feature. |
 | `icon` | `system-search-symbolic` | Sets the icon on an empty field |
 | `icon_back` | `go-previous-symbolic` | Sets the icon on search or another page |
-
