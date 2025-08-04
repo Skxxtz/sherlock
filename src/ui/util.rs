@@ -348,18 +348,17 @@ impl SearchHandler {
         if let Some(model) = self.model.as_ref().and_then(|m| m.upgrade()) {
             let mut holder: HashMap<String, Vec<Rc<Launcher>>> = HashMap::new();
             let futures = launchers.into_iter().map(|launcher| {
-                let alias = launcher.alias.clone();
                 let launcher = Rc::new(launcher);
                 async move {
                     let patch = launcher.bind_obj(launcher.clone());
-                    (alias, launcher, patch)
+                    (launcher, patch)
                 }
             });
             let patches = join_all(futures).await;
 
             // Check if only one launcher exists
             if patches.len() == 1 {
-                let (_, launcher, _) = patches.get(0).unwrap();
+                let (launcher, _) = patches.get(0).unwrap();
                 if let LauncherType::Emoji(emj) = &launcher.launcher_type {
                     if let Some(results) = self.results.upgrade() {
                         let tone = emj.default_skin_tone.get_name();
@@ -373,16 +372,19 @@ impl SearchHandler {
             }
 
             // Collect rows and holder
-            let mut rows: Vec<TileItem> = Vec::new();
-            for (alias, launcher, patch) in patches {
-                if let Some(alias) = alias {
-                    holder
-                        .entry(format!("{} ", alias))
-                        .and_modify(|s| s.push(launcher.clone()))
-                        .or_insert(vec![launcher]);
-                }
-                rows.extend(patch);
-            }
+            let rows: Vec<TileItem> = patches
+                .into_iter()
+                .map(|(launcher, patch)| {
+                    if let Some(alias) = &launcher.alias {
+                        holder
+                            .entry(format!("{} ", alias))
+                            .and_modify(|s| s.push(launcher.clone()))
+                            .or_insert(vec![launcher]);
+                    }
+                    patch
+                })
+                .flatten()
+                .collect();
 
             let _freeze_guard = model.freeze_notify();
             model.splice(0, model.n_items(), &rows);
