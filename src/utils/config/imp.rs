@@ -68,6 +68,7 @@ impl Default for ConfigBehavior {
             animate: true,
             global_prefix: None,
             global_flags: None,
+            use_leftright_arrows_insearchbar: false,
         }
     }
 }
