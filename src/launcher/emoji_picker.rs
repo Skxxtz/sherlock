@@ -307,7 +307,6 @@ fn construct(
         sorter.downgrade(),
         imp.results.get().upcast::<Widget>().downgrade(),
         ConfKeys::new(),
-        Cell::new(true),
     );
     Ok((search_text, main_overlay, ui, handler, context))
 }

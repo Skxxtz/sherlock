@@ -15,10 +15,7 @@ use levenshtein::levenshtein;
 use simd_json::prelude::ArrayTrait;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::{
-    cell::{Cell, RefCell},
-    f32,
-};
+use std::{cell::RefCell, f32};
 
 use super::context::make_context;
 use super::util::*;
@@ -82,6 +79,7 @@ pub fn search(
             let current_mode = Rc::clone(&handler.mode);
             let custom_handler = Rc::clone(&custom_handler);
             let modstr = handler.binds.shortcut_modifier_str.clone();
+            let apply_animation = ConfigGuard::read().map_or(false, |c| c.behavior.animate);
             move |_myself, _position, _removed, added| {
                 if added == 0 {
                     return;
@@ -97,6 +95,11 @@ pub fn search(
                         let mut current = 1;
                         for i in 0..selection.n_items() {
                             if let Some(item) = selection.item(i).and_downcast::<TileItem>() {
+                                if apply_animation {
+                                    if let Some(row) = item.parent().upgrade() {
+                                        row.add_css_class("animate");
+                                    }
+                                }
                                 if let Some(shortcut) = item.shortcut() {
                                     if current < 6 {
                                         current += shortcut.apply_shortcut(current, &modstr);
@@ -317,43 +320,6 @@ fn construct_window(
     let filter_model = FilterListModel::new(Some(model.clone()), Some(filter.clone()));
     let sorted_model = SortListModel::new(Some(filter_model), Some(sorter.clone()));
 
-    // Set and update `modkey + num` shortcut ui
-    let first_iter = Cell::new(config.behavior.animate);
-    sorted_model.connect_items_changed({
-        let mod_str = custom_binds.shortcut_modifier_str.clone();
-        let search_text = Rc::clone(&search_text);
-        let first_iter = Cell::clone(&first_iter);
-        move |myself, _, removed, added| {
-            // Early exit if nothing changed
-            if added == 0 && removed == 0 {
-                return;
-            }
-            let mut added_index = 0;
-            let apply_css = search_text.borrow().trim().is_empty() && first_iter.get();
-            for i in 0..myself.n_items() {
-                if let Some(item) = myself.item(i).and_downcast::<TileItem>() {
-                    if let Some(row) = item.parent().upgrade() {
-                        item.bind_signal(&row);
-                        if apply_css {
-                            row.add_css_class("animate");
-                        } else {
-                            row.remove_css_class("animate");
-                        }
-                        if let Some(shortcut_holder) = item.shortcut() {
-                            if added_index < 5 {
-                                added_index +=
-                                    shortcut_holder.apply_shortcut(added_index + 1, &mod_str);
-                            } else {
-                                shortcut_holder.remove_shortcut();
-                            }
-                        }
-                    }
-                }
-            }
-            first_iter.set(false);
-        }
-    });
-
     let selection = SingleSelection::new(Some(sorted_model));
     imp.results.set_model(Some(&selection));
 
@@ -368,7 +334,6 @@ fn construct_window(
         sorter.downgrade(),
         imp.results.get().upcast::<Widget>().downgrade(),
         custom_binds,
-        first_iter,
     );
 
     if config.expand.enable {
@@ -430,6 +395,9 @@ fn make_factory(search_text: Rc<RefCell<String>>) -> SignalListItemFactory {
             .and_downcast::<SherlockRow>()
             .expect("Child must be a SherlockRow");
 
+        // Remove any pending animations
+        row.remove_css_class("animate");
+
         while let Some(child) = row.first_child() {
             row.remove(&child);
         }
@@ -450,6 +418,11 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             let imp = item.imp();
             let launcher = imp.launcher.borrow();
             let home = launcher.home;
+
+            // Remove any pending animations
+            if let Some(p) = item.parent().upgrade() {
+                p.remove_css_class("animate");
+            }
 
             let mode = search_mode.borrow().trim().to_string();
             let current_text = search_text.borrow().clone();
@@ -575,8 +548,6 @@ fn nav_event(
     let custom_controller = custom_handler.borrow().get_controller();
     let stack_page = Rc::clone(stack_page);
     let multi = ConfigGuard::read().map_or(false, |c| c.runtime.multi);
-    let use_leftright_arrows_insearchbar =
-        ConfigGuard::read().map_or(false, |c| c.behavior.lr_arror_nav);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         let search_bar = search_bar.clone();
@@ -606,7 +577,7 @@ fn nav_event(
 
                 // Custom previous key
                 Key::Up => key_actions.on_prev(),
-                Key::Left if use_leftright_arrows_insearchbar => key_actions.on_prev(),
+                Key::Left => key_actions.on_prev(),
                 _ if matches(binds.up, binds.up_mod) => {
                     key_actions.on_prev();
                 }
@@ -616,7 +587,7 @@ fn nav_event(
 
                 // Custom next key
                 Key::Down => key_actions.on_next(),
-                Key::Right if use_leftright_arrows_insearchbar => key_actions.on_next(),
+                Key::Right => key_actions.on_next(),
                 _ if matches(binds.down, binds.down_mod) => {
                     key_actions.on_next();
                 }
