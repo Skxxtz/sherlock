@@ -1,14 +1,13 @@
-use std::path::PathBuf;
-
 use crate::{
     sherlock_error,
     utils::{
-        config::SherlockConfig,
+        config::{ConfigSourceFiles, SherlockConfig},
         errors::{SherlockError, SherlockErrorType},
         files::{expand_path, home_dir},
         paths,
     },
 };
+use std::{fs::read_to_string, path::PathBuf};
 
 #[derive(Clone, Debug, Default)]
 pub struct SherlockFlags {
@@ -34,11 +33,9 @@ impl SherlockFlags {
     pub fn to_config(&mut self) -> Result<(SherlockConfig, Vec<SherlockError>), SherlockError> {
         // Get location of config file
         let config_dir = self.config_dir.take().unwrap_or(paths::get_config_dir()?);
+        let home = home_dir()?;
         let mut path = match &self.config {
-            Some(path) => {
-                let home = home_dir()?;
-                expand_path(path, &home)
-            }
+            Some(path) => expand_path(path, &home),
             _ => config_dir.join("config.toml"),
         };
 
@@ -76,7 +73,7 @@ impl SherlockFlags {
         }
 
         match std::fs::read_to_string(&path) {
-            Ok(config_str) => {
+            Ok(mut config_str) => {
                 let config_res: Result<SherlockConfig, SherlockError> = match filetype.as_str() {
                     "json" => {
                         let mut bytes = config_str.into_bytes();
@@ -87,12 +84,35 @@ impl SherlockFlags {
                             )
                         })
                     }
-                    "toml" => toml::de::from_str(&config_str).map_err(|e| {
-                        sherlock_error!(
-                            SherlockErrorType::FileParseError(path.clone()),
-                            e.to_string()
-                        )
-                    }),
+                    "toml" => {
+                        // Setup to parse nested configs
+                        if let Ok(sources) = toml::de::from_str::<ConfigSourceFiles>(&config_str) {
+                            if !sources.source.is_empty() {
+                                sources
+                                    .source
+                                    .into_iter()
+                                    .map(|s| {
+                                        if s.file.starts_with("~/") {
+                                            expand_path(s.file, &home)
+                                        } else {
+                                            s.file
+                                        }
+                                    })
+                                    .filter(|f| f.is_file())
+                                    .filter_map(|f| read_to_string(&f).ok())
+                                    .for_each(|content| {
+                                        config_str.push('\n');
+                                        config_str.push_str(&content);
+                                    });
+                            }
+                        }
+                        toml::de::from_str(&config_str).map_err(|e| {
+                            sherlock_error!(
+                                SherlockErrorType::FileParseError(path.clone()),
+                                e.to_string()
+                            )
+                        })
+                    }
                     _ => {
                         return Err(sherlock_error!(
                             SherlockErrorType::FileParseError(path.clone()),

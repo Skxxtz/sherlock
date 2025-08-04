@@ -33,7 +33,7 @@
 
       perSystem = {system, ...}: let
         name = "sherlock";
-        version = "0.1.14";
+        version = "1.0.0";
 
         pkgs = import nixpkgs {
           inherit system;
