@@ -6,6 +6,8 @@
                 <property name="orientation">vertical</property>
                 <child>
                     <object class="GtkStack" id="stack">
+                        <property name="vexpand">true</property>
+                        <property name="hexpand">true</property>
 
                     </object>
                 </child>
