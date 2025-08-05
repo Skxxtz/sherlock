@@ -554,7 +554,6 @@ fn nav_event(
         let current_mode = Rc::clone(current_mode);
         let stack_page = Rc::clone(&stack_page);
         let key_actions = KeyActions::new(results, search_bar, context, custom_handler);
-        let use_lr_nav = ConfigGuard::read().map_or(false, |c| c.behavior.lr_arrow_nav);
         move |_, key, i, mods| {
             if stack_page.borrow().as_str() != "search-page" {
                 return false.into();
@@ -578,7 +577,7 @@ fn nav_event(
 
                 // Custom previous key
                 Key::Up => key_actions.on_prev(),
-                Key::Left if use_lr_nav => key_actions.on_prev(),
+                Key::Left if binds.use_lr_nav => key_actions.on_prev(),
                 _ if matches(binds.up, binds.up_mod) => {
                     key_actions.on_prev();
                 }
@@ -588,7 +587,7 @@ fn nav_event(
 
                 // Custom next key
                 Key::Down => key_actions.on_next(),
-                Key::Right if use_lr_nav => key_actions.on_next(),
+                Key::Right if binds.use_lr_nav => key_actions.on_next(),
                 _ if matches(binds.down, binds.down_mod) => {
                     key_actions.on_next();
                 }
