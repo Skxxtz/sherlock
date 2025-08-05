@@ -14,6 +14,7 @@ pub fn applaunch(exec: &str, terminal: bool) -> Option<()> {
     }
     if terminal {
         parts.push(config.default_apps.terminal.clone());
+        parts.push("-e".to_string());
     }
     parts.push(exec.to_string());
     if let Some(flag) = &config.behavior.global_flags {

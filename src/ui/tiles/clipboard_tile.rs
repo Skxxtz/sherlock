@@ -98,7 +98,7 @@ impl Tile {
         clp: &ClipboardLauncher,
     ) -> Option<(Widget, UpdateHandler)> {
         let clipboard_content = clp.clipboard_content.clone();
-        if clipboard_content.is_empty() {
+        if clipboard_content.trim().is_empty() {
             return None;
         }
         let capabilities = &clp.capabilities;
