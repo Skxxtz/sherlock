@@ -56,6 +56,8 @@ pub struct ConfKeys {
     // Shortcuts
     pub shortcut_modifier: Option<ModifierType>,
     pub shortcut_modifier_str: String,
+    // Behavior
+    pub use_lr_nav : bool
 }
 impl ConfKeys {
     pub fn new() -> Self {
@@ -90,6 +92,7 @@ impl ConfKeys {
             };
             let shortcut_modifier_str = ConfKeys::get_mod_str(&shortcut_modifier);
             let context_mod_str = ConfKeys::get_mod_str(&context_mod);
+            let use_lr_nav = c.behavior.use_lr_nav;
             return ConfKeys {
                 up: up.0,
                 up_mod,
@@ -107,6 +110,7 @@ impl ConfKeys {
                 context_mod_str,
                 shortcut_modifier,
                 shortcut_modifier_str,
+                use_lr_nav,
             };
         }
         ConfKeys::empty()
@@ -129,6 +133,7 @@ impl ConfKeys {
             context_str: None,
             shortcut_modifier: None,
             shortcut_modifier_str: String::new(),
+            use_lr_nav : true,
         }
     }
     fn eval_bind_combination(key: &str) -> (Option<ModifierType>, (Option<Key>, Option<String>)) {
