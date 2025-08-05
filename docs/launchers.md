@@ -268,6 +268,7 @@ Can be either of the following:
 | **DuckDuckGo**  | `https://duckduckgo.com/?q={keyword}`    |
 | **Yahoo**       | `https://search.yahoo.com/search?p={keyword}` |
 | **Baidu**       | `https://www.baidu.com/s?wd={keyword}`   |
+| **Brave**       | `https://search.brave.com/search?q={keyword}`   |
 | **Yandex**      | `https://yandex.com/search/?text={keyword}` |
 | **Ask**         | `https://www.ask.com/web?q={keyword}`    |
 | **Ecosia**      | `https://www.ecosia.org/search?q={keyword}` |

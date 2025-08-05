@@ -10,6 +10,7 @@ pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
         ("duckduckgo", "https://duckduckgo.com/?q={keyword}"),
         ("yahoo", "https://search.yahoo.com/search?p={keyword}"),
         ("baidu", "https://www.baidu.com/s?wd={keyword}"),
+        ("brave", "https://search.brave.com/search?q={keyword}"),
         ("yandex", "https://yandex.com/search/?text={keyword}"),
         ("ask", "https://www.ask.com/web?q={keyword}"),
         ("ecosia", "https://www.ecosia.org/search?q={keyword}"),
