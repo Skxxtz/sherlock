@@ -332,27 +332,50 @@ pub fn get_applications_dir() -> HashSet<PathBuf> {
     paths
 }
 
-pub fn get_desktop_files(dirs: HashSet<PathBuf>) -> Vec<PathBuf> {
-    dirs.into_par_iter()
-        .filter(|dir| dir.is_dir())
-        .filter_map(|dir| {
-            fs::read_dir(dir).ok().map(|entries| {
-                entries
-                    .filter_map(|entry| {
-                        entry.ok().and_then(|f| {
-                            let path = f.path();
-                            if path.extension().and_then(|ext| ext.to_str()) == Some("desktop") {
-                                Some(path)
-                            } else {
-                                None
-                            }
-                        })
+pub fn get_desktop_files(mut dirs: HashSet<PathBuf>) -> Vec<PathBuf> {
+    fn read_desktop_dir(dir: PathBuf) -> Option<HashMap<String, PathBuf>> {
+        fs::read_dir(dir).ok().map(|entries| {
+            entries
+                .filter_map(|entry| {
+                    entry.ok().and_then(|f| {
+                        let path = f.path();
+                        let extension = path.extension().and_then(|ext| ext.to_str())?;
+                        if extension == "desktop" {
+                            let stem = path.file_stem().and_then(|s| s.to_str())?;
+                            Some((stem.to_string(), path))
+                        } else {
+                            None
+                        }
                     })
-                    .collect::<Vec<PathBuf>>()
-            })
+                })
+                .collect::<HashMap<String, PathBuf>>()
         })
+    }
+    let local_dir = dirs
+        .iter()
+        .find(|p| {
+            p.ends_with(".local/share/applications") || p.ends_with(".local/share/applications/")
+        })
+        .cloned();
+
+    if let Some(local_dir) = &local_dir {
+        dirs.remove(local_dir);
+    }
+
+    let mut dirs: HashMap<String, PathBuf> = dirs
+        .into_par_iter()
+        .filter(|dir| dir.is_dir())
+        .filter_map(|dir| read_desktop_dir(dir))
         .flatten()
-        .collect()
+        .collect();
+
+    if let Some(local_dir) = local_dir.and_then(|d| read_desktop_dir(d)) {
+        for (name, path) in local_dir {
+            dirs.insert(name, path);
+        }
+    }
+
+    dirs.into_values().collect()
 }
 
 pub fn file_has_changed(file_path: &Path, compare_to: &Path) -> bool {
