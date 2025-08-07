@@ -114,6 +114,9 @@ impl Loader {
                                         "nodisplay" if value.eq_ignore_ascii_case("true") => {
                                             return None
                                         }
+                                        "hidden" if value.eq_ignore_ascii_case("true") => {
+                                            return None
+                                        }
                                         "terminal" => {
                                             data.terminal = value.eq_ignore_ascii_case("true");
                                         }
