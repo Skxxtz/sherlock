@@ -77,7 +77,7 @@ impl Loader {
                         return None;
                     }
                 }
-                let launcher_type: LauncherType = match raw.r#type.as_str() {
+                let launcher_type: LauncherType = match raw.r#type.to_lowercase().as_str() {
                     "app_launcher" => parse_app_launcher(&raw, &counts, max_decimals),
                     "audio_sink" => parse_audio_sink_launcher(),
                     "bookmarks" => parse_bookmarks_launcher(&raw),
