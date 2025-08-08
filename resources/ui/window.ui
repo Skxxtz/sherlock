@@ -4,6 +4,7 @@
         <child>
             <object class="GtkBox" id="_box">
                 <property name="orientation">vertical</property>
+                <property name="vexpand">false</property>
                 <child>
                     <object class="GtkStack" id="stack">
                         <property name="vexpand">true</property>
