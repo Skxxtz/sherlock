@@ -78,8 +78,6 @@
                         <child>
                             <object class="GtkListView" id="result-frame">
                                 <property name="name">list_box</property>
-                                <child>
-                                </child>
                             </object>
                         </child>
                     </object>

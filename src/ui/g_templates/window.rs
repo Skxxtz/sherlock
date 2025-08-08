@@ -51,6 +51,7 @@ use gtk4::{
 };
 
 use crate::ui::util::ConfKeys;
+use crate::utils::config::ConfigGuard;
 
 glib::wrapper! {
     pub struct MainWindow(ObjectSubclass<imp::MainWindow>)
@@ -62,6 +63,12 @@ impl MainWindow {
     pub fn new(application: &Application, width: i32, opacity: f64) -> Self {
         let obj = glib::Object::new::<Self>();
         let imp = obj.imp();
+
+        if let Ok(config) = ConfigGuard::read() {
+            if config.expand.enable {
+                obj.set_valign(gtk4::Align::Start);
+            }
+        }
 
         let custom_binds = ConfKeys::new();
         if let Some(context_str) = &custom_binds.context_str {
