@@ -222,18 +222,74 @@ Sherlock is available in `nixpkgs/unstable` as `sherlock-launcher`. If you're in
 
 Add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
 
-For `home-manager` enabled systems, import the `homeManagerModules.default`/`homeModules.default` output of the flake. Then, set `programs.sherlock.enable = true;` to install and create default configuration files. home-manager will track all of the config files automatically, and they can be modified using nix syntax with `programs.sherlock.settings.<config-file>`. The config files and their associated names are:
+For `home-manager` enabled systems, import the `homeManagerModules.default`/`homeModules.default` output of the flake. Then, set `programs.sherlock.enable = true;` to install and create default configuration files. Here's an example:
 
-- `config.json` (`config.toml`): `settings.config`
-- `fallback.json`: `settings.launchers`
-- `sherlock_alias.json`: `settings.aliases`
+<details>
+<summary>Nix Example Configuration</summary>
 
-The above settings are written nix syntax the following are written as just text:
+```nix
+# import the sherlock homeManager Module
+imports = [
+    inputs.sherlock.homeManagerModules.default
+];
 
-- `main.css`: `settings.style`
-- `sherlockignore`: `settings.ignore`
+# example configuration
+programs.sherlock = {
+    enable = true;
+    
+    # for faster startup times
+    runAsService = true;
 
-You can find an example [here](https://github.com/Vanta1/dots/blob/cbefb0351df8a766b534343b4a337d0d38cdd8fe/home/programs/sherlock.nix).
+    settings = {
+      # config.json / config.toml
+      # use nix syntax
+      config = {};
+
+      # fallback.json
+      # A list of launchers
+      launchers = [
+          {
+            name = "Calculator";
+            type = "calculation";
+            args = {
+                capabilities = [
+                    "calc.math"
+                    "calc.units"
+                ];
+            };
+            priority = 1;
+          }
+          {
+            name = "App Launcher";
+            type = "app_launcher";
+            args = {};
+            priority = 2;
+            home = "Home";
+          }
+      ];
+
+      # sherlock_alias.json
+      # use nix syntax
+      aliases = {
+        vesktop = { name = "Discord"; };
+      };
+
+      # main.css
+      style = /* css */ ''
+        * {
+            font-family: sans-serif;
+        }
+      '';
+
+      # sherlockignore
+      ignore = ''
+        Avahi*
+      '';
+    };
+};
+```
+
+</details>
 
 To stop home-manager from symlinking these files from the nix store (this can be useful if you're iterating a lot and don't want to rebuild your system), set the file's corresponding option to `null`. `programs.sherlock.settings = null;` will stop managing all sherlock-related config files.
 
