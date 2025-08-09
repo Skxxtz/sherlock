@@ -119,6 +119,8 @@ pub struct ConfigAppearance {
     pub icon_size: i32,
     #[serde(default = "OtherDefaults::bool_true")]
     pub use_base_css: bool,
+    #[serde(default)]
+    pub use_system_theme: bool,
     #[serde(default = "OtherDefaults::one")]
     pub opacity: f64,
     #[serde(default = "BindDefaults::modkey_ascii")]
