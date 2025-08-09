@@ -173,7 +173,7 @@ impl Launcher {
             method,
             exit: piped.exit,
             next_content: None,
-            priority: 1,
+            priority: 2,
             r#async: false,
             home: HomeType::Home,
             launcher_type,

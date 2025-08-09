@@ -148,8 +148,27 @@ impl TileItem {
         self.imp().parent.borrow().clone()
     }
     pub fn search(&self) -> Option<String> {
-        self.get_by_key(|data| data.search_string.to_lowercase())
+        let imp = self.imp();
+        let launcher = imp.launcher.borrow();
+
+        if let LauncherType::Pipe(pipe) = &launcher.launcher_type {
+            launcher.name
+                .as_ref()
+                .or(pipe.description.as_ref())
+                .map(|s| {
+                    match (&launcher.name, &pipe.description) {
+                        (Some(name), Some(desc)) => format!("{};{}", name, desc),
+                        _ => s.to_string(),
+                    }
+                })
+        } else {
+            let index = imp.index.get()?;
+            let inner = launcher.inner()?;
+            let data = inner.get(index as usize)?;
+            Some(data.search_string.clone())
+        }
     }
+
     pub fn priority(&self) -> f32 {
         self.get_by_key(|data| data.priority)
             .unwrap_or(self.imp().launcher.borrow().priority as f32)
