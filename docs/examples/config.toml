@@ -33,7 +33,7 @@ animate = true
 [binds]
 up = "control-k"
 down = "control-j"
-left = "control-ih"
+left = "control-h"
 right = "control-l"
 context = "control-i"
 modifier = "control"
