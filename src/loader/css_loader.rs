@@ -40,11 +40,13 @@ impl Loader {
 
         let mut provider_changed = false;
         if !config.appearance.use_system_theme {
-            provider.load_from_string("
+            provider.load_from_string(
+                "
                 * {
                     all: unset;
                 }
-            ");
+            ",
+            );
             provider_changed = true;
         }
 
@@ -61,7 +63,6 @@ impl Loader {
                 gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
             );
         }
-
 
         // Load the user css
         let theme = match ThemePicker::get_cached() {
