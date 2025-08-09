@@ -1,4 +1,4 @@
-use std::{fmt::Debug, path::Path};
+use std::{fmt::Debug, fs, path::Path};
 
 use bincode;
 use serde::{de::DeserializeOwned, Serialize};
@@ -44,10 +44,12 @@ impl BinaryCache {
 
         // Decode binary
         let cfg = bincode::config::standard().with_fixed_int_encoding();
-        let decoded: T = bincode::serde::decode_from_slice(&bytes, cfg)
-            .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))?
-            .0;
-
-        Ok(decoded)
+        match bincode::serde::decode_from_slice::<T, _>(&bytes, cfg){
+            Ok(decoded) => Ok(decoded.0),
+            Err(_) => {
+                let _ = fs::remove_file(path);
+                Ok(T::default())
+            }
+        }
     }
 }
