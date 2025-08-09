@@ -17,14 +17,19 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 ### Quick Links
 
 - [Documentation](https://github.com/Skxxtz/sherlock/tree/main/docs): Sherlock's documentation
+- [CONTRIBUTING.md](https://github.com/Skxxtz/sherlock/blob/main/.github/CONTRIBUTING.md):
+  Please read this before submitting a PR.
+
+### Additional Plugins
+
 - [sherlock-wiki](https://github.com/Skxxtz/sherlock-wiki): allows you to
   search Wikipedia from within Sherlock using the `bulk_text` launcher.
 - [sherlock-confetti](https://github.com/Skxxtz/sherlock-confetti): A
-  shader-based animation covering your entire screen. 
+  shader-based animation covering your entire screen.
 - [sherlock-dict](https://github.com/MoonBurst/sherlock_dict_rs): lookup word
   definitions from within Sherlock.
-- [CONTRIBUTING.md](https://github.com/Skxxtz/sherlock/blob/main/.github/CONTRIBUTING.md):
-  Please read this before submitting a PR.
+  - [sherlock-clipboard](https://github.com/MoonBurst/sherlock-clipboard): A
+    way for you to display cliphist history in sherlock
 <br><br>
 
 > **🚨 Warning:** This app is/was created on **Arch Linux** with the **Hyprland** tiling window manager in mind. It may cause errors or won't function at all on other system configurations.
@@ -178,8 +183,8 @@ Make sure you have the necessary dependencies installed:
     sudo cp target/release/sherlock /usr/local/bin/
     ```
 
-4. **(Optional) Remove the build directory:** 
-    
+4. **(Optional) Remove the build directory:**
+
     You can optionally remove the source code directory.
 
     ```bash
