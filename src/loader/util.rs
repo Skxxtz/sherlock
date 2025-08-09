@@ -17,6 +17,7 @@ use crate::{
     launcher::utils::HomeType,
     sherlock_error,
     utils::{
+        cache::BinaryCache,
         errors::{SherlockError, SherlockErrorType},
         files::{expand_path, home_dir},
         paths,
@@ -264,7 +265,7 @@ pub struct CounterReader {
 impl CounterReader {
     pub fn new() -> Result<Self, SherlockError> {
         let data_dir = paths::get_data_dir()?;
-        let path = data_dir.join("counts.json");
+        let path = data_dir.join("counts.bin");
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 sherlock_error!(
@@ -276,7 +277,7 @@ impl CounterReader {
         Ok(CounterReader { path })
     }
     pub fn increment(&self, key: &str) -> Result<(), SherlockError> {
-        let mut content: HashMap<String, u32> = JsonCache::read(&self.path)?;
+        let mut content: HashMap<String, u32> = BinaryCache::read(&self.path)?;
         let unique_values: HashMap<u32, u32> = content
             .values()
             .copied()
@@ -293,7 +294,7 @@ impl CounterReader {
         });
 
         *content.entry(key.to_string()).or_insert(0) += 1;
-        JsonCache::write(&self.path, &content)?;
+        BinaryCache::write(&self.path, &content)?;
         Ok(())
     }
 }
