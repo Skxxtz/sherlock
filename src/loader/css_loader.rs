@@ -38,15 +38,30 @@ impl Loader {
             gtk4::style_context_remove_provider_for_display(&display, &current_provider);
         }
 
+        let mut provider_changed = false;
+        if !config.appearance.use_system_theme {
+            provider.load_from_string("
+                * {
+                    all: unset;
+                }
+            ");
+            provider_changed = true;
+        }
+
         // Load the base line css
         if apply_base && config.appearance.use_base_css {
             provider.load_from_resource("/dev/skxxtz/sherlock/main.css");
+            provider_changed = true;
+        }
+
+        if provider_changed {
             gtk4::style_context_add_provider_for_display(
                 &display,
                 &provider,
                 gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
             );
         }
+
 
         // Load the user css
         let theme = match ThemePicker::get_cached() {

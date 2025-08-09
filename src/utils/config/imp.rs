@@ -55,6 +55,7 @@ impl Default for ConfigAppearance {
             icon_paths: FileDefaults::icon_paths(),
             icon_size: OtherDefaults::icon_size(),
             use_base_css: true,
+            use_system_theme: false,
             opacity: 1.0,
             mod_key_ascii: BindDefaults::modkey_ascii(),
         }
