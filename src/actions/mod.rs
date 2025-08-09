@@ -49,7 +49,10 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             "app_launcher" => {
                 let exec = attrs.get("exec").map_or("", |s| s.as_str());
                 let term = attrs.get("term").map_or(false, |s| s.as_str() == "true");
-                applaunch::applaunch(exec, term);
+                if let Err(error) = applaunch::applaunch(exec, term) {
+                    exit = false;
+                    let _result = error.insert(false);
+                }
                 increment(&exec);
             }
             "web_launcher" | "bookmarks" => {
