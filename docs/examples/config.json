@@ -75,11 +75,10 @@
     },
     "caching": {
         "enable": true,
-        "cache": "/home/basti/.cache/sherlock/sherlock_desktop_cache.json"
+        "cache": "/home/basti/.cache/sherlock/desktop_cache.bin"
     },
     "expand": {
-        "enable": false,
-        "edge": "top",
+        "enable": false, "edge": "top",
         "margin": 0
     },
     "backdrop": {
@@ -93,7 +92,7 @@
     "search_bar_icon": {
         "enable": true,
         "icon": "system-search-symbolic",
-        "icon_back": "go-previous-symbolic",
+        "icon_back": "sherlock-back",
         "size": 22
     }
 }
