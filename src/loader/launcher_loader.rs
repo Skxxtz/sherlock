@@ -26,8 +26,9 @@ use crate::launcher::{
     app_launcher, bulk_text_launcher, clipboard_launcher, system_cmd_launcher, web_launcher,
     Launcher, LauncherType,
 };
-use crate::loader::util::{CounterReader, JsonCache};
+use crate::loader::util::CounterReader;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
+use crate::utils::cache::BinaryCache;
 use crate::utils::config::{ConfigGuard, ConstantDefaults};
 use crate::utils::errors::SherlockError;
 use crate::utils::errors::SherlockErrorType;
@@ -58,8 +59,13 @@ impl Loader {
 
         // Read cached counter file
         let counter_reader = CounterReader::new()?;
-        let counts: HashMap<String, f32> =
-            JsonCache::read(&counter_reader.path).unwrap_or_default();
+        let result: Result<HashMap<String, u32>, SherlockError> =
+            BinaryCache::read(&counter_reader.path);
+        println!("{:?}", counter_reader.path);
+        println!("{:?}", result);
+
+        let counts: HashMap<String, u32> =
+            BinaryCache::read(&counter_reader.path).unwrap_or_default();
         let max_decimals = counts
             .iter()
             .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
@@ -119,7 +125,7 @@ impl Loader {
                 .filter_map(|launcher| launcher.get_execs())
                 .flat_map(|exec_set| exec_set.into_iter().map(|exec| (exec, 0)))
                 .collect();
-            if let Err(e) = JsonCache::write(&counter_reader.path, &counts) {
+            if let Err(e) = BinaryCache::write(&counter_reader.path, &counts) {
                 non_breaking.push(e)
             };
         }
@@ -130,7 +136,7 @@ impl Loader {
 fn parse_appdata(
     value: &Value,
     prio: f32,
-    counts: &HashMap<String, f32>,
+    counts: &HashMap<String, u32>,
     max_decimals: i32,
 ) -> Vec<AppData> {
     let data: HashSet<AppData> =
@@ -141,7 +147,7 @@ fn parse_appdata(
                 .exec
                 .as_ref()
                 .and_then(|exec| counts.get(exec))
-                .unwrap_or(&0.0);
+                .unwrap_or(&0);
             c.with_priority(parse_priority(prio, *count, max_decimals))
         })
         .collect::<Vec<AppData>>()
@@ -149,7 +155,7 @@ fn parse_appdata(
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_app_launcher(
     raw: &RawLauncher,
-    counts: &HashMap<String, f32>,
+    counts: &HashMap<String, u32>,
     max_decimals: i32,
 ) -> LauncherType {
     let apps: Vec<AppData> = ConfigGuard::read().ok().map_or_else(
@@ -247,7 +253,7 @@ fn parse_calculator(raw: &RawLauncher) -> LauncherType {
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_category_launcher(
     raw: &RawLauncher,
-    counts: &HashMap<String, f32>,
+    counts: &HashMap<String, u32>,
     max_decimals: i32,
 ) -> LauncherType {
     let prio = raw.priority;
@@ -324,7 +330,7 @@ fn parse_clipboard_launcher(raw: &RawLauncher) -> Result<LauncherType, SherlockE
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_command_launcher(
     raw: &RawLauncher,
-    counts: &HashMap<String, f32>,
+    counts: &HashMap<String, u32>,
     max_decimals: i32,
 ) -> LauncherType {
     let prio = raw.priority;
@@ -362,7 +368,7 @@ fn parse_pomodoro(raw: &RawLauncher) -> LauncherType {
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_debug_launcher(
     raw: &RawLauncher,
-    counts: &HashMap<String, f32>,
+    counts: &HashMap<String, u32>,
     max_decimals: i32,
 ) -> LauncherType {
     let prio = raw.priority;

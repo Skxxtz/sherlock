@@ -13,6 +13,7 @@ use std::time::SystemTime;
 use super::util::ApplicationAction;
 use super::{util, Loader};
 use crate::prelude::PathHelpers;
+use crate::utils::cache::BinaryCache;
 use crate::utils::config::ConfigGuard;
 use crate::utils::{
     errors::{SherlockError, SherlockErrorType},
@@ -25,7 +26,7 @@ impl Loader {
     pub fn load_applications_from_disk(
         applications: Option<Vec<PathBuf>>,
         priority: f32,
-        counts: &HashMap<String, f32>,
+        counts: &HashMap<String, u32>,
         decimals: i32,
     ) -> Result<Vec<AppData>, SherlockError> {
         let config = ConfigGuard::read()?;
@@ -153,7 +154,7 @@ impl Loader {
                             .exec
                             .as_ref()
                             .and_then(|exec| counts.get(exec))
-                            .unwrap_or(&0.0);
+                            .unwrap_or(&0);
                         let priority = parse_priority(priority, *count, decimals);
                         data.priority = priority;
                         Some(data)
@@ -168,7 +169,7 @@ impl Loader {
     fn get_new_applications(
         mut apps: Vec<AppData>,
         priority: f32,
-        counts: &HashMap<String, f32>,
+        counts: &HashMap<String, u32>,
         decimals: i32,
         last_changed: Option<SystemTime>,
     ) -> Result<Vec<AppData>, SherlockError> {
@@ -210,25 +211,9 @@ impl Loader {
         return Ok(apps);
     }
 
-    fn write_cache<T: AsRef<Path>>(apps: &Vec<AppData>, cache_loc: T) {
-        let path = cache_loc.as_ref();
-        if let Some(parent) = path.parent() {
-            let _ = fs::create_dir_all(parent);
-        }
-        let tmp_path = path.with_extension(".tmp");
-
-        if let Ok(f) = File::create(&tmp_path) {
-            if let Ok(_) = simd_json::to_writer(f, &apps) {
-                let _ = fs::rename(&tmp_path, &cache_loc);
-            } else {
-                let _ = fs::remove_file(&tmp_path);
-            }
-        }
-    }
-
     pub fn load_applications(
         priority: f32,
-        counts: &HashMap<String, f32>,
+        counts: &HashMap<String, u32>,
         decimals: i32,
     ) -> Result<Vec<AppData>, SherlockError> {
         let config = ConfigGuard::read()?;
@@ -239,46 +224,43 @@ impl Loader {
 
         if !changed {
             let _ = sher_log!("Loading cached apps");
-            let cached_apps: Option<Vec<AppData>> = File::open(&config.caching.cache)
-                .ok()
-                .and_then(|f| simd_json::from_reader(f).ok());
+            let mut cached_apps: Vec<AppData> = BinaryCache::read(&config.caching.cache)?;
 
-            if let Some(mut apps) = cached_apps {
-                // apply the current counts
-                apps = apps
-                    .drain(..)
-                    .map(|mut v| {
-                        let count = v
-                            .exec
-                            .as_ref()
-                            .and_then(|exec| counts.get(exec))
-                            .unwrap_or(&0.0);
-                        let new_priority = parse_priority(priority, *count, decimals);
-                        v.priority = new_priority;
-                        v
-                    })
-                    .collect();
+            let cleaned_apps: Vec<AppData> = cached_apps
+                .drain(..)
+                .map(|mut v| {
+                    let count = v
+                        .exec
+                        .as_ref()
+                        .and_then(|exec| counts.get(exec))
+                        .unwrap_or(&0);
+                    let new_priority = parse_priority(priority, *count, decimals);
+                    v.priority = new_priority;
+                    v
+                })
+                .collect();
 
-                // Refresh cache in the background
-                let old_apps = apps.clone();
-                let last_changed = config.caching.cache.modtime();
-                let cache = config.caching.cache.clone();
-                rayon::spawn_fifo({
-                    let counts_clone = counts.clone();
-                    move || {
-                        if let Ok(new_apps) = Loader::get_new_applications(
-                            old_apps,
-                            priority,
-                            &counts_clone,
-                            decimals,
-                            last_changed,
-                        ) {
-                            Loader::write_cache(&new_apps, cache);
+            // Refresh cache in the background
+            let old_apps = cleaned_apps.clone();
+            let last_changed = config.caching.cache.modtime();
+            let cache = config.caching.cache.clone();
+            rayon::spawn_fifo({
+                let counts_clone = counts.clone();
+                move || {
+                    if let Ok(new_apps) = Loader::get_new_applications(
+                        old_apps,
+                        priority,
+                        &counts_clone,
+                        decimals,
+                        last_changed,
+                    ) {
+                        if let Err(e) = BinaryCache::write(cache, &new_apps) {
+                            let _ = e.insert(true);
                         }
                     }
-                });
-                return Ok(apps);
-            }
+                }
+            });
+            return Ok(cleaned_apps);
         }
 
         let _ = sher_log!("Updating cached apps");
@@ -286,7 +268,11 @@ impl Loader {
         // Write the cache in the background
         let app_clone = apps.clone();
         let cache = config.caching.cache.clone();
-        rayon::spawn_fifo(move || Loader::write_cache(&app_clone, cache));
+        rayon::spawn_fifo(move || {
+            if let Err(e) = BinaryCache::write(cache, &app_clone) {
+                let _result = e.insert(true);
+            }
+        });
         Ok(apps)
     }
 }
@@ -295,11 +281,11 @@ fn should_ignore(ignore_apps: &Vec<Pattern>, app: &str) -> bool {
     let app_name = app.to_lowercase();
     ignore_apps.iter().any(|pattern| pattern.matches(&app_name))
 }
-pub fn parse_priority(priority: f32, count: f32, decimals: i32) -> f32 {
-    if count == 0.0 {
+pub fn parse_priority(priority: f32, count: u32, decimals: i32) -> f32 {
+    if count == 0 {
         priority + 0.99
     } else {
-        priority + 0.99 - count * 10f32.powi(-decimals)
+        priority + 0.99 - count as f32 * 10f32.powi(-decimals)
     }
 }
 

@@ -86,7 +86,7 @@ pub fn search(
                         c.appearance.num_shortcuts.clamp(0, 10) as i32,
                     )
                 })
-            .unwrap_or((false, 5));
+                .unwrap_or((false, 5));
             move |_myself, _position, _removed, added| {
                 if added == 0 {
                     return;
