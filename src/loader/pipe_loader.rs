@@ -50,7 +50,7 @@ impl PipedElements {
         if let Some(title) = &self.title {
             let cleaned: String = title
                 .chars()
-                .filter(|&c| c.is_ascii() && (!c.is_control() || c == '\t' || c == '\n'))
+                .filter(|&c| !c.is_control() || c == '\t' || c == '\n')
                 .collect();
             self.title = Some(cleaned);
         }
