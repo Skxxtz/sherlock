@@ -1,12 +1,15 @@
-use std::{
-    os::unix::process::CommandExt,
-    process::{Command, Stdio},
+use std::process::{Command, Stdio};
+
+use crate::{
+    sher_log, sherlock_error,
+    utils::{
+        config::ConfigGuard,
+        errors::{SherlockError, SherlockErrorType},
+    },
 };
 
-use crate::utils::config::ConfigGuard;
-
-pub fn applaunch(exec: &str, terminal: bool) -> Option<()> {
-    let config = ConfigGuard::read().ok()?;
+pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
+    let config = ConfigGuard::read()?;
     let mut parts = Vec::new();
 
     if let Some(pre) = &config.behavior.global_prefix {
@@ -23,24 +26,31 @@ pub fn applaunch(exec: &str, terminal: bool) -> Option<()> {
 
     let cmd = parts.join(" ").trim().to_string();
     let mut parts = split_as_command(&cmd).into_iter();
-    let mut command = Command::new(parts.next()?);
-    command.args(parts);
+    let mut command = Command::new(parts.next().ok_or(sherlock_error!(
+        SherlockErrorType::CommandExecutionError(cmd.clone()),
+        format!("Failed to get first base command")
+    ))?);
 
-    #[cfg(target_family = "unix")]
-    unsafe {
-        command
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .pre_exec(|| {
-                nix::unistd::setsid().ok();
-                Ok(())
-            });
+    command
+        .args(parts)
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::piped());
+
+    match command.spawn() {
+        Ok(mut _child) => {
+            let _ = sher_log!(format!("Detached process started: {}.", cmd));
+            Ok(())
+        }
+        Err(e) => {
+            let _ = sher_log!(format!("Failed to detach command: {}\nError: {}", cmd, e));
+
+            Err(sherlock_error!(
+                SherlockErrorType::CommandExecutionError(cmd),
+                e.to_string()
+            ))
+        }
     }
-    let _ = command
-        .spawn()
-        .map_err(|e| eprintln!("Error executing command: {}", e));
-    None
 }
 
 pub fn split_as_command(cmd: &str) -> Vec<String> {

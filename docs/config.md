@@ -53,6 +53,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | `use_base_css`    | `true`        | Enables or disables the extension of Sherlock's default style sheet. |
 | `opacity` | `1.0` | Controls the opacity of the window. Allowed range: `0.1 - 1.0` |
 | `mod_key_ascii` | `["⇧", "⇧", "⌘", "⌘", "⎇", "✦", "✦", "⌘"]` | Sets the ascii character for: `Shift`, `Caps Lock`, `Control`, `Meta`, `Alt`, `Super`, `Hyper`, `Fallback` in that order. |
+| `num_shortcuts` | `5` | Controls the number of shortcuts displayed. Shortcuts are indicators containing the modifier key and a number. The values are clamped to a value between 0-10 |
 
 ---
 

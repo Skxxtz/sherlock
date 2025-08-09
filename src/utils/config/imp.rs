@@ -58,6 +58,7 @@ impl Default for ConfigAppearance {
             use_system_theme: false,
             opacity: 1.0,
             mod_key_ascii: BindDefaults::modkey_ascii(),
+            num_shortcuts: 5,
         }
     }
 }
