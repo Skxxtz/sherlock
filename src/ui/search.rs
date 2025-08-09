@@ -437,10 +437,9 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
                 }
                 false
             } else {
-                let alias = &launcher.alias;
                 let priority = item.priority();
                 if mode != "all" {
-                    if home == HomeType::OnlyHome || &Some(mode) != alias {
+                    if home == HomeType::OnlyHome || Some(mode) != launcher.alias {
                         return false;
                     }
                     if current_text.is_empty() {
