@@ -34,8 +34,8 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     command
         .args(parts)
         .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .stdin(Stdio::piped());
+        .stderr(Stdio::null())
+        .stdin(Stdio::null());
 
     match command.spawn() {
         Ok(mut _child) => {

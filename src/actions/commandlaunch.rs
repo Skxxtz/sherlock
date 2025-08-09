@@ -38,8 +38,8 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
         .arg("-c")
         .arg(raw_command.clone())
         .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .stdin(Stdio::piped());
+        .stderr(Stdio::null())
+        .stdin(Stdio::null());
 
     match command.spawn() {
         Ok(mut _child) => {
