@@ -56,7 +56,7 @@ daemonize = false
 
 [caching]
 enable = true
-cache = "/home/user/.cache/sherlock/sherlock_desktop_cache.json"
+cache = "/home/user/.cache/sherlock/desktop_cache.bin"
 
 [expand]
 enable = false
@@ -74,6 +74,6 @@ enable = true
 [search_bar_icon]
 enable = true
 icon = "system-search-symbolic"
-icon_back = "go-previous-symbolic"
+icon_back = "sherlock-back"
 size = 22
 
