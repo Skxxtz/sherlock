@@ -70,7 +70,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 - Use the async widget to send API requests and display their responses directly in the launcher.
 - Great for integrating live data or external tools into your workflow.
 
-## Spotify Widget
+## 🎵 Spotify/Music Player Widget
 
 - Show your currently playing song or video
 
@@ -89,12 +89,12 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 - Use `modkey + number` shortcuts to quickly launch a command or app without having to scroll.
 - Configure custom key binds for navigation
 
-## Context menu
+## 📁 Context menu
 
 - A customizable context menu for additional application/launcher actions. For example opening a private browser window
 - Extend or overwrite existing actions from your `sherlock_alias.json` file or create custom ones for your commands
 
-## Weather widget
+## 🌞 Weather widget
 
 - Show the weather in your specified location
 
@@ -170,7 +170,15 @@ Make sure you have the necessary dependencies installed:
     After the build completes, install the binary to your system:
 
     ```bash
-    sudo cp target/release/sherlock /usr/bin/
+    sudo cp target/release/sherlock /usr/local/bin/
+    ```
+
+4. **(Optional) Remove the build directory:** 
+    
+    You can optionally remove the source code directory.
+
+    ```bash
+    rm -rf /path/to/sherlock
     ```
 
 ### <ins>Build Debian Package</ins>
@@ -206,10 +214,11 @@ Make sure you have the following dependencies installed:
     Once the package is built, you can install it using:
 
     ```bash
-    sudo dpkg -i target/debian/sherlock-launcher_0.1.14_amd64.deb
+    sudo dpkg -i target/debian/sherlock-launcher_*_amd64.deb
     ```
 
-    (Make sure to replace the filename if the version number is different.)
+    > You can use tab-completion to auto complete the exact file name.
+
 <br><br>
 
 ### <ins>Nix</ins>
