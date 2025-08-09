@@ -59,11 +59,6 @@ impl Loader {
 
         // Read cached counter file
         let counter_reader = CounterReader::new()?;
-        let result: Result<HashMap<String, u32>, SherlockError> =
-            BinaryCache::read(&counter_reader.path);
-        println!("{:?}", counter_reader.path);
-        println!("{:?}", result);
-
         let counts: HashMap<String, u32> =
             BinaryCache::read(&counter_reader.path).unwrap_or_default();
         let max_decimals = counts
