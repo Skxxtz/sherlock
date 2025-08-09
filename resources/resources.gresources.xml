@@ -32,6 +32,7 @@
         <file alias="sherlock-bookmark.svg">icons/sherlock-bookmark.svg</file>
         <file alias="bing.svg">icons/bing.svg</file>
         <file alias="duckduckgo.svg">icons/duckduckgo.svg</file>
+        <file alias="kagi.svg">icons/kagi.svg</file>
         <file alias="wikipedia.svg">icons/wikipedia.svg</file>
     </gresource>
 </gresources>

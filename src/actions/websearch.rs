@@ -18,6 +18,10 @@ pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
             "startpage",
             "https://www.startpage.com/sp/search?q={keyword}",
         ),
+        (
+            "kagi",
+            "https://kagi.com/search?q={keyword}",
+        ),
         ("plain", "{keyword}"),
     ]);
     let url_template = if let Some(url) = engines.get(engine) {
