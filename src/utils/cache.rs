@@ -44,7 +44,7 @@ impl BinaryCache {
 
         // Decode binary
         let cfg = bincode::config::standard().with_fixed_int_encoding();
-        match bincode::serde::decode_from_slice::<T, _>(&bytes, cfg){
+        match bincode::serde::decode_from_slice::<T, _>(&bytes, cfg) {
             Ok(decoded) => Ok(decoded.0),
             Err(_) => {
                 let _ = fs::remove_file(path);
