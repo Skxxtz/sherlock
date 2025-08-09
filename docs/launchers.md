@@ -263,6 +263,7 @@ Can be either of the following:
 
 | Search Engine   | URL                                      |
 |-----------------|------------------------------------------|
+| **Custom**      | `https://www.example.com/search={keyword}` |
 | **Google**      | `https://www.google.com/search?q={keyword}` |
 | **Bing**        | `https://www.bing.com/search?q={keyword}` |
 | **DuckDuckGo**  | `https://duckduckgo.com/?q={keyword}`    |
@@ -273,7 +274,6 @@ Can be either of the following:
 | **Ecosia**      | `https://www.ecosia.org/search?q={keyword}` |
 | **Qwant**       | `https://www.qwant.com/?q={keyword}`     |
 | **Startpage**   | `https://www.startpage.com/sp/search?q={keyword}` |
-| **Custom**      | `https://www.example.com/search={keyword}` |
 
 **`icon`** (required):<br>
 Sets the icon-name the launcher should show.
