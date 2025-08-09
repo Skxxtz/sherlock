@@ -79,10 +79,14 @@ pub fn search(
             let current_mode = Rc::clone(&handler.mode);
             let custom_handler = Rc::clone(&custom_handler);
             let modstr = handler.binds.shortcut_modifier_str.clone();
-            let apply_animation = ConfigGuard::read().map_or(false, |c| c.behavior.animate);
-            let num_shortcuts = ConfigGuard::read()
-                .map_or(5, |c| c.appearance.num_shortcuts)
-                .clamp(0, 10) as i32;
+            let (apply_animation, num_shortcuts) = ConfigGuard::read()
+                .map(|c| {
+                    (
+                        c.behavior.animate,
+                        c.appearance.num_shortcuts.clamp(0, 10) as i32,
+                    )
+                })
+            .unwrap_or((false, 5));
             move |_myself, _position, _removed, added| {
                 if added == 0 {
                     return;
