@@ -1,16 +1,15 @@
 :root {
-    --background: 0, 0%, 9%;
-    --background2: 0, 0%, 20%;
-    --foreground: 0, 0%, 15%;
-    --text: 53, 100%, 97%;
-    --border: 0, 0%, 19%;
+    --background: hsl(0, 0%, 9%);
+    --foreground: hsl(0, 0%, 15%);
+    --text: hsl(53, 100%, 97%);
+    --border: hsl(0, 0%, 19%);
 
 
-    --tag-background: 180, 0%, 30%;
-    --tag-color: 220, 10%, 100%;
-    --error: 4, 71%, 62%;
-    --warning: 55, 100%, 68%;
-    --success: 140, 40%, 40%;
+    --tag-background: hsl(180, 0%, 30%);
+    --tag-color: hsl(220, 10%, 100%);
+    --error: hsl(4, 71%, 62%);
+    --warning: hsl(55, 100%, 68%);
+    --success: hsl(140, 40%, 40%);
 
     --weather-clear: linear-gradient(45deg, #87B2E0 0%, #CED9E5 50%);
     --weather-few-clouds: linear-gradient(45deg, #A1A1A1 0%, #87B2E0 100%);
@@ -25,14 +24,14 @@
     --weather-snow-scattered-storm: linear-gradient(45deg, #1A1C1F 0%, #242B35 100%);
     --weather-showers-scattered: linear-gradient(45deg, #73848C 0%, #374B54 100%);
 
-    --weather-none-available: 0, 0%, 50%;
+    --weather-none-available: hsl(0, 0%, 50%);
     /* Neutral placeholder gray */
 }
 
 /*
---warning: 36, 89%, 52%;
---error: 0, 89%, 59%;
---success: 102, 36%, 53%;
+--warning: hsl(36, 89%, 52%);
+--error: hsl(0, 89%, 59%);
+--success: hsl(102, 36%, 53%;
 */
 
 
@@ -56,7 +55,7 @@ overshoot:backdrop {
     all: unset;
     padding: 0px;
     margin: 0px;
-    -gtk-secondary-caret-color: hsl(var(--background));
+    -gtk-secondary-caret-color: var(--background);
     outline-width: 0px;
     outline-offset: -3px;
     outline-style: dashed;
@@ -65,12 +64,12 @@ overshoot:backdrop {
 }
 
 label {
-    color: hsl(var(--text));
+    color: var(--text);
 }
 
 
 #overlay spinner {
-    color: hsl(var(--text));
+    color: var(--text);
 }
 
 row:selected,
@@ -87,7 +86,7 @@ scrolledwindow>viewport>*,
 listview,
 gridview,
 window {
-    background: hsl(var(--background));
+    background: var(--background);
 }
 
 #backdrop {
@@ -98,9 +97,9 @@ window {
 
 
 window:not(#backdrop) {
-    color: hsl(var(--text));
+    color: var(--text);
     border-radius: 5px;
-    border: 2px solid hsl(var(--border));
+    border: 2px solid var(--border);
 }
 
 
@@ -109,15 +108,15 @@ window:not(#backdrop) {
 #search-bar {
     outline: none;
     border: none;
-    background: hsla(var(--background), 1);
+    background: hsl(from var(--background) h s l / 100%);
     min-height: 40px;
-    color: hsl(var(--text));
+    color: var(--text);
     font-size: 15px;
     padding-left: 20px;
 }
 
 #search-bar-holder {
-    border-bottom: 2px solid hsl(var(--border));
+    border-bottom: 2px solid var(--border);
     padding: 5px 10px 4px 10px;
 }
 
@@ -156,14 +155,14 @@ window:not(#backdrop) {
 #search-bar placeholder {
     background: transparent;
     background-color: transparent;
-    color: hsla(var(--text), 0.7);
+    color: hsl(from var(--text) h s l / 70%);
     font-weight: 500;
 }
 
 #category-type {
     font-size: 13px;
     font-weight: bold;
-    color: hsl(var(--text));
+    color: var(--text);
     opacity: 0.3;
     padding: 10px 20px 0px 20px;
 }
@@ -180,7 +179,7 @@ scrollbar {
 }
 
 scrollbar slider {
-    background: hsla(var(--text), 0.1);
+    background: hsl(from var(--text) h s l / 10%);
     border: none;
 }
 
@@ -266,7 +265,7 @@ row:nth-child(10) .tile.animate {
 
 .tile #title {
     font-size: 15px;
-    color: hsl(var(--text));
+    color: var(--text);
 }
 
 .tile #icon {
@@ -275,15 +274,15 @@ row:nth-child(10) .tile.animate {
 }
 
 row:selected .tile {
-    background: hsla(var(--foreground), 1);
-    background-color: hsla(var(--foreground), 1);
+    background: hsl(from var(--foreground) h s l / 100%);
+    background-color: hsl(from var(--foreground) h s l / 100%);
 }
 
 row:selected .tile.multi-active,
 .tile.multi-active {
-    background: hsla(var(--foreground), 1);
-    background-color: hsla(var(--foreground), 1);
-    border: 1px solid hsla(var(--text), 0.2);
+    background: hsl(from var(--foreground) h s l / 100%);
+    background-color: hsl(from var(--foreground) h s l / 100%);
+    border: 1px solid hsl(from var(--text) h s l / 20%);
 }
 
 .tile:selected .tag,
@@ -291,20 +290,20 @@ row:selected .tile.multi-active,
     font-size: 11px;
     border-radius: 3px;
     padding: 2px 8px;
-    color: hsl(var(--tag-color));
+    color: var(--tag-color);
     box-shadow: 0px 0px 10px 0px rgba(2, 2, 2, 0.4);
-    border: 1px solid hsla(var(--text), 0.1);
+    border: 1px solid hsl(from var(--text) h s l / 10%);
     margin-left: 7px;
 }
 
 .tile:selected .tag-start,
 .tag-start {
-    background: hsla(var(--tag-background), 0.7);
+    background: hsl(from var(--tag-background) h s l / 70%);
 }
 
 .tile:selected .tag-end,
 .tag-end {
-    background: hsla(var(--success), 1);
+    background: hsl(from var(--success) h s l / 100);
 }
 
 .tile:focus {
@@ -313,7 +312,7 @@ row:selected .tile.multi-active,
 
 #launcher-type {
     font-size: 10px;
-    color: hsla(var(--text), 0.4);
+    color: hsl(from var(--text) h s l / 40%);
     margin-left: 0px;
 }
 
@@ -326,26 +325,26 @@ row:selected .tile.multi-active,
 #shortcut-holder {
     margin-right: 25px;
     padding: 5px 10px;
-    background: hsla(var(--foreground), 0.5);
+    background: hsl(from var(--foreground) h s l / 50%);
     border-radius: 5px;
-    border: 1px solid hsla(var(--text), 0.1);
+    border: 1px solid hsl(from var(--text) h s l / 10%);
     box-shadow: 0px 0px 6px 0px rgba(15, 15, 15, 1);
 }
 
 .tile:selected #shortcut-holder {
-    background: hsla(var(--background), 0.5);
-    background-color: hsla(var(--background), 0.5);
-    color: hsla(var(--text), 0.5);
+    background: hsl(from var(--background) h s l / 50%);
+    background-color: hsl(from var(--background) h s l / 50%);
+    color: hsl(from var(--text) h s l / 50%);
     box-shadow: 0px 0px 6px 0px rgba(22, 22, 22, 1);
 }
 
 #shortcut,
 #shortcut-modkey {
-    background: hsla(var(--background), 0);
-    background-color: hsla(var(--background), 0);
+    background: hsl(from var(--background) h s l / 0%);
+    background-color: hsl(from var(--background) h s l / 0%);
     font-size: 11px;
     font-weight: bold;
-    color: hsla(var(--text), 0.5);
+    color: hsl(from var(--text) h s l / 50%);
 }
 
 #shortcut-modkey {
@@ -407,13 +406,13 @@ row:selected .tile.multi-active,
 #bulk-text-content-title {
     font-size: 17px;
     font-weight: bold;
-    color: hsl(var(--text));
+    color: var(--text);
     min-height: 20px;
 }
 
 #bulk-text-content-body {
     font-size: 14px;
-    color: hsl(var(--text));
+    color: var(--text);
     line-height: 1.4;
     min-height: 20px;
 }
@@ -438,26 +437,26 @@ gridview child {
 }
 
 gridview child box {
-    background: hsl(var(--foreground));
+    background: var(--foreground);
     border-radius: 5px;
     border: 1px solid transparent;
 }
 
 gridview child:selected box {
-    border: 1px solid hsl(var(--tag-color));
+    border: 1px solid var(--tag-color);
 }
 
 
 /* NEXT PAGE */
 .next_tile {
-    color: hsl(var(--text));
-    background: hsl(var(--background));
+    color: var(--text);
+    background: var(--background);
 }
 
 .next_tile #content-body {
-    background: hsl(var(--background));
+    background: var(--background);
     padding: 10px;
-    color: hsl(var(--text));
+    color: var(--text);
 }
 
 .raw_text,
@@ -487,13 +486,13 @@ gridview child:selected box {
 }
 
 .error {
-    border: 1px solid hsla(var(--error), 0.5);
-    background: hsla(var(--error), 0.1);
+    border: 1px solid hsl(from var(--error) h s l / 50%);
+    background: hsl(from var(--error) h s l / 10%);
 }
 
 .warning {
-    border: 1px solid hsla(var(--warning), 0.5);
-    background: hsla(var(--warning), 0.1);
+    border: 1px solid hsl(from var(--warning) h s l / 50%);
+    background: hsl(from var(--warning) h s l / 10%);
 }
 
 .error-tile #title {
@@ -506,31 +505,31 @@ gridview child:selected box {
     margin-left: 10px;
     font-size: 16px;
     font-weight: bold;
-    color: hsl(var(--text));
+    color: var(--text);
 }
 
 .error-tile #content-body {
     margin-left: 10px;
     font-size: 14px;
-    color: hsl(var(--text));
+    color: var(--text);
     line-height: 1.4;
     color: gray;
 }
 
 /* STATUS BAR */
 .status-bar {
-    background: hsla(var(--foreground), 0.2);
-    border-top: 1px solid hsl(var(--border));
+    background: hsl(from var(--foreground) h s l / 20%);
+    border-top: 1px solid var(--border);
     padding: 4px 10px 4px 20px;
 }
 
 .status-bar label {
-    color: hsl(var(--text), 0.3);
+    color: hsl(from var(--text) h s l / 30%);
 }
 
 .status-bar #shortcut-key,
 .status-bar #shortcut-modifier {
-    background: hsl(var(--foreground));
+    background: var(--foreground);
     margin: 2px;
     padding: 1px 5px;
     border-radius: 3px;
@@ -566,26 +565,26 @@ gridview child:selected box {
     min-width: 50px;
     padding: 5px;
     margin: 4px;
-    background: hsl(var(--background));
-    border: 1px solid hsl(var(--border));
+    background: var(--background);
+    border: 1px solid var(--border);
     border-radius: 5px;
     box-shadow: unset;
 }
 
 #context-menu row {
-    color: hsla(var(--text), 0.8);
+    color: hsl(from var(--text) h s l / 80%);
     transition: 0.1s ease;
     padding: 10px 20px;
     border-radius: 5px;
 }
 
 #context-menu label {
-    color: hsla(var(--text), 0.8);
+    color: hsl(from var(--text) h s l / 80%);
     font-size: 13px;
 }
 
 #context-menu row:selected {
-    background: hsl(var(--foreground));
+    background: var(--foreground);
 }
 
 
@@ -689,7 +688,7 @@ gridview child:selected box {
 }
 
 .tile.weather-tile.weather-none-available {
-    background: hsl(var(--weather-none-available));
+    background: var(--weather-none-available);
     background-clip: padding-box;
 }
 
@@ -710,7 +709,7 @@ gridview child:selected box {
 }
 
 #timer-title {
-    color: hsla(var(--text), 0.7);
+    color: hsl(from var(--text) h s l / 70%);
     font-size: 11px;
 }
 
@@ -727,7 +726,7 @@ gridview child:selected box {
 
 .emoji-item #emoji-name {
     font-size: 10px;
-    color: hsla(var(--text), 0.3);
+    color: hsl(from var(--text) h s l / 30%);
 }
 
 #context-menu.emoji row {
@@ -740,7 +739,7 @@ gridview child:selected box {
 }
 
 #context-menu.emoji label.active {
-    background: hsla(var(--text), 0.1);
+    background: hsl(from var(--text) h s l / 10%);
 }
 
 /*ANIMATIONS*/
