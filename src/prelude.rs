@@ -95,19 +95,21 @@ pub trait ShortCut {
 }
 impl ShortCut for GtkBox {
     fn apply_shortcut(&self, index: i32, mod_str: &str) -> i32 {
-        if index < 6 {
-            if let Some(child) = self.first_child() {
-                if let Some(label) = child.downcast_ref::<Label>() {
-                    self.set_visible(true);
-                    label.set_text(&format!("{}", mod_str));
-                }
+        let mut internal_index = index;
+        if index == 10 {
+            internal_index = 0;
+        }
+        if let Some(child) = self.first_child() {
+            if let Some(label) = child.downcast_ref::<Label>() {
+                self.set_visible(true);
+                label.set_text(&format!("{}", mod_str));
             }
-            if let Some(child) = self.last_child() {
-                if let Some(label) = child.downcast_ref::<Label>() {
-                    self.set_visible(true);
-                    label.set_text(&format!("{}", index));
-                    return 1;
-                }
+        }
+        if let Some(child) = self.last_child() {
+            if let Some(label) = child.downcast_ref::<Label>() {
+                self.set_visible(true);
+                label.set_text(&format!("{}", internal_index));
+                return 1;
             }
         }
         return 0;
@@ -280,15 +282,14 @@ impl SherlockNav for ListView {
     }
     fn execute_by_index(&self, index: u32) {
         if let Some(selection) = self.model().and_downcast::<SingleSelection>() {
-            for item in index..selection.n_items() {
-                if let Some(item) = selection.item(item).and_downcast::<TileItem>() {
-                    if item.shortcut().is_some() {
-                        let exit: u8 = 0;
-                        if let Some(row) = item.parent().upgrade() {
-                            row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
-                            break;
-                        }
-                    }
+            if let Some(item_at_index) = (0..selection.n_items())
+                .filter_map(|i| selection.item(i).and_downcast::<TileItem>())
+                .filter(|item| item.shortcut().is_some())
+                .nth(index as usize)
+            {
+                let exit: u8 = 0;
+                if let Some(row) = item_at_index.parent().upgrade() {
+                    row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
                 }
             }
         }

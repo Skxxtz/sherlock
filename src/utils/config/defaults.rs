@@ -218,6 +218,9 @@ impl OtherDefaults {
     pub fn one() -> f64 {
         1.0
     }
+    pub fn five() -> u8 {
+        5
+    }
     pub fn backdrop_opacity() -> f64 {
         0.6
     }

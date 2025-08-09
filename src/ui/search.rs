@@ -82,6 +82,9 @@ pub fn search(
             let current_mode = Rc::clone(&handler.mode);
             let custom_handler = Rc::clone(&custom_handler);
             let modstr = handler.binds.shortcut_modifier_str.clone();
+            let num_shortcuts = ConfigGuard::read()
+                .map_or(5, |c| c.appearance.num_shortcuts)
+                .clamp(0, 10) as i32;
             move |_myself, _position, _removed, added| {
                 if added == 0 {
                     return;
@@ -98,7 +101,7 @@ pub fn search(
                         for i in 0..selection.n_items() {
                             if let Some(item) = selection.item(i).and_downcast::<TileItem>() {
                                 if let Some(shortcut) = item.shortcut() {
-                                    if current < 6 {
+                                    if current < num_shortcuts + 1 {
                                         current += shortcut.apply_shortcut(current, &modstr);
                                     } else {
                                         shortcut.remove_shortcut();
@@ -198,6 +201,9 @@ pub fn search(
             let current_mode = Rc::clone(&handler.mode);
             let custom_handler = Rc::clone(&custom_handler);
             let modstr = handler.binds.shortcut_modifier_str.clone();
+            let num_shortcuts = ConfigGuard::read()
+                .map_or(5, |c| c.appearance.num_shortcuts)
+                .clamp(0, 10) as i32;
             move |_: &ApplicationWindow, _, parameter| {
                 if let Some(focus_first) = parameter.and_then(|p| p.get::<bool>()) {
                     filter
@@ -218,7 +224,7 @@ pub fn search(
                             for i in 0..selection.n_items() {
                                 if let Some(item) = selection.item(i).and_downcast::<TileItem>() {
                                     if let Some(shortcut) = item.shortcut() {
-                                        if current < 6 {
+                                        if current < num_shortcuts + 1 {
                                             current += shortcut.apply_shortcut(current, &modstr);
                                         } else {
                                             shortcut.remove_shortcut();
@@ -678,14 +684,13 @@ fn nav_event(
                         .shortcut_modifier
                         .map_or(false, |modifier| mods.contains(modifier))
                     {
-                        if let Some(index) = key
-                            .name()
-                            .and_then(|name| name.parse::<u32>().ok().map(|v| v - 1))
-                        {
+                        if let Some(index) = key.name().and_then(|name| name.parse::<u32>().ok()) {
+                            let internal_index = if index == 0 { 9 } else { index - 1 };
+                            println!("index: {} - {}", index, internal_index);
                             key_actions
                                 .results
                                 .upgrade()
-                                .map(|r| r.execute_by_index(index));
+                                .map(|r| r.execute_by_index(internal_index));
                         }
                     } else {
                         return false.into();
