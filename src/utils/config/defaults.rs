@@ -180,7 +180,7 @@ impl FileDefaults {
     pub fn cache() -> PathBuf {
         paths::get_cache_dir()
             .unwrap()
-            .join("sherlock_desktop_cache.json")
+            .join("desktop_files.bin")
     }
     pub fn config() -> PathBuf {
         paths::get_config_dir().unwrap().join("config.toml")
