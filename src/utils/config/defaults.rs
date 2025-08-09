@@ -234,6 +234,6 @@ impl OtherDefaults {
         String::from("system-search-symbolic")
     }
     pub fn search_icon_back() -> String {
-        String::from("go-previous-symbolic")
+        String::from("sherlock-back")
     }
 }
