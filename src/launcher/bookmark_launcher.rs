@@ -2,9 +2,12 @@ use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
 
+use crate::loader::application_loader::file_has_changed;
 use crate::loader::util::{AppData, RawLauncher};
+use crate::utils::cache::BinaryCache;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::files::home_dir;
+use crate::utils::paths::get_cache_dir;
 use crate::{sher_log, sherlock_error};
 
 #[derive(Clone, Debug)]
@@ -83,7 +86,7 @@ impl BookmarkParser {
             )
         })?;
         let parser = MozillaSqliteParser::new(path, "zen");
-        parser.read(raw)
+        parser.read(raw, "zen")
     }
     fn firefox(raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
         fn get_path() -> Option<PathBuf> {
@@ -103,13 +106,13 @@ impl BookmarkParser {
         let path = get_path().ok_or_else(|| {
             sherlock_error!(
                 SherlockErrorType::FileExistError(PathBuf::from(
-                    "~/.mozilla/firefox//../places.sqlite",
+                    "~/.mozilla/firefox/../places.sqlite",
                 )),
                 "File does not exist"
             )
         })?;
         let parser = MozillaSqliteParser::new(path, "firefox");
-        parser.read(raw)
+        parser.read(raw, "firefox")
     }
 }
 struct MozillaSqliteParser {
@@ -117,18 +120,44 @@ struct MozillaSqliteParser {
 }
 impl MozillaSqliteParser {
     fn new(file: PathBuf, prefix: &str) -> Self {
-        let home = home_dir().ok();
-        let path: PathBuf = if let Some(home) = home {
-            let target = format!(".cache/sherlock/bookmarks/{}-places.sqlite", prefix);
-            let cache_path = home.join(target);
-            Self::copy_if_needed(&file, &cache_path);
-            cache_path
+        let path = if let Ok(cache) = get_cache_dir() {
+            let target = cache.join(format!("bookmarks/{}-places.sqlite", prefix));
+            Self::copy_if_needed(&file, &target);
+            target
         } else {
             file.to_path_buf()
         };
         Self { path }
     }
-    fn read(&self, raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
+    fn read(&self, raw: &RawLauncher, prefix: &str) -> Result<Vec<AppData>, SherlockError> {
+        let cache_dir = get_cache_dir()?;
+        let cache = cache_dir.join(format!("bookmarks/{}-cache.bin", prefix));
+        if file_has_changed(&cache, &self.path) {
+            self.read_new(raw).map(|v| {
+                if let Err(e) = BinaryCache::write(cache, &v) {
+                    let _result = e.insert(false);
+                };
+                v
+            })
+        } else {
+            BinaryCache::read::<Vec<AppData>, _>(cache).map(|mut app_data| {
+                let icon_class = raw
+                    .args
+                    .get("icon_class")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                app_data.iter_mut().for_each(|ad| {
+                    ad.icon_class = icon_class.clone();
+                    ad.tag_start = raw.tag_start.clone();
+                    ad.tag_end = raw.tag_end.clone();
+                    ad.priority = raw.priority + 1.0;
+                });
+                app_data
+            })
+        }
+    }
+    fn read_new(&self, raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
         let mut res: Vec<AppData> = Vec::new();
         let query = "
             SELECT b.title, p.url

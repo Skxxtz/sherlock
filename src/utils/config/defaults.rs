@@ -178,9 +178,7 @@ impl BindDefaults {
 pub struct FileDefaults {}
 impl FileDefaults {
     pub fn cache() -> PathBuf {
-        paths::get_cache_dir()
-            .unwrap()
-            .join("desktop_files.bin")
+        paths::get_cache_dir().unwrap().join("desktop_files.bin")
     }
     pub fn config() -> PathBuf {
         paths::get_config_dir().unwrap().join("config.toml")
