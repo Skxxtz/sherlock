@@ -119,7 +119,7 @@ impl AppData {
             terminal: false,
         }
     }
-    pub fn new_for_theme<'a, T, S>(name: T, path: Option<S>, priority: f32) -> Self
+    pub fn new_for_theme<'a, T, S>(name: T, path: Option<S>, raw: &RawLauncher) -> Self
     where
         T: Into<Cow<'a, str>>,
         S: Into<Cow<'a, str>>,
@@ -127,12 +127,18 @@ impl AppData {
         let name: Cow<'a, str> = name.into();
         let path = path.map(|s| s.into().into_owned());
         let name_string = name.into_owned();
+        let icon = raw
+            .args
+            .get("icon")
+            .and_then(|s| s.as_str())
+            .unwrap_or("sherlock-devtools")
+            .to_string();
         Self {
             name: name_string.clone(),
             exec: path,
             search_string: name_string,
-            priority,
-            icon: Some(String::from("sherlock-devtools")),
+            priority: raw.priority,
+            icon: Some(icon),
             icon_class: None,
             tag_start: None,
             tag_end: None,

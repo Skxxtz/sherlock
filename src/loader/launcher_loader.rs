@@ -437,7 +437,7 @@ fn parse_theme_launcher(raw: &RawLauncher) -> LauncherType {
         Err(_) => return LauncherType::Empty,
     };
     let absolute = home.join(relative);
-    ThemePicker::new(absolute, raw.priority)
+    ThemePicker::new(absolute, raw)
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_file_launcher(raw: &RawLauncher) -> LauncherType {
