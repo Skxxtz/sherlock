@@ -40,12 +40,9 @@ impl ProcessLauncher {
         match all_processes() {
             Ok(procs) => {
                 let user_processes: Vec<Process> = procs
-                    .flatten()
                     .par_bridge()
-                    .filter_map(|p| match p.uid() {
-                        Ok(uid) if uid > 0 => Some(p),
-                        _ => None,
-                    })
+                    .filter_map(Result::ok)
+                    .filter(|p| p.uid().map_or(false, |uid| uid > 0))
                     .collect();
                 let mut process_names: HashMap<i32, String> = user_processes
                     .par_iter()

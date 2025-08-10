@@ -17,6 +17,7 @@ pub fn copy_to_clipboard(string: &str) -> Result<(), SherlockError> {
     Ok(())
 }
 //TODO: takes 2.9ms/1.6ms - how to improve
+#[sherlock_macro::timing(level = "launchers")]
 pub fn read_from_clipboard() -> Result<String, SherlockError> {
     let mut ctx = ClipboardContext::new()
         .map_err(|e| sherlock_error!(SherlockErrorType::ClipboardError, e.to_string()))?;

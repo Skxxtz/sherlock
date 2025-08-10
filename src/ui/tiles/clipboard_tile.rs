@@ -11,6 +11,7 @@ use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::g_subclasses::tile_item::UpdateHandler;
 use crate::launcher::clipboard_launcher::ClipboardLauncher;
 use crate::launcher::Launcher;
+use crate::loader::launcher_loader::COLOR_RE;
 use crate::prelude::{IconComp, TileHandler};
 use crate::ui::g_templates::{AppTile, CalcTile};
 use crate::ui::tiles::calc_tile::CalcTileHandler;
@@ -146,15 +147,13 @@ impl Tile {
             .is_some()
             && clipboard_content.len() <= 20
         {
-            let color_raw = r"^(rgb|hsl)*\(?(\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3})\)?|\(?(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}\s*%\w*)\)?|^#([a-fA-F0-9]{6,8})$";
-            let color_re = Regex::new(color_raw).unwrap();
             let all = capabilities.contains("colors.all");
             let attrs = get_attrs_map(vec![
                 ("method", None),
                 ("keyword", Some(&clipboard_content)),
             ]);
 
-            if let Some(captures) = color_re.captures(&clipboard_content) {
+            if let Some(captures) = COLOR_RE.captures(&clipboard_content) {
                 if all || capabilities.contains("colors.rgb") {
                     if let Some(rgb) = captures.get(2) {
                         let color = RGB::from_str(rgb.as_str());

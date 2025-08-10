@@ -151,7 +151,8 @@ impl SizedMessage for UnixStream {
     }
     fn read_sized(&mut self) -> Result<Vec<u8>, SherlockError> {
         let mut buf_len = [0u8; 4];
-        self.read_exact(&mut buf_len).map_err(|_| SherlockError::empty())?;
+        self.read_exact(&mut buf_len)
+            .map_err(|_| SherlockError::empty())?;
         let msg_len = u32::from_be_bytes(buf_len) as usize;
 
         let mut buf = vec![0u8; msg_len];
