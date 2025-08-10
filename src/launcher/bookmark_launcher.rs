@@ -135,12 +135,14 @@ impl MozillaSqliteParser {
         if file_has_changed(&cache, &self.path) {
             self.read_new(raw).map(|v| {
                 if let Err(e) = BinaryCache::write(cache, &v) {
+                    let _ = sher_log!("Updating cached bookmarks");
                     let _result = e.insert(false);
                 };
                 v
             })
         } else {
             BinaryCache::read::<Vec<AppData>, _>(cache).map(|mut app_data| {
+                let _ = sher_log!("Reading cached bookmarks");
                 let icon_class = raw
                     .args
                     .get("icon_class")

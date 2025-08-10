@@ -128,7 +128,10 @@ impl SizedMessage for UnixStream {
     fn write_sized(&mut self, buf: &[u8]) -> Result<(), SherlockError> {
         let buf_len = buf.len();
         if buf_len > u32::MAX as usize {
-            // return error for size too big
+            return Err(sherlock_error!(
+                SherlockErrorType::InvalidMessageLength,
+                String::from_utf8_lossy(buf)
+            ));
         }
         let buf_len = buf_len as u32;
         self.write_all(&buf_len.to_be_bytes()).map_err(|e| {
@@ -148,18 +151,13 @@ impl SizedMessage for UnixStream {
     }
     fn read_sized(&mut self) -> Result<Vec<u8>, SherlockError> {
         let mut buf_len = [0u8; 4];
-        self.read_exact(&mut buf_len).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::SocketWriteError(SOCKET_PATH.to_string()),
-                e.to_string()
-            )
-        })?;
+        self.read_exact(&mut buf_len).map_err(|_| SherlockError::empty())?;
         let msg_len = u32::from_be_bytes(buf_len) as usize;
 
         let mut buf = vec![0u8; msg_len];
         self.read_exact(&mut buf).map_err(|e| {
             sherlock_error!(
-                SherlockErrorType::SocketWriteError(SOCKET_PATH.to_string()),
+                SherlockErrorType::SocketReadError(SOCKET_PATH.to_string()),
                 e.to_string()
             )
         })?;
