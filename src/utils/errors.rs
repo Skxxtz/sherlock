@@ -1,9 +1,11 @@
+use std::fmt::Display;
 use std::{fmt::Debug, os::unix::net::UnixStream, path::PathBuf};
 
 use gtk4::prelude::{BoxExt, WidgetExt};
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use serde::{Deserialize, Serialize};
 
+use crate::sher_log;
 use crate::{
     api::call::ApiCall, daemon::daemon::SizedMessage, g_subclasses::sherlock_row::SherlockRow,
     ui::g_templates::ErrorTile, SOCKET_PATH,
@@ -21,7 +23,13 @@ pub struct SherlockError {
     pub traceback: String,
 }
 impl SherlockError {
-    pub fn new<T: AsRef<str>>(error: SherlockErrorType, source: T, file: &str, line: u32) -> Self {
+    pub fn new<T: AsRef<str> + Display>(
+        error: SherlockErrorType,
+        source: T,
+        file: &str,
+        line: u32,
+    ) -> Self {
+        let _ = sher_log!(format!("{} - {}", error, source), file, line);
         Self {
             error,
             traceback: format!(
@@ -258,6 +266,12 @@ impl SherlockErrorType {
             }
         };
         (variant_name(self), message)
+    }
+}
+impl std::fmt::Display for SherlockErrorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (title, message) = self.get_message();
+        write!(f, "Error: {} - {}", title, message)
     }
 }
 impl AsRef<SherlockError> for SherlockError {
