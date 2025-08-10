@@ -77,7 +77,7 @@ async fn main() {
             });
         }
 
-        if let Err(error) = Loader::load_css(true) {
+        if let Err(error) = Loader::load_css(true, None) {
             errors.push(error);
         }
 

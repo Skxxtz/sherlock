@@ -25,7 +25,7 @@ fn set_provider(provider: WeakRef<CssProvider>) {
 }
 
 impl Loader {
-    pub fn load_css(apply_base: bool) -> Result<(), SherlockError> {
+    pub fn load_css(apply_base: bool, inplace: Option<bool>) -> Result<(), SherlockError> {
         let provider = CssProvider::new();
 
         let config = ConfigGuard::read()?;
@@ -39,7 +39,7 @@ impl Loader {
         }
 
         let mut provider_changed = false;
-        if !config.appearance.use_system_theme {
+        if !config.appearance.use_system_theme && inplace.unwrap_or(true) {
             provider.load_from_string(
                 "
                 * {

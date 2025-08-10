@@ -65,7 +65,7 @@ impl ThemePicker {
             )
         })?;
         if !exit {
-            if let Err(error) = Loader::load_css(false) {
+            if let Err(error) = Loader::load_css(false, Some(false)) {
                 let _result = error.insert(false);
             }
         }
