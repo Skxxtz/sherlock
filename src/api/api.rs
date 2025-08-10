@@ -60,17 +60,17 @@ impl SherlockAPI {
     /// Best use await_request() followed by flush() instead
     pub fn request(&mut self, api_call: ApiCall) {
         self.flush();
+        if !self.queue.is_empty() {
+            self.queue.iter().for_each(|wait| {
+                let _ = sher_log!(format!("Action {} stays in queue", wait));
+            });
+        }
         if self.match_action(&api_call).is_none() {
             let _ = sher_log!(format!(
                 "Action {} could not be executed and is moved to queue",
                 api_call
             ));
             self.queue.push(api_call);
-        }
-        if !self.queue.is_empty() {
-            self.queue.iter().for_each(|wait| {
-                let _ = sher_log!(format!("Action {} stays in queue", wait));
-            });
         }
     }
     pub fn flush(&mut self) -> Option<()> {

@@ -60,6 +60,9 @@ impl SherlockError {
         }
         object
     }
+    pub fn empty() -> Self {
+        Self { error: SherlockErrorType::None, traceback: String::new() }
+    }
     pub fn insert(self, is_error: bool) -> Result<(), SherlockError> {
         let mut stream = UnixStream::connect(SOCKET_PATH).map_err(|e| {
             sherlock_error!(
@@ -129,6 +132,8 @@ pub enum SherlockErrorType {
     SocketRemoveError(String),
     SocketConnectError(String),
     SocketWriteError(String),
+    SocketReadError(String),
+    InvalidMessageLength,
 
     // Sqlite
     SqlConnectionError(),
@@ -145,6 +150,8 @@ pub enum SherlockErrorType {
 
     // Actions
     InvalidAction,
+
+    None,
 }
 impl std::fmt::Display for SherlockError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -236,6 +243,10 @@ impl SherlockErrorType {
             SherlockErrorType::SocketRemoveError(socket) => socket_msg("close", socket),
             SherlockErrorType::SocketConnectError(socket) => socket_msg("connect", socket),
             SherlockErrorType::SocketWriteError(socket) => socket_msg("send message to", socket),
+            SherlockErrorType::SocketReadError(socket) => socket_msg("read message from", socket),
+            SherlockErrorType::InvalidMessageLength => {
+                format!("The api request exceeds u32::MAX.")
+            }
 
             // Sqlite
             SherlockErrorType::SqlConnectionError() => {
@@ -264,6 +275,8 @@ impl SherlockErrorType {
             SherlockErrorType::InvalidAction => {
                 format!(r#"Invalid Action Defined"#)
             }
+
+            SherlockErrorType::None => String::new(),
         };
         (variant_name(self), message)
     }
