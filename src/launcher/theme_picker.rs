@@ -4,6 +4,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use crate::loader::util::AppData;
+use crate::loader::util::RawLauncher;
 use crate::loader::Loader;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
@@ -17,7 +18,7 @@ pub struct ThemePicker {
     pub themes: Vec<AppData>,
 }
 impl ThemePicker {
-    pub fn new<T: AsRef<Path>>(loc: T, prio: f32) -> LauncherType {
+    pub fn new<T: AsRef<Path>>(loc: T, raw: &RawLauncher) -> LauncherType {
         let absolute = loc.as_ref();
         if !absolute.is_dir() {
             return LauncherType::Empty;
@@ -32,8 +33,8 @@ impl ThemePicker {
                     .filter(|path| path.is_file() || path.is_symlink())
                     .filter_map(|path| {
                         if path.extension()?.to_str()? == "css" {
-                            let name = path.file_name()?.to_str()?;
-                            Some(AppData::new_for_theme(name, path.to_str(), prio))
+                            let name = path.file_stem()?.to_str()?;
+                            Some(AppData::new_for_theme(name, path.to_str(), raw))
                         } else {
                             None
                         }
@@ -41,7 +42,7 @@ impl ThemePicker {
                     .collect()
             })
             .unwrap_or_default();
-        themes.push(AppData::new_for_theme("Unset", Some(""), prio));
+        themes.push(AppData::new_for_theme("Unset", Some(""), raw));
 
         if themes.is_empty() {
             return LauncherType::Empty;
