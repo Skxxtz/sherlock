@@ -49,7 +49,13 @@ pub fn write_log<T: AsRef<str>>(message: T, file: &str, line: u32) -> Result<(),
 
 #[macro_export]
 macro_rules! sher_log {
-    ($message:expr) => {{
+    // With message only — uses current file!() and line!()
+    ($message:expr) => {
         $crate::utils::logging::write_log($message, file!(), line!())
-    }};
+    };
+
+    // With message, file and line explicitly passed
+    ($message:expr, $file:expr, $line:expr) => {
+        $crate::utils::logging::write_log($message, $file, $line)
+    };
 }

@@ -223,6 +223,11 @@ impl MozillaSqliteParser {
     }
     fn copy_if_needed(src: &PathBuf, dst: &PathBuf) {
         if Self::should_update_cache(dst, src) {
+            let _ = sher_log!(format!(
+                r#"Bookmark database "{}" is copied to "{}""#,
+                src.display(),
+                dst.display()
+            ));
             if let Some(parent) = dst.parent() {
                 let _ = fs::create_dir_all(parent);
             }
