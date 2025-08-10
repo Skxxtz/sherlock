@@ -12,7 +12,6 @@ use crate::daemon::daemon::SherlockDaemon;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
-
 pub struct LockFile {
     path: PathBuf,
 }
