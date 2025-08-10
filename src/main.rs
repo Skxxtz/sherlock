@@ -243,6 +243,7 @@ async fn startup_loading() -> (
     let t0 = Instant::now();
     let mut non_breaking = Vec::new();
     let mut startup_errors = Vec::new();
+    let _ = sher_log!("New instance started");
 
     let lock = lock::ensure_single_instance(LOCK_FILE).unwrap_or_else(|_| process::exit(1));
 
