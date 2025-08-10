@@ -1,4 +1,5 @@
 use gio::glib::{idle_add, MainContext};
+use once_cell::sync::Lazy;
 use rayon::prelude::*;
 use regex::Regex;
 use serde::de::IntoDeserializer;
@@ -48,6 +49,10 @@ use super::util::AppData;
 use super::util::RawLauncher;
 use super::Loader;
 use crate::sherlock_error;
+
+pub static COLOR_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(rgb|hsl)*\(?(\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3})\)?|\(?(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}\s*%\w*)\)?|^#([a-fA-F0-9]{6,8})$").unwrap()
+});
 
 impl Loader {
     #[sherlock_macro::timing(name = "Loading launchers")]
@@ -283,36 +288,37 @@ fn parse_clipboard_launcher(raw: &RawLauncher) -> Result<LauncherType, SherlockE
     } else {
         // Check if the content is in a suitable format
 
-        let mut is_empty = true;
+        let mut has_val = false;
         if capabilities.contains("url") {
-            let url_raw = r"^(https?:\/\/)?(www\.)?([\da-z\.-]+)\.([a-z]{2,6})([\/\w\.-]*)*\/?$";
-            let url_re = Regex::new(url_raw).unwrap();
-            is_empty = url_re.is_match(&clipboard_content);
+            if clipboard_content.starts_with("http://")
+                || clipboard_content.starts_with("https://")
+                || clipboard_content.starts_with("www.")
+            {
+                has_val = clipboard_content.find('.').is_some();
+            }
         }
 
-        if !is_empty
+        if !has_val
             && capabilities
                 .iter()
                 .find(|c| c.starts_with("colors."))
                 .is_some()
             && clipboard_content.len() <= 20
         {
-            let color_raw = r"^(rgb|hsl)*\(?(\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3})\)?|\(?(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}\s*%\w*)\)?|^#([a-fA-F0-9]{6,8})$";
-            let color_re = Regex::new(color_raw).unwrap();
-            is_empty = color_re.is_match(&clipboard_content);
+            has_val = COLOR_RE.is_match(&clipboard_content);
         }
 
-        if !is_empty
+        if !has_val
             && capabilities
                 .iter()
                 .find(|c| c.starts_with("calc."))
                 .is_some()
         {
             let handler = CalcTileHandler::default();
-            is_empty = handler.based_show(&clipboard_content, &capabilities);
+            has_val = handler.based_show(&clipboard_content, &capabilities);
         }
 
-        if !is_empty {
+        if !has_val {
             return Ok(LauncherType::Empty);
         }
 

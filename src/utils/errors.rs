@@ -61,7 +61,10 @@ impl SherlockError {
         object
     }
     pub fn empty() -> Self {
-        Self { error: SherlockErrorType::None, traceback: String::new() }
+        Self {
+            error: SherlockErrorType::None,
+            traceback: String::new(),
+        }
     }
     pub fn insert(self, is_error: bool) -> Result<(), SherlockError> {
         let mut stream = UnixStream::connect(SOCKET_PATH).map_err(|e| {
