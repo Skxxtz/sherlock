@@ -9,28 +9,38 @@ use nix::unistd::Pid;
 use procfs::process::Process;
 
 use crate::daemon::daemon::SherlockDaemon;
+use crate::sherlock_error;
+use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 #[sherlock_macro::timing(name = "Ensuring single instance", level = "setup")]
-pub fn ensure_single_instance(lock_file: &str) -> Result<LockFile, String> {
+pub fn ensure_single_instance(lock_file: &str) -> Result<LockFile, SherlockError> {
     let path = PathBuf::from(lock_file);
     let take_over = env::args().find(|s| s == "--take-over");
     if path.exists() {
-        if let Some(content) = fs::read_to_string(&path).ok() {
-            if let Some(pid) = content.parse::<i32>().ok() {
-                match Process::new(pid) {
-                    Ok(_) => {
-                        if take_over.is_some() {
-                            let pid = Pid::from_raw(pid);
-                            let _ = kill(pid, SIGKILL);
-                            let _ = fs::remove_file(lock_file);
-                        } else {
-                            let _ = SherlockDaemon::instance();
-                        }
-                    }
-                    Err(_) => {
-                        let _ = fs::remove_file(lock_file);
-                    }
+        let content = fs::read_to_string(&path).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileReadError(path.clone()),
+                e.to_string()
+            )
+        })?;
+        let pid = content.parse::<i32>().map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileParseError(path.clone()),
+                e.to_string()
+            )
+        })?;
+        match Process::new(pid) {
+            Ok(_) => {
+                if take_over.is_some() {
+                    let pid = Pid::from_raw(pid);
+                    let _ = kill(pid, SIGKILL);
+                    let _ = fs::remove_file(lock_file);
+                } else {
+                    let _ = SherlockDaemon::instance();
                 }
+            }
+            Err(_) => {
+                let _ = fs::remove_file(lock_file);
             }
         }
     }
@@ -38,31 +48,45 @@ pub fn ensure_single_instance(lock_file: &str) -> Result<LockFile, String> {
 }
 
 pub struct LockFile {
-    path: String,
+    path: PathBuf,
 }
 
 impl LockFile {
-    pub fn new(path: &str) -> Result<Self, String> {
-        if Path::new(path).exists() {
-            return Err("Lockfile already exists. Aborting...".to_string());
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, SherlockError> {
+        let path = path.as_ref();
+        if path.exists() {
+            return Err(sherlock_error!(
+                SherlockErrorType::LockfileExistsError,
+                "".to_string()
+            ));
         }
 
-        match File::create(path) {
+        match File::create(&path) {
             Ok(mut f) => {
-                write!(f, "{}", std::process::id()).map_err(|e| e.to_string())?;
+                write!(f, "{}", std::process::id()).map_err(|e| {
+                    sherlock_error!(
+                        SherlockErrorType::FileWriteError(path.to_path_buf()),
+                        e.to_string()
+                    )
+                })?;
                 Ok(LockFile {
-                    path: path.to_string(),
+                    path: path.to_path_buf(),
                 })
             }
-            Err(e) => Err(format!("Failed to create lock file: {}", e)),
+            Err(e) => Err(sherlock_error!(
+                SherlockErrorType::FileWriteError(path.to_path_buf()),
+                e.to_string()
+            )),
         }
     }
 
-    pub fn remove(&self) -> Result<(), String> {
-        if let Err(e) = remove_file(&self.path) {
-            return Err(format!("Failed to remove lock file: {}", e));
-        }
-        Ok(())
+    pub fn remove(&self) -> Result<(), SherlockError> {
+        remove_file(&self.path).map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::FileRemoveError(self.path.clone()),
+                e.to_string()
+            )
+        })
     }
 }
 
