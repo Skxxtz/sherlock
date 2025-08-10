@@ -12,46 +12,45 @@ use crate::daemon::daemon::SherlockDaemon;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
-#[sherlock_macro::timing(name = "Ensuring single instance", level = "setup")]
-pub fn ensure_single_instance(lock_file: &str) -> Result<LockFile, SherlockError> {
-    let path = PathBuf::from(lock_file);
-    let take_over = env::args().find(|s| s == "--take-over");
-    if path.exists() {
-        let content = fs::read_to_string(&path).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileReadError(path.clone()),
-                e.to_string()
-            )
-        })?;
-        let pid = content.parse::<i32>().map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileParseError(path.clone()),
-                e.to_string()
-            )
-        })?;
-        match Process::new(pid) {
-            Ok(_) => {
-                if take_over.is_some() {
-                    let pid = Pid::from_raw(pid);
-                    let _ = kill(pid, SIGKILL);
-                    let _ = fs::remove_file(lock_file);
-                } else {
-                    let _ = SherlockDaemon::instance();
-                }
-            }
-            Err(_) => {
-                let _ = fs::remove_file(lock_file);
-            }
-        }
-    }
-    LockFile::new(lock_file)
-}
 
 pub struct LockFile {
     path: PathBuf,
 }
-
 impl LockFile {
+    #[sherlock_macro::timing(name = "Ensuring single instance", level = "setup")]
+    pub fn single_instance(lock_file: &str) -> Result<Self, SherlockError> {
+        let path = PathBuf::from(lock_file);
+        let take_over = env::args().find(|s| s == "--take-over");
+        if path.exists() {
+            let content = fs::read_to_string(&path).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::FileReadError(path.clone()),
+                    e.to_string()
+                )
+            })?;
+            let pid = content.parse::<i32>().map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::FileParseError(path.clone()),
+                    e.to_string()
+                )
+            })?;
+            match Process::new(pid) {
+                Ok(_) => {
+                    if take_over.is_some() {
+                        let pid = Pid::from_raw(pid);
+                        let _ = kill(pid, SIGKILL);
+                        let _ = fs::remove_file(lock_file);
+                    } else {
+                        let _ = SherlockDaemon::instance();
+                    }
+                }
+                Err(_) => {
+                    let _ = fs::remove_file(lock_file);
+                }
+            }
+        }
+        LockFile::new(lock_file)
+    }
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, SherlockError> {
         let path = path.as_ref();
         if path.exists() {

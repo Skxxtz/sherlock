@@ -13,7 +13,6 @@ use std::rc::Rc;
 use std::sync::RwLock;
 use std::time::Instant;
 use std::{env, process};
-use utils::config::SherlockFlags;
 
 mod actions;
 mod api;
@@ -28,7 +27,7 @@ mod utils;
 
 use api::api::SherlockModes;
 use api::server::SherlockServer;
-use application::lock::{self, LockFile};
+use application::lock::LockFile;
 use loader::Loader;
 use utils::{
     config::SherlockConfig,
@@ -52,10 +51,9 @@ async fn main() {
     let original_gsk_renderer = env::var("GSK_RENDERER").unwrap_or_default();
     env::set_var("ORIGINAL_GSK_RENDERER", original_gsk_renderer);
 
-    let (application, startup_errors, non_breaking, sherlock_flags, app_config, lock) =
-        startup_loading().await;
+    let setup = setup().await;
     let t01 = Instant::now();
-    application.connect_activate(move |app| {
+    setup.app.connect_activate(move |app| {
         let sherlock = Rc::new(RefCell::new(api::api::SherlockAPI::new(app)));
         let t1 = Instant::now();
         if let Ok(timing_enabled) = std::env::var("TIMING") {
@@ -63,10 +61,10 @@ async fn main() {
                 println!("GTK Activation took {:?}", t01.elapsed());
             }
         }
-        let mut errors = startup_errors.clone();
-        let warnings = non_breaking.clone();
+        let mut errors = setup.errors.clone();
+        let warnings = setup.warnings.clone();
 
-        if app_config.behavior.use_xdg_data_dir_icons {
+        if setup.config.behavior.use_xdg_data_dir_icons {
             glib::MainContext::default().spawn_local({
                 let sherlock = sherlock.clone();
                 async move {
@@ -106,7 +104,7 @@ async fn main() {
         app.set_accels_for_action("win.close", &["<Ctrl>W"]);
 
         // Significantly better id done here
-        if let Some(obf) = app_config.runtime.input {
+        if let Some(obf) = setup.config.runtime.input {
             sherlock
                 .borrow_mut()
                 .request(ApiCall::SwitchMode(SherlockModes::Input(obf)));
@@ -149,9 +147,9 @@ async fn main() {
 
         // Mode switching
         // Logic for the Error-View
-        let error_view_active = if !app_config.debug.try_suppress_errors {
+        let error_view_active = if !setup.config.debug.try_suppress_errors {
             let show_errors = !errors.is_empty();
-            let show_warnings = !app_config.debug.try_suppress_warnings && !warnings.is_empty();
+            let show_warnings = !setup.config.debug.try_suppress_warnings && !warnings.is_empty();
             show_errors || show_warnings
         } else {
             false
@@ -161,7 +159,7 @@ async fn main() {
             let pipe = Loader::load_pipe_args();
             let mut mode: Option<SherlockModes> = None;
             if !pipe.is_empty() {
-                if sherlock_flags.display_raw {
+                if setup.config.runtime.display_raw {
                     let pipe = String::from_utf8_lossy(&pipe).to_string();
                     mode = Some(SherlockModes::DisplayRaw(pipe));
                 } else if let Some(mut data) = PipedData::new(&pipe) {
@@ -205,7 +203,7 @@ async fn main() {
         let _server = SherlockServer::listen(sherlock);
 
         // Logic for handling the daemonization
-        if app_config.runtime.daemonize {
+        if setup.config.runtime.daemonize {
             // Used to cache render
             if let Some(window) = open_win.upgrade() {
                 let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.close", None);
@@ -228,26 +226,19 @@ async fn main() {
             }
         });
     });
-    application.run();
-    drop(lock);
+    setup.app.run();
+    drop(setup.lock);
 }
 
-async fn startup_loading() -> (
-    Application,
-    Vec<SherlockError>,
-    Vec<SherlockError>,
-    SherlockFlags,
-    SherlockConfig,
-    LockFile,
-) {
+async fn setup() -> StartupResponse {
     let t0 = Instant::now();
-    let mut non_breaking = Vec::new();
-    let mut startup_errors = Vec::new();
+    let mut warnings = Vec::new();
+    let mut errors = Vec::new();
     let _ = sher_log!("New instance started");
 
-    let lock = lock::ensure_single_instance(LOCK_FILE).unwrap_or_else(|_| process::exit(1));
+    let lock = LockFile::single_instance(LOCK_FILE).unwrap_or_else(|_| process::exit(1));
 
-    let (flags_result, app_result) = join!(async { Loader::load_flags() }, async {
+    let (flags_result, app) = join!(async { Loader::load_flags() }, async {
         let app = Application::builder()
             .flags(gio::ApplicationFlags::NON_UNIQUE | gio::ApplicationFlags::HANDLES_COMMAND_LINE)
             .build();
@@ -259,36 +250,34 @@ async fn startup_loading() -> (
     },);
 
     if let Err(e) = Loader::load_resources() {
-        startup_errors.push(e);
+        errors.push(e);
     }
 
-    let mut sherlock_flags = flags_result
-        .map_err(|e| startup_errors.push(e))
-        .unwrap_or_default();
+    let mut flags = flags_result.map_err(|e| errors.push(e)).unwrap_or_default();
 
-    let app_config = sherlock_flags.to_config().map_or_else(
+    let config = flags.to_config().map_or_else(
         |e| {
-            startup_errors.push(e);
+            errors.push(e);
             let defaults = SherlockConfig::default();
-            SherlockConfig::apply_flags(&mut sherlock_flags, defaults)
+            SherlockConfig::apply_flags(&mut flags, defaults)
         },
         |(cfg, non_crit)| {
-            non_breaking.extend(non_crit);
+            warnings.extend(non_crit);
             cfg
         },
     );
 
     // Setup custom icons
     let _ = ICONS.set(RwLock::new(CustomIconTheme::new()));
-    app_config.appearance.icon_paths.iter().for_each(|path| {
+    config.appearance.icon_paths.iter().for_each(|path| {
         if let Err(e) = IconThemeGuard::add_path(path) {
-            startup_errors.push(e);
+            errors.push(e);
         }
     });
 
     // Create global config
-    let _ = CONFIG.set(RwLock::new(app_config.clone())).map_err(|_| {
-        startup_errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
+    let _ = CONFIG.set(RwLock::new(config.clone())).map_err(|_| {
+        errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
     });
 
     // Set GSK_RENDERER
@@ -302,14 +291,21 @@ async fn startup_loading() -> (
         }
     }
 
-    (
-        app_result,
-        startup_errors,
-        non_breaking,
-        sherlock_flags,
-        app_config,
+    StartupResponse {
+        app,
+        errors,
+        warnings,
+        config,
         lock,
-    )
+    }
+}
+
+struct StartupResponse {
+    app: Application,
+    errors: Vec<SherlockError>,
+    warnings: Vec<SherlockError>,
+    config: SherlockConfig,
+    lock: LockFile,
 }
 
 fn post_startup() {
