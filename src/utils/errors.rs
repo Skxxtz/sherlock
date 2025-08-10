@@ -128,6 +128,9 @@ pub enum SherlockErrorType {
     DBusMessageConstructError(String),
     DBusMessageSendError(String),
 
+    // Lockfile
+    LockfileExistsError,
+
     // Networking
     HttpRequestError(String),
 
@@ -235,6 +238,11 @@ impl SherlockErrorType {
             }
             SherlockErrorType::DBusMessageSendError(message) => {
                 format!("Failed to send Dbus message \"{}\"", message)
+            }
+
+            // Lockfile
+            SherlockErrorType::LockfileExistsError => {
+                format!("Lockfile already exists in the specified location")
             }
 
             // Networking
