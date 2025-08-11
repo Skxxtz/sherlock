@@ -105,6 +105,7 @@ in {
           Unit.Description = "Sherlock - App Launcher";
           Install.WantedBy = [ "graphical-session.target" ];
           Service = {
+            Environment = [ "DISPLAY=:0" ];
             ExecStart = "${lib.getExe cfg.package} --daemonize";
             Restart = "on-failure";
           };
