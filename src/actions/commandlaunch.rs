@@ -41,6 +41,17 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
         .stderr(Stdio::null())
         .stdin(Stdio::null());
 
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        unsafe {
+            command.pre_exec(|| {
+                libc::setsid(); // start new session
+                Ok(())
+            });
+        }
+    }
+
     match command.spawn() {
         Ok(mut _child) => {
             let _ = sher_log!(format!("Detached process started: {}.", raw_command));

@@ -37,6 +37,17 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
         .stderr(Stdio::null())
         .stdin(Stdio::null());
 
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        unsafe {
+            command.pre_exec(|| {
+                libc::setsid(); // start new session
+                Ok(())
+            });
+        }
+    }
+
     match command.spawn() {
         Ok(mut _child) => {
             let _ = sher_log!(format!("Detached process started: {}.", cmd));
