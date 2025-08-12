@@ -234,12 +234,19 @@ Sherlock is available in `nixpkgs/unstable` as `sherlock-launcher`. If you're in
 
 #### Flakes & Home-Manager
 
-Add `sherlock.url = "github:Skxxtz/sherlock";` to the `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
+Add the following your `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
+
+```nix
+sherlock = {
+    url = "github:Skxxtz/sherlock";
+    inputs.nixpkgs.follows = "nixpkgs";
+};
+```
 
 For `home-manager` enabled systems, import the `homeManagerModules.default`/`homeModules.default` output of the flake. Then, set `programs.sherlock.enable = true;` to install and create default configuration files. Here's an example:
 
 <details>
-<summary>Nix Example Configuration</summary>
+<summary><strong>Nix Example Configuration</strong></summary>
 
 ```nix
 # import the sherlock homeManager Module
