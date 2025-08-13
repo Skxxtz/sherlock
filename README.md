@@ -234,6 +234,8 @@ Sherlock is available in `nixpkgs/unstable` as `sherlock-launcher`. If you're in
 
 #### Flakes & Home-Manager
 
+A module for Sherlock is available in home manager. You can find it's configuration [here](https://github.com/nix-community/home-manager/blob/master/modules/programs/sherlock.nix). If you want to use the latest updates and module options, follow the steps below.
+
 Add the following your `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
 
 ```nix
@@ -243,16 +245,20 @@ sherlock = {
 };
 ```
 
-For `home-manager` enabled systems, import the `homeManagerModules.default`/`homeModules.default` output of the flake. Then, set `programs.sherlock.enable = true;` to install and create default configuration files. Here's an example:
+For `home-manager` enabled systems, import the `homeManagerModules.default`/`homeModules.default` output of the flake. Then, disable the default home manager module with `disabledModules = [ "programs/sherlock.nix" ];` and set `programs.sherlock.enable = true;` to install and create default configuration files from the input. Here's an example:
 
 <details>
 <summary><strong>Nix Example Configuration</strong></summary>
 
 ```nix
-# import the sherlock homeManager Module
+# import the sherlock homeManager Module from our input
 imports = [
     inputs.sherlock.homeManagerModules.default
 ];
+
+# disable the default home manager module
+# otherwise they will conflict
+disabledModules = [ "programs/sherlock.nix" ];
 
 # example configuration
 programs.sherlock = {
