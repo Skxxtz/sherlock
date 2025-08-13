@@ -30,6 +30,7 @@ self: {
   # TODO(Vanta_1): fix these up into proper types
   configType = types.anything;
   launcherType = types.anything;
+  tomlFormat = pkgs.formats.toml { };
 in {
   options.programs.sherlock = with types; {
     enable = lib.mkEnableOption "Manage sherlock & config files with home-manager module." // {default = false;};
@@ -70,10 +71,10 @@ in {
           };
           config = mkOption {
             description = ''
-              `config.json` in Nix syntax.
+              `config.toml` in Nix syntax.
             '';
             default = {};
-            type = nullOr (attrsOf configType);
+            inherit (tomlFormat) type;
           };
           ignore = mkOption {
             description = "'sherlockignore' file contents.";
@@ -119,9 +120,9 @@ in {
           };
         })
         (mkIf (cfg.settings.config != null) {
-          xdg.configFile."sherlock/config.json" = {
+          xdg.configFile."sherlock/config.toml" = {
             onChange = mkIf cfg.runAsService "${lib.getExe' pkgs.systemd "systemctl"} --user restart sherlock.service";
-            text = builtins.toJSON cfg.settings.config;
+            source = tomlFormat.generate "sherlock-config.toml" cfg.settings.config;
           };
         })
         (mkIf (cfg.settings.ignore != null) {
