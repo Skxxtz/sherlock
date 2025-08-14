@@ -20,7 +20,7 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
         .map_or(String::new(), |f| format!(" {}", f));
 
     let exec = exec.replace("{keyword}", &keyword);
-    let commands = exec.split("&").map(|s| s.trim()).filter(|s| !s.is_empty());
+    let commands = exec.split(" &").map(|s| s.trim()).filter(|s| !s.is_empty());
 
     for command in commands {
         asynchronous_execution(command, &prefix, &flags)?;
