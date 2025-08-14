@@ -30,9 +30,9 @@ pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
 
     let url = url_template.replace("{keyword}", &query.replace(" ", "+"));
     let command = if browser.contains("%u") {
-        browser.replace("%u", &url)
+        browser.replace("%u", &format!(r#" "{}""#, url))
     } else {
-        browser.push_str(&format!(" {}", url));
+        browser.push_str(&format!(r#" "{}""#, url));
         browser
     };
     command_launch(&command, "")
