@@ -2552,7 +2552,6 @@ dependencies = [
  "gtk4",
  "gtk4-layer-shell",
  "levenshtein",
- "libc",
  "meval",
  "nix 0.29.0",
  "once_cell",

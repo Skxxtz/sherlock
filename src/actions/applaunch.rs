@@ -25,30 +25,17 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     }
 
     let cmd = parts.join(" ").trim().to_string();
-    let mut parts = split_as_command(&cmd).into_iter();
-    let mut command = Command::new(parts.next().ok_or(sherlock_error!(
-        SherlockErrorType::CommandExecutionError(cmd.clone()),
-        format!("Failed to get first base command")
-    ))?);
+    let parts = split_as_command(&cmd).into_iter();
 
-    command
+    let command = Command::new("nohup")
+        .arg("setsid")
         .args(parts)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .stdin(Stdio::null());
+        .stdin(Stdio::null())
+        .spawn();
 
-    #[cfg(unix)]
-    {
-        use std::os::unix::process::CommandExt;
-        unsafe {
-            command.pre_exec(|| {
-                libc::setsid(); // start new session
-                Ok(())
-            });
-        }
-    }
-
-    match command.spawn() {
+    match command {
         Ok(mut _child) => {
             let _ = sher_log!(format!("Detached process started: {}.", cmd));
             Ok(())
