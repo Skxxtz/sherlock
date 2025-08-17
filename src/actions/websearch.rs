@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
 use super::commandlaunch::command_launch;
-use crate::utils::{config::ConstantDefaults, errors::SherlockError};
+use crate::utils::{
+    config::{ConfigGuard, ConstantDefaults},
+    errors::SherlockError,
+};
 
-pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
+pub fn websearch(engine: &str, query: &str, browser: Option<&str>) -> Result<(), SherlockError> {
     let engines: HashMap<&str, &str> = HashMap::from([
         ("google", "https://www.google.com/search?q={keyword}"),
         ("bing", "https://www.bing.com/search?q={keyword}"),
@@ -26,7 +29,16 @@ pub fn websearch(engine: &str, query: &str) -> Result<(), SherlockError> {
         engine
     };
 
-    let mut browser = ConstantDefaults::browser()?;
+    let mut browser = match browser {
+        Some(b) => b.to_string(),
+        None => {
+            let c = ConfigGuard::read()?;
+            c.default_apps
+                .browser
+                .clone()
+                .unwrap_or(ConstantDefaults::browser()?)
+        }
+    };
 
     let url = url_template.replace("{keyword}", &query.replace(" ", "+"));
     let command = if browser.contains("%u") {
