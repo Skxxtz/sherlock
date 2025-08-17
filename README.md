@@ -82,6 +82,13 @@ way for you to display cliphist history in sherlock
 
 ## 🎵 Spotify/Music Player Widget
 
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="music-launcher" width="100%" src="docs/assets/MprisTile.svg">
+  </picture>
+</div>
+<br>
+
 - Show your currently playing song or video
 
 ## 📅 Teams Events Launcher
@@ -93,6 +100,7 @@ way for you to display cliphist history in sherlock
 - Type the launcher alias and space bar to only search within a specific category of commands.
 - Categories are fully configurable, allowing you to customize search scopes.
 - Use the category launcher to show a group for additional subcommands
+- Start Sherlock with the `--sub-menu` flag to only search within a category.
 
 ## ⌨️ Shortcuts
 
@@ -105,6 +113,13 @@ way for you to display cliphist history in sherlock
 - Extend or overwrite existing actions from your `sherlock_alias.json` file or create custom ones for your commands
 
 ## 🌞 Weather widget
+
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="weather-launcher" width="100%" src="docs/assets/WeatherWidget.svg">
+  </picture>
+</div>
+<br>
 
 - Show the weather in your specified location
 
