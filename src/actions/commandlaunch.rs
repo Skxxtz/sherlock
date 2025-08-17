@@ -32,35 +32,18 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
     sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
-    let mut command = Command::new("sh");
+    let result = Command::new("setsid")
+    .arg("sh")
+    .arg("-c")
+    .arg(raw_command.clone())
+    .stdin(Stdio::null())
+    .stdout(Stdio::null())
+    .stderr(Stdio::null())
+    .spawn();
 
-    command
-        .arg("-c")
-        .arg(raw_command.clone())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .stdin(Stdio::null());
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::process::CommandExt;
-        unsafe {
-            command.pre_exec(|| {
-                libc::setsid(); // start new session
-                Ok(())
-            });
-        }
-    }
-
-    match command.spawn() {
+    match result {
         Ok(mut _child) => {
             let _ = sher_log!(format!("Detached process started: {}.", raw_command));
-            // if let Some(err) = child.stderr.take() {
-            // sher_log!(format!(
-            //     r#"Detached process {} erred: {:?}"#,
-            //     raw_command, err
-            // ));
-            // }
             Ok(())
         }
         Err(e) => {
