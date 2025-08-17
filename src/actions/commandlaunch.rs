@@ -33,13 +33,13 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
     sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
     let result = Command::new("setsid")
-    .arg("sh")
-    .arg("-c")
-    .arg(raw_command.clone())
-    .stdin(Stdio::null())
-    .stdout(Stdio::null())
-    .stderr(Stdio::null())
-    .spawn();
+        .arg("sh")
+        .arg("-c")
+        .arg(raw_command.clone())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
 
     match result {
         Ok(mut _child) => {

@@ -185,9 +185,11 @@ fn parse_audio_sink_launcher() -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
-    if let Some(browser) = ConfigGuard::read()
-        .ok()
-        .and_then(|c| c.default_apps.browser.clone())
+    if let Some(browser) = raw
+        .args
+        .get("browser")
+        .and_then(|s| s.as_str())
+        .map(|s| s.to_string())
         .or_else(|| ConstantDefaults::browser().ok())
     {
         match BookmarkLauncher::find_bookmarks(&browser, raw) {
@@ -492,6 +494,11 @@ fn parse_weather_launcher(raw: &RawLauncher) -> LauncherType {
 }
 #[sherlock_macro::timing(level = "launchers")]
 fn parse_web_launcher(raw: &RawLauncher) -> LauncherType {
+    let browser = raw
+        .args
+        .get("browser")
+        .and_then(|s| s.as_str())
+        .map(|s| s.to_string());
     LauncherType::Web(WebLauncher {
         display_name: raw.display_name.clone().unwrap_or("".to_string()),
         icon: raw
@@ -506,6 +513,7 @@ fn parse_web_launcher(raw: &RawLauncher) -> LauncherType {
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_string(),
+        browser,
     })
 }
 
