@@ -28,7 +28,7 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
   shader-based animation covering your entire screen.
 - [sherlock-dict](https://github.com/MoonBurst/sherlock_dict_rs): lookup word
   definitions from within Sherlock.
-- [sherlock-clipboard](https://github.com/MoonBurst/sherlock-clipboard): A
+- [sherlock-clipboard](https://github.com/Skxxtz/sherlock-clipboard): A
 way for you to display cliphist history in sherlock
 <br><br>
 
