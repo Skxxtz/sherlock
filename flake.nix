@@ -4,10 +4,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     crane.url = "github:ipetkov/crane";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -25,11 +21,6 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
-
-      flake = rec {
-        homeModules.default = import ./nix/home-manager.nix self;
-        homeManagerModules.default = homeModules.default;
-      };
 
       perSystem = {system, ...}: let
         name = "sherlock";
