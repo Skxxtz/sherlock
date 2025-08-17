@@ -236,7 +236,10 @@ Sherlock is available in `nixpkgs/unstable` as `sherlock-launcher`. If you're in
 
 A module for Sherlock is available in home manager. You can find it's configuration [here](https://github.com/nix-community/home-manager/blob/master/modules/programs/sherlock.nix). If you want to use the latest updates and module options, follow the steps below.
 
-Add the following your `inputs` of `flake.nix`. The sherlock flake can be installed either as a standalone package; or managed with `home-manager`, which both installs and generates configuration files.
+<details>
+<summary><strong>Home-Manager Example Configuration</strong></summary>
+
+Add the following your `inputs` of `flake.nix` if you want to use the latest upstream version of sherlock.
 
 ```nix
 sherlock = {
@@ -245,80 +248,64 @@ sherlock = {
 };
 ```
 
-For `home-manager` enabled systems, import the `homeManagerModules.default`/`homeModules.default` output of the flake. Then, disable the default home manager module with `disabledModules = [ "programs/sherlock.nix" ];` and set `programs.sherlock.enable = true;` to install and create default configuration files from the input. Here's an example:
-
-<details>
-<summary><strong>Nix Example Configuration</strong></summary>
+Home-Manager config:
 
 ```nix
-# import the sherlock homeManager Module from our input
-imports = [
-    inputs.sherlock.homeManagerModules.default
-];
-
-# disable the default home manager module
-# otherwise they will conflict
-disabledModules = [ "programs/sherlock.nix" ];
-
-# example configuration
 programs.sherlock = {
-    enable = true;
-    
-    # for faster startup times
-    runAsService = true;
+  enable = true;
 
-    settings = {
-      # config.json / config.toml
-      # use nix syntax
-      config = {};
+  # to run sherlock as a daemon
+  systemd.enable = true;
 
-      # fallback.json
-      # A list of launchers
-      launchers = [
-          {
-            name = "Calculator";
-            type = "calculation";
-            args = {
-                capabilities = [
-                    "calc.math"
-                    "calc.units"
-                ];
-            };
-            priority = 1;
-          }
-          {
-            name = "App Launcher";
-            type = "app_launcher";
-            args = {};
-            priority = 2;
-            home = "Home";
-          }
-      ];
+  # If wanted, you can use this line for the _latest_ package. / Otherwise, you're relying on nixpkgs to update it frequently enough.
+  # For this to work, make sure to add sherlock as a flake input!
+  # package = inputs.sherlock.packages.${pkgs.system}.default;
 
-      # sherlock_alias.json
-      # use nix syntax
-      aliases = {
-        vesktop = { name = "Discord"; };
+  # config.toml
+  settings = {};
+
+  # sherlock_alias.json
+  aliases = {
+    vesktop = { name = "Discord"; };
+  };
+
+  # sherlockignore
+  ignore = ''
+    Avahi*
+  '';
+
+  # fallback.json
+  launchers = [
+    {
+      name = "Calculator";
+      type = "calculation";
+      args = {
+        capabilities = [
+          "calc.math"
+          "calc.units"
+        ];
       };
+      priority = 1;
+    }
+    {
+      name = "App Launcher";
+      type = "app_launcher";
+      args = {};
+      priority = 2;
+      home = "Home";
+    }
+  ];
 
-      # main.css
-      style = /* css */ ''
-        * {
-            font-family: sans-serif;
-        }
-      '';
-
-      # sherlockignore
-      ignore = ''
-        Avahi*
-      '';
-    };
+  # main.css
+  style = /* css */ ''
+    * {
+      font-family: sans-serif;
+    }
+  '';
 };
 ```
 
 </details>
-
-To stop home-manager from symlinking these files from the nix store (this can be useful if you're iterating a lot and don't want to rebuild your system), set the file's corresponding option to `null`. `programs.sherlock.settings = null;` will stop managing all sherlock-related config files.
 
 #### Flakes without Home-Manager
 
