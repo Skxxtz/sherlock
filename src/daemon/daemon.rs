@@ -180,7 +180,7 @@ pub fn print_reponse<T: AsRef<[u8]>>(response: T) -> Result<(), SherlockError> {
         stream.write_sized(response)?;
     } else {
         let response = String::from_utf8_lossy(response);
-        println!("{}", response);
+        print!("{}", response);
     }
     Ok(())
 }
