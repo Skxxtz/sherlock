@@ -59,7 +59,7 @@ mod imp {
 }
 
 use gtk4::glib;
-use gtk4::prelude::WidgetExt;
+use gtk4::prelude::{EntryExt, WidgetExt};
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 glib::wrapper! {
     pub struct GridSearchUi(ObjectSubclass<imp::GridSearchUi>)
@@ -68,9 +68,10 @@ glib::wrapper! {
 }
 
 impl GridSearchUi {
-    pub fn new() -> Self {
+    pub fn new(placeholder: Option<&str>) -> Self {
         let ui = glib::Object::new::<Self>();
         let imp = ui.imp();
+        imp.search_bar.set_placeholder_text(Some(placeholder.unwrap_or("Search:")));
         imp.search_icon_holder.add_css_class("search");
         imp.results.set_focusable(false);
         ui

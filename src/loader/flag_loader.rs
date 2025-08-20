@@ -84,6 +84,7 @@ impl SherlockFlags {
             multi: check_flag_existence("--multi"),
             photo_mode: check_flag_existence("--photo"),
             input: Self::extract_flag_value::<bool>(&args, "--input", None),
+            placeholder: Self::extract_flag_value::<String>(&args, "--placeholder", None),
         })
     }
 }
@@ -113,6 +114,10 @@ pub fn flag_documentation() -> Result<(), SherlockError> {
             "Specify the directly Sherlock will look for its configuration in.",
         ),
         ("\nBEHAVIOR:", ""),
+        (
+            "--placeholder",
+            "Overwrite the placeholder text of the search bar.",
+        ),
         (
             "--daemonize",
             "If this flag is set, Sherlock will run in daemon mode.",

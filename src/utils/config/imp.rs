@@ -71,6 +71,7 @@ impl Default for ConfigBehavior {
             global_prefix: None,
             global_flags: None,
             use_lr_nav: false,
+            placeholder: None,
         }
     }
 }

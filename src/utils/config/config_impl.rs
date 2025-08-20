@@ -199,6 +199,10 @@ impl SherlockConfig {
         config.runtime.field = sherlock_flags.field.take();
         config.runtime.daemonize = sherlock_flags.daemonize;
 
+        if let Some(placeholder) = sherlock_flags.placeholder.take() {
+            config.behavior.placeholder = Some(placeholder);
+        }
+
         config
     }
 }

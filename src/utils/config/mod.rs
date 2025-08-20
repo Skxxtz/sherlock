@@ -140,6 +140,8 @@ pub struct ConfigBehavior {
     pub global_flags: Option<String>,
     #[serde(default = "OtherDefaults::bool_true")]
     pub use_lr_nav: bool,
+    #[serde(default)]
+    pub placeholder: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
