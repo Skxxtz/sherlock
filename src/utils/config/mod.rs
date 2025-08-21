@@ -127,6 +127,8 @@ pub struct ConfigAppearance {
     pub mod_key_ascii: Vec<String>,
     #[serde(default = "OtherDefaults::five")]
     pub num_shortcuts: u8,
+    #[serde(default = "OtherDefaults::placeholder")]
+    pub placeholder: String,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfigBehavior {
@@ -140,8 +142,6 @@ pub struct ConfigBehavior {
     pub global_flags: Option<String>,
     #[serde(default = "OtherDefaults::bool_true")]
     pub use_lr_nav: bool,
-    #[serde(default)]
-    pub placeholder: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

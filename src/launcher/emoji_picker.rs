@@ -22,7 +22,6 @@ use crate::ui::context::make_emoji_context;
 use crate::ui::g_templates::GridSearchUi;
 use crate::ui::key_actions::EmojiKeyActions;
 use crate::ui::util::{ConfKeys, ContextUI, SearchHandler};
-use crate::utils::config::ConfigGuard;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy)]
@@ -271,11 +270,10 @@ fn construct(
     ),
     SherlockError,
 > {
-    let config = ConfigGuard::read()?;
     let emojies = EmojiPicker::load(skin_tone)?;
     let search_text = Rc::new(RefCell::new(String::new()));
     // Initialize the builder with the correct path
-    let ui = GridSearchUi::new(config.behavior.placeholder.as_deref());
+    let ui = GridSearchUi::new();
     let imp = ui.imp();
 
     let (context, revealer) = make_emoji_context();
@@ -500,4 +498,3 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
         }
     })
 }
-

@@ -67,13 +67,17 @@ glib::wrapper! {
         @implements gtk4::Buildable;
 }
 
+use crate::utils::config::ConfigGuard;
 impl GridSearchUi {
-    pub fn new(placeholder: Option<&str>) -> Self {
+    pub fn new() -> Self {
         let ui = glib::Object::new::<Self>();
         let imp = ui.imp();
-        imp.search_bar.set_placeholder_text(Some(placeholder.unwrap_or("Search:")));
         imp.search_icon_holder.add_css_class("search");
         imp.results.set_focusable(false);
+        if let Ok(config) = ConfigGuard::read() {
+            imp.search_bar
+                .set_placeholder_text(Some(&config.appearance.placeholder));
+        }
         ui
     }
 }

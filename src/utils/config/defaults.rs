@@ -234,4 +234,7 @@ impl OtherDefaults {
     pub fn search_icon_back() -> String {
         String::from("sherlock-back")
     }
+    pub fn placeholder() -> String {
+        String::from("Search:")
+    }
 }

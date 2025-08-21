@@ -200,7 +200,7 @@ impl SherlockConfig {
         config.runtime.daemonize = sherlock_flags.daemonize;
 
         if let Some(placeholder) = sherlock_flags.placeholder.take() {
-            config.behavior.placeholder = Some(placeholder);
+            config.appearance.placeholder = placeholder;
         }
 
         config
