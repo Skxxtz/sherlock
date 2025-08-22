@@ -127,6 +127,8 @@ pub struct ConfigAppearance {
     pub mod_key_ascii: Vec<String>,
     #[serde(default = "OtherDefaults::five")]
     pub num_shortcuts: u8,
+    #[serde(default = "OtherDefaults::placeholder")]
+    pub placeholder: String,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfigBehavior {
