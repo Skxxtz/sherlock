@@ -59,7 +59,7 @@ mod imp {
 }
 
 use gtk4::glib;
-use gtk4::prelude::WidgetExt;
+use gtk4::prelude::{EntryExt, WidgetExt};
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 glib::wrapper! {
     pub struct GridSearchUi(ObjectSubclass<imp::GridSearchUi>)
@@ -67,12 +67,17 @@ glib::wrapper! {
         @implements gtk4::Buildable;
 }
 
+use crate::utils::config::ConfigGuard;
 impl GridSearchUi {
     pub fn new() -> Self {
         let ui = glib::Object::new::<Self>();
         let imp = ui.imp();
         imp.search_icon_holder.add_css_class("search");
         imp.results.set_focusable(false);
+        if let Ok(config) = ConfigGuard::read() {
+            imp.search_bar
+                .set_placeholder_text(Some(&config.appearance.placeholder));
+        }
         ui
     }
 }

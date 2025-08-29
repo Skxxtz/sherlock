@@ -302,6 +302,9 @@ fn construct_window(
     main_overlay.set_child(Some(&ui));
     main_overlay.add_overlay(&revealer);
 
+    imp.search_bar
+        .set_placeholder_text(Some(&config.appearance.placeholder));
+
     // Update the search icon
     imp.search_icon.set_icon(
         Some(&config.search_bar_icon.icon),
