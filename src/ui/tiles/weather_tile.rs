@@ -11,7 +11,7 @@ use crate::actions::execute_from_attrs;
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::weather_launcher::WeatherData;
 use crate::launcher::Launcher;
-use crate::prelude::TileHandler;
+use crate::prelude::{IconComp, TileHandler};
 use crate::ui::g_templates::WeatherTile;
 
 impl Tile {
@@ -41,7 +41,7 @@ impl WeatherTileHandler {
     pub async fn async_update(&self, row: &SherlockRow, launcher: Rc<Launcher>) -> Option<()> {
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
-        if let Some((mut data, was_changed)) = launcher.get_weather().await {
+        if let Some((data, was_changed)) = launcher.get_weather().await {
             let css_class = if was_changed {
                 "weather-animate"
             } else {
@@ -53,8 +53,14 @@ impl WeatherTileHandler {
 
             let current_time = Local::now().time();
             if (data.sunset - current_time).num_seconds() < 0 {
-                data.icon.push_str("-night");
                 row.add_css_class("night");
+                imp.icon.set_icon(
+                    Some(&data.icon),
+                    None,
+                    Some(&format!("{}-night", data.icon)),
+                );
+            } else {
+                imp.icon.set_icon_name(Some(&data.icon));
             }
 
             imp.temperature.set_text(&data.temperature);
@@ -64,7 +70,8 @@ impl WeatherTileHandler {
             self.data.borrow_mut().replace(data);
         } else {
             imp.location.set_text("! Failed to load weather");
-            imp.icon.set_icon_name(Some("weather-none-available"));
+            imp.icon
+                .set_icon_name(Some("sherlock-weather-none-available"));
             imp.spinner.set_spinning(false);
         }
         Some(())
@@ -79,8 +86,11 @@ impl WeatherTileHandler {
             let current_time = Local::now().time();
             if (data.sunset - current_time).num_seconds() < 0 {
                 row.add_css_class("night");
-                imp.icon
-                    .set_icon_name(Some(&format!("{}-night", data.icon)));
+                imp.icon.set_icon(
+                    Some(&data.icon),
+                    None,
+                    Some(&format!("{}-night", data.icon)),
+                );
             } else {
                 imp.icon.set_icon_name(Some(&data.icon));
             }
@@ -89,8 +99,8 @@ impl WeatherTileHandler {
             imp.location.set_text(&data.format_str);
             imp.spinner.set_spinning(false);
         } else {
-            imp.location.set_text("! Failed to load weather");
-            imp.icon.set_icon_name(Some("weather-none-available"));
+            imp.icon
+                .set_icon_name(Some("sherlock-weather-none-available"));
             imp.spinner.set_spinning(false);
         }
         Some(())

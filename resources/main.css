@@ -611,7 +611,6 @@ gridview child:selected box {
 }
 
 .tile.weather-tile #location {
-    margin-left: 5px;
     padding: 10px 0px;
     font-size: 10px;
 }
