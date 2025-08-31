@@ -777,7 +777,8 @@ name]` method or by using bind callbacks `"callback": "[function name]"`.
     "type": "weather",
     "args": {
         "location": "berlin",
-        "update_interval": 60
+        "update_interval": 60,
+        "icon_theme": "Sherlock"
     },
     "priority": 1,
     "home": "OnlyHome",
@@ -794,3 +795,6 @@ Specifies the location for which the weather should be gathered.<br>
 
 **`update_interval`** (optional):<br>
 Specifies how often you want to update the weather. In minutes.<br>
+
+**`icon_theme`** (optional):<br>
+Specifies whether Sherlock's fallback icon theme should be used or the system icon theme.<br>
