@@ -487,8 +487,8 @@ fn parse_weather_launcher(raw: &RawLauncher) -> LauncherType {
 
         let icon_theme: WeatherIconTheme = raw
             .args
-            .get("icon_theme")           
-            .and_then(Value::as_str)    
+            .get("icon_theme")
+            .and_then(Value::as_str)
             .and_then(|s| serde_json::from_str(&format!(r#""{}""#, s)).ok())
             .unwrap_or(WeatherIconTheme::None);
 

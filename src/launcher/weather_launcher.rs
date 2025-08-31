@@ -12,7 +12,7 @@ use crate::utils::files::home_dir;
 #[derive(Clone, Debug, Deserialize)]
 pub enum WeatherIconTheme {
     Sherlock,
-    None
+    None,
 }
 
 #[derive(Clone, Debug)]
@@ -123,17 +123,23 @@ impl WeatherData {
             ".cache/sherlock/weather/{}.json",
             launcher.location
         ));
-
         fn modtime(path: &PathBuf) -> Option<SystemTime> {
             fs::metadata(path).ok().and_then(|m| m.modified().ok())
         }
         let mtime = modtime(&path)?;
         let time_since = SystemTime::now().duration_since(mtime).ok()?;
         if time_since < Duration::from_secs(60 * launcher.update_interval) {
-            let cached_data: Option<Self> = File::open(&path)
+            let mut cached_data: Self = File::open(&path)
                 .ok()
-                .and_then(|f| simd_json::from_reader(f).ok());
-            return cached_data;
+                .and_then(|f| simd_json::from_reader(f).ok())?;
+
+            cached_data.icon = if matches!(launcher.icon_theme, WeatherIconTheme::Sherlock) {
+                format!("sherlock-{}", cached_data.css)
+            } else {
+                cached_data.css.clone()
+            };
+
+            return Some(cached_data);
         } else {
             return None;
         }
