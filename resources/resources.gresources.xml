@@ -26,6 +26,7 @@
 <file alias="timer.gif">icons/timer.gif</file>
 <file alias="sherlock-bookmark.svg">icons/sherlock-bookmark.svg</file>
 <file alias="duckduckgo.svg">icons/duckduckgo.svg</file>
+<file alias="sherlock-weather-snow-night.svg">icons/weather-icons/sherlock-weather-snow-night.svg</file>
 <file alias="sherlock-weather-clear-night.svg">icons/weather-icons/sherlock-weather-clear-night.svg</file>
 <file alias="sherlock-weather-many-clouds-night.svg">icons/weather-icons/sherlock-weather-many-clouds-night.svg</file>
 <file alias="sherlock-weather-showers-scattered.svg">icons/weather-icons/sherlock-weather-showers-scattered.svg</file>
@@ -33,7 +34,6 @@
 <file alias="sherlock-weather-cloudy.svg">icons/weather-icons/sherlock-weather-cloudy.svg</file>
 <file alias="sherlock-weather-few-clouds.svg">icons/weather-icons/sherlock-weather-few-clouds.svg</file>
 <file alias="sherlock-weather-many-clouds.svg">icons/weather-icons/sherlock-weather-many-clouds.svg</file>
-<file alias="sherlock-weather-snow-1.svg">icons/weather-icons/sherlock-weather-snow-1.svg</file>
 <file alias="sherlock-weather-windy.svg">icons/weather-icons/sherlock-weather-windy.svg</file>
 <file alias="sherlock-weather-tornado.svg">icons/weather-icons/sherlock-weather-tornado.svg</file>
 <file alias="sherlock-weather-clouds.svg">icons/weather-icons/sherlock-weather-clouds.svg</file>
