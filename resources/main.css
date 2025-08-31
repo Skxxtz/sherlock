@@ -25,6 +25,7 @@
     --weather-showers-scattered: linear-gradient(45deg, #73848C 0%, #374B54 100%);
 
     --weather-none-available: hsl(0, 0%, 50%);
+    --weather-night: #2C3140;
     /* Neutral placeholder gray */
 }
 
@@ -690,6 +691,9 @@ gridview child:selected box {
 .tile.weather-tile.weather-none-available {
     background: var(--weather-none-available);
     background-clip: padding-box;
+}
+.tile.weather-tile.night {
+    background: var(--weather-night);
 }
 
 /* TIMER TILE */

@@ -1,3 +1,4 @@
+use chrono::Local;
 use serde::{Deserialize, Serialize};
 use simd_json::base::{ValueAsArray, ValueAsScalar};
 use std::collections::HashSet;
@@ -35,6 +36,11 @@ impl WeatherLauncher {
         let mut response_bytes = response.into_bytes();
         let json: simd_json::OwnedValue = simd_json::to_owned_value(&mut response_bytes).ok()?;
         let current_condition = json["current_condition"].as_array()?.get(0)?;
+
+        // Get sunset time
+        let astronomy = json["weather"].as_array()?.get(0)?["astronomy"].as_array()?.get(0)?;
+        let sunset_raw = astronomy["sunset"].as_str()?;
+        let sunset = chrono::NaiveTime::parse_from_str(sunset_raw, "%I:%M %p").ok()?;
 
         // Parse Temperature
         let temperature = match config.units.temperatures.as_str() {
@@ -81,6 +87,7 @@ impl WeatherLauncher {
             format_str,
             location: self.location.clone(),
             css: WeatherLauncher::match_weather_code(code),
+            sunset,
         };
         data.cache();
 
@@ -115,6 +122,7 @@ pub struct WeatherData {
     pub format_str: String,
     pub location: String,
     pub css: String,
+    pub sunset: chrono::NaiveTime,
 }
 impl WeatherData {
     fn from(launcher: &WeatherLauncher) -> Option<Self> {
