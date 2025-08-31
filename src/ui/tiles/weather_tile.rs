@@ -50,7 +50,7 @@ impl WeatherTileHandler {
 
             row.add_css_class(css_class);
             row.add_css_class(&data.css);
-            
+
             let current_time = Local::now().time();
             if (data.sunset - current_time).num_seconds() < 0 {
                 data.icon.push_str("-night");
@@ -79,7 +79,8 @@ impl WeatherTileHandler {
             let current_time = Local::now().time();
             if (data.sunset - current_time).num_seconds() < 0 {
                 row.add_css_class("night");
-                imp.icon.set_icon_name(Some(&format!("{}-night", data.icon)));
+                imp.icon
+                    .set_icon_name(Some(&format!("{}-night", data.icon)));
             } else {
                 imp.icon.set_icon_name(Some(&data.icon));
             }

@@ -1,4 +1,3 @@
-use chrono::Local;
 use serde::{Deserialize, Serialize};
 use simd_json::base::{ValueAsArray, ValueAsScalar};
 use std::collections::HashSet;
@@ -38,7 +37,9 @@ impl WeatherLauncher {
         let current_condition = json["current_condition"].as_array()?.get(0)?;
 
         // Get sunset time
-        let astronomy = json["weather"].as_array()?.get(0)?["astronomy"].as_array()?.get(0)?;
+        let astronomy = json["weather"].as_array()?.get(0)?["astronomy"]
+            .as_array()?
+            .get(0)?;
         let sunset_raw = astronomy["sunset"].as_str()?;
         let sunset = chrono::NaiveTime::parse_from_str(sunset_raw, "%I:%M %p").ok()?;
 
