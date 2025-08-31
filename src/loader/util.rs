@@ -307,7 +307,7 @@ impl CounterReader {
 
 pub struct JsonCache;
 impl JsonCache {
-    pub fn write<T>(path: &PathBuf, to: &T) -> Result<(), SherlockError>
+    pub fn _write<T>(path: &PathBuf, to: &T) -> Result<(), SherlockError>
     where
         T: serde::Serialize + ?Sized,
     {

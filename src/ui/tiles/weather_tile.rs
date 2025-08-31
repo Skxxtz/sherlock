@@ -48,7 +48,7 @@ impl WeatherTileHandler {
             };
 
             row.add_css_class(css_class);
-            row.add_css_class(&data.icon);
+            row.add_css_class(&data.css);
 
             imp.temperature.set_text(&data.temperature);
             imp.icon.set_icon_name(Some(&data.icon));
@@ -57,6 +57,7 @@ impl WeatherTileHandler {
             self.data.borrow_mut().replace(data);
         } else {
             imp.location.set_text("! Failed to load weather");
+            imp.icon.set_icon_name(Some("weather-none-available"));
             imp.spinner.set_spinning(false);
         }
         Some(())
@@ -74,6 +75,7 @@ impl WeatherTileHandler {
             imp.spinner.set_spinning(false);
         } else {
             imp.location.set_text("! Failed to load weather");
+            imp.icon.set_icon_name(Some("weather-none-available"));
             imp.spinner.set_spinning(false);
         }
         Some(())

@@ -22,7 +22,7 @@ use crate::launcher::file_launcher::FileLauncher;
 use crate::launcher::pomodoro_launcher::{Pomodoro, PomodoroStyle};
 use crate::launcher::process_launcher::ProcessLauncher;
 use crate::launcher::theme_picker::ThemePicker;
-use crate::launcher::weather_launcher::WeatherLauncher;
+use crate::launcher::weather_launcher::{WeatherIconTheme, WeatherLauncher};
 use crate::launcher::{
     app_launcher, bulk_text_launcher, clipboard_launcher, system_cmd_launcher, web_launcher,
     Launcher, LauncherType,
@@ -484,9 +484,18 @@ fn parse_weather_launcher(raw: &RawLauncher) -> LauncherType {
             .get("update_interval")
             .and_then(Value::as_u64)
             .unwrap_or(60);
+
+        let icon_theme: WeatherIconTheme = raw
+            .args
+            .get("icon_theme")           
+            .and_then(Value::as_str)    
+            .and_then(|s| serde_json::from_str(&format!(r#""{}""#, s)).ok())
+            .unwrap_or(WeatherIconTheme::None);
+
         LauncherType::Weather(WeatherLauncher {
             location: location.to_string(),
             update_interval,
+            icon_theme,
         })
     } else {
         LauncherType::Empty

@@ -9,10 +9,17 @@ use super::utils::to_title_case;
 use crate::utils::config::ConfigGuard;
 use crate::utils::files::home_dir;
 
+#[derive(Clone, Debug, Deserialize)]
+pub enum WeatherIconTheme {
+    Sherlock,
+    None
+}
+
 #[derive(Clone, Debug)]
 pub struct WeatherLauncher {
     pub location: String,
     pub update_interval: u64,
+    pub icon_theme: WeatherIconTheme,
 }
 impl WeatherLauncher {
     pub async fn get_result(&self) -> Option<(WeatherData, bool)> {
@@ -37,7 +44,11 @@ impl WeatherLauncher {
 
         // Parse Icon
         let code = current_condition["weatherCode"].as_str()?;
-        let icon = WeatherLauncher::match_weather_code(code);
+        let icon = if matches!(self.icon_theme, WeatherIconTheme::Sherlock) {
+            format!("sherlock-{}", WeatherLauncher::match_weather_code(code))
+        } else {
+            WeatherLauncher::match_weather_code(code)
+        };
 
         // Parse wind dir
         let wind_deg = current_condition["winddirDegree"]
@@ -69,6 +80,7 @@ impl WeatherLauncher {
             icon,
             format_str,
             location: self.location.clone(),
+            css: WeatherLauncher::match_weather_code(code),
         };
         data.cache();
 
@@ -102,6 +114,7 @@ pub struct WeatherData {
     pub icon: String,
     pub format_str: String,
     pub location: String,
+    pub css: String,
 }
 impl WeatherData {
     fn from(launcher: &WeatherLauncher) -> Option<Self> {

@@ -60,7 +60,7 @@ fn generate_resource_file() {
         .join("\n");
     let icons = icons
         .into_iter()
-        .map(|f| format!(r#"<file alias="{}">{}</file>"#, f, f))
+        .map(|f| format!(r#"<file alias="{}">{}</file>"#, f.split("/").last().unwrap_or(&f), f))
         .collect::<Vec<String>>()
         .join("\n");
 
