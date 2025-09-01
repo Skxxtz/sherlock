@@ -533,10 +533,10 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
 
             if !search_text.is_empty() {
                 if let Some(search) = item_a.search() {
-                    priority_a = make_prio(item_a.priority(), &search_text, &search);
+                    priority_a = make_prio(item_a.priority(), &search_text, &search.to_lowercase());
                 }
                 if let Some(search) = item_b.search() {
-                    priority_b = make_prio(item_b.priority(), &search_text, &search);
+                    priority_b = make_prio(item_b.priority(), &search_text, &search.to_lowercase());
                 }
             }
 
