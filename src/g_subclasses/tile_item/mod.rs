@@ -303,7 +303,8 @@ impl TileItem {
             }
             UpdateHandler::Weather(inner) => {
                 if let Some(parent) = self.parent().upgrade() {
-                    return inner.update(&parent);
+                    let launcher = imp.launcher.borrow();
+                    return inner.update(&parent, launcher.clone());
                 }
             }
             UpdateHandler::WebTile(inner) => {

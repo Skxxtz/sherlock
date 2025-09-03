@@ -41,6 +41,14 @@ impl WeatherTileHandler {
     pub async fn async_update(&self, row: &SherlockRow, launcher: Rc<Launcher>) -> Option<()> {
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
+
+        if imp.datetime_holder.get_visible() {
+            let now = chrono::Local::now();
+            imp.datetime_holder.set_visible(true);
+            imp.time.set_text(&now.format("%R").to_string());
+            imp.date.set_text(&now.format("%a, %d %b %Y").to_string());
+        }
+
         if let Some((data, was_changed)) = launcher.get_weather().await {
             let css_class = if was_changed {
                 "weather-animate"
@@ -76,9 +84,21 @@ impl WeatherTileHandler {
         }
         Some(())
     }
-    pub fn update(&self, row: &SherlockRow) -> Option<()> {
+    pub fn update(&self, row: &SherlockRow, launcher: Rc<Launcher>) -> Option<()> {
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
+
+        if let Some(weather_launcher) = launcher.get_weather_launcher() {
+            if weather_launcher.show_datetime {
+                let now = chrono::Local::now();
+                imp.datetime_holder.set_visible(true);
+                imp.time.set_text(&now.format("%R").to_string());
+                imp.date.set_text(&now.format("%a, %d %b %Y").to_string());
+            } else {
+                imp.datetime_holder.set_visible(false);
+            }
+        }
+
         if let Some(data) = &*self.data.borrow() {
             row.add_css_class("weather-no-animate");
             row.add_css_class(&data.icon);
