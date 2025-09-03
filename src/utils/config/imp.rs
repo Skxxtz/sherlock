@@ -51,6 +51,8 @@ impl Default for ConfigAppearance {
         Self {
             width: 900,
             height: 593, // 617 with, 593 without notification bar
+            margins: (0, 0, 0, 0),
+            anchor: String::from(""),
             gsk_renderer: String::from("cairo"),
             icon_paths: FileDefaults::icon_paths(),
             icon_size: OtherDefaults::icon_size(),

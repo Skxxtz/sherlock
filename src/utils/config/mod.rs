@@ -112,6 +112,10 @@ pub struct ConfigAppearance {
     #[serde(default)]
     pub height: i32,
     #[serde(default)]
+    pub margins: (i32, i32, i32, i32),
+    #[serde(default)]
+    pub anchor: String,
+    #[serde(default)]
     pub gsk_renderer: String,
     #[serde(default = "FileDefaults::icon_paths")]
     pub icon_paths: Vec<PathBuf>,
