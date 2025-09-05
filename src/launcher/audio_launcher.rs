@@ -24,18 +24,16 @@ impl MusicPlayerLauncher {
     /// image: Pixbuf
     /// was_cached: bool
     pub async fn get_image(&self) -> Option<(Pixbuf, bool)> {
-        let loc = match &self.mpris.metadata.art.split("/").last() {
-            Some(s) => s.to_string(),
-            _ => return None,
-        };
+        let art_url = self.mpris.metadata.art.as_ref()?;
+        let loc = art_url.split("/").last()?.to_string();
         let mut was_cached = true;
         let bytes = match MusicPlayerLauncher::read_cached_cover(&loc) {
             Ok(b) => b,
             Err(_) => {
-                if self.mpris.metadata.art.starts_with("file") {
-                    MusicPlayerLauncher::read_image_file(&self.mpris.metadata.art).ok()?
+                if art_url.starts_with("file") {
+                    MusicPlayerLauncher::read_image_file(art_url).ok()?
                 } else {
-                    let response = reqwest::get(&self.mpris.metadata.art).await.ok()?;
+                    let response = reqwest::get(art_url).await.ok()?;
                     let bytes = response.bytes().await.ok()?;
                     let _ = MusicPlayerLauncher::cache_cover(&bytes, &loc);
                     was_cached = false;

@@ -94,9 +94,23 @@ impl MusicTileHandler {
                 }
                 // Update mpris and ui title and artist
                 *mpris = new;
-                imp.category
-                    .set_text(&mpris.mpris.metadata.artists.join(", "));
-                imp.title.set_text(&mpris.mpris.metadata.title);
+                let artists_text = mpris
+                    .mpris
+                    .metadata
+                    .artists
+                    .as_ref()
+                    .map(|artists| artists.join(", "))
+                    .unwrap_or_else(|| "Unknown Artist".to_string());
+                imp.category.set_text(&artists_text);
+
+                let title_text = mpris
+                    .mpris
+                    .metadata
+                    .title
+                    .as_ref()
+                    .map(|title| title.clone())
+                    .unwrap_or_else(|| "Unknown Title".to_string());
+                imp.title.set_text(&title_text);
                 self.attrs
                     .borrow_mut()
                     .entry("player".to_string())
