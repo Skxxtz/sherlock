@@ -10,3 +10,4 @@
 .envrc
 
 *.gresources
+*.gresources.xml
