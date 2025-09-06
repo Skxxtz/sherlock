@@ -9,7 +9,7 @@ use gtk4::{
     prelude::*, Application, ApplicationWindow, EventControllerFocus, EventControllerKey,
     StackTransitionType,
 };
-use gtk4_layer_shell::{Edge, Layer, LayerShell};
+use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -50,13 +50,26 @@ pub fn window(
     window.init_layer_shell();
     window.set_namespace("sherlock");
     window.set_layer(Layer::Overlay);
-    window.set_keyboard_mode(gtk4_layer_shell::KeyboardMode::Exclusive);
+    window.set_keyboard_mode(KeyboardMode::Exclusive);
+
+    window.set_anchor(Edge::Top, config.appearance.anchor.contains("top"));
+    window.set_anchor(Edge::Right, config.appearance.anchor.contains("right"));
+    window.set_anchor(Edge::Bottom, config.appearance.anchor.contains("bottom"));
+    window.set_anchor(Edge::Left, config.appearance.anchor.contains("left"));
+
+    window.set_margin(Edge::Top, config.appearance.margins.0);
+    window.set_margin(Edge::Right, config.appearance.margins.1);
+    window.set_margin(Edge::Bottom, config.appearance.margins.2);
+    window.set_margin(Edge::Left, config.appearance.margins.3);
 
     if !config.expand.enable {
         window.set_default_height(height);
-    } else {
-        window.set_anchor(gtk4_layer_shell::Edge::Top, true);
-        window.set_margin(gtk4_layer_shell::Edge::Top, config.expand.margin);
+    } else if config.appearance.anchor.is_empty() {
+        window.set_anchor(Edge::Top, true);
+        window.set_margin(
+            Edge::Top,
+            config.expand.margin + config.appearance.margins.0,
+        );
     }
 
     if !config.runtime.photo_mode {
