@@ -23,6 +23,7 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     if let Some(flag) = &config.behavior.global_flags {
         parts.push(flag.to_string());
     }
+    parts.retain(|s| !s.starts_with("%"));
 
     let cmd = parts.join(" ").trim().to_string();
     match spawn_command_line_async(&cmd) {
