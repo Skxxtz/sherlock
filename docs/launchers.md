@@ -778,7 +778,8 @@ name]` method or by using bind callbacks `"callback": "[function name]"`.
     "args": {
         "location": "berlin",
         "update_interval": 60,
-        "icon_theme": "Sherlock"
+        "icon_theme": "Sherlock",
+        "show_datetime": false
     },
     "priority": 1,
     "home": "OnlyHome",
@@ -798,3 +799,6 @@ Specifies how often you want to update the weather. In minutes.<br>
 
 **`icon_theme`** (optional):<br>
 Specifies whether Sherlock's fallback icon theme should be used or the system icon theme.<br>
+
+**`show_datetime`** (optional):<br>
+Specifies whether the current date and time should be shown alongside the weather information.<br>

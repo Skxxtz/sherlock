@@ -332,4 +332,10 @@ impl Launcher {
             _ => None,
         }
     }
+    pub fn get_weather_launcher(&self) -> Option<&WeatherLauncher> {
+        match &self.launcher_type {
+            LauncherType::Weather(wtr) => Some(wtr),
+            _ => None,
+        }
+    }
 }
