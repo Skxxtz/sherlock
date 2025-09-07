@@ -1,4 +1,4 @@
-use std::process::{Command, Stdio};
+use gio::glib::spawn_command_line_async;
 
 use crate::{
     sher_log, sherlock_error,
@@ -25,18 +25,8 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     }
 
     let cmd = parts.join(" ").trim().to_string();
-    let parts = split_as_command(&cmd).into_iter();
-
-    let command = Command::new("nohup")
-        .arg("setsid")
-        .args(parts)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .stdin(Stdio::null())
-        .spawn();
-
-    match command {
-        Ok(mut _child) => {
+    match spawn_command_line_async(&cmd) {
+        Ok(_) => {
             let _ = sher_log!(format!("Detached process started: {}.", cmd));
             Ok(())
         }
@@ -51,7 +41,7 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     }
 }
 
-pub fn split_as_command(cmd: &str) -> Vec<String> {
+pub fn _split_as_command(cmd: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();
     let mut quoting = false;

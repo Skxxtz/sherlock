@@ -1,4 +1,4 @@
-use std::process::{Command, Stdio};
+use gio::glib::spawn_command_line_async;
 
 use crate::sher_log;
 use crate::utils::config::ConfigGuard;
@@ -32,17 +32,8 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
     sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
-    let result = Command::new("setsid")
-        .arg("sh")
-        .arg("-c")
-        .arg(raw_command.clone())
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn();
-
-    match result {
-        Ok(mut _child) => {
+    match spawn_command_line_async(&raw_command) {
+        Ok(_) => {
             let _ = sher_log!(format!("Detached process started: {}.", raw_command));
             Ok(())
         }
