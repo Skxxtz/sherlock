@@ -1,4 +1,5 @@
-use gio::glib::spawn_command_line_async;
+use std::os::fd::AsRawFd;
+use std::process::{Command, Stdio};
 
 use crate::{
     sher_log, sherlock_error,
@@ -23,10 +24,17 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     if let Some(flag) = &config.behavior.global_flags {
         parts.push(flag.to_string());
     }
-    parts.retain(|s| !s.starts_with("%"));
 
     let cmd = parts.join(" ").trim().to_string();
-    match spawn_command_line_async(&cmd) {
+    let mut parts = split_as_command(&cmd).into_iter();
+
+    let mut command = Command::new(parts.next().ok_or(sherlock_error!(
+        SherlockErrorType::CommandExecutionError(cmd.clone()),
+        format!("Failed to get first base command")
+    ))?);
+    command.args(parts);
+
+    match launch_detached(command) {
         Ok(_) => {
             let _ = sher_log!(format!("Detached process started: {}.", cmd));
             Ok(())
@@ -42,7 +50,43 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     }
 }
 
-pub fn _split_as_command(cmd: &str) -> Vec<String> {
+pub fn launch_detached(mut command: Command) -> std::io::Result<()> {
+    unsafe {
+        match libc::fork() {
+            -1 => return Err(std::io::Error::last_os_error()),
+            0 => {
+                // Child process
+                if libc::setsid() == -1 {
+                    return Err(std::io::Error::last_os_error());
+                }
+
+                // Fork again to prevent from acquiring a controlling terminal
+                match libc::fork() {
+                    -1 => return Err(std::io::Error::last_os_error()),
+                    0 => {
+                        // Now fully detached
+                        // Redirect stdio
+                        let devnull = std::fs::OpenOptions::new()
+                            .read(true)
+                            .write(true)
+                            .open("/dev/null")?;
+                        let fd = devnull.as_raw_fd();
+                        libc::dup2(fd, libc::STDIN_FILENO);
+                        libc::dup2(fd, libc::STDOUT_FILENO);
+                        libc::dup2(fd, libc::STDERR_FILENO);
+
+                        command.spawn().expect("Failed to spawn command");
+                        std::process::exit(0);
+                    }
+                    _ => std::process::exit(0),
+                }
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
+pub fn split_as_command(cmd: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();
     let mut quoting = false;

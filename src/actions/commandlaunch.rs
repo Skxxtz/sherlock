@@ -1,5 +1,8 @@
+use std::process::Command;
+
 use gio::glib::spawn_command_line_async;
 
+use crate::actions::applaunch::{launch_detached, split_as_command};
 use crate::sher_log;
 use crate::utils::config::ConfigGuard;
 use crate::{
@@ -32,7 +35,14 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
     sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
-    match spawn_command_line_async(&raw_command) {
+    let mut parts = split_as_command(&raw_command).into_iter();
+    let mut command = Command::new(parts.next().ok_or(sherlock_error!(
+        SherlockErrorType::CommandExecutionError(raw_command.clone()),
+        format!("Failed to get first base command")
+    ))?);
+    command.args(parts);
+
+    match launch_detached(command) {
         Ok(_) => {
             let _ = sher_log!(format!("Detached process started: {}.", raw_command));
             Ok(())

@@ -37,6 +37,7 @@ futures = "0.3.31"
 levenshtein = "1.0.5"
 xdg = "3.0.0"
 bincode = {version = "2.0.1", features = ["serde"]}
+libc = "0.2.175"
 
 [package.metadata]
 assets = ["resources/*"]
