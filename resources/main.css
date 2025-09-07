@@ -598,6 +598,7 @@ gridview child:selected box {
 
 .tile.weather-tile #content-holder {
     opacity: 0;
+    margin-bottom: 15px;
 }
 
 .tile.weather-tile.weather-animate #content-holder {
@@ -619,11 +620,14 @@ gridview child:selected box {
     font-size: 30px;
 }
 
-.tile.weather-tile #content-holder {
-    margin-bottom: 15px;
+.tile.weather-tile #date {
+    padding: 10px 4px 0px 0px;
+    font-size: 12px;
 }
 
-
+.tile.weather-tile #time {
+    font-size: 42px;
+}
 
 /*WEATHER CLASSES*/
 /* Weather Types */

@@ -20,6 +20,7 @@ pub struct WeatherLauncher {
     pub location: String,
     pub update_interval: u64,
     pub icon_theme: WeatherIconTheme,
+    pub show_datetime: bool,
 }
 impl WeatherLauncher {
     pub async fn get_result(&self) -> Option<(WeatherData, bool)> {

@@ -18,6 +18,15 @@ mod imp {
 
         #[template_child(id = "spinner")]
         pub spinner: TemplateChild<Spinner>,
+
+        #[template_child(id = "time")]
+        pub time: TemplateChild<Label>,
+
+        #[template_child(id = "date")]
+        pub date: TemplateChild<Label>,
+
+        #[template_child(id = "datetime-holder")]
+        pub datetime_holder: TemplateChild<GtkBox>,
     }
 
     #[glib::object_subclass]

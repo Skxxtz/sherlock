@@ -492,10 +492,17 @@ fn parse_weather_launcher(raw: &RawLauncher) -> LauncherType {
             .and_then(|s| serde_json::from_str(&format!(r#""{}""#, s)).ok())
             .unwrap_or(WeatherIconTheme::None);
 
+        let show_datetime = raw
+            .args
+            .get("show_datetime")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+
         LauncherType::Weather(WeatherLauncher {
             location: location.to_string(),
             update_interval,
             icon_theme,
+            show_datetime,
         })
     } else {
         LauncherType::Empty
