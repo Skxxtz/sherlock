@@ -20,7 +20,9 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
         .as_ref()
         .map_or(String::new(), |f| format!(" {}", f));
 
-    let exec = exec.replace("{keyword}", &keyword);
+    let mut exec = exec.replace("{keyword}", &keyword);
+    exec = exec.replace("{terminal}", &config.default_apps.terminal);
+
     let commands = exec.split(" &").map(|s| s.trim()).filter(|s| !s.is_empty());
 
     for command in commands {
