@@ -1,7 +1,5 @@
 use std::process::Command;
 
-use gio::glib::spawn_command_line_async;
-
 use crate::actions::applaunch::{launch_detached, split_as_command};
 use crate::sher_log;
 use crate::utils::config::ConfigGuard;

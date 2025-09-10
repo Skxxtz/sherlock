@@ -1,5 +1,5 @@
 use std::os::fd::AsRawFd;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use crate::{
     sher_log, sherlock_error,
