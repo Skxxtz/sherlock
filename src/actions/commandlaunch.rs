@@ -1,6 +1,8 @@
+use regex::Regex;
 use std::process::Command;
 
 use crate::actions::applaunch::{launch_detached, split_as_command};
+use crate::api::api::SherlockAPI;
 use crate::sher_log;
 use crate::utils::config::ConfigGuard;
 use crate::{
@@ -20,8 +22,35 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
         .as_ref()
         .map_or(String::new(), |f| format!(" {}", f));
 
-    let mut exec = exec.replace("{keyword}", &keyword);
-    exec = exec.replace("{terminal}", &config.default_apps.terminal);
+    let mut exec = exec.to_string();
+
+    let pattern = r#"\{([a-zA-Z_]+)(?::(.*?))?\}"#;
+    let re = Regex::new(pattern).unwrap();
+    for cap in re.captures_iter(&exec.clone()) {
+        let full_match = &cap[0];
+        let key = &cap[1];
+        let value = cap.get(2).map(|m| m.as_str());
+
+        match key {
+            "terminal" => {
+                exec = exec.replace(full_match, &format!("{} -e", config.default_apps.terminal));
+            }
+            "password" => {
+                let password = gio::glib::MainContext::default()
+                    .block_on(async { SherlockAPI::input_field(true, value).await })?;
+                exec = exec.replace(full_match, &password);
+            }
+            "custom_text" => {
+                let text = gio::glib::MainContext::default()
+                    .block_on(async { SherlockAPI::input_field(false, value).await })?;
+                exec = exec.replace(full_match, &text);
+            }
+            "keyword" => {
+                exec = exec.replace(full_match, &keyword);
+            }
+            _ => {}
+        }
+    }
 
     let commands = exec.split(" &").map(|s| s.trim()).filter(|s| !s.is_empty());
 

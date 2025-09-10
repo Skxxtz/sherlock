@@ -19,13 +19,16 @@ use crate::{
         util::JsonCache,
     },
     prelude::StackHelpers,
-    sher_log,
+    sher_log, sherlock_error,
     ui::{
         g_templates::{InputWindow, SearchUiObj},
         tiles::Tile,
         util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
     },
-    utils::{config::ConfigGuard, errors::SherlockError},
+    utils::{
+        config::ConfigGuard,
+        errors::{SherlockError, SherlockErrorType},
+    },
 };
 
 use super::call::ApiCall;
@@ -293,7 +296,7 @@ impl SherlockAPI {
     }
     fn spawn_input(&self, obfuscate: bool) -> Option<()> {
         let app = self.app.upgrade()?;
-        let win = InputWindow::new(obfuscate);
+        let (win, _) = InputWindow::new(obfuscate, None);
         win.set_application(Some(&app));
         win.present();
         Some(())
@@ -319,6 +322,19 @@ impl SherlockAPI {
             }
         }
         Some(())
+    }
+    pub async fn input_field(
+        obfuscate: bool,
+        placeholder: Option<&str>,
+    ) -> Result<String, SherlockError> {
+        let (win, rec) = InputWindow::new(obfuscate, placeholder);
+        win.present();
+        rec.await.map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::Abort("Input Field".to_string()),
+                e.to_string()
+            )
+        })
     }
 }
 

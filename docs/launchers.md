@@ -416,6 +416,35 @@ Has following fields of its own:
 6. `tag_start` / specifies what will be displayed in the start tag
 7. `tag_end` / specifies what will be displayed in the end tag
 
+### Replacement Variables
+
+Variables that can be used to replace certain parts of a command with runtime variables.
+
+1. `{keyword}` - The searched text
+2. `{terminal}` - Your default terminal
+3. `{custom_text:[optional name]}` - A text field will open asking for a value.
+   The name will be displayed as the inputs placeholder
+3. `{password:[optional name]}` - Same as `custom_text`, with additional obfuscation.
+
+**Examples:**
+
+```json
+{
+    "name": "SSH",
+    "type": "command",
+    "args": {
+        "commands": {
+            "SSH": {
+                "icon": "sherlock-link",
+                "exec": "{terminal} ssh {custom_text:User:}@{custom_text:Host:}",
+                "search_string": "ssh"
+            }
+        }
+    },
+    "priority": 1
+}
+```
+
 <br>
 
 ## Debug Launcher
@@ -492,13 +521,14 @@ Has following fields of its own:
 ```
 
 ### Arguments (args)
+
 - `default_skin_tone`: Sets the default skin tone for emojies. Can be either one of those:
-    - `Light`
-    - `MediumLight`
-    - `Medium`
-    - `MediumDark`
-    - `Dark`
-    - `Simpsons` (Default)
+  - `Light`
+  - `MediumLight`
+  - `Medium`
+  - `MediumDark`
+  - `Dark`
+  - `Simpsons` (Default)
 
 ## Bulk Text
 
