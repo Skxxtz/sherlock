@@ -421,7 +421,9 @@ Has following fields of its own:
 Variables that can be used to replace certain parts of a command with runtime variables.
 
 1. `{keyword}` - The searched text
-2. `{terminal}` - Your default terminal
+2. `{terminal}` - Your default terminal. Note that the terminal will close as
+   soon as the process is completed. To turn off that behavior, do 
+   `"{terminal} sh -c \"[YOUR COMMAND(s)] c {other_variable}; exec $SHELL\""`
 3. `{custom_text:[optional name]}` - A text field will open asking for a value.
    The name will be displayed as the inputs placeholder
 3. `{password:[optional name]}` - Same as `custom_text`, with additional obfuscation.
@@ -438,6 +440,16 @@ Variables that can be used to replace certain parts of a command with runtime va
                 "icon": "sherlock-link",
                 "exec": "{terminal} ssh {custom_text:User:}@{custom_text:Host:}",
                 "search_string": "ssh"
+            },
+            "NordVPN": {
+                "icon": "nordvpn",
+                "exec": "{terminal} sh -c \"nordvpn c {custom_text:Server:}; exec $SHELL\"",
+                "search_string": "nordvpn"
+            },
+            "NordVPN Daemon": {
+                "icon": "nordvpn",
+                "exec": "systemctl --user start nordvpnd",
+                "search_string": "nordvpn daemon"
             }
         }
     },

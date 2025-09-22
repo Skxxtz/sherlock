@@ -7,6 +7,9 @@ mod imp {
     #[derive(CompositeTemplate, Default)]
     #[template(resource = "/dev/skxxtz/sherlock/ui/event_tile.ui")]
     pub struct EventTile {
+        #[template_child(id = "launcher-type")]
+        pub launcher_type: TemplateChild<Label>,
+
         #[template_child(id = "title-label")]
         pub title: TemplateChild<Label>,
 

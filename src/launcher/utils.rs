@@ -56,6 +56,7 @@ pub enum HomeType {
     OnlyHome,
     Home,
     Search,
+    Persist,
 }
 impl Default for HomeType {
     fn default() -> Self {

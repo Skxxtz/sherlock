@@ -10,6 +10,7 @@ use crate::{
     utils::errors::{SherlockError, SherlockErrorType},
 };
 pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
+    println!("keyword: {:?}", keyword);
     let config = ConfigGuard::read()?;
     let prefix = config
         .behavior
@@ -46,7 +47,9 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
                 exec = exec.replace(full_match, &text);
             }
             "keyword" => {
+                println!("{:?}", exec);
                 exec = exec.replace(full_match, &keyword);
+                println!("{:?}", exec);
             }
             _ => {}
         }
