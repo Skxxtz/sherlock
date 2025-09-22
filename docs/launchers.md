@@ -53,7 +53,7 @@ The launcher can be of the following types:<br>
 |-------------|------|-------------|
 | `name`      | `[UI]` | The name of the category the tiles belong to. This name will appear under the app’s name. It is required but can be left empty. |
 | `alias`     | `[FC]` | The command used to search within this category. |
-| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. Can be set to `Home`, `OnlyHome`, or `Search` (default)|
+| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. Can be set to `Home`, `OnlyHome`, `Persist`, or `Search` (default)|
 | `async`     | `[FC]` | Indicates whether the launcher should run asynchronously. This is used in `Bulk Text`. |
 | `on_return`     | `[FC]` | Specifies what to do if return is pressed on the tile. |
 | `spawn_focus`     | `[FC]` | Determines whether the tile should automatically gain focus when it appears as the first item in the list. |
