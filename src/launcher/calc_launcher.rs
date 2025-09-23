@@ -267,6 +267,7 @@ pub struct Currency {
     sgd: f32, // Singapore Dollar
     hkd: f32, // Hong Kong Dollar
     krw: f32, // South Korean Won
+    pln: f32, // Polish złoty
 }
 impl Currency {
     pub fn from_map(mut map: HashMap<String, f32>) -> Option<Self> {
@@ -286,6 +287,7 @@ impl Currency {
             sgd: map.remove("sgd")?,
             hkd: map.remove("hkd")?,
             krw: map.remove("krw")?,
+            pln: map.remove("pln")?,
         })
     }
     pub fn match_unit(&self, unit: &str) -> Option<(f32, String)> {
@@ -309,6 +311,7 @@ impl Currency {
             "sgd" | "singapore dollar" => Some((self.sgd, "S$".to_string())),
             "hkd" | "hong kong dollar" => Some((self.hkd, "HK$".to_string())),
             "krw" | "south korean won" | "won" => Some((self.krw, "₩".to_string())),
+            "pln" | "polish" | "złoty" | "polish złoty" => Some((self.pln, "zł".to_string())),
             _ => None,
         }
     }
@@ -362,6 +365,10 @@ impl Currency {
             "krw",
             "south korean won",
             "won",
+            "pln",
+            "polish",
+            "złoty",
+            "polish złoty",
         ];
         allowed.contains(&unit.to_lowercase().as_str())
     }
@@ -422,7 +429,7 @@ impl Currency {
             ],
             "ignore_unknown_fields": true,
             "options": { "lang": "en" },
-            "range": [0,14],
+            "range": [0,15],
             "sort": {
                 "sortBy": "popularity_rank",
                 "sortOrder": "asc"
@@ -433,7 +440,7 @@ impl Currency {
                     { "expression": { "left": "type", "operation": "equal", "right": "forex" } },
                     { "expression": { "left": "exchange", "operation": "equal", "right": "FX_IDC" } },
                     { "expression": { "left": "currency_id", "operation": "equal", "right": "USD" } },
-                    { "expression": { "left": "base_currency_id", "operation": "in_range", "right": ["EUR", "JPY", "GBP", "AUD", "CAD", "CHF", "CNY", "NZD", "SEK", "NOK", "MXN", "SGD", "HKD", "KRW"] } }
+                    { "expression": { "left": "base_currency_id", "operation": "in_range", "right": ["EUR", "JPY", "GBP", "AUD", "CAD", "CHF", "CNY", "NZD", "SEK", "NOK", "MXN", "SGD", "HKD", "KRW", "PLN"] } }
                 ]
             }
         }"#;
@@ -465,6 +472,7 @@ impl Currency {
             .text()
             .await
             .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))?;
+        println!("{:?}", body);
 
         // simd-json requires &mut str
         let mut buf = body.into_bytes();
