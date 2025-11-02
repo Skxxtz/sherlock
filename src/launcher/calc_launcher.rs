@@ -472,7 +472,6 @@ impl Currency {
             .text()
             .await
             .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))?;
-        println!("{:?}", body);
 
         // simd-json requires &mut str
         let mut buf = body.into_bytes();

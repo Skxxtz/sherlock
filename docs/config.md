@@ -65,6 +65,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | `animate` | `true`   | Sets if startup animation should play. (Temporarily deprecated) ||
 | `global_prefix` | `None`   | Prepends this to every command. ||
 | `global_flags` | `None`   | Appends these flags to every command. ||
+| `remember_query` | `false`   | Specifies whether the last query should maintain in the search bar when you open Sherlock next. Only works in daemonized mode. ||
 
 ---
 
