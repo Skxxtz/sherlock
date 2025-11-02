@@ -2,11 +2,12 @@ use gio::{
     glib::{object::ObjectExt, variant::ToVariant, MainContext, WeakRef},
     ListStore,
 };
-use gtk4::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::{prelude::EditableExt, subclass::prelude::ObjectSubclassIsExt};
 use gtk4::{
     prelude::{EntryExt, GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, Stack,
 };
+use nix::NixPath;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
@@ -126,6 +127,7 @@ impl SherlockAPI {
         // Switch mode to specified and assign config runtime parameter
         if let Some(ui) = self.search_ui.as_ref().and_then(|s| s.upgrade()) {
             let bar = &ui.imp().search_bar;
+            bar.select_region(0, -1);
             if let Ok(_) = bar.activate_action("win.switch-mode", Some(&submenu.to_variant())) {
                 let _ = ConfigGuard::write_key(|c| c.runtime.sub_menu = Some(submenu.to_string()));
             }

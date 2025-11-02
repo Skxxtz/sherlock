@@ -130,11 +130,13 @@ pub fn window(
                 match c.runtime.daemonize {
                     true => {
                         window.set_visible(false);
-                        let _ = gtk4::prelude::WidgetExt::activate_action(
-                            window,
-                            "win.clear-search",
-                            Some(&true.to_variant()),
-                        );
+                        if !c.behavior.remember_query {
+                            let _ = gtk4::prelude::WidgetExt::activate_action(
+                                window,
+                                "win.clear-search",
+                                Some(&true.to_variant()),
+                            );
+                        }
                         let _ = gtk4::prelude::WidgetExt::activate_action(
                             window,
                             "win.switch-page",
