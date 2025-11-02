@@ -72,15 +72,21 @@ impl Loader {
             .map(|(_, v)| v.to_string().len())
             .unwrap_or(0) as i32;
 
-        let submenu = config.runtime.sub_menu.clone();
+        let submenu = config
+            .runtime
+            .sub_menu
+            .clone()
+            .unwrap_or(String::from("all"));
         // Parse the launchers
         let launchers: Vec<Launcher> = raw_launchers
             .into_par_iter()
             .filter_map(|raw| {
                 // Logic to restrict in submenu mode
-                if submenu.is_some() {
-                    if &submenu != &raw.alias {
-                        return None;
+                if submenu != "all" {
+                    if let Some(alias) = &raw.alias {
+                        if &submenu != alias {
+                            return None;
+                        }
                     }
                 }
                 let launcher_type: LauncherType = match raw.r#type.to_lowercase().as_str() {

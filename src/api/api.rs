@@ -7,7 +7,6 @@ use gtk4::{
     prelude::{EntryExt, GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, Stack,
 };
-use nix::NixPath;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
@@ -107,11 +106,10 @@ impl SherlockAPI {
         }
     }
     pub fn close(&mut self) -> Option<()> {
-        let calls: Vec<ApiCall> = self.shutdown_queue.drain(..).collect();
+        let mut calls: Vec<ApiCall> = self.shutdown_queue.drain(..).collect();
+        calls.push(ApiCall::SwitchMode(SherlockModes::Search));
         for call in calls {
-            if let ApiCall::Method(x) = call {
-                self.call_method(&x);
-            }
+            self.match_action(&call);
         }
         let window = self.window.as_ref().and_then(|win| win.upgrade())?;
         let _ = window.activate_action("win.close", None);
