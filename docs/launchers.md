@@ -136,11 +136,21 @@ Binds have the following structure:
     "name": "App Launcher",
     "alias": "app",
     "type": "app_launcher",
-    "args": {},
+    "args": {
+        "use_keywords": true
+    },
     "priority": 2,
     "home": "Home"
 }
 ```
+
+### Arguments (args)
+
+(optional)<br>
+
+1. `use_keywords`: This boolean value allows you to specify whether Sherlock
+   should only search for the name of the app or also use the keywords provided
+   in the .desktop file. 
 
 <br>
 
