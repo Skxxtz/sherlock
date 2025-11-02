@@ -164,15 +164,26 @@ fn parse_app_launcher(
     counts: &HashMap<String, u32>,
     max_decimals: i32,
 ) -> LauncherType {
+    let use_keywords = raw
+        .args
+        .get("use_keywords")
+        .and_then(|s| s.as_bool())
+        .unwrap_or(true);
     let apps: Vec<AppData> = ConfigGuard::read().ok().map_or_else(
         || Vec::new(),
         |config| {
             let prio = raw.priority;
-            match config.caching.enable {
-                true => Loader::load_applications(prio, counts, max_decimals).unwrap_or_default(),
-                false => Loader::load_applications_from_disk(None, prio, counts, max_decimals)
-                    .unwrap_or_default(),
-            }
+            let tmp = match config.caching.enable {
+                true => Loader::load_applications(prio, counts, max_decimals, use_keywords),
+                false => Loader::load_applications_from_disk(
+                    None,
+                    prio,
+                    counts,
+                    max_decimals,
+                    use_keywords,
+                ),
+            };
+            tmp.unwrap_or_default()
         },
     );
     LauncherType::App(AppLauncher { apps })

@@ -179,7 +179,7 @@ impl AppData {
         self.priority = priority;
         self
     }
-    pub fn apply_alias(&mut self, alias: Option<SherlockAlias>) {
+    pub fn apply_alias(&mut self, alias: Option<SherlockAlias>, use_keywords: bool) {
         if let Some(alias) = alias {
             if let Some(alias_name) = alias.name.as_ref() {
                 self.name = alias_name.to_string();
@@ -188,9 +188,11 @@ impl AppData {
                 self.icon = Some(alias_icon.to_string());
             }
             if let Some(alias_keywords) = alias.keywords.as_ref() {
-                self.search_string = format!("{};{}", self.name, alias_keywords)
+                self.search_string =
+                    Self::construct_search(&self.name, &alias_keywords, use_keywords);
             } else {
-                self.search_string = format!("{};{}", self.name, self.search_string);
+                self.search_string =
+                    Self::construct_search(&self.name, &self.search_string, use_keywords);
             }
             if let Some(alias_exec) = alias.exec.as_ref() {
                 self.exec = Some(alias_exec.to_string());
@@ -215,7 +217,16 @@ impl AppData {
                     .collect();
             }
         } else {
-            self.search_string = format!("{};{}", self.name, self.search_string);
+            self.search_string =
+                Self::construct_search(&self.name, &self.search_string, use_keywords);
+        }
+        println!("{:?}", self.search_string);
+    }
+    fn construct_search(name: &str, search_str: &str, use_keywords: bool) -> String {
+        if use_keywords {
+            format!("{};{}", name, search_str)
+        } else {
+            name.to_string()
         }
     }
 }
