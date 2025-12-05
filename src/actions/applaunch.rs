@@ -89,14 +89,14 @@ pub fn launch_detached(mut command: Command) -> std::io::Result<()> {
 pub fn split_as_command(cmd: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();
-    let mut quoting = false;
     let mut prev = '\0';
     let mut double_escape = false;
+    let mut double_quoting = false;
+    let mut single_quoting = false;
 
     for c in cmd.chars() {
         if double_escape {
-            // Escape inside quotes in Exec value as specified by
-            // https://specifications.freedesktop.org/desktop-entry-spec/latest/exec-variables.html
+            // Escape inside double quotes
             double_escape = false;
             match c {
                 '"' | '`' | '$' | '\\' => {
@@ -107,12 +107,13 @@ pub fn split_as_command(cmd: &str) -> Vec<String> {
                 }
                 _ => current.push('\\'),
             }
-        }
-        if quoting && c == '\\' && prev == '\\' {
+        } else if double_quoting && c == '\\' && prev == '\\' {
             double_escape = true;
-        } else if c == '"' {
-            quoting = !quoting;
-        } else if !quoting && c.is_whitespace() && !current.is_empty() {
+        } else if c == '"' && !single_quoting {
+            double_quoting = !double_quoting;
+        } else if c == '\'' && !double_quoting {
+            single_quoting = !single_quoting;
+        } else if !double_quoting && !single_quoting && c.is_whitespace() && !current.is_empty() {
             parts.push(current.clone());
             current.clear();
         } else {
