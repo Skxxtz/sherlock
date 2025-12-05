@@ -28,6 +28,7 @@ impl Loader {
         priority: f32,
         counts: &HashMap<String, u32>,
         decimals: i32,
+        use_keywords: bool,
     ) -> Result<Vec<AppData>, SherlockError> {
         let config = ConfigGuard::read()?;
 
@@ -148,7 +149,7 @@ impl Loader {
                             let mut aliases = aliases.lock_blocking();
                             aliases.remove(&data.name)
                         };
-                        data.apply_alias(alias);
+                        data.apply_alias(alias, use_keywords);
                         // apply counts
                         let count = data
                             .exec
@@ -172,6 +173,7 @@ impl Loader {
         counts: &HashMap<String, u32>,
         decimals: i32,
         last_changed: Option<SystemTime>,
+        use_keywords: bool,
     ) -> Result<Vec<AppData>, SherlockError> {
         let system_apps = get_applications_dir();
 
@@ -204,7 +206,13 @@ impl Loader {
         });
 
         // get information for uncached applications
-        match Loader::load_applications_from_disk(Some(desktop_files), priority, counts, decimals) {
+        match Loader::load_applications_from_disk(
+            Some(desktop_files),
+            priority,
+            counts,
+            decimals,
+            use_keywords,
+        ) {
             Ok(new_apps) => apps.extend(new_apps),
             _ => {}
         };
@@ -215,6 +223,7 @@ impl Loader {
         priority: f32,
         counts: &HashMap<String, u32>,
         decimals: i32,
+        use_keywords: bool,
     ) -> Result<Vec<AppData>, SherlockError> {
         let config = ConfigGuard::read()?;
         // check if sherlock_alias was modified
@@ -253,6 +262,7 @@ impl Loader {
                         &counts_clone,
                         decimals,
                         last_changed,
+                        use_keywords,
                     ) {
                         if let Err(e) = BinaryCache::write(cache, &new_apps) {
                             let _ = e.insert(true);
@@ -264,7 +274,8 @@ impl Loader {
         }
 
         let _ = sher_log!("Updating cached apps");
-        let apps = Loader::load_applications_from_disk(None, priority, counts, decimals)?;
+        let apps =
+            Loader::load_applications_from_disk(None, priority, counts, decimals, use_keywords)?;
         // Write the cache in the background
         let app_clone = apps.clone();
         let cache = config.caching.cache.clone();

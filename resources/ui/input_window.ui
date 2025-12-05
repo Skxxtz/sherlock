@@ -8,6 +8,7 @@
                 <property name="orientation">vertical</property>
                 <child>
                     <object class="GtkEntry" id="input">
+                        <property name="name">search-bar</property>
                         <property name="vexpand">true</property>
                         <property name="hexpand">true</property>
                         <property name="margin-start">10</property>

@@ -53,7 +53,7 @@ The launcher can be of the following types:<br>
 |-------------|------|-------------|
 | `name`      | `[UI]` | The name of the category the tiles belong to. This name will appear under the app’s name. It is required but can be left empty. |
 | `alias`     | `[FC]` | The command used to search within this category. |
-| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. Can be set to `Home`, `OnlyHome`, or `Search` (default)|
+| `home`      | `[FC]` | Determines if the elements of this launcher are displayed at startup. Can be set to `Home`, `OnlyHome`, `Persist`, or `Search` (default)|
 | `async`     | `[FC]` | Indicates whether the launcher should run asynchronously. This is used in `Bulk Text`. |
 | `on_return`     | `[FC]` | Specifies what to do if return is pressed on the tile. |
 | `spawn_focus`     | `[FC]` | Determines whether the tile should automatically gain focus when it appears as the first item in the list. |
@@ -136,11 +136,21 @@ Binds have the following structure:
     "name": "App Launcher",
     "alias": "app",
     "type": "app_launcher",
-    "args": {},
+    "args": {
+        "use_keywords": true
+    },
     "priority": 2,
     "home": "Home"
 }
 ```
+
+### Arguments (args)
+
+(optional)<br>
+
+1. `use_keywords`: This boolean value allows you to specify whether Sherlock
+   should only search for the name of the app or also use the keywords provided
+   in the .desktop file. 
 
 <br>
 
@@ -416,6 +426,47 @@ Has following fields of its own:
 6. `tag_start` / specifies what will be displayed in the start tag
 7. `tag_end` / specifies what will be displayed in the end tag
 
+### Replacement Variables
+
+Variables that can be used to replace certain parts of a command with runtime variables.
+
+1. `{keyword}` - The searched text
+2. `{terminal}` - Your default terminal. Note that the terminal will close as
+   soon as the process is completed. To turn off that behavior, do 
+   `"{terminal} sh -c \"[YOUR COMMAND(s)] c {other_variable}; exec $SHELL\""`
+3. `{custom_text:[optional name]}` - A text field will open asking for a value.
+   The name will be displayed as the inputs placeholder
+3. `{password:[optional name]}` - Same as `custom_text`, with additional obfuscation.
+
+**Examples:**
+
+```json
+{
+    "name": "SSH",
+    "type": "command",
+    "args": {
+        "commands": {
+            "SSH": {
+                "icon": "sherlock-link",
+                "exec": "{terminal} ssh {custom_text:User:}@{custom_text:Host:}",
+                "search_string": "ssh"
+            },
+            "NordVPN": {
+                "icon": "nordvpn",
+                "exec": "{terminal} sh -c \"nordvpn c {custom_text:Server:}; exec $SHELL\"",
+                "search_string": "nordvpn"
+            },
+            "NordVPN Daemon": {
+                "icon": "nordvpn",
+                "exec": "systemctl --user start nordvpnd",
+                "search_string": "nordvpn daemon"
+            }
+        }
+    },
+    "priority": 1
+}
+```
+
 <br>
 
 ## Debug Launcher
@@ -492,13 +543,14 @@ Has following fields of its own:
 ```
 
 ### Arguments (args)
+
 - `default_skin_tone`: Sets the default skin tone for emojies. Can be either one of those:
-    - `Light`
-    - `MediumLight`
-    - `Medium`
-    - `MediumDark`
-    - `Dark`
-    - `Simpsons` (Default)
+  - `Light`
+  - `MediumLight`
+  - `Medium`
+  - `MediumDark`
+  - `Dark`
+  - `Simpsons` (Default)
 
 ## Bulk Text
 
@@ -777,7 +829,9 @@ name]` method or by using bind callbacks `"callback": "[function name]"`.
     "type": "weather",
     "args": {
         "location": "berlin",
-        "update_interval": 60
+        "update_interval": 60,
+        "icon_theme": "Sherlock",
+        "show_datetime": false
     },
     "priority": 1,
     "home": "OnlyHome",
@@ -794,3 +848,9 @@ Specifies the location for which the weather should be gathered.<br>
 
 **`update_interval`** (optional):<br>
 Specifies how often you want to update the weather. In minutes.<br>
+
+**`icon_theme`** (optional):<br>
+Specifies whether Sherlock's fallback icon theme should be used or the system icon theme.<br>
+
+**`show_datetime`** (optional):<br>
+Specifies whether the current date and time should be shown alongside the weather information.<br>

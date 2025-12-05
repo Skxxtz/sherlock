@@ -22,7 +22,7 @@ use crate::launcher::file_launcher::FileLauncher;
 use crate::launcher::pomodoro_launcher::{Pomodoro, PomodoroStyle};
 use crate::launcher::process_launcher::ProcessLauncher;
 use crate::launcher::theme_picker::ThemePicker;
-use crate::launcher::weather_launcher::WeatherLauncher;
+use crate::launcher::weather_launcher::{WeatherIconTheme, WeatherLauncher};
 use crate::launcher::{
     app_launcher, bulk_text_launcher, clipboard_launcher, system_cmd_launcher, web_launcher,
     Launcher, LauncherType,
@@ -72,15 +72,21 @@ impl Loader {
             .map(|(_, v)| v.to_string().len())
             .unwrap_or(0) as i32;
 
-        let submenu = config.runtime.sub_menu.clone();
+        let submenu = config
+            .runtime
+            .sub_menu
+            .clone()
+            .unwrap_or(String::from("all"));
         // Parse the launchers
         let launchers: Vec<Launcher> = raw_launchers
             .into_par_iter()
             .filter_map(|raw| {
                 // Logic to restrict in submenu mode
-                if submenu.is_some() {
-                    if &submenu != &raw.alias {
-                        return None;
+                if submenu != "all" {
+                    if let Some(alias) = &raw.alias {
+                        if &submenu != alias {
+                            return None;
+                        }
                     }
                 }
                 let launcher_type: LauncherType = match raw.r#type.to_lowercase().as_str() {
@@ -158,15 +164,26 @@ fn parse_app_launcher(
     counts: &HashMap<String, u32>,
     max_decimals: i32,
 ) -> LauncherType {
+    let use_keywords = raw
+        .args
+        .get("use_keywords")
+        .and_then(|s| s.as_bool())
+        .unwrap_or(true);
     let apps: Vec<AppData> = ConfigGuard::read().ok().map_or_else(
         || Vec::new(),
         |config| {
             let prio = raw.priority;
-            match config.caching.enable {
-                true => Loader::load_applications(prio, counts, max_decimals).unwrap_or_default(),
-                false => Loader::load_applications_from_disk(None, prio, counts, max_decimals)
-                    .unwrap_or_default(),
-            }
+            let tmp = match config.caching.enable {
+                true => Loader::load_applications(prio, counts, max_decimals, use_keywords),
+                false => Loader::load_applications_from_disk(
+                    None,
+                    prio,
+                    counts,
+                    max_decimals,
+                    use_keywords,
+                ),
+            };
+            tmp.unwrap_or_default()
         },
     );
     LauncherType::App(AppLauncher { apps })
@@ -484,9 +501,25 @@ fn parse_weather_launcher(raw: &RawLauncher) -> LauncherType {
             .get("update_interval")
             .and_then(Value::as_u64)
             .unwrap_or(60);
+
+        let icon_theme: WeatherIconTheme = raw
+            .args
+            .get("icon_theme")
+            .and_then(Value::as_str)
+            .and_then(|s| serde_json::from_str(&format!(r#""{}""#, s)).ok())
+            .unwrap_or(WeatherIconTheme::None);
+
+        let show_datetime = raw
+            .args
+            .get("show_datetime")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+
         LauncherType::Weather(WeatherLauncher {
             location: location.to_string(),
             update_interval,
+            icon_theme,
+            show_datetime,
         })
     } else {
         LauncherType::Empty

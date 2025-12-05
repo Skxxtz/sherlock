@@ -1,3 +1,4 @@
+use chrono::Local;
 use gio::glib::WeakRef;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
@@ -10,7 +11,7 @@ use crate::actions::execute_from_attrs;
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::launcher::weather_launcher::WeatherData;
 use crate::launcher::Launcher;
-use crate::prelude::TileHandler;
+use crate::prelude::{IconComp, TileHandler};
 use crate::ui::g_templates::WeatherTile;
 
 impl Tile {
@@ -40,6 +41,14 @@ impl WeatherTileHandler {
     pub async fn async_update(&self, row: &SherlockRow, launcher: Rc<Launcher>) -> Option<()> {
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
+
+        if imp.datetime_holder.get_visible() {
+            let now = chrono::Local::now();
+            imp.datetime_holder.set_visible(true);
+            imp.time.set_text(&now.format("%R").to_string());
+            imp.date.set_text(&now.format("%a, %d %b %Y").to_string());
+        }
+
         if let Some((data, was_changed)) = launcher.get_weather().await {
             let css_class = if was_changed {
                 "weather-animate"
@@ -48,7 +57,19 @@ impl WeatherTileHandler {
             };
 
             row.add_css_class(css_class);
-            row.add_css_class(&data.icon);
+            row.add_css_class(&data.css);
+
+            let current_time = Local::now().time();
+            if (data.sunset - current_time).num_seconds() < 0 {
+                row.add_css_class("night");
+                imp.icon.set_icon(
+                    Some(&data.icon),
+                    None,
+                    Some(&format!("{}-night", data.icon)),
+                );
+            } else {
+                imp.icon.set_icon_name(Some(&data.icon));
+            }
 
             imp.temperature.set_text(&data.temperature);
             imp.icon.set_icon_name(Some(&data.icon));
@@ -57,23 +78,49 @@ impl WeatherTileHandler {
             self.data.borrow_mut().replace(data);
         } else {
             imp.location.set_text("! Failed to load weather");
+            imp.icon
+                .set_icon_name(Some("sherlock-weather-none-available"));
             imp.spinner.set_spinning(false);
         }
         Some(())
     }
-    pub fn update(&self, row: &SherlockRow) -> Option<()> {
+    pub fn update(&self, row: &SherlockRow, launcher: Rc<Launcher>) -> Option<()> {
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
+
+        if let Some(weather_launcher) = launcher.get_weather_launcher() {
+            if weather_launcher.show_datetime {
+                let now = chrono::Local::now();
+                imp.datetime_holder.set_visible(true);
+                imp.time.set_text(&now.format("%R").to_string());
+                imp.date.set_text(&now.format("%a, %d %b %Y").to_string());
+            } else {
+                imp.datetime_holder.set_visible(false);
+            }
+        }
+
         if let Some(data) = &*self.data.borrow() {
             row.add_css_class("weather-no-animate");
             row.add_css_class(&data.icon);
 
+            let current_time = Local::now().time();
+            if (data.sunset - current_time).num_seconds() < 0 {
+                row.add_css_class("night");
+                imp.icon.set_icon(
+                    Some(&data.icon),
+                    None,
+                    Some(&format!("{}-night", data.icon)),
+                );
+            } else {
+                imp.icon.set_icon_name(Some(&data.icon));
+            }
+
             imp.temperature.set_text(&data.temperature);
-            imp.icon.set_icon_name(Some(&data.icon));
             imp.location.set_text(&data.format_str);
             imp.spinner.set_spinning(false);
         } else {
-            imp.location.set_text("! Failed to load weather");
+            imp.icon
+                .set_icon_name(Some("sherlock-weather-none-available"));
             imp.spinner.set_spinning(false);
         }
         Some(())

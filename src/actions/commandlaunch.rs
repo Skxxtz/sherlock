@@ -1,5 +1,9 @@
+use regex::Regex;
+use std::io::Write;
 use std::process::{Command, Stdio};
 
+use crate::actions::applaunch::{launch_detached, launch_detached_child, split_as_command};
+use crate::api::api::SherlockAPI;
 use crate::sher_log;
 use crate::utils::config::ConfigGuard;
 use crate::{
@@ -19,30 +23,122 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
         .as_ref()
         .map_or(String::new(), |f| format!(" {}", f));
 
-    let exec = exec.replace("{keyword}", &keyword);
+    let mut exec = exec.to_string();
+
+    let pattern = r#"\{([a-zA-Z_]+)(?::(.*?))?\}"#;
+    let re = Regex::new(pattern).unwrap();
+    for cap in re.captures_iter(&exec.clone()) {
+        let full_match = &cap[0];
+        let key = &cap[1];
+        let value = cap.get(2).map(|m| m.as_str());
+
+        match key {
+            "terminal" => {
+                exec = exec.replace(full_match, &format!("{} -e", config.default_apps.terminal));
+            }
+            "password" => {
+                let password = gio::glib::MainContext::default()
+                    .block_on(async { SherlockAPI::input_field(true, value).await })?;
+                exec = exec.replace(full_match, &password);
+            }
+            "custom_text" => {
+                let text = gio::glib::MainContext::default()
+                    .block_on(async { SherlockAPI::input_field(false, value).await })?;
+                exec = exec.replace(full_match, &text);
+            }
+            "keyword" => {
+                println!("{:?}", exec);
+                exec = exec.replace(full_match, &keyword);
+                println!("{:?}", exec);
+            }
+            _ => {}
+        }
+    }
+
     let commands = exec.split(" &").map(|s| s.trim()).filter(|s| !s.is_empty());
 
+    let mut sudo = None;
     for command in commands {
-        asynchronous_execution(command, &prefix, &flags)?;
+        // Query sudo password if its not specified yet
+        if command.contains("sudo ") {
+            if sudo.is_none() {
+                sudo = Some(
+                    gio::glib::MainContext::default()
+                        .block_on(async { SherlockAPI::input_field(true, Some("SUDO:")).await })?,
+                );
+            }
+        }
+        asynchronous_execution(command, &prefix, &flags, &sudo)?;
     }
     Ok(())
 }
 
-pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<(), SherlockError> {
+pub fn asynchronous_execution(
+    cmd: &str,
+    prefix: &str,
+    flags: &str,
+    sudo_password: &Option<String>,
+) -> Result<(), SherlockError> {
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
+
     sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
-    let result = Command::new("setsid")
-        .arg("sh")
-        .arg("-c")
-        .arg(raw_command.clone())
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn();
+    let mut parts = split_as_command(&raw_command).into_iter();
+    let base = parts.next().ok_or_else(|| {
+        sherlock_error!(
+            SherlockErrorType::CommandExecutionError(raw_command.clone()),
+            "Failed to get first base command"
+        )
+    })?;
 
-    match result {
-        Ok(mut _child) => {
+    // If sudo is requested, wrap the command
+    let mut command = if let Some(ref _pw) = sudo_password {
+        let mut c = Command::new("sudo");
+
+        // -S makes sudo read password from stdin
+        c.arg("-S");
+
+        c.arg(base);
+        c.args(parts);
+
+        c.stdin(Stdio::piped());
+        c
+    } else {
+        let mut c = Command::new(base);
+        c.args(parts);
+        c
+    };
+
+    // If sudo: write password into stdin *before* detaching
+    if let Some(ref pw) = sudo_password {
+        let mut child = command.spawn().map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::CommandExecutionError(raw_command.clone()),
+                e.to_string()
+            )
+        })?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            // write password securely
+            stdin
+                .write_all(format!("{}\n", pw).as_bytes())
+                .map_err(|e| {
+                    sherlock_error!(
+                        SherlockErrorType::CommandExecutionError(raw_command.clone()),
+                        e.to_string()
+                    )
+                })?;
+        }
+
+        launch_detached_child(child)?;
+
+        let _ = sher_log!(format!("Detached sudo process for: {}.", raw_command));
+        return Ok(());
+    }
+
+    // No sudo path
+    match launch_detached(command) {
+        Ok(_) => {
             let _ = sher_log!(format!("Detached process started: {}.", raw_command));
             Ok(())
         }
@@ -51,7 +147,6 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
                 "Failed to detach command: {}\nError: {}",
                 raw_command, e
             ));
-
             Err(sherlock_error!(
                 SherlockErrorType::CommandExecutionError(cmd.to_string()),
                 e.to_string()

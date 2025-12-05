@@ -4,7 +4,8 @@
         "type": "weather",
         "args": {
             "location": "bremen",
-            "update_interval": 60
+            "update_interval": 60,
+            "icon_theme": "Sherlock"
         },
         "actions": [
             {

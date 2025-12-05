@@ -157,6 +157,9 @@ pub enum SherlockErrorType {
     // Actions
     InvalidAction,
 
+    // Abort
+    Abort(String),
+
     None,
 }
 impl std::fmt::Display for SherlockError {
@@ -285,6 +288,11 @@ impl SherlockErrorType {
             // Actions
             SherlockErrorType::InvalidAction => {
                 format!(r#"Invalid Action Defined"#)
+            }
+
+            // Abort
+            SherlockErrorType::Abort(what) => {
+                format!(r#"Aborted Action "{}""#, what)
             }
 
             SherlockErrorType::None => String::new(),

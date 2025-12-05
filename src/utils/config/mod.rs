@@ -112,6 +112,10 @@ pub struct ConfigAppearance {
     #[serde(default)]
     pub height: i32,
     #[serde(default)]
+    pub margins: (i32, i32, i32, i32),
+    #[serde(default)]
+    pub anchor: String,
+    #[serde(default)]
     pub gsk_renderer: String,
     #[serde(default = "FileDefaults::icon_paths")]
     pub icon_paths: Vec<PathBuf>,
@@ -127,6 +131,8 @@ pub struct ConfigAppearance {
     pub mod_key_ascii: Vec<String>,
     #[serde(default = "OtherDefaults::five")]
     pub num_shortcuts: u8,
+    #[serde(default = "OtherDefaults::placeholder")]
+    pub placeholder: String,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfigBehavior {
@@ -140,6 +146,8 @@ pub struct ConfigBehavior {
     pub global_flags: Option<String>,
     #[serde(default = "OtherDefaults::bool_true")]
     pub use_lr_nav: bool,
+    #[serde(default)]
+    pub remember_query: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

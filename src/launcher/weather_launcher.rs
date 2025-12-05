@@ -9,10 +9,18 @@ use super::utils::to_title_case;
 use crate::utils::config::ConfigGuard;
 use crate::utils::files::home_dir;
 
+#[derive(Clone, Debug, Deserialize)]
+pub enum WeatherIconTheme {
+    Sherlock,
+    None,
+}
+
 #[derive(Clone, Debug)]
 pub struct WeatherLauncher {
     pub location: String,
     pub update_interval: u64,
+    pub icon_theme: WeatherIconTheme,
+    pub show_datetime: bool,
 }
 impl WeatherLauncher {
     pub async fn get_result(&self) -> Option<(WeatherData, bool)> {
@@ -29,6 +37,13 @@ impl WeatherLauncher {
         let json: simd_json::OwnedValue = simd_json::to_owned_value(&mut response_bytes).ok()?;
         let current_condition = json["current_condition"].as_array()?.get(0)?;
 
+        // Get sunset time
+        let astronomy = json["weather"].as_array()?.get(0)?["astronomy"]
+            .as_array()?
+            .get(0)?;
+        let sunset_raw = astronomy["sunset"].as_str()?;
+        let sunset = chrono::NaiveTime::parse_from_str(sunset_raw, "%I:%M %p").ok()?;
+
         // Parse Temperature
         let temperature = match config.units.temperatures.as_str() {
             "f" | "F" => format!("{}°F", current_condition["temp_F"].as_str()?),
@@ -37,7 +52,11 @@ impl WeatherLauncher {
 
         // Parse Icon
         let code = current_condition["weatherCode"].as_str()?;
-        let icon = WeatherLauncher::match_weather_code(code);
+        let icon = if matches!(self.icon_theme, WeatherIconTheme::Sherlock) {
+            format!("sherlock-{}", WeatherLauncher::match_weather_code(code))
+        } else {
+            WeatherLauncher::match_weather_code(code)
+        };
 
         // Parse wind dir
         let wind_deg = current_condition["winddirDegree"]
@@ -69,6 +88,8 @@ impl WeatherLauncher {
             icon,
             format_str,
             location: self.location.clone(),
+            css: WeatherLauncher::match_weather_code(code),
+            sunset,
         };
         data.cache();
 
@@ -102,6 +123,8 @@ pub struct WeatherData {
     pub icon: String,
     pub format_str: String,
     pub location: String,
+    pub css: String,
+    pub sunset: chrono::NaiveTime,
 }
 impl WeatherData {
     fn from(launcher: &WeatherLauncher) -> Option<Self> {
@@ -110,17 +133,23 @@ impl WeatherData {
             ".cache/sherlock/weather/{}.json",
             launcher.location
         ));
-
         fn modtime(path: &PathBuf) -> Option<SystemTime> {
             fs::metadata(path).ok().and_then(|m| m.modified().ok())
         }
         let mtime = modtime(&path)?;
         let time_since = SystemTime::now().duration_since(mtime).ok()?;
         if time_since < Duration::from_secs(60 * launcher.update_interval) {
-            let cached_data: Option<Self> = File::open(&path)
+            let mut cached_data: Self = File::open(&path)
                 .ok()
-                .and_then(|f| simd_json::from_reader(f).ok());
-            return cached_data;
+                .and_then(|f| simd_json::from_reader(f).ok())?;
+
+            cached_data.icon = if matches!(launcher.icon_theme, WeatherIconTheme::Sherlock) {
+                format!("sherlock-{}", cached_data.css)
+            } else {
+                cached_data.css.clone()
+            };
+
+            return Some(cached_data);
         } else {
             return None;
         }

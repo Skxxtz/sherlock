@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
-use zbus::zvariant::DeserializeDict;
-use zbus::zvariant::Type;
+use zbus::zvariant::{DeserializeDict, Type};
 
 #[derive(DeserializeDict, Type, Debug, Clone, Default)]
 #[zvariant(signature = "a{sv}")]
@@ -18,19 +17,19 @@ pub struct MprisData {
 #[allow(unused)]
 pub struct MetaData {
     #[zvariant(rename = "xesam:title")]
-    pub title: String,
+    pub title: Option<String>,
 
     #[zvariant(rename = "xesam:album")]
-    pub album: String,
+    pub album: Option<String>,
 
     #[zvariant(rename = "xesam:artist")]
-    pub artists: Vec<String>,
+    pub artists: Option<Vec<String>>,
 
     #[zvariant(rename = "xesam:url")]
-    pub url: String,
+    pub url: Option<String>,
 
     #[zvariant(rename = "mpris:artUrl")]
-    pub art: String,
+    pub art: Option<String>,
 }
 
 pub fn to_title_case(input_str: &str) -> String {
@@ -57,6 +56,7 @@ pub enum HomeType {
     OnlyHome,
     Home,
     Search,
+    Persist,
 }
 impl Default for HomeType {
     fn default() -> Self {

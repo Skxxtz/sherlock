@@ -324,14 +324,12 @@ impl EmojiKeyActions {
     }
     fn move_up(&self) -> Option<()> {
         let results = self.results.upgrade()?;
-        let width = results.width();
-        let offset = (width / 100).min(7);
+        let offset = Self::get_offset(results.width());
         results.focus_offset(None, -offset)
     }
     fn move_down(&self) -> Option<()> {
         let results = self.results.upgrade()?;
-        let width = results.width();
-        let offset = (width / 100).min(7);
+        let offset = Self::get_offset(results.width());
         results.focus_offset(None, offset)
     }
     fn move_down_context(&self) -> Option<()> {
@@ -383,5 +381,8 @@ impl EmojiKeyActions {
             }
         }
         None
+    }
+    fn get_offset(n: i32) -> i32 {
+        (n + 50) / 120
     }
 }

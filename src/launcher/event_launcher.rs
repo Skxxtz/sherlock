@@ -137,7 +137,7 @@ impl ThunderBirdEventManager {
                 WHERE
                     p.key = 'X-MICROSOFT-SKYPETEAMSMEETINGURL'
                     AND e.event_start BETWEEN strftime('%s', '{}', '{}') * 1000000
-                                          AND strftime('%s', '{}', '{}', 'start of day') * 1000000
+                                          AND strftime('%s', '{}', '{}') * 1000000
                 ORDER BY
                     e.event_start;
                 ",

@@ -2,7 +2,7 @@ use gio::{
     glib::{object::ObjectExt, variant::ToVariant, MainContext, WeakRef},
     ListStore,
 };
-use gtk4::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::{prelude::EditableExt, subclass::prelude::ObjectSubclassIsExt};
 use gtk4::{
     prelude::{EntryExt, GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, Stack,
@@ -19,13 +19,16 @@ use crate::{
         util::JsonCache,
     },
     prelude::StackHelpers,
-    sher_log,
+    sher_log, sherlock_error,
     ui::{
         g_templates::{InputWindow, SearchUiObj},
         tiles::Tile,
         util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
     },
-    utils::{config::ConfigGuard, errors::SherlockError},
+    utils::{
+        config::ConfigGuard,
+        errors::{SherlockError, SherlockErrorType},
+    },
 };
 
 use super::call::ApiCall;
@@ -103,11 +106,10 @@ impl SherlockAPI {
         }
     }
     pub fn close(&mut self) -> Option<()> {
-        let calls: Vec<ApiCall> = self.shutdown_queue.drain(..).collect();
+        let mut calls: Vec<ApiCall> = self.shutdown_queue.drain(..).collect();
+        calls.push(ApiCall::SwitchMode(SherlockModes::Search));
         for call in calls {
-            if let ApiCall::Method(x) = call {
-                self.call_method(&x);
-            }
+            self.match_action(&call);
         }
         let window = self.window.as_ref().and_then(|win| win.upgrade())?;
         let _ = window.activate_action("win.close", None);
@@ -123,6 +125,7 @@ impl SherlockAPI {
         // Switch mode to specified and assign config runtime parameter
         if let Some(ui) = self.search_ui.as_ref().and_then(|s| s.upgrade()) {
             let bar = &ui.imp().search_bar;
+            bar.select_region(0, -1);
             if let Ok(_) = bar.activate_action("win.switch-mode", Some(&submenu.to_variant())) {
                 let _ = ConfigGuard::write_key(|c| c.runtime.sub_menu = Some(submenu.to_string()));
             }
@@ -293,7 +296,7 @@ impl SherlockAPI {
     }
     fn spawn_input(&self, obfuscate: bool) -> Option<()> {
         let app = self.app.upgrade()?;
-        let win = InputWindow::new(obfuscate);
+        let (win, _) = InputWindow::new(obfuscate, None);
         win.set_application(Some(&app));
         win.present();
         Some(())
@@ -319,6 +322,19 @@ impl SherlockAPI {
             }
         }
         Some(())
+    }
+    pub async fn input_field(
+        obfuscate: bool,
+        placeholder: Option<&str>,
+    ) -> Result<String, SherlockError> {
+        let (win, rec) = InputWindow::new(obfuscate, placeholder);
+        win.present();
+        rec.await.map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::Abort("Input Field".to_string()),
+                e.to_string()
+            )
+        })
     }
 }
 

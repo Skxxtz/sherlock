@@ -25,6 +25,7 @@
     --weather-showers-scattered: linear-gradient(45deg, #73848C 0%, #374B54 100%);
 
     --weather-none-available: hsl(0, 0%, 50%);
+    --weather-night: #2C3140;
     /* Neutral placeholder gray */
 }
 
@@ -597,6 +598,7 @@ gridview child:selected box {
 
 .tile.weather-tile #content-holder {
     opacity: 0;
+    margin-bottom: 15px;
 }
 
 .tile.weather-tile.weather-animate #content-holder {
@@ -610,7 +612,6 @@ gridview child:selected box {
 }
 
 .tile.weather-tile #location {
-    margin-left: 5px;
     padding: 10px 0px;
     font-size: 10px;
 }
@@ -619,11 +620,14 @@ gridview child:selected box {
     font-size: 30px;
 }
 
-.tile.weather-tile #content-holder {
-    margin-bottom: 15px;
+.tile.weather-tile #date {
+    padding: 10px 4px 0px 0px;
+    font-size: 12px;
 }
 
-
+.tile.weather-tile #time {
+    font-size: 42px;
+}
 
 /*WEATHER CLASSES*/
 /* Weather Types */
@@ -690,6 +694,9 @@ gridview child:selected box {
 .tile.weather-tile.weather-none-available {
     background: var(--weather-none-available);
     background-clip: padding-box;
+}
+.tile.weather-tile.night {
+    background: var(--weather-night);
 }
 
 /* TIMER TILE */

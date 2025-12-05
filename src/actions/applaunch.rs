@@ -1,4 +1,5 @@
-use std::process::{Command, Stdio};
+use std::os::fd::AsRawFd;
+use std::process::Command;
 
 use crate::{
     sher_log, sherlock_error,
@@ -25,18 +26,16 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     }
 
     let cmd = parts.join(" ").trim().to_string();
-    let parts = split_as_command(&cmd).into_iter();
+    let mut parts = split_as_command(&cmd).into_iter();
 
-    let command = Command::new("nohup")
-        .arg("setsid")
-        .args(parts)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .stdin(Stdio::null())
-        .spawn();
+    let mut command = Command::new(parts.next().ok_or(sherlock_error!(
+        SherlockErrorType::CommandExecutionError(cmd.clone()),
+        format!("Failed to get first base command")
+    ))?);
+    command.args(parts);
 
-    match command {
-        Ok(mut _child) => {
+    match launch_detached(command) {
+        Ok(_) => {
             let _ = sher_log!(format!("Detached process started: {}.", cmd));
             Ok(())
         }
@@ -51,17 +50,83 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
     }
 }
 
+pub fn launch_detached(mut command: Command) -> std::io::Result<()> {
+    unsafe {
+        match libc::fork() {
+            -1 => return Err(std::io::Error::last_os_error()),
+            0 => {
+                // Child process
+                if libc::setsid() == -1 {
+                    return Err(std::io::Error::last_os_error());
+                }
+
+                // Fork again to prevent from acquiring a controlling terminal
+                match libc::fork() {
+                    -1 => return Err(std::io::Error::last_os_error()),
+                    0 => {
+                        // Now fully detached
+                        // Redirect stdio
+                        let devnull = std::fs::OpenOptions::new()
+                            .read(true)
+                            .write(true)
+                            .open("/dev/null")?;
+                        let fd = devnull.as_raw_fd();
+                        libc::dup2(fd, libc::STDIN_FILENO);
+                        libc::dup2(fd, libc::STDOUT_FILENO);
+                        libc::dup2(fd, libc::STDERR_FILENO);
+
+                        command.spawn().expect("Failed to spawn command");
+                        std::process::exit(0);
+                    }
+                    _ => std::process::exit(0),
+                }
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
+pub fn launch_detached_child(mut child: std::process::Child) -> Result<(), SherlockError> {
+    unsafe {
+        // Tells OS the process is not attatched to sherlock anymore
+        libc::signal(libc::SIGHUP, libc::SIG_IGN);
+    }
+
+    // Make sure stdin/out/err dont hand or capture output
+    if let Some(stdin) = child.stdin.take() {
+        let _ = nix::fcntl::fcntl(
+            stdin.as_raw_fd(),
+            nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC),
+        );
+    }
+    if let Some(stdin) = child.stdin.take() {
+        let _ = nix::fcntl::fcntl(
+            stdin.as_raw_fd(),
+            nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC),
+        );
+    }
+    if let Some(stdin) = child.stdin.take() {
+        let _ = nix::fcntl::fcntl(
+            stdin.as_raw_fd(),
+            nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC),
+        );
+    }
+
+    std::mem::drop(child);
+    Ok(())
+}
+
 pub fn split_as_command(cmd: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();
-    let mut quoting = false;
     let mut prev = '\0';
     let mut double_escape = false;
+    let mut double_quoting = false;
+    let mut single_quoting = false;
 
     for c in cmd.chars() {
         if double_escape {
-            // Escape inside quotes in Exec value as specified by
-            // https://specifications.freedesktop.org/desktop-entry-spec/latest/exec-variables.html
+            // Escape inside double quotes
             double_escape = false;
             match c {
                 '"' | '`' | '$' | '\\' => {
@@ -72,12 +137,13 @@ pub fn split_as_command(cmd: &str) -> Vec<String> {
                 }
                 _ => current.push('\\'),
             }
-        }
-        if quoting && c == '\\' && prev == '\\' {
+        } else if double_quoting && c == '\\' && prev == '\\' {
             double_escape = true;
-        } else if c == '"' {
-            quoting = !quoting;
-        } else if !quoting && c.is_whitespace() && !current.is_empty() {
+        } else if c == '"' && !single_quoting {
+            double_quoting = !double_quoting;
+        } else if c == '\'' && !double_quoting {
+            single_quoting = !single_quoting;
+        } else if !double_quoting && !single_quoting && c.is_whitespace() && !current.is_empty() {
             parts.push(current.clone());
             current.clear();
         } else {

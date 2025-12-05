@@ -65,6 +65,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | `animate` | `true`   | Sets if startup animation should play. (Temporarily deprecated) ||
 | `global_prefix` | `None`   | Prepends this to every command. ||
 | `global_flags` | `None`   | Appends these flags to every command. ||
+| `remember_query` | `false`   | Specifies whether the last query should maintain in the search bar when you open Sherlock next. Only works in daemonized mode. ||
 
 ---
 
@@ -81,6 +82,8 @@ The `[binds]` section allows you to configure additional keybindings for navigat
 | `modifier` | `control`     | Defines the keybind used for shortcuts (`<modifier>+<1-5>`) and the clearing of the search bar using (`modifier+backspace`)  |
 | `exec_inplace` | `control+return`     | Defines the key bind to execute an item without sherlock closing afterwards. |
 | `context` | `control+i`     | Defines the keybind to open the context menu. |
+| `use_lr_nav` | `false`     | If set to `true`, allows you to move the search bar cursor using the left and right arrows. |
+
 
 ### Available Keys
 

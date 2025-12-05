@@ -302,6 +302,9 @@ fn construct_window(
     main_overlay.set_child(Some(&ui));
     main_overlay.add_overlay(&revealer);
 
+    imp.search_bar
+        .set_placeholder_text(Some(&config.appearance.placeholder));
+
     // Update the search icon
     imp.search_icon.set_icon(
         Some(&config.search_bar_icon.icon),
@@ -441,6 +444,10 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             let update_res = item.based_show(&search_text.borrow());
             item.update(&search_text.borrow());
 
+            if home == HomeType::Persist {
+                return true;
+            }
+
             if is_home {
                 if home != HomeType::Search {
                     return true;
@@ -530,10 +537,10 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
 
             if !search_text.is_empty() {
                 if let Some(search) = item_a.search() {
-                    priority_a = make_prio(item_a.priority(), &search_text, &search);
+                    priority_a = make_prio(item_a.priority(), &search_text, &search.to_lowercase());
                 }
                 if let Some(search) = item_b.search() {
-                    priority_b = make_prio(item_b.priority(), &search_text, &search);
+                    priority_b = make_prio(item_b.priority(), &search_text, &search.to_lowercase());
                 }
             }
 

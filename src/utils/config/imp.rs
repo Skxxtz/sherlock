@@ -51,6 +51,8 @@ impl Default for ConfigAppearance {
         Self {
             width: 900,
             height: 593, // 617 with, 593 without notification bar
+            margins: (0, 0, 0, 0),
+            anchor: String::from(""),
             gsk_renderer: String::from("cairo"),
             icon_paths: FileDefaults::icon_paths(),
             icon_size: OtherDefaults::icon_size(),
@@ -59,6 +61,7 @@ impl Default for ConfigAppearance {
             opacity: 1.0,
             mod_key_ascii: BindDefaults::modkey_ascii(),
             num_shortcuts: 5,
+            placeholder: OtherDefaults::placeholder(),
         }
     }
 }
@@ -71,6 +74,7 @@ impl Default for ConfigBehavior {
             global_prefix: None,
             global_flags: None,
             use_lr_nav: false,
+            remember_query: false,
         }
     }
 }
