@@ -79,7 +79,6 @@ pub fn asynchronous_execution(
 ) -> Result<(), SherlockError> {
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
 
-    // Log only the visible command, never the password
     sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
     let mut parts = split_as_command(&raw_command).into_iter();
@@ -97,7 +96,6 @@ pub fn asynchronous_execution(
         // -S makes sudo read password from stdin
         c.arg("-S");
 
-        // Now append original command as args
         c.arg(base);
         c.args(parts);
 
@@ -128,7 +126,6 @@ pub fn asynchronous_execution(
             })?;
         }
 
-        // detach or wait (your choice)
         launch_detached_child(child)?;
 
         let _ = sher_log!(format!("Detached sudo process for: {}.", raw_command));
