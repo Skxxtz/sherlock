@@ -82,6 +82,8 @@ The `[binds]` section allows you to configure additional keybindings for navigat
 | `modifier` | `control`     | Defines the keybind used for shortcuts (`<modifier>+<1-5>`) and the clearing of the search bar using (`modifier+backspace`)  |
 | `exec_inplace` | `control+return`     | Defines the key bind to execute an item without sherlock closing afterwards. |
 | `context` | `control+i`     | Defines the keybind to open the context menu. |
+| `use_lr_nav` | `false`     | If set to `true`, allows you to move the search bar cursor using the left and right arrows. |
+
 
 ### Available Keys
 
