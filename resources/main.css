@@ -198,8 +198,8 @@ image {
     border-radius: 4px;
 }
 
-.tile:hover *,
-.tile:hover {
+.tile:not(.weather-tile):hover *,
+.tile:not(.weather-tile):hover {
     background: transparent;
 }
 
