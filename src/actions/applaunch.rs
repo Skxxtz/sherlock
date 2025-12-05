@@ -86,6 +86,27 @@ pub fn launch_detached(mut command: Command) -> std::io::Result<()> {
     }
 }
 
+pub fn launch_detached_child(mut child: std::process::Child) -> Result<(), SherlockError> {
+    unsafe {
+        // Tells OS the process is not attatched to sherlock anymore
+        libc::signal(libc::SIGHUP, libc::SIG_IGN);
+    }
+
+    // Make sure stdin/out/err dont hand or capture output
+    if let Some(stdin) = child.stdin.take() {
+        let _ = nix::fcntl::fcntl(stdin.as_raw_fd(), nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC));
+    }
+    if let Some(stdin) = child.stdin.take() {
+        let _ = nix::fcntl::fcntl(stdin.as_raw_fd(), nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC));
+    }
+    if let Some(stdin) = child.stdin.take() {
+        let _ = nix::fcntl::fcntl(stdin.as_raw_fd(), nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC));
+    }
+
+    std::mem::drop(child);
+    Ok(())
+}
+
 pub fn split_as_command(cmd: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();

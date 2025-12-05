@@ -1,7 +1,8 @@
 use regex::Regex;
-use std::process::Command;
+use std::io::Write;
+use std::process::{Command, Stdio};
 
-use crate::actions::applaunch::{launch_detached, split_as_command};
+use crate::actions::applaunch::{launch_detached, launch_detached_child, split_as_command};
 use crate::api::api::SherlockAPI;
 use crate::sher_log;
 use crate::utils::config::ConfigGuard;
@@ -10,7 +11,6 @@ use crate::{
     utils::errors::{SherlockError, SherlockErrorType},
 };
 pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
-    println!("keyword: {:?}", keyword);
     let config = ConfigGuard::read()?;
     let prefix = config
         .behavior
@@ -57,23 +57,85 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
 
     let commands = exec.split(" &").map(|s| s.trim()).filter(|s| !s.is_empty());
 
+    let mut sudo = None;
     for command in commands {
-        asynchronous_execution(command, &prefix, &flags)?;
+        // Query sudo password if its not specified yet
+        if command.contains("sudo ") {
+            if sudo.is_none() {
+                sudo = Some(gio::glib::MainContext::default()
+                    .block_on(async { SherlockAPI::input_field(true, Some("SUDO:")).await })?);
+            }
+        }
+        asynchronous_execution(command, &prefix, &flags, &sudo)?;
     }
     Ok(())
 }
 
-pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<(), SherlockError> {
+pub fn asynchronous_execution(
+    cmd: &str,
+    prefix: &str,
+    flags: &str,
+    sudo_password: &Option<String>,
+) -> Result<(), SherlockError> {
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
+
+    // Log only the visible command, never the password
     sher_log!(format!(r#"Spawning command "{}""#, raw_command))?;
 
     let mut parts = split_as_command(&raw_command).into_iter();
-    let mut command = Command::new(parts.next().ok_or(sherlock_error!(
-        SherlockErrorType::CommandExecutionError(raw_command.clone()),
-        format!("Failed to get first base command")
-    ))?);
-    command.args(parts);
+    let base = parts.next().ok_or_else(|| {
+        sherlock_error!(
+            SherlockErrorType::CommandExecutionError(raw_command.clone()),
+            "Failed to get first base command"
+        )
+    })?;
 
+    // If sudo is requested, wrap the command
+    let mut command = if let Some(ref _pw) = sudo_password {
+        let mut c = Command::new("sudo");
+
+        // -S makes sudo read password from stdin
+        c.arg("-S");
+
+        // Now append original command as args
+        c.arg(base);
+        c.args(parts);
+
+        c.stdin(Stdio::piped());
+        c
+    } else {
+        let mut c = Command::new(base);
+        c.args(parts);
+        c
+    };
+
+    // If sudo: write password into stdin *before* detaching
+    if let Some(ref pw) = sudo_password {
+        let mut child = command.spawn().map_err(|e| {
+            sherlock_error!(
+                SherlockErrorType::CommandExecutionError(raw_command.clone()),
+                e.to_string()
+            )
+        })?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            // write password securely
+            stdin.write_all(format!("{}\n", pw).as_bytes()).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::CommandExecutionError(raw_command.clone()),
+                    e.to_string()
+                )
+            })?;
+        }
+
+        // detach or wait (your choice)
+        launch_detached_child(child)?;
+
+        let _ = sher_log!(format!("Detached sudo process for: {}.", raw_command));
+        return Ok(());
+    }
+
+    // No sudo path
     match launch_detached(command) {
         Ok(_) => {
             let _ = sher_log!(format!("Detached process started: {}.", raw_command));
@@ -84,7 +146,6 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
                 "Failed to detach command: {}\nError: {}",
                 raw_command, e
             ));
-
             Err(sherlock_error!(
                 SherlockErrorType::CommandExecutionError(cmd.to_string()),
                 e.to_string()
@@ -92,3 +153,4 @@ pub fn asynchronous_execution(cmd: &str, prefix: &str, flags: &str) -> Result<()
         }
     }
 }
+
