@@ -41,7 +41,15 @@
                     <object class="GtkEntry" id="search-bar">
                         <property name="placeholder-text">Search:</property>
                         <property name="name">search-bar</property>
-                        <property name="hexpand">true</property>
+                        <property name="hexpand">false</property>
+                    </object>
+                </child>
+
+                <child>
+                    <object class="GtkBox" id="arg-holder">
+                        <property name="orientation">horizontal</property>
+                        <property name="name">arg-holder</property>
+                        <property name="spacing">6</property>
                     </object>
                 </child>
             </object>

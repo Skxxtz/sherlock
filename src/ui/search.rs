@@ -2,7 +2,6 @@ use gio::{
     glib::{SignalHandlerId, WeakRef},
     ActionEntry, ListStore,
 };
-use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     self,
     gdk::{Key, ModifierType},
@@ -11,6 +10,7 @@ use gtk4::{
     SignalListItemFactory, SingleSelection, SortListModel, Widget,
 };
 use gtk4::{glib, ApplicationWindow, Entry};
+use gtk4::{pango, subclass::prelude::ObjectSubclassIsExt};
 use levenshtein::levenshtein;
 use simd_json::prelude::ArrayTrait;
 use std::collections::HashMap;
@@ -294,7 +294,7 @@ fn construct_window(
     let search_text = Rc::new(RefCell::new(String::from("")));
 
     // Initialize the builder with the correct path
-    let ui = SearchUiObj::new();
+    let mut ui = SearchUiObj::new();
     let imp = ui.imp();
 
     let (context, revealer) = make_context();
@@ -717,6 +717,13 @@ fn change_event(
 
         move |search_bar| {
             let mut current_text = search_bar.text().to_string();
+
+            // Make search bar auto resize
+            let layout = search_bar.create_pango_layout(Some(&current_text));
+            let (w, _) = layout.size();
+            let px = w / pango::SCALE;
+            search_bar.set_width_request(px + 24);
+
             // logic to switch to search mode with respective icons
             if current_text.len() == 1 {
                 let _ = search_bar.activate_action("win.switch-mode", Some(&"search".to_variant()));
@@ -734,6 +741,10 @@ fn change_event(
             // filter and sort
             if let Some(res) = results.upgrade() {
                 // To reload ui according to mode
+                if let Some(sel) = res.selected_item().and_downcast::<TileItem>() {
+                    println!("{:?}", sel.search());
+                    println!("{:?}", sel.variables());
+                }
                 let _ = res.activate_action("win.update-items", Some(&true.to_variant()));
             }
         }

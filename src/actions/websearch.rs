@@ -6,7 +6,11 @@ use crate::utils::{
     errors::SherlockError,
 };
 
-pub fn websearch(mut engine: &str, query: &str, browser: Option<&str>) -> Result<(), SherlockError> {
+pub fn websearch(
+    mut engine: &str,
+    query: &str,
+    browser: Option<&str>,
+) -> Result<(), SherlockError> {
     if is_url(query) {
         engine = "plain";
     }
@@ -53,7 +57,6 @@ pub fn websearch(mut engine: &str, query: &str, browser: Option<&str>) -> Result
     command_launch(&command, "")
 }
 
-
 fn is_url(input: &str) -> bool {
     let s = input.trim();
 
@@ -74,14 +77,14 @@ fn is_url(input: &str) -> bool {
         }
 
         if bytes.get(colon_pos + 1) == Some(&b'/') && bytes.get(colon_pos + 2) == Some(&b'/') {
-            return true
+            return true;
         }
 
-        return false
+        return false;
     }
 
     if s.eq_ignore_ascii_case("localhost") {
-        return true
+        return true;
     }
 
     // IPv4 detection
@@ -92,7 +95,7 @@ fn is_url(input: &str) -> bool {
         if c == b'.' {
             dot_count += 1;
             if dot_count > 3 || digit_count == 0 {
-                break
+                break;
             }
             digit_count = 0;
         } else if c.is_ascii_digit() {
@@ -109,16 +112,15 @@ fn is_url(input: &str) -> bool {
         return true;
     }
 
-
     // Has a single dot and no spaces → domain.com
     if !s.contains(' ') && !s.ends_with('.') && memchr::memchr(b'.', bytes).is_some() {
-        return true
+        return true;
     }
 
     // host:port (only digits after colon)
     if let Some((host, port)) = s.split_once(':') {
         if !host.contains(' ') && port.chars().all(|c| c.is_ascii_digit()) {
-            return true
+            return true;
         }
     }
 
@@ -136,5 +138,4 @@ fn test_url_detector() {
     assert!(!is_url("hello"));
     assert!(!is_url("rust regex"));
     assert!(!is_url("a b.com"));
-
 }

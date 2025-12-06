@@ -8,7 +8,7 @@ use gtk4::subclass::prelude::*;
 use crate::g_subclasses::sherlock_row::{SherlockRow, SherlockRowBind};
 use crate::g_subclasses::tile_item::UpdateHandler;
 use crate::launcher::Launcher;
-use crate::loader::util::ApplicationAction;
+use crate::loader::util::{ApplicationAction, ExecVariable};
 
 /// ## Fields:
 #[derive(Default)]
@@ -22,6 +22,7 @@ pub struct TileItem {
     // Customs
     pub active: Cell<bool>,
     pub actions: RefCell<Vec<ApplicationAction>>,
+    pub vars: RefCell<Vec<ExecVariable>>,
     pub binds: Rc<RefCell<Vec<SherlockRowBind>>>,
 }
 

@@ -1,5 +1,6 @@
 mod api_tile;
 mod app_tile;
+mod arg_bar;
 mod calc_tile;
 mod error_tile;
 mod event_tile;
@@ -12,6 +13,7 @@ mod window;
 
 pub use api_tile::ApiTile;
 pub use app_tile::AppTile;
+pub use arg_bar::ArgBar;
 pub use calc_tile::CalcTile;
 pub use error_tile::ErrorTile;
 pub use event_tile::EventTile;

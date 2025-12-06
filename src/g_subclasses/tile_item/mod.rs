@@ -11,7 +11,7 @@ use std::{rc::Rc, usize};
 
 use crate::g_subclasses::sherlock_row::SherlockRowBind;
 use crate::launcher::LauncherType;
-use crate::loader::util::ApplicationAction;
+use crate::loader::util::{ApplicationAction, ExecVariable};
 use crate::prelude::TileHandler;
 use crate::ui::tiles::api_tile::ApiTileHandler;
 use crate::ui::tiles::app_tile::AppTileHandler;
@@ -91,7 +91,7 @@ impl TileItem {
                 Some(tile.upcast::<Widget>())
             }
             LauncherType::Api(api) => {
-                let tile = Tile::api(launcher.clone(), api);
+                let tile = Tile::api(launcher.clone(), &api);
                 Some(tile.upcast::<Widget>())
             }
             LauncherType::Clipboard(clp) => {
@@ -206,6 +206,19 @@ impl TileItem {
             imp.launcher.borrow().actions.clone()
         };
         actions.unwrap_or_default()
+    }
+    pub fn variables(&self) -> Vec<ExecVariable> {
+        let imp = self.imp();
+        if let Some(index) = imp.index.get() {
+            imp.launcher
+                .borrow()
+                .inner()
+                .and_then(|inner| inner.get(index as usize))
+                .map(|val| val.vars.clone())
+                .unwrap_or_default()
+        } else {
+            vec![]
+        }
     }
     pub fn alias(&self) -> String {
         self.imp()

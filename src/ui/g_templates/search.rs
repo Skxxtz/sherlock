@@ -36,6 +36,9 @@ mod imp {
 
         #[template_child(id = "result-frame")]
         pub results: TemplateChild<ListView>,
+
+        #[template_child(id = "arg-holder")]
+        pub arg_holder: TemplateChild<GtkBox>,
     }
 
     #[glib::object_subclass]
@@ -58,7 +61,13 @@ mod imp {
     impl BoxImpl for SearchUiObj {}
 }
 
-use gtk4::{glib, prelude::WidgetExt, subclass::prelude::ObjectSubclassIsExt};
+use gtk4::{
+    glib,
+    prelude::{BoxExt, EditableExt, EntryExt, WidgetExt},
+    subclass::prelude::ObjectSubclassIsExt,
+};
+
+use crate::ui::g_templates::ArgBar;
 glib::wrapper! {
     pub struct SearchUiObj(ObjectSubclass<imp::SearchUiObj>)
         @extends gtk4::Widget, gtk4::Box,
@@ -71,6 +80,14 @@ impl SearchUiObj {
         let imp = ui.imp();
         imp.search_icon_holder.add_css_class("search");
         imp.results.set_focusable(false);
+        if let Some(placeholder) = imp.search_bar.placeholder_text() {
+            imp.search_bar.set_max_width_chars(placeholder.len() as i32);
+        }
         ui
+    }
+    pub fn add_arg_bar(&mut self, placeholder: &str) {
+        let imp = self.imp();
+        let entry = ArgBar::new(placeholder);
+        imp.arg_holder.append(&entry);
     }
 }

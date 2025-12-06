@@ -58,6 +58,13 @@ pub struct RawLauncher {
 fn default_true() -> bool {
     true
 }
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecVariable {
+    StringInput(String),
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationAction {
     pub name: Option<String>,
@@ -101,6 +108,9 @@ pub struct AppData {
     #[serde(default)]
     pub actions: Vec<ApplicationAction>,
     #[serde(default)]
+    #[serde(rename = "variables")]
+    pub vars: Vec<ExecVariable>,
+    #[serde(default)]
     pub terminal: bool,
 }
 impl AppData {
@@ -116,6 +126,7 @@ impl AppData {
             tag_end: None,
             desktop_file: None,
             actions: vec![],
+            vars: vec![],
             terminal: false,
         }
     }
@@ -144,11 +155,24 @@ impl AppData {
             tag_end: None,
             desktop_file: None,
             actions: vec![],
+            vars: vec![],
             terminal: false,
         }
     }
     pub fn from_raw_launcher(raw: &RawLauncher) -> Self {
         let mut data = Self::new();
+        let exec_args: Option<Vec<ExecVariable>> = raw
+            .args
+            .get("variables")
+            .and_then(|v| v.as_array())
+            .map(|variables| {
+                variables
+                    .iter()
+                    .filter_map(|v| serde_json::from_value::<ExecVariable>(v.clone()).ok())
+                    .collect()
+            });
+        data.vars = exec_args.unwrap_or_default();
+
         data.priority = raw.priority;
         data.name = raw.name.as_deref().unwrap_or("").to_string();
         data.icon = raw
@@ -220,7 +244,6 @@ impl AppData {
             self.search_string =
                 Self::construct_search(&self.name, &self.search_string, use_keywords);
         }
-        println!("{:?}", self.search_string);
     }
     fn construct_search(name: &str, search_str: &str, use_keywords: bool) -> String {
         if use_keywords {

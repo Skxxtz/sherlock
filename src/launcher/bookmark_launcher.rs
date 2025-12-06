@@ -198,6 +198,7 @@ impl MozillaSqliteParser {
                         desktop_file: None,
                         priority: raw.priority + 1.0,
                         actions: vec![],
+                        vars: vec![],
                         terminal: false,
                     };
                     res.push(bookmark);
@@ -293,6 +294,7 @@ impl ChromeParser {
                             desktop_file: None,
                             priority: raw.priority + 1.0,
                             actions: vec![],
+                            vars: vec![],
                             terminal: false,
                         });
                     }
