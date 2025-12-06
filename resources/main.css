@@ -274,6 +274,7 @@ row:nth-child(10) .tile.animate {
     padding: 0px;
 }
 
+row:selected .tile:hover, 
 row:selected .tile {
     background: hsl(from var(--foreground) h s l / 100%);
     background-color: hsl(from var(--foreground) h s l / 100%);
