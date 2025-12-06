@@ -1,4 +1,4 @@
-use std::env;
+use std::env::{self, temp_dir};
 use std::fs::{self, remove_file, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -11,6 +11,7 @@ use procfs::process::Process;
 use crate::daemon::daemon::SherlockDaemon;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::utils::paths::get_cache_dir;
 
 pub struct LockFile {
     path: PathBuf,
@@ -18,7 +19,7 @@ pub struct LockFile {
 impl LockFile {
     #[sherlock_macro::timing(name = "Ensuring single instance", level = "setup")]
     pub fn single_instance(lock_file: &str) -> Result<Self, SherlockError> {
-        let path = PathBuf::from(lock_file);
+        let path = Self::get_path(lock_file);
         let take_over = env::args().find(|s| s == "--take-over");
         if path.exists() {
             let content = fs::read_to_string(&path).map_err(|e| {
@@ -85,6 +86,16 @@ impl LockFile {
                 e.to_string()
             )
         })
+    }
+
+    /// Creates the lock file path. If `XDG_RUNTIME_DIR` exists, it will be used. Otherwise, it will
+    /// fallback to `XDG_CACKE_HOME/sherlock`.
+    pub fn get_path(file_name: &str) -> PathBuf {
+        if let Ok(runtime_dir) = env::var("XDG_RUNTIME_DIR") {
+            PathBuf::from(runtime_dir).join(file_name)
+        } else {
+            get_cache_dir().unwrap_or(temp_dir()).join(file_name)
+        }
     }
 }
 

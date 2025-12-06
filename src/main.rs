@@ -39,7 +39,7 @@ use crate::utils::config::ConfigGuard;
 
 const SOCKET_PATH: &str = "/tmp/sherlock_daemon.sock";
 const SOCKET_DIR: &str = "/tmp/";
-const LOCK_FILE: &str = "/tmp/sherlock.lock";
+const LOCK_FILE: &str = "sherlock.lock";
 
 static CONFIG: OnceCell<RwLock<SherlockConfig>> = OnceCell::new();
 static ICONS: OnceCell<RwLock<CustomIconTheme>> = OnceCell::new();
