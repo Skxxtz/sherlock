@@ -39,13 +39,13 @@ impl LockFile {
                     if take_over.is_some() {
                         let pid = Pid::from_raw(pid);
                         let _ = kill(pid, SIGKILL);
-                        let _ = fs::remove_file(lock_file);
+                        let _ = fs::remove_file(&path);
                     } else {
                         let _ = SherlockDaemon::instance();
                     }
                 }
                 Err(_) => {
-                    let _ = fs::remove_file(lock_file);
+                    let _ = fs::remove_file(&path);
                 }
             }
         }
