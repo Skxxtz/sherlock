@@ -49,14 +49,14 @@ impl LockFile {
                 }
             }
         }
-        LockFile::new(lock_file)
+        LockFile::new(path)
     }
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, SherlockError> {
         let path = path.as_ref();
         if path.exists() {
             return Err(sherlock_error!(
                 SherlockErrorType::LockfileExistsError,
-                "".to_string()
+                format!("{:?}", path)
             ));
         }
 

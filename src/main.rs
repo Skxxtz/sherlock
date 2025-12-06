@@ -236,7 +236,10 @@ async fn setup() -> StartupResponse {
     let mut errors = Vec::new();
     let _ = sher_log!("New instance started");
 
-    let lock = LockFile::single_instance(LOCK_FILE).unwrap_or_else(|_| process::exit(1));
+    let lock = LockFile::single_instance(LOCK_FILE).unwrap_or_else(|e| {
+        eprintln!("Error: {}", e.to_string());
+        process::exit(1)
+    });
 
     let (flags_result, app) = join!(async { Loader::load_flags() }, async {
         let app = Application::builder()
