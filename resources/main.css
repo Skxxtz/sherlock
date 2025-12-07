@@ -111,10 +111,37 @@ window:not(#backdrop) {
     border: none;
     background: hsl(from var(--background) h s l / 100%);
     min-height: 40px;
-    color: var(--text);
+    color: hsl(from var(--text) h s l / 50%);
     font-size: 15px;
     padding-left: 20px;
 }
+
+/* var fields */
+#arg-holder {
+    padding: 5px;
+}
+.arg-box {
+    --hue: 100;
+    --saturation: 0%;
+    --lightness: 50%;
+    background: hsla(var(--hue), var(--saturation), var(--lightness), 0.08);
+    border: 1px solid hsla(var(--hue), var(--saturation), var(--lightness), 0.01);
+    box-shadow: inset 0px 0px 10px 0px rgba(0,0,0,0.3), 
+                0px 0px 5px 0px rgba(0,0,0,0.1);
+    color: hsla(var(--hue), var(--saturation), 80%, 0.3);
+    border-radius: 4px;
+    padding: 2px 7px;
+    min-width: 10px;
+    transition: 0.2s ease;
+}
+
+.arg-box:focus-within {
+    border: 1px solid hsla(var(--hue), var(--saturation), var(--lightness), 0.2);
+    box-shadow: inset 0px 0px 10px 0px rgba(0,0,0,0.1), 
+                0px 0px 5px 0px rgba(0,0,0,0.3);
+    color: hsla(var(--hue), var(--saturation), 80%, 0.5);
+}
+
 
 #search-bar-holder {
     border-bottom: 2px solid var(--border);
@@ -149,8 +176,9 @@ window:not(#backdrop) {
     margin-left: 10px;
 }
 
-#search-bar:focus {
+#search-bar:focus-within {
     outline: none;
+    color: hsla(var(--text), 0.9);
 }
 
 #search-bar placeholder {
