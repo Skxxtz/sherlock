@@ -2,12 +2,12 @@ use gio::{
     glib::{SignalHandlerId, WeakRef},
     ActionEntry, ListStore,
 };
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     self, prelude::*, CustomFilter, CustomSorter, EventControllerKey, FilterListModel, Overlay,
     SignalListItemFactory, SingleSelection, SortListModel, Widget,
 };
 use gtk4::{glib, ApplicationWindow};
-use gtk4::{pango, subclass::prelude::ObjectSubclassIsExt};
 use levenshtein::levenshtein;
 use simd_json::prelude::ArrayTrait;
 use std::collections::HashMap;
@@ -621,9 +621,11 @@ fn change_event(
 
             // Make search bar auto resize
             let layout = search_bar.create_pango_layout(Some(&current_text));
-            let (w, _) = layout.size();
-            let px = w / pango::SCALE;
-            search_bar.set_width_request(px + 24);
+            let (w, h) = layout.size();
+            let hpx = w / gtk4::pango::SCALE;
+            let vpx = h / gtk4::pango::SCALE;
+
+            search_bar.set_size_request(hpx + 1, vpx + 1);
 
             // logic to switch to search mode with respective icons
             if current_text.len() == 1 {
@@ -646,7 +648,6 @@ fn change_event(
 
                 // Show arg bars
                 if let Some(sel) = res.selected_item().and_downcast::<TileItem>() {
-                    // TODO: with the variables, show them in the search bar
                     let vars = sel.variables();
                     if let Some(ui) = ui_clone.upgrade() {
                         if vars.len() > 0 {

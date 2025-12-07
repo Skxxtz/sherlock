@@ -3,7 +3,8 @@
     --foreground: hsl(0, 0%, 15%);
     --text: hsl(53, 100%, 97%);
     --border: hsl(0, 0%, 19%);
-    --arg-bar: hsl(100, 0%, 0%);
+    --arg-bar: hsl(100, 0%, 50%);
+
 
 
     --tag-background: hsl(180, 0%, 30%);

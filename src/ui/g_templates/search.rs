@@ -93,8 +93,14 @@ impl SearchUiObj {
         imp.results.set_focusable(false);
         imp.search_bar_holder.set_focusable(true);
         imp.search_bar_holder.set_can_focus(true);
+        imp.search_bar.set_max_width_chars(1);
         if let Some(placeholder) = imp.search_bar.placeholder_text() {
-            imp.search_bar.set_max_width_chars(placeholder.len() as i32);
+            let layout = imp.search_bar.create_pango_layout(Some(&placeholder));
+            let (w, h) = layout.size();
+            let hpx = w / gtk4::pango::SCALE;
+            let vpx = h / gtk4::pango::SCALE;
+
+            imp.search_bar.set_size_request(hpx + 2, vpx + 1);
         }
         ui
     }
