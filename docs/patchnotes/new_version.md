@@ -1,2 +1,3 @@
 - added functionality for `web_search` to search for URLs dynamically
 - added functionality for variable fields
+- added new keybind format

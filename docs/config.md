@@ -71,6 +71,9 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 
 ## Binds Section `[binds]`
 
+> [!WARNING]  
+> This section is deprecated since v0.1.15 – use [keybinds](#keybinds) instead.
+
 The `[binds]` section allows you to configure additional keybindings for navigation. The values of the binds are specified in the format `<modifier>-<key>`. For example, `control-tab` binds the Control key and the Tab key. If you only want to bind a single Key, you only provide `<key>`. For the modifier key you can only provide `<modifier>.
 
 | **Keyword**           | **Default** | **Explanation**                                                                 |
@@ -83,7 +86,6 @@ The `[binds]` section allows you to configure additional keybindings for navigat
 | `exec_inplace` | `control+return`     | Defines the key bind to execute an item without sherlock closing afterwards. |
 | `context` | `control+i`     | Defines the keybind to open the context menu. |
 | `use_lr_nav` | `false`     | If set to `true`, allows you to move the search bar cursor using the left and right arrows. |
-
 
 ### Available Keys
 
@@ -112,6 +114,62 @@ The `[binds]` section allows you to configure additional keybindings for navigat
 | `<Meta>`   | `meta`      |
 
 ---
+
+## Keybinds
+
+The `[keybinds]` section allows you to configure keybinds for naviagation. The
+configuration will map a key combination to an internal function such as
+selecting the next item.
+
+Keybinds are defined in the following manner:
+
+```toml
+[keybinds]
+"mod-key" = "internal_function"
+```
+
+### Internal Functions
+
+| Function Name   | Functionality    |
+|--------------- | --------------- |
+| `item_down`   | Selects the item below the current one.   |
+| `item_up`   | Selects the item above the current one.   |
+| `item_left`   | Selects the item to the left of the current one. In row views, it will do the same as `item_up`.   |
+| `item_right`   | Selects the item to the right of the current one. In row views, it will do the same as `item_down`.   |
+| `arg_next`   | Focuses the next argument field.   |
+| `arg_prev`   | Focuses the previous argument field.   |
+| `exec`   | Executes the currently selected row.   |
+| `exec_inplace`   | Executes the currently selected row without closing Sherlock.   |
+| `multi_select`   | Marks a row as selected if Sherlock is run using the `--multi` flag. |
+| `toggle_context`   | Toggles the context menu. Note: `<esc>` will close the context menu too. |
+| `clear_bar`   | Clears the entire search bar of its content. |
+| `backspace`   | Clears the current mode whenever the searchbar is empty. |
+| `error_page`   | Opens a view containing any errors. |
+| `shortcut`   | Executes the nth shortcut. Requires the key to be some modifier and end with `-<digit>`, which is a generic placeholder for any number. |
+
+### Key Names
+
+Sherlock uses gtk4's internal key names. However, for simplicity, some key names are changed:
+
+**Mod Keys:**
+
+| GTK   | Sherlock    |
+|--------------- | --------------- |
+| CONTROL_MASK, Control   | ctrl   |
+| SHIFT_MASK, Shift   | shift   |
+| LOCK_MASK   | caps   |
+| ALT_MASK, MOD1_MASK   | alt   |
+| SUPER_MASK, MOD4_MASK   | meta   |
+| MOD5_MASK   | mod5   |
+
+**Keys:**
+
+| GTK   | Sherlock    |
+|--------------- | --------------- |
+| ISO_left_tab   | tab   |
+| iso_level3_shift   | altgr   |
+| Control_L   | ctrl_l   |
+| Control_R   | ctrl_r   |
 
 ## Files Section `[files]`
 
