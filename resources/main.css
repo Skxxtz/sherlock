@@ -178,7 +178,7 @@ window:not(#backdrop) {
 
 #search-bar:focus-within {
     outline: none;
-    color: hsla(var(--text), 0.9);
+    color: hsla(from var(--text) h s l / 90%);
 }
 
 #search-bar placeholder {
