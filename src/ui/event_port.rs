@@ -108,9 +108,9 @@ impl EventPort {
 
                 UIFunction::Exec => {
                     if !ConfigGuard::read().map_or(false, |c| c.runtime.multi) {
-                        self.key_actions.on_return(Some(true));
+                        self.key_actions.on_return(None);
                     } else {
-                        self.key_actions.on_multi_return(Some(true));
+                        self.key_actions.on_multi_return(None);
                     }
                 }
                 UIFunction::ExecInplace => {
