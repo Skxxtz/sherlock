@@ -3,6 +3,7 @@
     --foreground: hsl(0, 0%, 15%);
     --text: hsl(53, 100%, 97%);
     --border: hsl(0, 0%, 19%);
+    --arg-bar: hsl(100, 0%, 0%);
 
 
     --tag-background: hsl(180, 0%, 30%);
@@ -121,14 +122,11 @@ window:not(#backdrop) {
     padding: 5px;
 }
 .arg-box {
-    --hue: 100;
-    --saturation: 0%;
-    --lightness: 50%;
-    background: hsla(var(--hue), var(--saturation), var(--lightness), 0.08);
-    border: 1px solid hsla(var(--hue), var(--saturation), var(--lightness), 0.01);
+    background: hsla(from var(--arg-bar) h s l / 8%);
+    border: 1px solid hsla(from var(--arg-bar) h s l / 1%);
     box-shadow: inset 0px 0px 10px 0px rgba(0,0,0,0.3), 
                 0px 0px 5px 0px rgba(0,0,0,0.1);
-    color: hsla(var(--hue), var(--saturation), 80%, 0.3);
+    color: hsla(from var(--arg-bar) h s 80% / 30%);
     border-radius: 4px;
     padding: 2px 7px;
     min-width: 10px;
@@ -136,12 +134,11 @@ window:not(#backdrop) {
 }
 
 .arg-box:focus-within {
-    border: 1px solid hsla(var(--hue), var(--saturation), var(--lightness), 0.2);
+    border: 1px solid hsla(from var(--arg-bar) h s l / 20%);
     box-shadow: inset 0px 0px 10px 0px rgba(0,0,0,0.1), 
                 0px 0px 5px 0px rgba(0,0,0,0.3);
-    color: hsla(var(--hue), var(--saturation), 80%, 0.5);
+    color: hsla(from var(--arg-bar) h s 80% / 50%);
 }
-
 
 #search-bar-holder {
     border-bottom: 2px solid var(--border);
