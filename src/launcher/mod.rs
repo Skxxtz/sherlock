@@ -222,6 +222,7 @@ impl Launcher {
             | LauncherType::MusicPlayer(_)
             | LauncherType::Pomodoro(_) => {
                 let base = self.base_setup(launcher);
+                base.set_index(0);
                 vec![base]
             }
             _ => vec![],
@@ -276,6 +277,7 @@ impl Launcher {
             LauncherType::File(f) => Some(&f.data),
             LauncherType::Theme(thm) => Some(&thm.themes),
             LauncherType::Process(proc) => Some(&proc.processes),
+            LauncherType::Web(web) => Some(&web.app_data),
             _ => None,
         }
     }

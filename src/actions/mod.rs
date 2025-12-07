@@ -69,7 +69,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                     ""
                 };
                 let browser = attrs.get("browser").map(|s| s.as_str());
-                if let Err(error) = websearch::websearch(engine, query, browser) {
+                if let Err(error) = websearch::websearch(engine, query, browser, variables) {
                     exit = false;
                     let _result = error.insert(false);
                 }

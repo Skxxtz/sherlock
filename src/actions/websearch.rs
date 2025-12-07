@@ -10,6 +10,7 @@ pub fn websearch(
     mut engine: &str,
     query: &str,
     browser: Option<&str>,
+    variables: HashMap<String, String>,
 ) -> Result<(), SherlockError> {
     if is_url(query) {
         engine = "plain";
@@ -54,7 +55,7 @@ pub fn websearch(
         browser.push_str(&format!(r#" "{}""#, url));
         browser
     };
-    command_launch(&command, "", HashMap::new())
+    command_launch(&command, "", variables)
 }
 
 fn is_url(input: &str) -> bool {

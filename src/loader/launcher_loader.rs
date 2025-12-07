@@ -532,6 +532,8 @@ fn parse_web_launcher(raw: &RawLauncher) -> LauncherType {
         .get("browser")
         .and_then(|s| s.as_str())
         .map(|s| s.to_string());
+    let mut app_data = AppData::new();
+    app_data.vars = raw.variables.clone().unwrap_or_default();
     LauncherType::Web(WebLauncher {
         display_name: raw.display_name.clone().unwrap_or("".to_string()),
         icon: raw
@@ -547,6 +549,7 @@ fn parse_web_launcher(raw: &RawLauncher) -> LauncherType {
             .unwrap_or_default()
             .to_string(),
         browser,
+        app_data: vec![app_data],
     })
 }
 

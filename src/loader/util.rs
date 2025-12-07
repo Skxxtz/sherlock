@@ -54,6 +54,8 @@ pub struct RawLauncher {
     pub actions: Option<Vec<ApplicationAction>>,
     #[serde(default)]
     pub add_actions: Option<Vec<ApplicationAction>>,
+    #[serde(default)]
+    pub variables: Option<Vec<ExecVariable>>,
 }
 fn default_true() -> bool {
     true
