@@ -65,7 +65,7 @@ impl EventPort {
             let (before, last) = key.split_at(pos + 1);
             if let Ok(num) = last.parse::<u8>() {
                 shortcut_index = num;
-                key = format!("{}-<digit>", before);
+                key = format!("{}<digit>", before);
             }
         }
 
