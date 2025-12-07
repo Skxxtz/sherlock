@@ -89,7 +89,7 @@ Actions are used to define entries within Sherlock's context menu. They are defi
 
 <div align="center" style="text-align:center; border-radius:10px;">
   <picture>
-    <img alt="app-launcher" width="100%" src="assets/var-tile.svg">
+    <img alt="variable fields" width="100%" src="assets/var-fields.svg">
   </picture>
 </div>
 <br>
