@@ -156,6 +156,7 @@ impl SearchUiObj {
         if index == 0 {
             // focus search bar
             imp.search_bar.grab_focus();
+            imp.search_bar.select_region(-1, -1);
             imp.bar_index.set(0);
         } else if index > 0 {
             let mut child = imp.arg_holder.first_child();
@@ -166,6 +167,7 @@ impl SearchUiObj {
                 if let Ok(arg) = child.downcast::<ArgBar>() {
                     if let Some(entry) = arg.entry() {
                         entry.grab_focus();
+                        entry.select_region(-1, -1);
                         imp.bar_index.set(index);
                     }
                 }
