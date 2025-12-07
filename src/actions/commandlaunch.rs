@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::collections::HashMap;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -10,7 +11,11 @@ use crate::{
     sherlock_error,
     utils::errors::{SherlockError, SherlockErrorType},
 };
-pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
+pub fn command_launch(
+    exec: &str,
+    keyword: &str,
+    variables: HashMap<String, String>,
+) -> Result<(), SherlockError> {
     let config = ConfigGuard::read()?;
     let prefix = config
         .behavior
@@ -47,9 +52,12 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
                 exec = exec.replace(full_match, &text);
             }
             "keyword" => {
-                println!("{:?}", exec);
                 exec = exec.replace(full_match, &keyword);
-                println!("{:?}", exec);
+            }
+            "variable" => {
+                if let Some(val) = variables.get(value.unwrap()) {
+                    exec = exec.replace(full_match, val)
+                }
             }
             _ => {}
         }
@@ -57,18 +65,13 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
 
     let commands = exec.split(" &").map(|s| s.trim()).filter(|s| !s.is_empty());
 
-    let mut sudo = None;
     for command in commands {
+        let mut sudo = None;
         // Query sudo password if its not specified yet
         if command.contains("sudo ") {
-            if sudo.is_none() {
-                sudo = Some(
-                    gio::glib::MainContext::default()
-                        .block_on(async { SherlockAPI::input_field(true, Some("SUDO:")).await })?,
-                );
-            }
+            sudo = variables.get("sudo");
         }
-        asynchronous_execution(command, &prefix, &flags, &sudo)?;
+        asynchronous_execution(command, &prefix, &flags, sudo)?;
     }
     Ok(())
 }
@@ -77,7 +80,7 @@ pub fn asynchronous_execution(
     cmd: &str,
     prefix: &str,
     flags: &str,
-    sudo_password: &Option<String>,
+    sudo_password: Option<&String>,
 ) -> Result<(), SherlockError> {
     let raw_command = format!("{}{}{}", prefix, cmd, flags).replace(r#"\""#, "'");
 

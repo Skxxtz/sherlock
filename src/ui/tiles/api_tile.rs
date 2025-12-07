@@ -93,6 +93,9 @@ impl ApiTileHandler {
         }
         Some(())
     }
+    pub fn change_attrs(&self, key: String, value: String) {
+        self.attrs.borrow_mut().insert(key, value);
+    }
     pub fn bind_signal(&self, row: &SherlockRow, launcher: Rc<Launcher>) {
         row.add_css_class("bulk-text");
         let signal_id = row.connect_local("row-should-activate", false, {

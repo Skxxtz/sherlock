@@ -352,6 +352,22 @@ impl TileItem {
             _ => None,
         }
     }
+    pub fn change_attrs(&self, key: String, val: String) {
+        match &*self.imp().update_handler.borrow() {
+            UpdateHandler::ApiTile(inner) => inner.change_attrs(key, val),
+            UpdateHandler::AppTile(inner) => inner.change_attrs(key, val),
+            UpdateHandler::Calculator(inner) => inner.change_attrs(key, val),
+            UpdateHandler::Clipboard(inner) => inner.change_attrs(key, val),
+            UpdateHandler::Event(inner) => inner.change_attrs(key, val),
+            UpdateHandler::MusicPlayer(inner) => inner.change_attrs(key, val),
+            UpdateHandler::Pipe(inner) => inner.change_attrs(key, val),
+            UpdateHandler::Process(inner) => inner.change_attrs(key, val),
+            UpdateHandler::Weather(inner) => inner.change_attrs(key, val),
+            UpdateHandler::WebTile(inner) => inner.change_attrs(key, val),
+            UpdateHandler::Pomodoro(_) | UpdateHandler::Default => {}
+        }
+    }
+
     pub fn bind_signal(&self, row: &SherlockRow) {
         let launcher = self.imp().launcher.borrow().clone();
         match &*self.imp().update_handler.borrow() {

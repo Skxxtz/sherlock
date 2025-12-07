@@ -29,10 +29,12 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
     do_exit: Option<bool>,
     launcher: Option<Rc<Launcher>>,
 ) {
-    //construct HashMap
-    let attrs: HashMap<String, String> = attrs
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v.to_string()))
+    let variables: HashMap<String, String> = attrs
+        .iter()
+        .filter_map(|(k, v)| {
+            k.strip_prefix("variable_")
+                .map(|name| (name.to_string(), v.clone()))
+        })
         .collect();
 
     if let Some(method) = attrs.get("method") {
@@ -49,7 +51,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             "app_launcher" => {
                 let exec = attrs.get("exec").map_or("", |s| s.as_str());
                 let term = attrs.get("term").map_or(false, |s| s.as_str() == "true");
-                if let Err(error) = applaunch::applaunch(exec, term) {
+                if let Err(error) = applaunch::applaunch(exec, term, variables) {
                     exit = false;
                     let _result = error.insert(false);
                 }
@@ -75,7 +77,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             "command" => {
                 let exec = attrs.get("exec").map_or("", |s| s.as_str());
                 let keyword = attrs.get("keyword").map_or("", |s| s.as_str());
-                if let Err(error) = commandlaunch::command_launch(exec, keyword) {
+                if let Err(error) = commandlaunch::command_launch(exec, keyword, variables) {
                     exit = false;
                     let _result = error.insert(false);
                 } else {
@@ -218,9 +220,11 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                         // start new sherlock instance
                         if let Ok(config) = ConfigGuard::read() {
                             if config.runtime.daemonize {
-                                if let Err(err) =
-                                    command_launch("sherlock --take-over --daemonize", "")
-                                {
+                                if let Err(err) = command_launch(
+                                    "sherlock --take-over --daemonize",
+                                    "",
+                                    HashMap::new(),
+                                ) {
                                     let _result = err.insert(true);
                                 }
                             }

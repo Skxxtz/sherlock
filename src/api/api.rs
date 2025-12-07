@@ -10,7 +10,7 @@ use gtk4::{
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
-use std::{fmt::Display, sync::RwLock, time::Instant};
+use std::{collections::HashMap, fmt::Display, sync::RwLock, time::Instant};
 
 use crate::{
     actions::{commandlaunch::command_launch, execute_from_attrs, get_attrs_map},
@@ -168,7 +168,9 @@ impl SherlockAPI {
             "restart" => {
                 if let Ok(config) = ConfigGuard::read() {
                     if config.runtime.daemonize {
-                        if let Err(err) = command_launch("sherlock --take-over --daemonize", "") {
+                        if let Err(err) =
+                            command_launch("sherlock --take-over --daemonize", "", HashMap::new())
+                        {
                             let _result = err.insert(true);
                         }
                     }

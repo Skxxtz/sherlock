@@ -20,7 +20,6 @@ use gio::glib::{
 };
 use gtk4::{gdk::Texture, glib, prelude::WidgetExt, Box, Label, Picture, Widget};
 use serde::Deserialize;
-use std::os::unix::net::UnixStream;
 use std::{
     cell::{Cell, RefCell},
     io::Write,
@@ -29,6 +28,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
     usize,
 };
+use std::{collections::HashMap, os::unix::net::UnixStream};
 
 use super::Tile;
 
@@ -84,7 +84,7 @@ impl PomodoroInterface {
             Err(e) if matches!(e.error, SherlockErrorType::SocketConnectError(_)) => {
                 // start pomodoro service
                 let exec = instance.exec.display().to_string();
-                if let Err(e) = command_launch(&exec, "") {
+                if let Err(e) = command_launch(&exec, "", HashMap::new()) {
                     let _result = e.insert(false);
                 }
             }

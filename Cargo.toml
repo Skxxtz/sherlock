@@ -39,6 +39,7 @@ xdg = "3.0.0"
 bincode = {version = "2.0.1", features = ["serde"]}
 libc = "0.2.175"
 memchr = "2.7.6"
+itertools = "0.14.0"
 
 [package.metadata]
 assets = ["resources/*"]

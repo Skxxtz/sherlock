@@ -1,5 +1,5 @@
-use std::os::fd::AsRawFd;
 use std::process::Command;
+use std::{collections::HashMap, os::fd::AsRawFd};
 
 use crate::{
     sher_log, sherlock_error,
@@ -9,9 +9,18 @@ use crate::{
     },
 };
 
-pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
+pub fn applaunch(
+    exec: &str,
+    terminal: bool,
+    variables: HashMap<String, String>,
+) -> Result<(), SherlockError> {
     let config = ConfigGuard::read()?;
     let mut parts = Vec::new();
+    let mut exec = exec.to_string();
+
+    for (k, v) in variables {
+        exec = exec.replace(&format!("{{variable:{}}}", k), &v);
+    }
 
     if let Some(pre) = &config.behavior.global_prefix {
         parts.push(pre.to_string());

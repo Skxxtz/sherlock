@@ -3,13 +3,10 @@ use gio::{
     ActionEntry, ListStore,
 };
 use gtk4::{
-    self,
-    gdk::{Key, ModifierType},
-    prelude::*,
-    CustomFilter, CustomSorter, EventControllerKey, FilterListModel, ListView, Overlay,
+    self, prelude::*, CustomFilter, CustomSorter, EventControllerKey, FilterListModel, Overlay,
     SignalListItemFactory, SingleSelection, SortListModel, Widget,
 };
-use gtk4::{glib, ApplicationWindow, Entry};
+use gtk4::{glib, ApplicationWindow};
 use gtk4::{pango, subclass::prelude::ObjectSubclassIsExt};
 use levenshtein::levenshtein;
 use simd_json::prelude::ArrayTrait;
@@ -20,11 +17,12 @@ use std::{cell::RefCell, f32};
 use super::context::make_context;
 use super::util::*;
 use crate::{
-    api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
+    api::api::SherlockAPI,
     g_subclasses::{action_entry::ContextAction, sherlock_row::SherlockRow, tile_item::TileItem},
     launcher::{utils::HomeType, Launcher},
+    loader::util::ExecVariable,
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
-    ui::{g_templates::SearchUiObj, key_actions::KeyActions},
+    ui::{event_port::EventPort, g_templates::SearchUiObj},
     utils::config::OtherDefaults,
 };
 use crate::{
@@ -122,20 +120,29 @@ pub fn search(
         });
     }
 
-    nav_event(
-        imp.results.downgrade(),
-        imp.search_bar.downgrade(),
+    let binds = ConfigGuard::read()
+        .map(|c| c.keybinds.clone())
+        .unwrap_or_default();
+    let event_port = EventPort::new(
+        ui.downgrade(),
         handler.filter.clone(),
         handler.sorter.clone(),
-        handler.binds.clone(),
-        stack_page_ref,
-        &Rc::clone(&handler.mode),
+        binds,
+        Rc::clone(&handler.mode),
         context.clone(),
         Rc::clone(&custom_handler),
     );
+    let event_port = Rc::new(RefCell::new(event_port));
+
+    nav_event(
+        ui.downgrade(),
+        Rc::clone(&event_port),
+        stack_page_ref,
+        Rc::clone(&custom_handler),
+    );
     change_event(
-        imp.search_bar.downgrade(),
-        imp.results.downgrade(),
+        ui.downgrade(),
+        Rc::clone(&event_port),
         Rc::clone(&handler.modes),
         &Rc::clone(&handler.mode),
         &search_query,
@@ -294,7 +301,7 @@ fn construct_window(
     let search_text = Rc::new(RefCell::new(String::from("")));
 
     // Initialize the builder with the correct path
-    let mut ui = SearchUiObj::new();
+    let ui = SearchUiObj::new();
     let imp = ui.imp();
 
     let (context, revealer) = make_context();
@@ -550,170 +557,64 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
 }
 
 fn nav_event(
-    results: WeakRef<ListView>,
-    search_bar: WeakRef<Entry>,
-    filter: WeakRef<CustomFilter>,
-    sorter: WeakRef<CustomSorter>,
-    binds: ConfKeys,
+    ui_weak: WeakRef<SearchUiObj>,
+    event_port: Rc<RefCell<EventPort>>,
     stack_page: &Rc<RefCell<String>>,
-    current_mode: &Rc<RefCell<String>>,
-    context: ContextUI<ContextAction>,
     custom_handler: Rc<RefCell<UserBindHandler>>,
 ) {
+    let ui = ui_weak.upgrade().unwrap();
+    let imp = ui.imp();
+
+    let search_bar = imp.search_bar.downgrade();
+
     let event_controller = EventControllerKey::new();
-    let custom_controller = custom_handler.borrow().get_controller();
-    let stack_page = Rc::clone(stack_page);
-    let multi = ConfigGuard::read().map_or(false, |c| c.runtime.multi);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
-        let search_bar = search_bar.clone();
-        let current_mode = Rc::clone(current_mode);
         let stack_page = Rc::clone(&stack_page);
-        let key_actions = KeyActions::new(results, search_bar, context, custom_handler);
-        move |_, key, i, mods| {
+        move |_, key, _, mods| {
             if stack_page.borrow().as_str() != "search-page" {
                 return false.into();
             };
-            let matches = |comp: Option<Key>, comp_mod: Option<ModifierType>| {
-                let key_matches = Some(key) == comp;
-                let mod_matches = comp_mod.map_or(false, |m| mods.contains(m));
-                key_matches && mod_matches
-            };
 
-            match key {
-                // Inplace execution of commands
-                _ if matches(binds.exec_inplace, binds.exec_inplace_mod) => {
-                    key_actions.on_return(Some(false))
-                }
-
-                // Context menu opening
-                _ if matches(binds.context, binds.context_mod) => {
-                    key_actions.open_context();
-                }
-
-                // Custom previous key
-                Key::Up => key_actions.on_prev(),
-                Key::Left if binds.use_lr_nav => key_actions.on_prev(),
-                _ if matches(binds.up, binds.up_mod) => {
-                    key_actions.on_prev();
-                }
-                _ if matches(binds.left, binds.left_mod) => {
-                    key_actions.on_prev();
-                }
-
-                // Custom next key
-                Key::Down => key_actions.on_next(),
-                Key::Right if binds.use_lr_nav => key_actions.on_next(),
-                _ if matches(binds.down, binds.down_mod) => {
-                    key_actions.on_next();
-                }
-                _ if matches(binds.right, binds.right_mod) => {
-                    key_actions.on_next();
-                }
-
-                Key::BackSpace => {
-                    let mut ctext = key_actions
-                        .search_bar
-                        .upgrade()
-                        .map_or(String::new(), |entry| entry.text().to_string());
-                    if binds
-                        .shortcut_modifier
-                        .map_or(false, |modifier| mods.contains(modifier))
-                    {
-                        key_actions
-                            .search_bar
-                            .upgrade()
-                            .map(|entry| entry.set_text(""));
-                        ctext.clear();
-                    }
-                    if ctext.is_empty() && current_mode.borrow().as_str() != "all" {
-                        let _ = key_actions.search_bar.upgrade().map(|entry| {
-                            let _ =
-                                entry.activate_action("win.switch-mode", Some(&"all".to_variant()));
-                            // apply filter and sorter
-                            filter
-                                .upgrade()
-                                .map(|filter| filter.changed(gtk4::FilterChange::Different));
-                            sorter
-                                .upgrade()
-                                .map(|sorter| sorter.changed(gtk4::SorterChange::Different));
-                        });
-                    }
-                    // Focus first item and check for overflow
-                    key_actions.focus_first(current_mode.clone());
-                    return false.into();
-                }
-                Key::Return if multi => {
-                    key_actions.on_multi_return(None);
-                }
-                Key::Return | Key::KP_Enter => {
-                    key_actions.on_return(None);
-                }
-                Key::Escape if key_actions.context.open.get() => {
-                    key_actions.close_context();
-                }
-                Key::Tab if multi && mods.is_empty() => {
-                    key_actions.mark_active();
-                }
-                Key::Tab => {
-                    return true.into();
-                }
-                Key::F11 => {
-                    let api_call = ApiCall::SwitchMode(crate::api::api::SherlockModes::Error);
-                    let _ = SherlockServer::send_action(api_call);
-                }
-                _ if key.to_unicode().and_then(|c| c.to_digit(10)).is_some() => {
-                    if binds
-                        .shortcut_modifier
-                        .map_or(false, |modifier| mods.contains(modifier))
-                    {
-                        if let Some(index) = key.name().and_then(|name| name.parse::<u32>().ok()) {
-                            let internal_index = if index == 0 { 9 } else { index - 1 };
-                            println!("index: {} - {}", index, internal_index);
-                            key_actions
-                                .results
-                                .upgrade()
-                                .map(|r| r.execute_by_index(internal_index));
-                        }
-                    } else {
-                        return false.into();
-                    }
-                }
-                // Pain - solution for shift-tab since gtk handles it as an individual event
-                _ if i == 23 && mods.contains(ModifierType::SHIFT_MASK) => {
-                    let shift = Some(ModifierType::SHIFT_MASK);
-                    let tab = Some(Key::Tab);
-                    if binds.left_mod == shift && binds.left == tab {
-                        key_actions.on_prev();
-                    } else if binds.right_mod == shift && binds.right == tab {
-                        key_actions.on_next();
-                    }
-                }
-                _ => return false.into(),
+            // Construct event string
+            let event_string = EventPort::key_event_string(key, mods);
+            if event_string.is_empty() {
+                return false.into();
             }
-            true.into()
+
+            let port_clone = event_port.clone();
+            event_port
+                .borrow()
+                .handle_key_event(&event_string, port_clone)
+                .into()
         }
     });
 
     if let Some(entry) = search_bar.upgrade() {
         entry.add_controller(event_controller);
-        if let Some(custom_controller) = custom_controller {
+        if let Some(custom_controller) = custom_handler.borrow().get_controller() {
             entry.add_controller(custom_controller);
         }
     }
 }
 
 fn change_event(
-    search_bar: WeakRef<Entry>,
-    results: WeakRef<ListView>,
+    ui_weak: WeakRef<SearchUiObj>,
+    event_port: Rc<RefCell<EventPort>>,
     modes: Rc<RefCell<HashMap<String, Vec<Rc<Launcher>>>>>,
     mode: &Rc<RefCell<String>>,
     search_query: &Rc<RefCell<String>>,
 ) -> Option<()> {
-    let search_bar = search_bar.upgrade()?;
+    let ui = ui_weak.upgrade()?;
+    let imp = ui.imp();
+
+    let search_bar = imp.search_bar.get();
+    let results = imp.results.downgrade();
+
     search_bar.connect_changed({
         let mode_clone = Rc::clone(mode);
         let search_query_clone = Rc::clone(search_query);
+        let ui_clone = ui_weak.clone();
 
         move |search_bar| {
             let mut current_text = search_bar.text().to_string();
@@ -741,11 +642,32 @@ fn change_event(
             // filter and sort
             if let Some(res) = results.upgrade() {
                 // To reload ui according to mode
-                if let Some(sel) = res.selected_item().and_downcast::<TileItem>() {
-                    println!("{:?}", sel.search());
-                    println!("{:?}", sel.variables());
-                }
                 let _ = res.activate_action("win.update-items", Some(&true.to_variant()));
+
+                // Show arg bars
+                if let Some(sel) = res.selected_item().and_downcast::<TileItem>() {
+                    // TODO: with the variables, show them in the search bar
+                    let vars = sel.variables();
+                    if let Some(ui) = ui_clone.upgrade() {
+                        if vars.len() > 0 {
+                            // add variable fields
+                            ui.remove_arg_bars();
+                            for (i, var) in vars.into_iter().enumerate() {
+                                match var {
+                                    ExecVariable::StringInput(placeholder) => {
+                                        ui.add_arg_bar(i as u8, &placeholder, event_port.clone());
+                                    }
+                                    ExecVariable::PasswordInput(placeholder) => {
+                                        ui.add_pwd_bar(i as u8, &placeholder, event_port.clone());
+                                    }
+                                }
+                            }
+                        } else {
+                            // remove all variable fields
+                            ui.remove_arg_bars();
+                        }
+                    }
+                }
             }
         }
     });

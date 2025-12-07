@@ -1,11 +1,14 @@
 use gio::{
     glib::{
-        object::{CastNone, ObjectExt},
+        object::{Cast, CastNone, ObjectExt},
         WeakRef,
     },
     prelude::ListModelExt,
 };
-use gtk4::subclass::prelude::ObjectSubclassIsExt;
+use gtk4::{
+    prelude::{BoxExt, EntryExt},
+    subclass::prelude::ObjectSubclassIsExt,
+};
 use gtk4::{
     prelude::{EditableExt, WidgetExt},
     Entry, GridView, ListView, SingleSelection,
@@ -20,12 +23,16 @@ use crate::{
     },
     launcher::emoji_picker::SkinTone,
     prelude::SherlockNav,
-    ui::search::UserBindHandler,
+    ui::{
+        g_templates::{ArgBar, SearchUiObj},
+        search::UserBindHandler,
+    },
 };
 
 use super::util::ContextUI;
 
 pub struct KeyActions {
+    pub ui: WeakRef<SearchUiObj>,
     pub results: WeakRef<ListView>,
     pub search_bar: WeakRef<Entry>,
     pub context: ContextUI<ContextAction>,
@@ -33,12 +40,16 @@ pub struct KeyActions {
 }
 impl KeyActions {
     pub fn new(
-        results: WeakRef<ListView>,
-        search_bar: WeakRef<Entry>,
+        ui: WeakRef<SearchUiObj>,
         context: ContextUI<ContextAction>,
         custom_handler: Rc<RefCell<UserBindHandler>>,
     ) -> Self {
+        let ui_upgr = ui.upgrade().unwrap();
+        let imp = ui_upgr.imp();
+        let search_bar = imp.search_bar.downgrade();
+        let results = imp.results.downgrade();
         Self {
+            ui,
             results,
             search_bar,
             context,
@@ -83,6 +94,22 @@ impl KeyActions {
                 .and_then(|r| r.selected_item())
                 .and_downcast::<TileItem>()
             {
+                if let Some(ui) = self.ui.upgrade() {
+                    let imp = ui.imp();
+                    while let Some(child) = imp.arg_holder.last_child() {
+                        if let Some(entry) = child.downcast_ref::<ArgBar>().and_then(|a| a.entry())
+                        {
+                            let key = entry
+                                .placeholder_text()
+                                .map(|s| s.to_string())
+                                .unwrap_or_default();
+                            let val = entry.text().to_string();
+
+                            item.change_attrs(format!("variable_{}", key), val);
+                        }
+                        imp.arg_holder.get().remove(&child);
+                    }
+                }
                 if let Some(row) = item.parent().upgrade() {
                     row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
                 }
@@ -110,6 +137,16 @@ impl KeyActions {
             self.move_next_context();
         } else {
             self.move_next();
+        }
+    }
+    pub fn arg_next(&self) {
+        if let Some(ui) = self.ui.upgrade() {
+            ui.focus_next_arg_bar();
+        }
+    }
+    pub fn arg_prev(&self) {
+        if let Some(ui) = self.ui.upgrade() {
+            ui.focus_prev_arg_bar();
         }
     }
     pub fn open_context(&self) -> Option<()> {

@@ -54,7 +54,7 @@ pub fn websearch(
         browser.push_str(&format!(r#" "{}""#, url));
         browser
     };
-    command_launch(&command, "")
+    command_launch(&command, "", HashMap::new())
 }
 
 fn is_url(input: &str) -> bool {

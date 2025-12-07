@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
+use crate::ui::event_port::UIFunction;
 use crate::utils::config::defaults::FileDefaults;
 
 mod config_impl;
@@ -38,6 +42,10 @@ pub struct SherlockConfig {
     /// Custom key or action bindings (supplementing defaults)
     #[serde(default)]
     pub binds: ConfigBinds,
+
+    /// Custom key or action bindings (supplementing defaults)
+    #[serde(default)]
+    pub keybinds: HashMap<String, UIFunction>,
 
     /// User-specified overrides for default config file paths
     #[serde(default)]

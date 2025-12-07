@@ -63,6 +63,7 @@ fn default_true() -> bool {
 #[serde(rename_all = "snake_case")]
 pub enum ExecVariable {
     StringInput(String),
+    PasswordInput(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
