@@ -59,10 +59,11 @@ The launcher can be of the following types:<br>
 | `spawn_focus`     | `[FC]` | Determines whether the tile should automatically gain focus when it appears as the first item in the list. |
 | `shortcut`     | `[FC]` | Determines whether the tile should have the shortcut indicator on the side. |
 | `actions`     | `[FC]` | Sets custom actions for launchers or – if applicable – its children. Examples: [Debug Launcher](#debug-launcher), Detailed: [Actions](#actions)|
+| `variables`     | `[FC]` | Enables custom variable fields in the search bar, allowing you to define runtime parameters for commands. Detailed: [Variable Fields](#variable-fields)|
 
 ## Complex Attributes
 
-### actions
+### Actions
 
 Actions are used to define entries within Sherlock's context menu. They are defined as an array of actions, following a simple structure:
 
@@ -83,6 +84,54 @@ Actions are used to define entries within Sherlock's context menu. They are defi
 - `exec`: The argument to be processed by `method`. For instance, in case of `app_launcher`, this should be the app with its flags
 - `method`: The function to be executed whenever you activate this menu entry
 - `exit`: Whether sherlock should close after completing the action
+
+### Variable Fields
+
+Variable fields are text input fields that appear in the search bar to allow
+the definition of runtime arguments for commands you want to run. For example,
+this can be used to run a command like `nordvpn c [location]` easily from
+within sherlock.
+
+There are currently two types of fields:
+
+1. `string_input`: A plain text input
+2. `password_input`: An obfuscated input 
+
+When specifying a variable field, it is important to also give it a name. This
+name will serve two purposes – it will show as the placeholder text for the
+input field and it will be the variable name. The resulting variable field will
+be something similar to this: `{"string_input": "variable name"}`. The content
+of the variable fields will be accessible in the `exec` parameter of the command. 
+
+**Example:**
+```json
+    {
+        "name": "Utilities",
+        "type": "command",
+        "args": {
+            "commands": {
+                "NordVPN": {
+                    "variables": [
+                        {"string_input": "location"}
+                    ],
+                    "icon": "nordvpn",
+                    "exec": "nordvpn c {variable:location}",
+                    "search_string": "nordvpn"
+                },
+                "NordVPN Daemon": {
+                    "variables": [
+                        {"password_input": "sudo"}
+                    ],
+                    "icon": "nordvpn",
+                    "exec": "sudo -S systemctl start nordvpnd",
+                    "search_string": "nordvpn daemon"
+                }
+            }
+        },
+        "priority": 1
+    }
+```
+
 
 ### Binds
 
@@ -150,7 +199,7 @@ Binds have the following structure:
 
 1. `use_keywords`: This boolean value allows you to specify whether Sherlock
    should only search for the name of the app or also use the keywords provided
-   in the .desktop file. 
+   in the .desktop file.
 
 <br>
 
@@ -432,7 +481,7 @@ Variables that can be used to replace certain parts of a command with runtime va
 
 1. `{keyword}` - The searched text
 2. `{terminal}` - Your default terminal. Note that the terminal will close as
-   soon as the process is completed. To turn off that behavior, do 
+   soon as the process is completed. To turn off that behavior, do
    `"{terminal} sh -c \"[YOUR COMMAND(s)] c {other_variable}; exec $SHELL\""`
 3. `{custom_text:[optional name]}` - A text field will open asking for a value.
    The name will be displayed as the inputs placeholder
