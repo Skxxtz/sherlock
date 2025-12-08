@@ -1,3 +1,4 @@
+use nix::NixPath;
 use regex::Regex;
 use std::collections::HashMap;
 use std::io::Write;
@@ -60,6 +61,19 @@ pub fn command_launch(
                 }
             }
             _ => {}
+        }
+    }
+
+    let pattern = r#"\{prefix\[(.*?)\]:(.*?)\}"#;
+    let re = Regex::new(pattern).unwrap();
+    for cap in re.captures_iter(&exec.clone()) {
+        let full_match = &cap[0];
+        let prefix_for = &cap[1];
+        let prefix = &cap[2];
+        if !variables.get(prefix_for).map_or(true, |v| v.is_empty()) {
+            exec = exec.replace(full_match, prefix);
+        } else {
+            exec = exec.replace(full_match, "");
         }
     }
 
