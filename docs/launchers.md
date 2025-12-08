@@ -529,12 +529,9 @@ With defined variable field:
 {
     "variables": [
                {"string_input": "query"}
-    ]
+    ],
+    "exec": "https://example.com/search?q={variable:query}"
 }
-```
-
-```bash
-https://example.com/search?q={variable:query}
 ```
 
 ##### 4. `{prefix[<variable name>]:<prefix text>}`
@@ -555,12 +552,9 @@ With defined variable fields:
 {
     "variables": [
                {"string_input": "query"}
-    ]
+    ],
+    "exec": "https://example.com/{prefix[query]:search?q=}{variable:query}"
 }
-```
-
-```bash
-https://example.com/{prefix[query]:search?q=}{variable:query}
 ```
 
 ##### **Examples:**
