@@ -452,6 +452,9 @@ fn make_filter(search_text: &Rc<RefCell<String>>, mode: &Rc<RefCell<String>>) ->
             item.update(&search_text.borrow());
 
             if home == HomeType::Persist {
+                if mode != "all" && Some(mode) != launcher.alias {
+                    return false;
+                }
                 return true;
             }
 
