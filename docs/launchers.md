@@ -102,15 +102,19 @@ within sherlock.
 There are currently two types of fields:
 
 1. `string_input`: A plain text input
-2. `password_input`: An obfuscated input 
+2. `password_input`: An obfuscated input
 
 When specifying a variable field, it is important to also give it a name. This
 name will serve two purposes – it will show as the placeholder text for the
 input field and it will be the variable name. The resulting variable field will
 be something similar to this: `{"string_input": "variable name"}`. The content
-of the variable fields will be accessible in the `exec` parameter of the command. 
+of the variable fields will be accessible in the `exec` parameter of the command.
+
+> [!TIP]
+> Check the notation for replacement variables [replacement variables 🔗](#replacement-variables)
 
 **Example:**
+
 ```json
     {
         "name": "Utilities",
@@ -138,7 +142,6 @@ of the variable fields will be accessible in the `exec` parameter of the command
         "priority": 1
     }
 ```
-
 
 ### Binds
 
@@ -484,17 +487,79 @@ Has following fields of its own:
 
 ### Replacement Variables
 
-Variables that can be used to replace certain parts of a command with runtime variables.
+Replacement variables allow you to dynamically insert values into commands
+based on the user's input or environment.
 
-1. `{keyword}` - The searched text
-2. `{terminal}` - Your default terminal. Note that the terminal will close as
-   soon as the process is completed. To turn off that behavior, do
-   `"{terminal} sh -c \"[YOUR COMMAND(s)] c {other_variable}; exec $SHELL\""`
-3. `{custom_text:[optional name]}` - A text field will open asking for a value.
-   The name will be displayed as the inputs placeholder
-3. `{password:[optional name]}` - Same as `custom_text`, with additional obfuscation.
+#### Available Variables
 
-**Examples:**
+##### 1. `{keyword}`
+
+Replaces with the text the user searched for.
+
+**Example:**
+`https://www.example.com/search?q={keyword}`
+
+##### 2. `{terminal}`
+
+Replaces with the user-defined or automatically detected default terminal.
+
+> [!TIP]
+> Most terminals close immediately after the launched process finishes. To prevent this, wrap your command like:
+>
+> ```
+> {terminal} sh -c "[YOUR COMMAND]; exec $SHELL" 
+> ```
+>
+> **Example:**
+>
+> ```
+> "exec": "{terminal} sh -c \"ssh {variable:user}@{variable:host}; exec $SHELL\"",
+> ```
+
+##### 3. `{variable:<name>}`
+
+Inserts the value of a runtime-defined variable. Only works if the variable
+field is defined (see [Variable Fields](#variable-fields))
+
+**Example:**
+
+With defined variable field:
+
+```json
+variables: [
+{"string_input": "query"}
+]
+```
+
+```bash
+https://example.com/search?q={variable:query}
+```
+
+##### 4. `{prefix[<variable name>]:<prefix text>}`
+
+A *conditional prefix variable*.
+
+- If the variable **exists and has a value**, the prefix text will be inserted.
+- If the variable is **undefined**, the entire replacement (including the prefix) becomes an empty string.
+
+This is useful for optional flags or when you want to either query on a website
+or go to its home page.
+
+**Example:**
+
+With defined variable fields:
+
+```json
+variables: [
+{"string_input": "query"}
+]
+```
+
+```bash
+https://example.com/{prefix[query]:search?q=}{variable:query}
+```
+
+##### **Examples:**
 
 ```json
 {
