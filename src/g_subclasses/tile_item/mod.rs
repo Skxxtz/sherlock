@@ -275,9 +275,10 @@ impl TileItem {
             | UpdateHandler::Pomodoro(_)
             | UpdateHandler::Process(_)
             | UpdateHandler::Weather(_)
+            | UpdateHandler::WebTile(_)
             | UpdateHandler::Default => false,
 
-            UpdateHandler::ApiTile(_) | UpdateHandler::WebTile(_) => true,
+            UpdateHandler::ApiTile(_) => true,
         }
     }
     pub fn replace_tile(&self, tile: &Widget) {

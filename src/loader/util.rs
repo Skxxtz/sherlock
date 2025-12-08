@@ -163,43 +163,39 @@ impl AppData {
         }
     }
     pub fn from_raw_launcher(raw: &RawLauncher) -> Self {
-        let mut data = Self::new();
-        let exec_args: Option<Vec<ExecVariable>> = raw
-            .args
-            .get("variables")
-            .and_then(|v| v.as_array())
-            .map(|variables| {
-                variables
-                    .iter()
-                    .filter_map(|v| serde_json::from_value::<ExecVariable>(v.clone()).ok())
-                    .collect()
-            });
-        data.vars = exec_args.unwrap_or_default();
-
-        data.priority = raw.priority;
-        data.name = raw.name.as_deref().unwrap_or("").to_string();
-        data.icon = raw
-            .args
-            .get("icon")
-            .and_then(Value::as_str)
-            .map(|s| s.to_string());
+        let search_string = format!(
+            "{};{}",
+            raw.name.as_deref().unwrap_or_default(),
+            raw.args
+                .get("search_string")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+        );
+        let mut data = Self {
+            name: raw.name.clone().unwrap_or_default(),
+            exec: Default::default(),
+            search_string,
+            priority: raw.priority,
+            icon: None,
+            icon_class: None,
+            tag_start: raw.tag_start.clone(),
+            tag_end: raw.tag_end.clone(),
+            desktop_file: None,
+            actions: raw.actions.clone().unwrap_or_default(),
+            vars: raw.variables.clone().unwrap_or_default(),
+            terminal: false,
+        };
         data.icon_class = raw
             .args
             .get("icon_class")
             .and_then(Value::as_str)
             .map(|s| s.to_string());
-        data.tag_start = raw.tag_start.clone();
-        data.tag_end = raw.tag_end.clone();
-        data.actions = raw.actions.clone().unwrap_or(vec![]);
-        let search = format!(
-            "{};{}",
-            raw.name.as_deref().unwrap_or(""),
-            raw.args
-                .get("search_string")
-                .and_then(Value::as_str)
-                .unwrap_or("")
-        );
-        data.search_string = search;
+        data.icon = raw
+            .args
+            .get("icon")
+            .and_then(Value::as_str)
+            .map(|s| s.to_string());
+
         data
     }
     pub fn with_priority(mut self, priority: f32) -> Self {

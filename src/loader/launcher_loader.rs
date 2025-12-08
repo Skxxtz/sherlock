@@ -537,9 +537,9 @@ fn parse_web_launcher(raw: &RawLauncher) -> LauncherType {
     let app_data = raw
         .variables
         .as_ref()
-        .map(|vars| {
-            let mut a = AppData::new();
-            a.vars = vars.clone();
+        .filter(|vars| !vars.is_empty())
+        .map(|_| {
+            let a = AppData::from_raw_launcher(&raw);
             vec![a]
         })
         .unwrap_or_default();
