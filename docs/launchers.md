@@ -526,9 +526,11 @@ field is defined (see [Variable Fields](#variable-fields))
 With defined variable field:
 
 ```json
-variables: [
-{"string_input": "query"}
-]
+{
+    "variables": [
+               {"string_input": "query"}
+    ]
+}
 ```
 
 ```bash
@@ -550,9 +552,11 @@ or go to its home page.
 With defined variable fields:
 
 ```json
-variables: [
-{"string_input": "query"}
-]
+{
+    "variables": [
+               {"string_input": "query"}
+    ]
+}
 ```
 
 ```bash
