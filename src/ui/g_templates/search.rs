@@ -116,10 +116,16 @@ impl SearchUiObj {
     }
     pub fn remove_arg_bars(&self) {
         let imp = self.imp();
+
+        // Fix: Otherwise focus of any bar might get lost
+        if imp.bar_index.get() != 0 {
+            imp.search_bar.grab_focus();
+            imp.bar_index.set(0);
+        }
+
         while let Some(child) = imp.arg_holder.last_child() {
             imp.arg_holder.remove(&child);
         }
-        imp.bar_index.set(0);
     }
     pub fn bar_index(&self) -> usize {
         self.imp().bar_index.get() as usize
