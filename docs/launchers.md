@@ -722,7 +722,8 @@ Specifies the arguments to pass along to the `exec` program.<br>
 </div>
 <br>
 
-> **🚨 Warning:** Currently only supports Thunderbird calendar events
+> [!IMPORTANT]
+> Currently only supports Thunderbird calendar events
 
 ```json
 {

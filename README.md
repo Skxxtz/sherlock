@@ -32,7 +32,9 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
 way for you to display cliphist history in sherlock
 <br><br>
 
-> **🚨 Warning:** This app is/was created on **Arch Linux** with the **Hyprland** tiling window manager in mind. It may cause errors or won't function at all on other system configurations.
+> [!CAUTION]
+> This app is/was developed on **Arch Linux** with the **Hyprland** tiling window manager in mind. It may cause errors or won't function on your system. If so, please let me know in the issues, I will try my best to resolve it.
+
 ---
 
 ## Table of Contents
