@@ -384,7 +384,8 @@ Specifies what the launcher should parse:
 - **`calc.temperatures` (unit)** - displays the solutions to temerature transformations
 - **`calc.currencies` (unit)** - displays the solutions to currency transformations
 
-> **💡 Note:** You can also use `calc.units` to use all available unit transformations
+> [!TIP]
+> You can also use `calc.units` tu use all available unit transformations
 
 <br>
 
@@ -434,7 +435,7 @@ Specifies what the launcher should parse:
 - **`calc.temperatures` (unit)** - displays the solutions to temerature transformations
 - **`calc.currencies` (unit)** - displays the solutions to currency transformations
 
-> **💡 Note:**
+> [!TIP]
 > You can also use
 >
 > - `colors.all` to use all available color formats
@@ -772,6 +773,35 @@ Specifies the second offset from the `date` parameter.<br>
 
 **`location`** (optional):<br>
 Specifies your theme directory. Defaults to `~/.config/sherlock/themes/`.
+
+> [!TIP]
+> You can also wrap this into a category launcher so only one item will be displayed until until the category is activated:
+>
+> ```json
+> {
+>     "name": "Theme Picker",
+>     "type": "theme_picker",
+>     "alias": "themes",
+>     "priority": 0,
+> },
+> {
+>     "name": "Categories",
+>     "alias": "cat",
+>     "type": "categories",
+>     "args": {
+>         "categories": {
+>             "Themes": {
+>                 "icon": "theme-picker",
+>                 "icon_class": "reactive",
+>                 "exec": "themes",
+>                 "search_string": "themes;"
+>             }
+>         }
+>     },
+>     "priority": 3,
+>     "home": "Home"
+> },
+> ```
 
 <br>
 
