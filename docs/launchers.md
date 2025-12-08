@@ -87,6 +87,13 @@ Actions are used to define entries within Sherlock's context menu. They are defi
 
 ### Variable Fields
 
+<div align="center" style="text-align:center; border-radius:10px;">
+  <picture>
+    <img alt="variable fields" width="100%" src="assets/var-fields.svg">
+  </picture>
+</div>
+<br>
+
 Variable fields are text input fields that appear in the search bar to allow
 the definition of runtime arguments for commands you want to run. For example,
 this can be used to run a command like `nordvpn c [location]` easily from
