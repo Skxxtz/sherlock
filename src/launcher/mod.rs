@@ -221,8 +221,14 @@ impl Launcher {
             | LauncherType::Weather(_)
             | LauncherType::MusicPlayer(_)
             | LauncherType::Pomodoro(_) => {
+                let index = launcher
+                    .inner()
+                    .and_then(|i| if i.len() > 0 { Some(0) } else { None });
                 let base = self.base_setup(launcher);
-                base.set_index(0);
+
+                if let Some(index) = index {
+                    base.set_index(index);
+                }
                 vec![base]
             }
             _ => vec![],
