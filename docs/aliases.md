@@ -1,76 +1,84 @@
-# Aliases
-Sherlock aliases allow you to customize how applications are displayed and launcher within Sherlock. 
-## Example Problem
-The application `Brave Browser` should:
-- Appear with the display name **Webbrowser**
-- Use a custom **Webbrowser icon**
-- Alwaays be launched with **Electron Wayland flags** to enhance rendering quality
-- Should have context menu entries to start a new private window
-This is a problem Sherlock aliases can fix.<br>
+# Sherlock Alias
 
-Sherlock aliases provide a way for you to customize the application's:
-1. Name
-2. Icon
-3. Keywords
-4. Exec
-5. Sherlock Context Menu Entries
-<br>
+Sherlock aliases allow you to customize how applications appear and behave
+inside Sherlock. They enable you to override an applications presentation,
+launch behavior, and context menu actions without modifying the original
+`.desktop` file.
 
-> **Example File**: [sherlock_alias.json](https://github.com/Skxxtz/sherlock/blob/main/docs/examples/sherlock_alias.json)
+## Motivation
 
-## Usage:
-1. Create the `sherlock_alias.json` file:
-`echo {} > ~/.config/sherlock/sherlock_alias.json` or `Sherlock init`
-2. Find the application you want to alias
-3. Write a simple alias entry into the alias file
+Suppose the application **Brave Browser** should:
+
+- Appear under the display name **Brave**
+- Use a custom icon
+- Always launch with Electron Wayland flags for improved rendering
+- Provide context-menu options, e.g. Start private window
+- Support variable input fields
+- Appear when searching for custom keywords
+
+These modifications are difficult to achieve using default desktop entries. Sherlock aliases solve this problem by giving you full user-side control over:
+
+1. `name`: Application name
+2. `icon`: Icon
+3. `keywords`: Keywords
+4. `exec`: Execution command
+5. `add_actions`: Additional Sherlock context-menu actions
+6. `actions`: Overwriting context-menu actions
+7. `variables`: Variable input fields
+
+## Creating and Using Sherlock Aliases
+
+### Step 1 - Create the alias file
+
+Create an empty alias configuration file (if it does not exist):
+
+```bash
+    echo {} > ~/.config/sherlock/sherlock_alias.json
+```
+
+or run:
+
+```bash
+sherlock init
+```
+
+### Step 2 - Identify the application
+
+Find the application name as Sherlock detects it. Thhis is the key used to override it.
+
+### Step 3 - Add an alias entry
+
+Insert a JSON object into `sherlock_alias.json`:
+
 ```json
 {
-    "the current app name":{
-        "name": "your desired name",
-            "icon": "your icon",
-            "exec": "/path/to/applicatoin --your-flags %U",
-            "keywords": "sample alias",
-            "add_actions": [
+    "Current App Name": {
+        "name": "Desired Name",
+        "icon": "your-icon",
+        "keywords": "sample alias",
+        "variables": [
+            {"string_input": "variable name"}
+        ],
+        "exec": "/path/to/application --your-flags %U {prefix[variable name]:some prefix}{variable:variable name}",
+        "add_actions": [
             {
-                "Example Action",
+                "name": "Example Action",
                 "exec": "/path/to/application --your-flags",
-                "icon": "your icon",
-                "method": "method",
+                "icon": "your-icon",
+                "method": "method"
             }
-            ],
-            "actions": [
+        ],
+        "actions": [
             {
-                "Example Action",
+                "name": "Example Action",
                 "exec": "/path/to/application --your-flags",
-                "icon": "your icon",
-                "method": "method",
+                "icon": "your-icon",
+                "method": "method"
             }
-            ]
+        ]
     }
 }
 ```
-### Available Methods for Actions/Add_actions
 
-- `category`: Uses the `exec` to open a new mode
-- `app_launcher`: Opens the `exec` as an app
-- `web_launcher`: Opens the `exec` as a link in your default web browser
-- `command`: Opens the `exec` as a command
-- `debug`: Matches the `exec` against
-    - `clear_cache`: To clear the application's cache
-    - `show_errors`: To switch to the error/warning screen
-    - `reset_counts`: To reset the execution counter
-
-**DONE!**<br>
-
-## Examples
-### Start `vesktop` using Wayland flags
-```json
-{
-    "Vesktop": {
-        "name": "Discord",
-            "icon": "discord",
-            "exec": "/usr/bin/vesktop --enable-features=UseOzonePlatform --ozone-platform=wayland %U",
-            "keywords": "discord"
-    },
-}
-```
+> [!TIP]
+> For full documentation on actions, see [Actions](https://github.com/Skxxtz/sherlock/blob/main/docs/features/actions.md)
