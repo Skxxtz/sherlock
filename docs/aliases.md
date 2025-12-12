@@ -81,4 +81,4 @@ Insert a JSON object into `sherlock_alias.json`:
 ```
 
 > [!TIP]
-> For full documentation on actions, see [Actions](https://github.com/Skxxtz/sherlock/blob/main/docs/features/actions.md)
+> For full documentation on actions, see [Actions](https://github.com/Skxxtz/sherlock/blob/main/docs/launchers.md#actions)
