@@ -239,6 +239,9 @@ impl AppData {
                     })
                     .collect();
             }
+            if let Some(variables) = alias.variables {
+                self.vars.extend(variables);
+            }
         } else {
             self.search_string =
                 Self::construct_search(&self.name, &self.search_string, use_keywords);
@@ -296,6 +299,7 @@ pub struct SherlockAlias {
     pub keywords: Option<String>,
     pub actions: Option<Vec<ApplicationAction>>,
     pub add_actions: Option<Vec<ApplicationAction>>,
+    pub variables: Option<Vec<ExecVariable>>,
 }
 
 pub struct CounterReader {

@@ -1,6 +1,8 @@
 use std::process::Command;
 use std::{collections::HashMap, os::fd::AsRawFd};
 
+use regex::Regex;
+
 use crate::{
     sher_log, sherlock_error,
     utils::{
@@ -18,6 +20,21 @@ pub fn applaunch(
     let mut parts = Vec::new();
     let mut exec = exec.to_string();
 
+    // Insert prefixes
+    let pattern = r#"\{prefix\[(.*?)\]:(.*?)\}"#;
+    let re = Regex::new(pattern).unwrap();
+    for cap in re.captures_iter(&exec.clone()) {
+        let full_match = &cap[0];
+        let prefix_for = &cap[1];
+        let prefix = &cap[2];
+        if !variables.get(prefix_for).map_or(true, |v| v.is_empty()) {
+            exec = exec.replace(full_match, prefix);
+        } else {
+            exec = exec.replace(full_match, "");
+        }
+    }
+
+    // Insert variables
     for (k, v) in variables {
         exec = exec.replace(&format!("{{variable:{}}}", k), &v);
     }
