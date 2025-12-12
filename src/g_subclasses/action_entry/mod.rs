@@ -54,15 +54,23 @@ impl ContextAction {
             let exec = action.exec.clone();
             let method = action.method.clone();
             let exit = action.exit.clone();
-            move |row| {
-                let row = row.first().map(|f| f.get::<ContextAction>().ok())??;
+            move |args| {
+                let row = args.first().map(|f| f.get::<ContextAction>().ok())??;
                 let attrs = get_attrs_map(vec![
                     ("method", Some(&method)),
                     ("exec", exec.as_deref()),
                     ("term", Some(&terminal.to_string())),
                     ("exit", Some(&exit.to_string())),
                 ]);
-                execute_from_attrs(&row, &attrs, None, None);
+
+                let exit: u8 = args.get(1).and_then(|v| v.get::<u8>().ok())?;
+                let exit: Option<bool> = match exit {
+                    1 => Some(false),
+                    2 => Some(true),
+                    _ => None,
+                };
+
+                execute_from_attrs(&row, &attrs, exit, None);
                 // To reload ui according to mode
                 let _ = row.activate_action("win.update-items", Some(&false.to_variant()));
                 None
