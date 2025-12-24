@@ -28,7 +28,7 @@ The launcher can be of the following types:<br>
 - **[Emoji](#emoji-picker):** This launcher allows you to search and pick emojis.
 - **[Bulk Text](#bulk-text):** The Bulk Text is a way to launch a custom script/application in an async form and to display its result in a widget.
 - **[Teams Event Launcher](#teams-event):** This launcher is capable of joining Microsoft Teams meetings that are scheduled to begin between 5mins ago and in 15mins.
-- **[Theme Picker](#theme-picjer):** This launcher shows available themes and sets them as your default.
+- **[Theme Picker](#theme-picker):** This launcher shows available themes and sets them as your default.
 - **[Music Player Launcher](#music-player):** This launcher shows the currently playing song with artist and toggles playback on return.
 - **[Process Terminator](#process-terminator):** This utility shows user processes and terminates them on return.
 - **[Pomodoro Timer](#pomodoro-timer):** This utility shows a pomodoro-timer focus utility.
