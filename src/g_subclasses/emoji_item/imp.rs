@@ -1,7 +1,7 @@
 use gio::glib::subclass::Signal;
 use gio::glib::{SignalHandlerId, WeakRef};
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, GestureClick};
+use gtk4::{GestureClick, glib};
 use once_cell::sync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;

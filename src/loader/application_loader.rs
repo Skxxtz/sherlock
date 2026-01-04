@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use super::util::ApplicationAction;
-use super::{util, Loader};
+use super::{Loader, util};
 use crate::prelude::PathHelpers;
 use crate::utils::cache::BinaryCache;
 use crate::utils::config::ConfigGuard;
@@ -114,10 +114,10 @@ impl Loader {
                                         "icon" => data.icon = Some(value.to_string()),
                                         "exec" => data.exec = Some(value.to_string()),
                                         "nodisplay" if value.eq_ignore_ascii_case("true") => {
-                                            return None
+                                            return None;
                                         }
                                         "hidden" if value.eq_ignore_ascii_case("true") => {
-                                            return None
+                                            return None;
                                         }
                                         "terminal" => {
                                             data.terminal = value.eq_ignore_ascii_case("true");

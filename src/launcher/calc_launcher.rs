@@ -9,13 +9,13 @@ use crate::{
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use simd_json::{
+    OwnedValue,
     base::{ValueAsArray, ValueAsScalar},
     derived::ValueObjectAccess,
-    OwnedValue,
 };
 use std::{
     collections::{HashMap, HashSet},
-    fs::{create_dir_all, File},
+    fs::{File, create_dir_all},
     path::Path,
     sync::OnceLock,
     time::{Duration, SystemTime},
@@ -80,9 +80,9 @@ impl Calculator {
         let ctof = |c: f32| (c * 9.0 / 5.0) + 32.0;
         let ftoc = |f: f32| (f - 32.0) * 5.0 / 9.0;
         let parse_unit = |unit: &str| {
-            if unit == "c" || unit.len() > 1 && "celsius".contains(&unit) {
+            if unit == "c" || unit.len() > 1 && "celsius".contains(unit) {
                 "C"
-            } else if unit == "f" || unit.len() > 1 && "fahrenheit".contains(&unit) {
+            } else if unit == "f" || unit.len() > 1 && "fahrenheit".contains(unit) {
                 "F"
             } else {
                 "C"
@@ -380,7 +380,7 @@ impl Currency {
             let time_since = SystemTime::now().duration_since(mtime).ok()?;
             // then was cached
             if time_since < Duration::from_secs(60 * update_interval) {
-                File::open(&absolute)
+                File::open(absolute)
                     .ok()
                     .and_then(|file| simd_json::from_reader(file).ok())?
             }
@@ -389,17 +389,15 @@ impl Currency {
     }
     fn cache<P: AsRef<Path>>(&self, loc: P) -> Result<(), SherlockError> {
         let absolute = loc.as_ref();
-        if !absolute.is_file() {
-            if let Some(parents) = absolute.parent() {
-                create_dir_all(parents).map_err(|e| {
-                    sherlock_error!(
-                        SherlockErrorType::DirCreateError(String::from(
-                            "~/.cache/sherlock/currency/"
-                        )),
-                        e.to_string()
-                    )
-                })?;
-            }
+        if !absolute.is_file()
+            && let Some(parents) = absolute.parent()
+        {
+            create_dir_all(parents).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::DirCreateError(String::from("~/.cache/sherlock/currency/")),
+                    e.to_string()
+                )
+            })?;
         }
         let content = simd_json::to_string(self)
             .map_err(|e| sherlock_error!(SherlockErrorType::SerializationError, e.to_string()))?;
@@ -414,9 +412,8 @@ impl Currency {
     pub async fn get_exchange(update_interval: u64) -> Result<Currency, SherlockError> {
         let home = home_dir()?;
         let absolute = home.join(".cache/sherlock/currency/currency.json");
-        match Currency::load_cached(&absolute, update_interval) {
-            Some(curr) => return Ok(curr),
-            _ => {}
+        if let Some(curr) = Currency::load_cached(&absolute, update_interval) {
+            return Ok(curr);
         };
 
         let url = "https://scanner.tradingview.com/forex/scan?label-product=related-symbols";
@@ -487,7 +484,7 @@ impl Currency {
                         let (_, pair) = symbol.split_once(":")?;
                         let (to, _from) = pair.split_at(3);
                         let price = item.get("d")?.as_array()?.get(2)?.as_f32()?;
-                        Some((to.to_lowercase(), price as f32))
+                        Some((to.to_lowercase(), price))
                     })
                     .collect()
             } else {

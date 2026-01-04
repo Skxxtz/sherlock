@@ -1,7 +1,7 @@
 mod imp {
+    use gtk4::CompositeTemplate;
     use gtk4::glib;
     use gtk4::subclass::prelude::*;
-    use gtk4::CompositeTemplate;
     use gtk4::{Box as GtkBox, Image, Label};
 
     #[derive(CompositeTemplate, Default)]
@@ -51,12 +51,11 @@ use gtk4::glib;
 glib::wrapper! {
     pub struct EventTile(ObjectSubclass<imp::EventTile>)
         @extends gtk4::Widget, gtk4::Box,
-        @implements gtk4::Buildable;
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
 }
 
 impl EventTile {
     pub fn new() -> Self {
-        let obj = glib::Object::new::<Self>();
-        obj
+        glib::Object::new::<Self>()
     }
 }

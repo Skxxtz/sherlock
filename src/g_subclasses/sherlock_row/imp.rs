@@ -1,10 +1,10 @@
+use gio::glib::SignalHandlerId;
 use gio::glib::object::ObjectExt;
 use gio::glib::subclass::Signal;
-use gio::glib::SignalHandlerId;
 use gtk4::prelude::*;
 use gtk4::prelude::{GestureSingleExt, WidgetExt};
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, GestureClick};
+use gtk4::{GestureClick, glib};
 use once_cell::unsync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
@@ -51,11 +51,11 @@ impl ObjectImpl for SherlockRow {
 
             let obj = self.obj().downgrade();
             gesture.connect_pressed(move |_, n_clicks, _, _| {
-                if n_clicks >= 2 {
-                    if let Some(obj) = obj.upgrade() {
-                        let exit: u8 = 0;
-                        obj.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
-                    }
+                if n_clicks >= 2
+                    && let Some(obj) = obj.upgrade()
+                {
+                    let exit: u8 = 0;
+                    obj.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
                 }
             });
 
@@ -71,9 +71,11 @@ impl ObjectImpl for SherlockRow {
         // 1 => forces NO
         // 2 => forces YES
         SIGNALS.get_or_init(|| {
-            vec![Signal::builder("row-should-activate")
-                .param_types([u8::static_type(), String::static_type()])
-                .build()]
+            vec![
+                Signal::builder("row-should-activate")
+                    .param_types([u8::static_type(), String::static_type()])
+                    .build(),
+            ]
         })
     }
 }

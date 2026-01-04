@@ -19,10 +19,10 @@ impl ConstantDefaults {
         let mut terminal = None;
 
         //Check if $TERMAINAL is set
-        if let Ok(term) = std::env::var("TERMINAL") {
-            if Self::is_terminal_installed(&term) {
-                terminal = Some(term);
-            }
+        if let Ok(term) = std::env::var("TERMINAL")
+            && Self::is_terminal_installed(&term)
+        {
+            terminal = Some(term);
         }
         // Try other terminals
         if terminal.is_none() {
@@ -59,8 +59,8 @@ impl ConstantDefaults {
             Ok(t)
         } else {
             Err(sherlock_error!(
-                    SherlockErrorType::ConfigError(Some("Failed to get terminal".to_string())),
-                    "Unable to locate or parse a valid terminal app. Ensure that the terminal app is correctly specified in the configuration file or environment variables."
+                SherlockErrorType::ConfigError(Some("Failed to get terminal".to_string())),
+                "Unable to locate or parse a valid terminal app. Ensure that the terminal app is correctly specified in the configuration file or environment variables."
             ))
         }
     }
@@ -107,7 +107,7 @@ impl ConstantDefaults {
                     e.to_string()
                 )
             })?
-            .filter_map(Result::ok)
+            .map_while(Result::ok)
             .find(|line| line.starts_with("Exec="))
             .and_then(|line| line.strip_prefix("Exec=").map(|l| l.to_string()))
             .ok_or_else(|| {
@@ -116,7 +116,9 @@ impl ConstantDefaults {
         Ok(browser)
     }
     pub fn teams() -> String {
-        String::from("teams-for-linux --enable-features=UseOzonePlatform --ozone-platform=wayland --url {meeting_url}")
+        String::from(
+            "teams-for-linux --enable-features=UseOzonePlatform --ozone-platform=wayland --url {meeting_url}",
+        )
     }
     pub fn calendar_client() -> String {
         String::from("thunderbird")
@@ -201,10 +203,12 @@ impl FileDefaults {
             .join("sherlock_actions.json")
     }
     pub fn icon_paths() -> Vec<PathBuf> {
-        vec![paths::get_config_dir()
-            .unwrap()
-            .join("icons/")
-            .to_path_buf()]
+        vec![
+            paths::get_config_dir()
+                .unwrap()
+                .join("icons/")
+                .to_path_buf(),
+        ]
     }
 }
 

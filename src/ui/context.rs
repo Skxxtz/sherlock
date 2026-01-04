@@ -1,6 +1,6 @@
 use std::{cell::Cell, rc::Rc};
 
-use gio::{glib::object::ObjectExt, prelude::ListModelExt, ListStore};
+use gio::{ListStore, glib::object::ObjectExt, prelude::ListModelExt};
 use gtk4::{ListView, Revealer, ScrolledWindow, SignalListItemFactory, SingleSelection};
 
 use crate::{
@@ -41,7 +41,7 @@ pub fn make_context() -> (ContextUI<ContextAction>, Revealer) {
         .child(&viewport)
         .build();
 
-    if !ConfigGuard::read().map_or(false, |c| c.behavior.animate) {
+    if !ConfigGuard::read().is_ok_and(|c| c.behavior.animate) {
         revealer.set_transition_duration(0);
     }
 
@@ -101,7 +101,7 @@ pub fn make_emoji_context() -> (ContextUI<EmojiContextAction>, Revealer) {
         .child(&viewport)
         .build();
 
-    if !ConfigGuard::read().map_or(false, |c| c.behavior.animate) {
+    if !ConfigGuard::read().is_ok_and(|c| c.behavior.animate) {
         revealer.set_transition_duration(0);
     }
 

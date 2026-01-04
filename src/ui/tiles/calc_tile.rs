@@ -2,16 +2,16 @@ use super::Tile;
 use crate::{
     actions::{execute_from_attrs, get_attrs_map},
     g_subclasses::sherlock_row::SherlockRow,
-    launcher::{calc_launcher::Calculator, Launcher},
+    launcher::{Launcher, calc_launcher::Calculator},
     prelude::TileHandler,
     ui::g_templates::CalcTile,
 };
 use gio::glib::{
-    object::{Cast, ObjectExt},
     WeakRef,
+    object::{Cast, ObjectExt},
 };
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::{prelude::WidgetExt, Widget};
+use gtk4::{Widget, prelude::WidgetExt};
 use meval::eval_str;
 use std::{
     cell::RefCell,

@@ -1,12 +1,11 @@
 mod imp;
 
-use gio::glib::{object::ObjectExt, property::PropertySet, SignalHandlerId, WeakRef};
+use gio::glib::{SignalHandlerId, WeakRef, object::ObjectExt, property::PropertySet};
 use glib::Object;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
-    glib,
+    Box, GestureClick, glib,
     prelude::{GestureSingleExt, WidgetExt},
-    Box, GestureClick,
 };
 use serde::Deserialize;
 
@@ -49,18 +48,18 @@ impl EmojiObject {
             if let Some(old_parent) = imp.parent.borrow().as_ref().and_then(|tmp| tmp.upgrade()) {
                 old_parent.remove_controller(gesture);
             }
-            parent
-                .upgrade()
-                .map(|tmp| tmp.add_controller(gesture.clone()));
+            if let Some(tmp) = parent.upgrade() {
+                tmp.add_controller(gesture.clone())
+            }
         }
         *self.imp().parent.borrow_mut() = Some(parent);
     }
     fn unset_parent(&self) {
         let imp = self.imp();
-        if let Some(gesture) = imp.gesture.get() {
-            if let Some(parent) = imp.parent.borrow().as_ref().and_then(|tmp| tmp.upgrade()) {
-                parent.remove_controller(gesture);
-            }
+        if let Some(gesture) = imp.gesture.get()
+            && let Some(parent) = imp.parent.borrow().as_ref().and_then(|tmp| tmp.upgrade())
+        {
+            parent.remove_controller(gesture);
         }
         *self.imp().parent.borrow_mut() = None;
     }
@@ -112,7 +111,7 @@ impl EmojiObject {
     pub fn from(emoji_data: EmojiRaw, skin: &SkinTone) -> Self {
         let obj: Self = Object::builder().build();
         let imp = obj.imp();
-        imp.default_skin_tone.set(skin.clone());
+        imp.default_skin_tone.set(*skin);
 
         imp.gesture.get_or_init(|| {
             let gesture = GestureClick::new();
@@ -120,10 +119,10 @@ impl EmojiObject {
             gesture.set_button(0);
             gesture.connect_pressed({
                 move |_, n_clicks, _, _| {
-                    if n_clicks >= 2 {
-                        if let Some(obj) = obj.upgrade() {
-                            obj.emit_by_name::<()>("emoji-should-activate", &[]);
-                        }
+                    if n_clicks >= 2
+                        && let Some(obj) = obj.upgrade()
+                    {
+                        obj.emit_by_name::<()>("emoji-should-activate", &[]);
                     }
                 }
             });

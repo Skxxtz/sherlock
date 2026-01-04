@@ -1,5 +1,5 @@
 use gio::glib::{object::IsA, variant::ToVariant};
-use gtk4::{prelude::*, Widget};
+use gtk4::{Widget, prelude::*};
 use std::fs::File;
 use std::{collections::HashMap, rc::Rc};
 use teamslaunch::teamslaunch;
@@ -31,12 +31,12 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
 ) {
     //construct HashMap
     let attrs: HashMap<String, String> = attrs
-        .into_iter()
+        .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect();
 
     if let Some(method) = attrs.get("method") {
-        let mut exit = do_exit.unwrap_or(attrs.get("exit").map_or(true, |s| s == "true"));
+        let mut exit = do_exit.unwrap_or(attrs.get("exit").is_none_or(|s| s == "true"));
 
         match method.as_str() {
             "categories" => {
@@ -48,12 +48,12 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             }
             "app_launcher" => {
                 let exec = attrs.get("exec").map_or("", |s| s.as_str());
-                let term = attrs.get("term").map_or(false, |s| s.as_str() == "true");
+                let term = attrs.get("term").is_some_and(|s| s.as_str() == "true");
                 if let Err(error) = applaunch::applaunch(exec, term) {
                     exit = false;
                     let _result = error.insert(false);
                 }
-                increment(&exec);
+                increment(exec);
             }
             "web_launcher" | "bookmarks" => {
                 let engine = attrs.get("engine").map_or("plain", |s| s.as_str());
@@ -79,7 +79,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                     exit = false;
                     let _result = error.insert(false);
                 } else {
-                    increment(&exec);
+                    increment(exec);
                 }
             }
             "copy" => {
@@ -89,11 +89,11 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                         if let Some(output) = attrs.get(field) {
                             let _ = util::copy_to_clipboard(output.as_str());
                         }
-                    } else if let Some(output) = attrs.get("result").or(attrs.get("exec")) {
-                        if let Err(err) = util::copy_to_clipboard(output.as_str()) {
-                            exit = false;
-                            let _result = err.insert(false);
-                        }
+                    } else if let Some(output) = attrs.get("result").or(attrs.get("exec"))
+                        && let Err(err) = util::copy_to_clipboard(output.as_str())
+                    {
+                        exit = false;
+                        let _result = err.insert(false);
                     }
                 }
             }
@@ -107,13 +107,13 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 }
             }
             "teams_event" => {
-                if let Some(meeting) = attrs.get("meeting_url") {
-                    if let Err(_) = teamslaunch(meeting) {
-                        let _ = row.activate_action(
-                            "win.switch-page",
-                            Some(&String::from("search-page->error-page").to_variant()),
-                        );
-                    }
+                if let Some(meeting) = attrs.get("meeting_url")
+                    && teamslaunch(meeting).is_err()
+                {
+                    let _ = row.activate_action(
+                        "win.switch-page",
+                        Some(&String::from("search-page->error-page").to_variant()),
+                    );
                 }
             }
             "emoji_picker" => {
@@ -158,10 +158,9 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                     .get("parent-pid")
                     .and_then(|p| p.parse::<i32>().ok())
                     .zip(attrs.get("child-pid").and_then(|c| c.parse::<i32>().ok()))
+                    && let Err(error) = ProcessLauncher::kill((ppid, cpid))
                 {
-                    if let Err(error) = ProcessLauncher::kill((ppid, cpid)) {
-                        let _result = error.insert(false);
-                    }
+                    let _result = error.insert(false);
                 };
             }
             "debug" => {
@@ -169,10 +168,13 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 match exec {
                     "show_errors" => {
                         exit = false;
-                        if let Ok(_) = row.activate_action(
-                            "win.switch-page",
-                            Some(&String::from("search-page->error-page").to_variant()),
-                        ) {
+                        if row
+                            .activate_action(
+                                "win.switch-page",
+                                Some(&String::from("search-page->error-page").to_variant()),
+                            )
+                            .is_ok()
+                        {
                             increment("debug.show_errors");
                         }
                     }
@@ -193,16 +195,16 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                     "reset_log" => {
                         if let Ok(home) = home_dir() {
                             let file = home.join(".sherlock/sherlock.log");
-                            if file.is_file() {
-                                if let Err(err) = File::create(&file).map_err(|e| {
+                            if file.is_file()
+                                && let Err(err) = File::create(&file).map_err(|e| {
                                     sherlock_error!(
                                         SherlockErrorType::FileWriteError(file.clone()),
                                         e.to_string()
                                     )
-                                }) {
-                                    exit = false;
-                                    let _result = err.insert(false);
-                                }
+                                })
+                            {
+                                exit = false;
+                                let _result = err.insert(false);
                             }
                         }
                     }
@@ -216,14 +218,11 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                     }
                     "restart" => {
                         // start new sherlock instance
-                        if let Ok(config) = ConfigGuard::read() {
-                            if config.runtime.daemonize {
-                                if let Err(err) =
-                                    command_launch("sherlock --take-over --daemonize", "")
-                                {
-                                    let _result = err.insert(true);
-                                }
-                            }
+                        if let Ok(config) = ConfigGuard::read()
+                            && config.runtime.daemonize
+                            && let Err(err) = command_launch("sherlock --take-over --daemonize", "")
+                        {
+                            let _result = err.insert(true);
                         }
                     }
                     _ => {}
@@ -233,17 +232,15 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
                 let _result = clear_cached_files();
             }
             k if k.starts_with("inner.") => {
-                if let Some(callback) = k.strip_prefix("inner.") {
-                    if let Some(context) = row.dynamic_cast_ref::<ContextAction>() {
-                        if let Some(row) = context
-                            .get_row()
-                            .and_then(|row| row.upgrade())
-                            .and_then(|tile| tile.parent().upgrade())
-                        {
-                            let exit = exit as u8;
-                            row.emit_by_name::<()>("row-should-activate", &[&exit, &callback]);
-                        }
-                    }
+                if let Some(callback) = k.strip_prefix("inner.")
+                    && let Some(context) = row.dynamic_cast_ref::<ContextAction>()
+                    && let Some(row) = context
+                        .get_row()
+                        .and_then(|row| row.upgrade())
+                        .and_then(|tile| tile.parent().upgrade())
+                {
+                    let exit = exit as u8;
+                    row.emit_by_name::<()>("row-should-activate", &[&exit, &callback]);
                 }
             }
             _ => {

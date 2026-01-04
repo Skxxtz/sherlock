@@ -1,7 +1,7 @@
-use gio::glib::object::ObjectExt;
 use gio::glib::WeakRef;
-use gtk4::gdk::Display;
+use gio::glib::object::ObjectExt;
 use gtk4::CssProvider;
+use gtk4::gdk::Display;
 use std::cell::RefCell;
 use std::fs;
 use std::fs::read_to_string;

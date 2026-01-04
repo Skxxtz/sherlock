@@ -53,7 +53,7 @@ pub fn applaunch(exec: &str, terminal: bool) -> Result<(), SherlockError> {
 pub fn launch_detached(mut command: Command) -> std::io::Result<()> {
     unsafe {
         match libc::fork() {
-            -1 => return Err(std::io::Error::last_os_error()),
+            -1 => Err(std::io::Error::last_os_error()),
             0 => {
                 // Child process
                 if libc::setsid() == -1 {
@@ -62,7 +62,7 @@ pub fn launch_detached(mut command: Command) -> std::io::Result<()> {
 
                 // Fork again to prevent from acquiring a controlling terminal
                 match libc::fork() {
-                    -1 => return Err(std::io::Error::last_os_error()),
+                    -1 => Err(std::io::Error::last_os_error()),
                     0 => {
                         // Now fully detached
                         // Redirect stdio
@@ -94,22 +94,13 @@ pub fn launch_detached_child(mut child: std::process::Child) -> Result<(), Sherl
 
     // Make sure stdin/out/err dont hand or capture output
     if let Some(stdin) = child.stdin.take() {
-        let _ = nix::fcntl::fcntl(
-            stdin.as_raw_fd(),
-            nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC),
-        );
+        let _ = nix::fcntl::fcntl(stdin, nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC));
     }
     if let Some(stdin) = child.stdin.take() {
-        let _ = nix::fcntl::fcntl(
-            stdin.as_raw_fd(),
-            nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC),
-        );
+        let _ = nix::fcntl::fcntl(stdin, nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC));
     }
     if let Some(stdin) = child.stdin.take() {
-        let _ = nix::fcntl::fcntl(
-            stdin.as_raw_fd(),
-            nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC),
-        );
+        let _ = nix::fcntl::fcntl(stdin, nix::fcntl::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC));
     }
 
     std::mem::drop(child);

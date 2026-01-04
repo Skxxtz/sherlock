@@ -3,11 +3,11 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::os::linux::fs::MetadataExt;
 
-use gtk4::gdk::Display;
 use gtk4::IconTheme;
+use gtk4::gdk::Display;
 use serde::Deserialize;
-use simd_json::base::ValueTryAsMutObject;
 use simd_json::OwnedValue;
+use simd_json::base::ValueTryAsMutObject;
 
 use crate::api::call::ApiCall;
 use crate::utils::config::{ConfigGuard, OtherDefaults};

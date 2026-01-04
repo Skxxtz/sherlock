@@ -1,6 +1,6 @@
-use gio::glib::WeakRef;
 use gio::ListStore;
-use gtk4::{self, gdk::Key, prelude::*, Builder, EventControllerKey};
+use gio::glib::WeakRef;
+use gtk4::{self, Builder, EventControllerKey, gdk::Key, prelude::*};
 use gtk4::{Box as GtkBox, ListView, SignalListItemFactory, SingleSelection};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -11,12 +11,12 @@ pub fn errors(backend: &ErrorBackend, stack_page: &Rc<RefCell<String>>) -> GtkBo
     let (stack, ui) = construct(backend);
 
     nav_event(&stack, ui.results.clone(), stack_page);
-    return stack;
+    stack
 }
 fn nav_event(stack: &GtkBox, result_holder: WeakRef<ListView>, stack_page: &Rc<RefCell<String>>) {
     // Wrap the event controller in an Rc<RefCell> for shared mutability
     let event_controller = EventControllerKey::new();
-    let stack_page = Rc::clone(&stack_page);
+    let stack_page = Rc::clone(stack_page);
 
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed(move |_, key, _, _| {

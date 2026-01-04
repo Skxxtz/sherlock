@@ -1,6 +1,6 @@
 mod imp;
 
-use gio::glib::{object::ObjectExt, variant::ToVariant, SignalHandlerId, WeakRef};
+use gio::glib::{SignalHandlerId, WeakRef, object::ObjectExt, variant::ToVariant};
 use glib::Object;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{glib, prelude::WidgetExt};
@@ -14,7 +14,8 @@ use crate::{
 
 glib::wrapper! {
     pub struct ContextAction(ObjectSubclass<imp::ContextAction>)
-        @extends gtk4::Box, gtk4::Widget;
+        @extends gtk4::Box, gtk4::Widget,
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
 }
 
 impl ContextAction {
@@ -40,20 +41,19 @@ impl ContextAction {
         if let Some(modkey) = imp.modkey.get().and_then(|w| w.upgrade()) {
             modkey.set_text(mod_str);
         }
-        if let Some(title_label) = imp.title.get().and_then(|w| w.upgrade()) {
-            if let Some(title) = &action.name {
-                title_label.set_text(&title);
-            }
+        if let Some(title_label) = imp.title.get().and_then(|w| w.upgrade())
+            && let Some(title) = &action.name
+        {
+            title_label.set_text(title);
         }
-        imp.icon
-            .get()
-            .and_then(|tmp| tmp.upgrade())
-            .map(|icon| icon.set_icon(action.icon.as_deref(), None, None));
+        if let Some(icon) = imp.icon.get().and_then(|tmp| tmp.upgrade()) {
+            icon.set_icon(action.icon.as_deref(), None, None)
+        }
 
         let signal_id = obj.connect_local("context-action-should-activate", false, {
             let exec = action.exec.clone();
             let method = action.method.clone();
-            let exit = action.exit.clone();
+            let exit = action.exit;
             move |row| {
                 let row = row.first().map(|f| f.get::<ContextAction>().ok())??;
                 let attrs = get_attrs_map(vec![

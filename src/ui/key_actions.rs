@@ -1,14 +1,14 @@
 use gio::{
     glib::{
-        object::{CastNone, ObjectExt},
         WeakRef,
+        object::{CastNone, ObjectExt},
     },
     prelude::ListModelExt,
 };
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
-    prelude::{EditableExt, WidgetExt},
     Entry, GridView, ListView, SingleSelection,
+    prelude::{EditableExt, WidgetExt},
 };
 use std::{cell::RefCell, rc::Rc};
 
@@ -70,10 +70,10 @@ impl KeyActions {
         let exit: u8 = close.map_or(0, |v| if v { 2 } else { 1 });
         if self.context.open.get() {
             // Activate action
-            if let Some(upgr) = self.context.view.upgrade() {
-                if let Some(row) = upgr.selected_item().and_downcast::<ContextAction>() {
-                    row.emit_by_name::<()>("context-action-should-activate", &[&exit]);
-                }
+            if let Some(upgr) = self.context.view.upgrade()
+                && let Some(row) = upgr.selected_item().and_downcast::<ContextAction>()
+            {
+                row.emit_by_name::<()>("context-action-should-activate", &[&exit]);
             }
         } else {
             // Activate apptile
@@ -86,10 +86,8 @@ impl KeyActions {
                 if let Some(row) = item.parent().upgrade() {
                     row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
                 }
-            } else {
-                if let Some(current_text) = self.search_bar.upgrade().map(|s| s.text()) {
-                    println!("{}", current_text);
-                }
+            } else if let Some(current_text) = self.search_bar.upgrade().map(|s| s.text()) {
+                println!("{}", current_text);
             }
         }
     }
@@ -217,23 +215,21 @@ impl EmojiKeyActions {
                     .cloned()
                     .collect();
 
-                if let Some(upgr) = self.context.view.upgrade() {
-                    if let Some(row) = upgr.selected_item().and_downcast::<EmojiContextAction>() {
-                        if let Some(parent) = row
-                            .imp()
-                            .parent
-                            .get()
-                            .and_then(|s| s.upgrade().and_downcast::<EmojiObject>())
-                        {
-                            let emoji = parent.imp().emoji.borrow().reconstruct(&indices);
-                            let attrs = get_attrs_map(vec![
-                                ("method", Some("copy")),
-                                ("result", Some(&emoji)),
-                            ]);
-                            execute_from_attrs(&row, &attrs, None, None);
-                        }
-                        row.emit_by_name::<()>("context-action-should-activate", &[&exit]);
+                if let Some(upgr) = self.context.view.upgrade()
+                    && let Some(row) = upgr.selected_item().and_downcast::<EmojiContextAction>()
+                {
+                    if let Some(parent) = row
+                        .imp()
+                        .parent
+                        .get()
+                        .and_then(|s| s.upgrade().and_downcast::<EmojiObject>())
+                    {
+                        let emoji = parent.imp().emoji.borrow().reconstruct(&indices);
+                        let attrs =
+                            get_attrs_map(vec![("method", Some("copy")), ("result", Some(&emoji))]);
+                        execute_from_attrs(&row, &attrs, None, None);
                     }
+                    row.emit_by_name::<()>("context-action-should-activate", &[&exit]);
                 }
             }
         } else {
@@ -245,10 +241,8 @@ impl EmojiKeyActions {
                 .and_downcast::<EmojiObject>()
             {
                 item.emit_by_name::<()>("emoji-should-activate", &[]);
-            } else {
-                if let Some(current_text) = self.search_bar.upgrade().map(|s| s.text()) {
-                    println!("{}", current_text);
-                }
+            } else if let Some(current_text) = self.search_bar.upgrade().map(|s| s.text()) {
+                println!("{}", current_text);
             }
         }
     }
@@ -353,10 +347,10 @@ impl EmojiKeyActions {
         let selected = model.selected();
         if let Some(new_index) = context_action.focus_next() {
             for i in 0..model.n_items() {
-                if i != selected {
-                    if let Some(tmp) = model.item(i).and_downcast::<EmojiContextAction>() {
-                        tmp.update_index(selected as u8, new_index, true);
-                    }
+                if i != selected
+                    && let Some(tmp) = model.item(i).and_downcast::<EmojiContextAction>()
+                {
+                    tmp.update_index(selected as u8, new_index, true);
                 }
             }
         }
@@ -373,10 +367,10 @@ impl EmojiKeyActions {
         let selected = model.selected();
         if let Some(new_index) = context_action.focus_prev() {
             for i in 0..model.n_items() {
-                if i != selected {
-                    if let Some(tmp) = model.item(i).and_downcast::<EmojiContextAction>() {
-                        tmp.update_index(selected as u8, new_index, true);
-                    }
+                if i != selected
+                    && let Some(tmp) = model.item(i).and_downcast::<EmojiContextAction>()
+                {
+                    tmp.update_index(selected as u8, new_index, true);
                 }
             }
         }

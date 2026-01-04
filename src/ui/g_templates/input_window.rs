@@ -2,9 +2,9 @@ mod imp {
     use std::cell::RefCell;
 
     use futures::channel::oneshot::Sender;
-    use gtk4::subclass::prelude::*;
     use gtk4::CompositeTemplate;
-    use gtk4::{glib, ApplicationWindow, Entry};
+    use gtk4::subclass::prelude::*;
+    use gtk4::{ApplicationWindow, Entry, glib};
 
     #[derive(CompositeTemplate, Default)]
     #[template(resource = "/dev/skxxtz/sherlock/ui/input_window.ui")]
@@ -35,21 +35,21 @@ mod imp {
     impl ApplicationWindowImpl for InputWindow {}
 }
 
-use futures::channel::oneshot::{channel, Receiver};
+use futures::channel::oneshot::{Receiver, channel};
 use gio::glib::object::ObjectExt;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
+    EventControllerKey,
     gdk::Key,
     glib,
     prelude::{EditableExt, EntryExt, EventControllerExt, GtkWindowExt, WidgetExt},
-    EventControllerKey,
 };
 use gtk4_layer_shell::LayerShell;
 
 glib::wrapper! {
     pub struct InputWindow(ObjectSubclass<imp::InputWindow>)
         @extends gtk4::Widget, gtk4::Window, gtk4::ApplicationWindow,
-        @implements gtk4::Buildable;
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget, gtk4::Native, gtk4::Root, gtk4::ShortcutManager, gio::ActionGroup, gio::ActionMap;
 }
 
 impl InputWindow {

@@ -10,6 +10,7 @@ use crate::{
     sherlock_error,
     utils::errors::{SherlockError, SherlockErrorType},
 };
+
 pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
     let config = ConfigGuard::read()?;
     let prefix = config
@@ -48,7 +49,7 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
             }
             "keyword" => {
                 println!("{:?}", exec);
-                exec = exec.replace(full_match, &keyword);
+                exec = exec.replace(full_match, keyword);
                 println!("{:?}", exec);
             }
             _ => {}
@@ -60,13 +61,11 @@ pub fn command_launch(exec: &str, keyword: &str) -> Result<(), SherlockError> {
     let mut sudo = None;
     for command in commands {
         // Query sudo password if its not specified yet
-        if command.contains("sudo ") {
-            if sudo.is_none() {
-                sudo = Some(
-                    gio::glib::MainContext::default()
-                        .block_on(async { SherlockAPI::input_field(true, Some("SUDO:")).await })?,
-                );
-            }
+        if command.contains("sudo ") && sudo.is_none() {
+            sudo = Some(
+                gio::glib::MainContext::default()
+                    .block_on(async { SherlockAPI::input_field(true, Some("SUDO:")).await })?,
+            );
         }
         asynchronous_execution(command, &prefix, &flags, &sudo)?;
     }
@@ -92,7 +91,7 @@ pub fn asynchronous_execution(
     })?;
 
     // If sudo is requested, wrap the command
-    let mut command = if let Some(ref _pw) = sudo_password {
+    let mut command = if sudo_password.is_some() {
         let mut c = Command::new("sudo");
 
         // -S makes sudo read password from stdin
@@ -110,7 +109,7 @@ pub fn asynchronous_execution(
     };
 
     // If sudo: write password into stdin *before* detaching
-    if let Some(ref pw) = sudo_password {
+    if let Some(pw) = sudo_password {
         let mut child = command.spawn().map_err(|e| {
             sherlock_error!(
                 SherlockErrorType::CommandExecutionError(raw_command.clone()),

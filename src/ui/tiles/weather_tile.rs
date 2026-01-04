@@ -9,8 +9,8 @@ use std::rc::Rc;
 use super::Tile;
 use crate::actions::execute_from_attrs;
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::weather_launcher::WeatherData;
 use crate::launcher::Launcher;
+use crate::launcher::weather_launcher::WeatherData;
 use crate::prelude::{IconComp, TileHandler};
 use crate::ui::g_templates::WeatherTile;
 

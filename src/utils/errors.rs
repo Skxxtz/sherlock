@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::sher_log;
 use crate::{
-    api::call::ApiCall, daemon::daemon::SizedMessage, g_subclasses::sherlock_row::SherlockRow,
-    ui::g_templates::ErrorTile, SOCKET_PATH,
+    SOCKET_PATH, api::call::ApiCall, daemon::daemon::SizedMessage,
+    g_subclasses::sherlock_row::SherlockRow, ui::g_templates::ErrorTile,
 };
 
 #[macro_export]

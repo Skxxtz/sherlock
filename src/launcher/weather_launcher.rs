@@ -24,9 +24,8 @@ pub struct WeatherLauncher {
 }
 impl WeatherLauncher {
     pub async fn get_result(&self) -> Option<(WeatherData, bool)> {
-        let config = ConfigGuard::read().ok()?;
         // try read cache
-        if let Some(data) = WeatherData::from(&self) {
+        if let Some(data) = WeatherData::from(self) {
             return Some((data, false));
         };
 
@@ -35,16 +34,17 @@ impl WeatherLauncher {
         let response = reqwest::get(url).await.ok()?.text().await.ok()?;
         let mut response_bytes = response.into_bytes();
         let json: simd_json::OwnedValue = simd_json::to_owned_value(&mut response_bytes).ok()?;
-        let current_condition = json["current_condition"].as_array()?.get(0)?;
+        let current_condition = json["current_condition"].as_array()?.first()?;
 
         // Get sunset time
-        let astronomy = json["weather"].as_array()?.get(0)?["astronomy"]
+        let astronomy = json["weather"].as_array()?.first()?["astronomy"]
             .as_array()?
-            .get(0)?;
+            .first()?;
         let sunset_raw = astronomy["sunset"].as_str()?;
         let sunset = chrono::NaiveTime::parse_from_str(sunset_raw, "%I:%M %p").ok()?;
 
         // Parse Temperature
+        let config = ConfigGuard::read().ok()?;
         let temperature = match config.units.temperatures.as_str() {
             "f" | "F" => format!("{}°F", current_condition["temp_F"].as_str()?),
             _ => format!("{}°C", current_condition["temp_C"].as_str()?),
@@ -149,9 +149,9 @@ impl WeatherData {
                 cached_data.css.clone()
             };
 
-            return Some(cached_data);
+            Some(cached_data)
         } else {
-            return None;
+            None
         }
     }
     fn cache(&self) -> Option<()> {
@@ -162,7 +162,7 @@ impl WeatherData {
         }
         let tmp_path = path.with_extension(".tmp");
         if let Ok(f) = File::create(&tmp_path) {
-            if let Ok(_) = simd_json::to_writer(f, &self) {
+            if simd_json::to_writer(f, &self).is_ok() {
                 let _ = fs::rename(&tmp_path, &path);
             } else {
                 let _ = fs::remove_file(&tmp_path);

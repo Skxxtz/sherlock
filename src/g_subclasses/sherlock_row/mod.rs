@@ -1,6 +1,6 @@
 mod imp;
 
-use gio::glib::{object::ObjectExt, SignalHandlerId};
+use gio::glib::{SignalHandlerId, object::ObjectExt};
 use glib::Object;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
@@ -8,13 +8,14 @@ use gtk4::{
     glib,
     prelude::WidgetExt,
 };
-use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser::SerializeStruct};
 
 use crate::loader::util::ApplicationAction;
 
 glib::wrapper! {
     pub struct SherlockRow(ObjectSubclass<imp::SherlockRow>)
-        @extends gtk4::Box, gtk4::Widget;
+        @extends gtk4::Box, gtk4::Widget,
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
 }
 
 impl SherlockRow {
@@ -104,10 +105,10 @@ impl Serialize for SherlockRowBind {
             bind_parts.push(name.0.to_string());
         }
 
-        if let Some(key) = &self.key {
-            if let Some(name) = key.name() {
-                bind_parts.push(name.to_string());
-            }
+        if let Some(key) = &self.key
+            && let Some(name) = key.name()
+        {
+            bind_parts.push(name.to_string());
         }
 
         let bind = bind_parts.join("+");

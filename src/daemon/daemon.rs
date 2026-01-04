@@ -6,7 +6,7 @@ use crate::api::api::RESPONSE_SOCKET;
 use crate::api::call::ApiCall;
 use crate::loader::Loader;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{sher_log, sherlock_error, SOCKET_DIR, SOCKET_PATH};
+use crate::{SOCKET_DIR, SOCKET_PATH, sher_log, sherlock_error};
 
 pub struct SherlockDaemon {
     socket: String,
@@ -17,17 +17,15 @@ impl SherlockDaemon {
         let listener = UnixListener::bind(SOCKET_PATH).expect("Failed to bind socket");
         let _ = sher_log!(format!("Daemon listening on {}", SOCKET_PATH));
 
-        for stream in listener.incoming() {
-            if let Ok(mut stream) = stream {
-                loop {
-                    match stream.read_sized() {
-                        Ok(buf) if !buf.is_empty() => {
-                            let received_data = String::from_utf8_lossy(&buf);
-                            let received_data = received_data.trim();
-                            let _ = pipeline.send(received_data.to_string()).await;
-                        }
-                        Ok(_) | Err(_) => break,
+        for mut stream in listener.incoming().flatten() {
+            loop {
+                match stream.read_sized() {
+                    Ok(buf) if !buf.is_empty() => {
+                        let received_data = String::from_utf8_lossy(&buf);
+                        let received_data = received_data.trim();
+                        let _ = pipeline.send(received_data.to_string()).await;
                     }
+                    Ok(_) | Err(_) => break,
                 }
             }
         }
@@ -92,20 +90,18 @@ impl SherlockDaemon {
             drop(stream);
 
             // Await response
-            'server_loop: for stream in listener.incoming() {
-                if let Ok(mut stream) = stream {
-                    loop {
-                        match stream.read_sized() {
-                            Ok(buf) if !buf.is_empty() => {
-                                let received_data = String::from_utf8_lossy(&buf);
-                                let received_data = received_data.trim();
-                                if received_data == "EXIT" {
-                                    break 'server_loop;
-                                }
-                                println!("{}", received_data);
+            'server_loop: for mut stream in listener.incoming().flatten() {
+                loop {
+                    match stream.read_sized() {
+                        Ok(buf) if !buf.is_empty() => {
+                            let received_data = String::from_utf8_lossy(&buf);
+                            let received_data = received_data.trim();
+                            if received_data == "EXIT" {
+                                break 'server_loop;
                             }
-                            Ok(_) | Err(_) => break,
+                            println!("{}", received_data);
                         }
+                        Ok(_) | Err(_) => break,
                     }
                 }
             }

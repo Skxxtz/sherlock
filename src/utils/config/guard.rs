@@ -1,12 +1,11 @@
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::{
-    sherlock_error,
+    CONFIG, sherlock_error,
     utils::{
         config::SherlockConfig,
         errors::{SherlockError, SherlockErrorType},
     },
-    CONFIG,
 };
 
 pub struct ConfigGuard;

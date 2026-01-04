@@ -1,5 +1,5 @@
 use gio::glib::WeakRef;
-use gtk4::{prelude::*, Box, Builder, Label, TextView};
+use gtk4::{Box, Builder, Label, TextView, prelude::*};
 
 #[derive(Default)]
 pub struct TextViewTileBuilder {

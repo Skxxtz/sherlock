@@ -45,7 +45,7 @@ impl MusicPlayerLauncher {
         let loader = PixbufLoader::new();
         loader.write(&bytes).ok()?;
         loader.close().ok()?;
-        loader.pixbuf().and_then(|i| Some((i, was_cached)))
+        loader.pixbuf().map(|i| (i, was_cached))
     }
     fn cache_cover(image: &Bytes, loc: &str) -> Result<(), SherlockError> {
         // Create dir and parents
@@ -79,7 +79,7 @@ impl MusicPlayerLauncher {
             )
         })?;
 
-        file.write_all(&image).map_err(|e| {
+        file.write_all(image).map_err(|e| {
             sherlock_error!(
                 SherlockErrorType::FileExistError(path.clone()),
                 e.to_string()
@@ -194,12 +194,12 @@ impl AudioLauncherFunctions {
         let mut names: Vec<String> = proxy.call("ListNames", &()).ok()?;
         names.retain(|n| n.starts_with("org.mpris.MediaPlayer2."));
         let first = names.first().cloned();
-        if let Ok(config) = ConfigGuard::read() {
-            if let Some(m) = config.default_apps.mpris.as_ref() {
-                let preferred = names.into_iter().find(|name| name.contains(m));
-                if preferred.is_some() {
-                    return preferred;
-                }
+        if let Ok(config) = ConfigGuard::read()
+            && let Some(m) = config.default_apps.mpris.as_ref()
+        {
+            let preferred = names.into_iter().find(|name| name.contains(m));
+            if preferred.is_some() {
+                return preferred;
             }
         }
         first

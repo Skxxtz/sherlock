@@ -1,18 +1,19 @@
 mod imp;
 
 use gio::glib::object::Cast;
-use gio::glib::{object::ObjectExt, WeakRef};
+use gio::glib::{WeakRef, object::ObjectExt};
 use glib::Object;
 use gtk4::prelude::WidgetExt;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::{glib, Box as GtkBox, Widget};
+use gtk4::{Box as GtkBox, Widget, glib};
 use simd_json::prelude::Indexed;
-use std::{rc::Rc, usize};
+use std::rc::Rc;
 
 use crate::g_subclasses::sherlock_row::SherlockRowBind;
 use crate::launcher::LauncherType;
 use crate::loader::util::ApplicationAction;
 use crate::prelude::TileHandler;
+use crate::ui::tiles::Tile;
 use crate::ui::tiles::api_tile::ApiTileHandler;
 use crate::ui::tiles::app_tile::AppTileHandler;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
@@ -24,7 +25,6 @@ use crate::ui::tiles::pomodoro_tile::PomodoroTileHandler;
 use crate::ui::tiles::process_tile::ProcTileHandler;
 use crate::ui::tiles::weather_tile::WeatherTileHandler;
 use crate::ui::tiles::web_tile::WebTileHandler;
-use crate::ui::tiles::Tile;
 use crate::{g_subclasses::sherlock_row::SherlockRow, launcher::Launcher, loader::util::AppData};
 
 glib::wrapper! {
@@ -68,7 +68,7 @@ impl TileItem {
         let index = imp.index.get()?;
         let inner = launcher.inner()?;
         let data = inner.get(index as usize)?;
-        Some(key(&data))
+        Some(key(data))
     }
 
     pub fn get_patch(&self) -> Option<Widget> {
@@ -95,7 +95,7 @@ impl TileItem {
                 Some(tile.upcast::<Widget>())
             }
             LauncherType::Clipboard(clp) => {
-                if let Some((tile, handler)) = Tile::clipboard(launcher.clone(), &clp) {
+                if let Some((tile, handler)) = Tile::clipboard(launcher.clone(), clp) {
                     self.imp().update_handler.replace(handler);
                     Some(tile)
                 } else {
@@ -134,7 +134,7 @@ impl TileItem {
                 Some(tile.upcast::<Widget>())
             }
             LauncherType::Web(web) => {
-                let tile = Tile::web(launcher.clone(), &web);
+                let tile = Tile::web(launcher.clone(), web);
                 Some(tile.upcast::<Widget>())
             }
 
@@ -222,7 +222,7 @@ impl TileItem {
                 .borrow()
                 .inner()
                 .and_then(|inner| inner.get(index as usize))
-                .map_or(false, |v| v.terminal)
+                .is_some_and(|v| v.terminal)
         } else {
             false
         }
@@ -280,10 +280,10 @@ impl TileItem {
             UpdateHandler::AppTile(app) => {
                 let launcher = imp.launcher.borrow();
                 let index = imp.index.get().unwrap();
-                if let Some(inner) = launcher.inner() {
-                    if let Some(value) = inner.get(index as usize) {
-                        return app.update(keyword, launcher.clone(), value);
-                    }
+                if let Some(inner) = launcher.inner()
+                    && let Some(value) = inner.get(index as usize)
+                {
+                    return app.update(keyword, launcher.clone(), value);
                 }
             }
             UpdateHandler::Calculator(inner) => {
@@ -295,10 +295,10 @@ impl TileItem {
             UpdateHandler::Process(proc) => {
                 let launcher = imp.launcher.borrow();
                 let index = imp.index.get().unwrap();
-                if let Some(inner) = launcher.inner() {
-                    if let Some(value) = inner.get(index as usize) {
-                        return proc.update(keyword, launcher.clone(), value);
-                    }
+                if let Some(inner) = launcher.inner()
+                    && let Some(value) = inner.get(index as usize)
+                {
+                    return proc.update(keyword, launcher.clone(), value);
                 }
             }
             UpdateHandler::Weather(inner) => {
@@ -402,7 +402,7 @@ impl TileItem {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum UpdateHandler {
     AppTile(AppTileHandler),
     ApiTile(ApiTileHandler),
@@ -415,12 +415,8 @@ pub enum UpdateHandler {
     Process(ProcTileHandler),
     Weather(WeatherTileHandler),
     WebTile(WebTileHandler),
+    #[default]
     Default,
-}
-impl Default for UpdateHandler {
-    fn default() -> Self {
-        Self::Default
-    }
 }
 impl UpdateHandler {
     pub fn replace_tile(&mut self, tile: &Widget) {

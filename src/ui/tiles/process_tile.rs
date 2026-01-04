@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use gio::glib::WeakRef;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::{prelude::*, Box};
+use gtk4::{Box, prelude::*};
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;

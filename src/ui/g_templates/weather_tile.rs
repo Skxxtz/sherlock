@@ -1,8 +1,8 @@
 mod imp {
-    use gtk4::subclass::prelude::*;
     use gtk4::CompositeTemplate;
-    use gtk4::{glib, Spinner};
+    use gtk4::subclass::prelude::*;
     use gtk4::{Box as GtkBox, Image, Label};
+    use gtk4::{Spinner, glib};
 
     #[derive(CompositeTemplate, Default)]
     #[template(resource = "/dev/skxxtz/sherlock/ui/weather_tile.ui")]
@@ -54,7 +54,7 @@ use gtk4::glib;
 glib::wrapper! {
     pub struct WeatherTile(ObjectSubclass<imp::WeatherTile>)
         @extends gtk4::Widget, gtk4::Box,
-        @implements gtk4::Buildable;
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
 }
 
 impl WeatherTile {

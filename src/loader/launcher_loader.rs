@@ -1,4 +1,4 @@
-use gio::glib::{idle_add, MainContext};
+use gio::glib::{MainContext, idle_add};
 use once_cell::sync::Lazy;
 use rayon::prelude::*;
 use regex::Regex;
@@ -14,7 +14,7 @@ use std::str::FromStr;
 use crate::actions::util::read_from_clipboard;
 use crate::launcher::audio_launcher::AudioLauncherFunctions;
 use crate::launcher::bookmark_launcher::BookmarkLauncher;
-use crate::launcher::calc_launcher::{CalculatorLauncher, Currency, CURRENCIES};
+use crate::launcher::calc_launcher::{CURRENCIES, CalculatorLauncher, Currency};
 use crate::launcher::category_launcher::CategoryLauncher;
 use crate::launcher::emoji_picker::{EmojiPicker, SkinTone};
 use crate::launcher::event_launcher::EventLauncher;
@@ -24,8 +24,8 @@ use crate::launcher::process_launcher::ProcessLauncher;
 use crate::launcher::theme_picker::ThemePicker;
 use crate::launcher::weather_launcher::{WeatherIconTheme, WeatherLauncher};
 use crate::launcher::{
-    app_launcher, bulk_text_launcher, clipboard_launcher, system_cmd_launcher, web_launcher,
-    Launcher, LauncherType,
+    Launcher, LauncherType, app_launcher, bulk_text_launcher, clipboard_launcher,
+    system_cmd_launcher, web_launcher,
 };
 use crate::loader::util::CounterReader;
 use crate::ui::tiles::calc_tile::CalcTileHandler;
@@ -43,11 +43,11 @@ use simd_json::prelude::ArrayTrait;
 use system_cmd_launcher::CommandLauncher;
 use web_launcher::WebLauncher;
 
+use super::Loader;
 use super::application_loader::parse_priority;
-use super::util::deserialize_named_appdata;
 use super::util::AppData;
 use super::util::RawLauncher;
-use super::Loader;
+use super::util::deserialize_named_appdata;
 use crate::sherlock_error;
 
 pub static COLOR_RE: Lazy<Regex> = Lazy::new(|| {

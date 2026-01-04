@@ -4,10 +4,10 @@ mod imp {
     use std::cell::RefCell;
 
     use gio::glib::{SignalHandlerId, SourceId, WeakRef};
-    use gtk4::subclass::prelude::*;
     use gtk4::CompositeTemplate;
-    use gtk4::{glib, Picture};
+    use gtk4::subclass::prelude::*;
     use gtk4::{Box as GtkBox, Label};
+    use gtk4::{Picture, glib};
 
     use crate::g_subclasses::sherlock_row::SherlockRow;
 
@@ -55,7 +55,7 @@ use gtk4::glib;
 glib::wrapper! {
     pub struct TimerTile(ObjectSubclass<imp::TimerTile>)
         @extends gtk4::Widget, gtk4::Box,
-        @implements gtk4::Buildable;
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
 }
 
 impl TimerTile {
