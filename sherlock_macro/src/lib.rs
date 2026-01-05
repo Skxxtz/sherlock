@@ -1,9 +1,9 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::token::Comma;
-use syn::{parse_macro_input, ItemFn, Meta};
 use syn::Expr::Lit;
 use syn::punctuated::Punctuated;
+use syn::token::Comma;
+use syn::{ItemFn, Meta, parse_macro_input};
 
 #[proc_macro_attribute]
 pub fn timing(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -25,15 +25,14 @@ pub fn timing(attr: TokenStream, item: TokenStream) -> TokenStream {
                         if let syn::Lit::Str(lit_str) = &expr_lit.lit {
                             name = lit_str.value();
                         }
-                    },
+                    }
                     ("level", Lit(expr_lit)) => {
                         if let syn::Lit::Str(lit_str) = &expr_lit.lit {
                             level = lit_str.value();
                         }
-                    },
+                    }
                     _ => {}
                 }
-
             }
         }
     }

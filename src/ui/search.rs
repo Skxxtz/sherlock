@@ -1,16 +1,15 @@
 use gio::{
-    glib::{SignalHandlerId, WeakRef},
     ActionEntry, ListStore,
+    glib::{SignalHandlerId, WeakRef},
 };
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
-    self,
+    self, CustomFilter, CustomSorter, EventControllerKey, FilterListModel, ListView, Overlay,
+    SignalListItemFactory, SingleSelection, SortListModel, Widget,
     gdk::{Key, ModifierType},
     prelude::*,
-    CustomFilter, CustomSorter, EventControllerKey, FilterListModel, ListView, Overlay,
-    SignalListItemFactory, SingleSelection, SortListModel, Widget,
 };
-use gtk4::{glib, ApplicationWindow, Entry};
+use gtk4::{ApplicationWindow, Entry, glib};
 use levenshtein::levenshtein;
 use simd_json::prelude::ArrayTrait;
 use std::collections::HashMap;
@@ -22,7 +21,7 @@ use super::util::*;
 use crate::{
     api::{api::SherlockAPI, call::ApiCall, server::SherlockServer},
     g_subclasses::{action_entry::ContextAction, sherlock_row::SherlockRow, tile_item::TileItem},
-    launcher::{utils::HomeType, Launcher},
+    launcher::{Launcher, utils::HomeType},
     prelude::{IconComp, SherlockNav, SherlockSearch, ShortCut},
     ui::{g_templates::SearchUiObj, key_actions::KeyActions},
     utils::config::OtherDefaults,
@@ -102,10 +101,8 @@ pub fn search(
                         let mut current = 1;
                         for i in 0..selection.n_items() {
                             if let Some(item) = selection.item(i).and_downcast::<TileItem>() {
-                                if apply_animation {
-                                    if let Some(row) = item.parent().upgrade() {
-                                        row.add_css_class("animate");
-                                    }
+                                if apply_animation && let Some(row) = item.parent().upgrade() {
+                                    row.add_css_class("animate");
                                 }
                                 if let Some(shortcut) = item.shortcut() {
                                     if current < num_shortcuts + 1 {
@@ -165,10 +162,10 @@ pub fn search(
                             imp.mode_title.set_text("Search");
                         }
                         _ => {
-                            parameter.push_str(" ");
+                            parameter.push(' ');
                             match modes_clone.borrow().get(&parameter) {
-                                Some(launchers) if launchers.len() > 0 => {
-                                    if let Some(launcher) = launchers.get(0) {
+                                Some(launchers) if !launchers.is_empty() => {
+                                    if let Some(launcher) = launchers.first() {
                                         imp.search_icon_holder.set_css_classes(&["back"]);
                                         if let Some(name) = &launcher.name {
                                             imp.mode_title.set_text(name);
@@ -213,12 +210,12 @@ pub fn search(
                 .clamp(0, 10) as i32;
             move |_: &ApplicationWindow, _, parameter| {
                 if let Some(focus_first) = parameter.and_then(|p| p.get::<bool>()) {
-                    filter
-                        .upgrade()
-                        .map(|filter| filter.changed(gtk4::FilterChange::Different));
-                    sorter
-                        .upgrade()
-                        .map(|sorter| sorter.changed(gtk4::SorterChange::Different));
+                    if let Some(filter) = filter.upgrade() {
+                        filter.changed(gtk4::FilterChange::Different)
+                    }
+                    if let Some(sorter) = sorter.upgrade() {
+                        sorter.changed(gtk4::SorterChange::Different)
+                    }
                     let weaks = results.get_weaks().unwrap_or(vec![]);
                     if focus_first {
                         results.focus_first(
@@ -229,13 +226,13 @@ pub fn search(
                         if let Some(selection) = results.model().and_downcast::<SingleSelection>() {
                             let mut current = 1;
                             for i in 0..selection.n_items() {
-                                if let Some(item) = selection.item(i).and_downcast::<TileItem>() {
-                                    if let Some(shortcut) = item.shortcut() {
-                                        if current < num_shortcuts + 1 {
-                                            current += shortcut.apply_shortcut(current, &modstr);
-                                        } else {
-                                            shortcut.remove_shortcut();
-                                        }
+                                if let Some(item) = selection.item(i).and_downcast::<TileItem>()
+                                    && let Some(shortcut) = item.shortcut()
+                                {
+                                    if current < num_shortcuts + 1 {
+                                        current += shortcut.apply_shortcut(current, &modstr);
+                                    } else {
+                                        shortcut.remove_shortcut();
                                     }
                                 }
                             }
@@ -479,7 +476,7 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
     CustomSorter::new({
         let search_text = Rc::clone(search_text);
         fn search_score(query: &str, match_in: &str) -> f32 {
-            if match_in.len() == 0 {
+            if match_in.is_empty() {
                 return 0.0;
             }
             let (distance, element) = match_in
@@ -495,17 +492,17 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             } else {
                 0.0
             };
-            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
-                if var == "true" {
-                    println!(
-                        "Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}",
-                        element,
-                        query,
-                        distance,
-                        normed,
-                        normed + starts_with
-                    );
-                }
+            if let Ok(var) = std::env::var("DEBUG_SEARCH")
+                && var == "true"
+            {
+                println!(
+                    "Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}",
+                    element,
+                    query,
+                    distance,
+                    normed,
+                    normed + starts_with
+                );
             }
             normed + starts_with
         }
@@ -515,14 +512,14 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             // shift counts 3 to right; 1.34 → 1.0034 to make room for levenshtein (2 spaces for
             // max .99)
             let counters = prio.fract() / 100.0;
-            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
-                if var == "true" {
-                    println!("Base Prio: {}", prio);
-                    println!(
-                        "Resulting Prio: {}\n",
-                        prio.trunc() + (counters + score).min(0.99)
-                    );
-                }
+            if let Ok(var) = std::env::var("DEBUG_SEARCH")
+                && var == "true"
+            {
+                println!("Base Prio: {}", prio);
+                println!(
+                    "Resulting Prio: {}\n",
+                    prio.trunc() + (counters + score).min(0.99)
+                );
             }
             prio.trunc() + (counters + score).min(0.99)
         }
@@ -563,7 +560,7 @@ fn nav_event(
     let event_controller = EventControllerKey::new();
     let custom_controller = custom_handler.borrow().get_controller();
     let stack_page = Rc::clone(stack_page);
-    let multi = ConfigGuard::read().map_or(false, |c| c.runtime.multi);
+    let multi = ConfigGuard::read().is_ok_and(|c| c.runtime.multi);
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
         let search_bar = search_bar.clone();
@@ -576,7 +573,7 @@ fn nav_event(
             };
             let matches = |comp: Option<Key>, comp_mod: Option<ModifierType>| {
                 let key_matches = Some(key) == comp;
-                let mod_matches = comp_mod.map_or(false, |m| mods.contains(m));
+                let mod_matches = comp_mod.is_some_and(|m| mods.contains(m));
                 key_matches && mod_matches
             };
 
@@ -620,10 +617,9 @@ fn nav_event(
                         .shortcut_modifier
                         .map_or(false, |modifier| mods.contains(modifier))
                     {
-                        key_actions
-                            .search_bar
-                            .upgrade()
-                            .map(|entry| entry.set_text(""));
+                        if let Some(entry) = key_actions.search_bar.upgrade() {
+                            entry.set_text("")
+                        }
                         ctext.clear();
                     }
                     if ctext.is_empty() && current_mode.borrow().as_str() != "all" {
@@ -631,12 +627,12 @@ fn nav_event(
                             let _ =
                                 entry.activate_action("win.switch-mode", Some(&"all".to_variant()));
                             // apply filter and sorter
-                            filter
-                                .upgrade()
-                                .map(|filter| filter.changed(gtk4::FilterChange::Different));
-                            sorter
-                                .upgrade()
-                                .map(|sorter| sorter.changed(gtk4::SorterChange::Different));
+                            if let Some(filter) = filter.upgrade() {
+                                filter.changed(gtk4::FilterChange::Different)
+                            }
+                            if let Some(sorter) = sorter.upgrade() {
+                                sorter.changed(gtk4::SorterChange::Different)
+                            }
                         });
                     }
                     // Focus first item and check for overflow
@@ -670,10 +666,9 @@ fn nav_event(
                         if let Some(index) = key.name().and_then(|name| name.parse::<u32>().ok()) {
                             let internal_index = if index == 0 { 9 } else { index - 1 };
                             println!("index: {} - {}", index, internal_index);
-                            key_actions
-                                .results
-                                .upgrade()
-                                .map(|r| r.execute_by_index(internal_index));
+                            if let Some(r) = key_actions.results.upgrade() {
+                                r.execute_by_index(internal_index)
+                            }
                         }
                     } else {
                         return false.into();
@@ -720,7 +715,7 @@ fn change_event(
             // logic to switch to search mode with respective icons
             if current_text.len() == 1 {
                 let _ = search_bar.activate_action("win.switch-mode", Some(&"search".to_variant()));
-            } else if current_text.len() == 0 && mode_clone.borrow().as_str().trim() == "all" {
+            } else if current_text.is_empty() && mode_clone.borrow().as_str().trim() == "all" {
                 let _ = search_bar.activate_action("win.switch-mode", Some(&"all".to_variant()));
             }
             let trimmed = current_text.trim();
@@ -753,10 +748,10 @@ impl UserBindHandler {
         }
     }
     pub fn set_handler(&mut self, id: SignalHandlerId) {
-        if let Some(inner) = self.inner.upgrade() {
-            if let Some(id) = self.signal_id.replace(id) {
-                inner.disconnect(id);
-            }
+        if let Some(inner) = self.inner.upgrade()
+            && let Some(id) = self.signal_id.replace(id)
+        {
+            inner.disconnect(id);
         }
     }
     pub fn set_binds(

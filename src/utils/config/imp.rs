@@ -5,9 +5,9 @@ use std::{
 
 use crate::utils::{
     config::{
-        defaults::{BindDefaults, ConstantDefaults, FileDefaults, OtherDefaults},
         ConfigAppearance, ConfigBackdrop, ConfigBehavior, ConfigBinds, ConfigCaching, ConfigDebug,
         ConfigDefaultApps, ConfigExpand, ConfigFiles, ConfigUnits, SearchBarIcon, StatusBar,
+        defaults::{BindDefaults, ConstantDefaults, FileDefaults, OtherDefaults},
     },
     files::home_dir,
 };

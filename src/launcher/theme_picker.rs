@@ -1,11 +1,11 @@
-use std::fs::write;
 use std::fs::File;
+use std::fs::write;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::loader::Loader;
 use crate::loader::util::AppData;
 use crate::loader::util::RawLauncher;
-use crate::loader::Loader;
 use crate::sherlock_error;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::paths;
@@ -64,10 +64,8 @@ impl ThemePicker {
                 e.to_string()
             )
         })?;
-        if !exit {
-            if let Err(error) = Loader::load_css(false, Some(false)) {
-                let _result = error.insert(false);
-            }
+        if !exit && let Err(error) = Loader::load_css(false, Some(false)) {
+            let _result = error.insert(false);
         }
         Ok(())
     }

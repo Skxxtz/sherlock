@@ -1,8 +1,6 @@
 mod imp;
 
-use std::usize;
-
-use gio::glib::{object::ObjectExt, variant::ToVariant, SignalHandlerId, WeakRef};
+use gio::glib::{SignalHandlerId, WeakRef, object::ObjectExt, variant::ToVariant};
 use glib::Object;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{glib, prelude::WidgetExt};
@@ -15,7 +13,8 @@ use crate::{
 
 glib::wrapper! {
     pub struct EmojiContextAction(ObjectSubclass<imp::EmojiContextAction>)
-        @extends gtk4::Box, gtk4::Widget;
+        @extends gtk4::Box, gtk4::Widget,
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
 }
 
 impl EmojiContextAction {
@@ -100,12 +99,10 @@ impl EmojiContextAction {
                 } else {
                     result.push_str("{current}");
                 }
+            } else if count == color_index {
+                result.push_str("{current}");
             } else {
-                if count == color_index {
-                    result.push_str("{current}");
-                } else {
-                    result.push_str(default);
-                }
+                result.push_str(default);
             }
 
             remaining = &remaining[pos + pattern.len()..];
@@ -133,11 +130,14 @@ impl EmojiContextAction {
 
         if let Some(new_index) = obj.update_index(color_index, default_skin_tone, false) {
             imp.index.set(default_skin_tone);
-            imp.tones
+            if let Some(tmp) = imp
+                .tones
                 .borrow()
                 .get(new_index)
                 .and_then(|tmp| tmp.upgrade())
-                .map(|tmp| tmp.add_css_class("active"));
+            {
+                tmp.add_css_class("active")
+            }
         }
 
         let signal_id = obj.connect_local("context-action-should-activate", false, {

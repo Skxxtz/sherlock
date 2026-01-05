@@ -1,18 +1,17 @@
 use std::{borrow::Cow, cell::RefCell, collections::HashSet, fmt::Debug, rc::Rc, time::SystemTime};
 
 use gio::{
+    ListStore,
     glib::{
-        self,
+        self, Object, WeakRef,
         object::{Cast, CastNone, IsA, ObjectExt},
         variant::ToVariant,
-        Object, WeakRef,
     },
     prelude::ListModelExt,
-    ListStore,
 };
 use gtk4::{
-    prelude::WidgetExt, Box as GtkBox, GridView, Image, Label, ListScrollFlags, ListView,
-    SingleSelection, Stack, StackPage, Widget,
+    Box as GtkBox, GridView, Image, Label, ListScrollFlags, ListView, SingleSelection, Stack,
+    StackPage, Widget, prelude::WidgetExt,
 };
 
 use crate::{
@@ -61,7 +60,7 @@ impl SherlockSearch for PipedElements {
                 .collect();
             return concat_str.contains(&lowercase);
         }
-        return false;
+        false
     }
 }
 /// Apply icon by name or by path if applicable
@@ -99,20 +98,20 @@ impl ShortCut for GtkBox {
         if index == 10 {
             internal_index = 0;
         }
-        if let Some(child) = self.first_child() {
-            if let Some(label) = child.downcast_ref::<Label>() {
-                self.set_visible(true);
-                label.set_text(&format!("{}", mod_str));
-            }
+        if let Some(child) = self.first_child()
+            && let Some(label) = child.downcast_ref::<Label>()
+        {
+            self.set_visible(true);
+            label.set_text(mod_str);
         }
-        if let Some(child) = self.last_child() {
-            if let Some(label) = child.downcast_ref::<Label>() {
-                self.set_visible(true);
-                label.set_text(&format!("{}", internal_index));
-                return 1;
-            }
+        if let Some(child) = self.last_child()
+            && let Some(label) = child.downcast_ref::<Label>()
+        {
+            self.set_visible(true);
+            label.set_text(&format!("{}", internal_index));
+            return 1;
         }
-        return 0;
+        0
     }
     fn remove_shortcut(&self) -> i32 {
         let r = if self.is_visible() { 1 } else { 0 };
@@ -160,9 +159,9 @@ impl SherlockNav for ListView {
         } else {
             let _ = self.activate_action("win.context-mode", Some(&"".to_string().to_variant()));
         }
-        context_model
-            .and_then(|tmp| tmp.upgrade())
-            .map(|ctx| ctx.remove_all());
+        if let Some(ctx) = context_model.and_then(|tmp| tmp.upgrade()) {
+            ctx.remove_all()
+        }
         Some(())
     }
     fn focus_offset(
@@ -215,21 +214,19 @@ impl SherlockNav for ListView {
         } else {
             index
         };
-        if new_index != index {
-            if new_index < n_items {
-                self.scroll_to(new_index, ListScrollFlags::NONE, None);
-                let selected = selection.selected_item().and_downcast::<TileItem>()?;
+        if new_index != index && new_index < n_items {
+            self.scroll_to(new_index, ListScrollFlags::NONE, None);
+            let selected = selection.selected_item().and_downcast::<TileItem>()?;
 
-                // Logic to handle custom user binds
-                if let Some(handler) = custom_handler {
-                    let mut handler = handler.borrow_mut();
-                    let custom_binds = selected.binds();
-                    if let Some(id) = handler.set_binds(custom_binds, selected.downgrade()) {
-                        handler.set_handler(id);
-                    }
+            // Logic to handle custom user binds
+            if let Some(handler) = custom_handler {
+                let mut handler = handler.borrow_mut();
+                let custom_binds = selected.binds();
+                if let Some(id) = handler.set_binds(custom_binds, selected.downgrade()) {
+                    handler.set_handler(id);
                 }
-                self.context_action(context_model);
             }
+            self.context_action(context_model);
         }
         None
     }
@@ -281,16 +278,15 @@ impl SherlockNav for ListView {
         (changed || selected.alias() == *current_mode.borrow().trim()).then_some(())
     }
     fn execute_by_index(&self, index: u32) {
-        if let Some(selection) = self.model().and_downcast::<SingleSelection>() {
-            if let Some(item_at_index) = (0..selection.n_items())
+        if let Some(selection) = self.model().and_downcast::<SingleSelection>()
+            && let Some(item_at_index) = (0..selection.n_items())
                 .filter_map(|i| selection.item(i).and_downcast::<TileItem>())
                 .filter(|item| item.shortcut().is_some())
                 .nth(index as usize)
-            {
-                let exit: u8 = 0;
-                if let Some(row) = item_at_index.parent().upgrade() {
-                    row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
-                }
+        {
+            let exit: u8 = 0;
+            if let Some(row) = item_at_index.parent().upgrade() {
+                row.emit_by_name::<()>("row-should-activate", &[&exit, &""]);
             }
         }
     }
@@ -341,9 +337,9 @@ impl SherlockNav for GridView {
         } else {
             let _ = self.activate_action("win.context-mode", Some(&"".to_string().to_variant()));
         }
-        context_model
-            .and_then(|tmp| tmp.upgrade())
-            .map(|ctx| ctx.remove_all());
+        if let Some(ctx) = context_model.and_then(|tmp| tmp.upgrade()) {
+            ctx.remove_all()
+        }
         Some(())
     }
     fn focus_next(
@@ -359,11 +355,9 @@ impl SherlockNav for GridView {
         let n_items = selection.n_items();
         let new_index = index + 1;
 
-        if new_index != index {
-            if new_index < n_items {
-                selection.set_selected(new_index);
-                self.scroll_to(new_index, ListScrollFlags::NONE, None);
-            }
+        if new_index != index && new_index < n_items {
+            selection.set_selected(new_index);
+            self.scroll_to(new_index, ListScrollFlags::NONE, None);
         }
         self.context_action(context_model);
 
@@ -383,11 +377,9 @@ impl SherlockNav for GridView {
         } else {
             index
         };
-        if new_index != index {
-            if new_index < n_items {
-                self.scroll_to(new_index, ListScrollFlags::NONE, None);
-                self.context_action(context_model);
-            }
+        if new_index != index && new_index < n_items {
+            self.scroll_to(new_index, ListScrollFlags::NONE, None);
+            self.context_action(context_model);
         }
         None
     }

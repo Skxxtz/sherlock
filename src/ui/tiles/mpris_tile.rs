@@ -8,13 +8,13 @@ use gio::glib::{Bytes, WeakRef};
 use gio::prelude::ListModelExt;
 use gtk4::prelude::{BoxExt, WidgetExt};
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::{gdk, Box, Image, Overlay, Widget};
+use gtk4::{Box, Image, Overlay, Widget, gdk};
 
 use super::Tile;
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::audio_launcher::MusicPlayerLauncher;
 use crate::launcher::Launcher;
+use crate::launcher::audio_launcher::MusicPlayerLauncher;
 use crate::prelude::TileHandler;
 use crate::ui::g_templates::AppTile;
 

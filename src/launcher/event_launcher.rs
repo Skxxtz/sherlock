@@ -27,36 +27,32 @@ pub struct EventLauncher {
 impl EventLauncher {
     pub fn get_event(date: &str, event_start: &str, event_end: &str) -> Option<TeamsEvent> {
         let config = ConfigGuard::read().ok()?;
-        let calendar_client = config.default_apps.calendar_client.as_ref();
-        match calendar_client {
-            "thunderbird" => {
-                let thunderbird_manager = ThunderBirdEventManager::new()?;
-                if let Some(path) = &thunderbird_manager.database_path {
-                    match Connection::open(Path::new(path)) {
-                        Ok(conn) => {
-                            if let Some((meeting_url, title, start_time, end_time)) =
-                                thunderbird_manager.get_teams_event_by_time(
-                                    &conn,
-                                    date,
-                                    event_start,
-                                    event_end,
-                                )
-                            {
-                                return Some(TeamsEvent {
-                                    title,
-                                    meeting_url: meeting_url.to_string(),
-                                    start_time,
-                                    end_time,
-                                });
-                            }
+        if config.default_apps.calendar_client == "thunderbird" {
+            let thunderbird_manager = ThunderBirdEventManager::new()?;
+            if let Some(path) = &thunderbird_manager.database_path {
+                match Connection::open(Path::new(path)) {
+                    Ok(conn) => {
+                        if let Some((meeting_url, title, start_time, end_time)) =
+                            thunderbird_manager.get_teams_event_by_time(
+                                &conn,
+                                date,
+                                event_start,
+                                event_end,
+                            )
+                        {
+                            return Some(TeamsEvent {
+                                title,
+                                meeting_url: meeting_url.to_string(),
+                                start_time,
+                                end_time,
+                            });
                         }
-                        Err(_) => return None,
                     }
+                    Err(_) => return None,
                 }
             }
-            _ => {}
         }
-        return None;
+        None
     }
 }
 
@@ -105,7 +101,7 @@ impl ThunderBirdEventManager {
                 Err(_) => {
                     return Some(Self {
                         database_path: None,
-                    })
+                    });
                 }
             }
         }
@@ -153,25 +149,25 @@ impl ThunderBirdEventManager {
                 Ok((title, start_time, end_time, url))
             });
 
-            if let Ok(rows) = event_iter {
-                if let Some(row) = rows.flatten().nth(0) {
-                    let t1 = row.1 / 1_000_000;
-                    let t2 = row.2 / 1_000_000;
+            if let Ok(rows) = event_iter
+                && let Some(row) = rows.flatten().nth(0)
+            {
+                let t1 = row.1 / 1_000_000;
+                let t2 = row.2 / 1_000_000;
 
-                    let start_datetime: DateTime<Utc> = DateTime::from_timestamp(t1, 0)?;
-                    let end_datetime: DateTime<Utc> = DateTime::from_timestamp(t2, 0)?;
+                let start_datetime: DateTime<Utc> = DateTime::from_timestamp(t1, 0)?;
+                let end_datetime: DateTime<Utc> = DateTime::from_timestamp(t2, 0)?;
 
-                    let start_time = start_datetime.with_timezone(&Local);
-                    let end_time = end_datetime.with_timezone(&Local);
+                let start_time = start_datetime.with_timezone(&Local);
+                let end_time = end_datetime.with_timezone(&Local);
 
-                    let event_start = start_time.format("%H:%M").to_string();
-                    let event_end = end_time.format("%H:%M").to_string();
+                let event_start = start_time.format("%H:%M").to_string();
+                let event_end = end_time.format("%H:%M").to_string();
 
-                    return Some((row.3, row.0, event_start, event_end));
-                }
+                return Some((row.3, row.0, event_start, event_end));
             }
         }
 
-        return None;
+        None
     }
 }

@@ -87,25 +87,25 @@ impl SherlockFlags {
                     }
                     "toml" => {
                         // Setup to parse nested configs
-                        if let Ok(sources) = toml::de::from_str::<ConfigSourceFiles>(&config_str) {
-                            if !sources.source.is_empty() {
-                                sources
-                                    .source
-                                    .into_iter()
-                                    .map(|s| {
-                                        if s.file.starts_with("~/") {
-                                            expand_path(s.file, &home)
-                                        } else {
-                                            s.file
-                                        }
-                                    })
-                                    .filter(|f| f.is_file())
-                                    .filter_map(|f| read_to_string(&f).ok())
-                                    .for_each(|content| {
-                                        config_str.push('\n');
-                                        config_str.push_str(&content);
-                                    });
-                            }
+                        if let Ok(sources) = toml::de::from_str::<ConfigSourceFiles>(&config_str)
+                            && !sources.source.is_empty()
+                        {
+                            sources
+                                .source
+                                .into_iter()
+                                .map(|s| {
+                                    if s.file.starts_with("~/") {
+                                        expand_path(s.file, &home)
+                                    } else {
+                                        s.file
+                                    }
+                                })
+                                .filter(|f| f.is_file())
+                                .filter_map(|f| read_to_string(&f).ok())
+                                .for_each(|content| {
+                                    config_str.push('\n');
+                                    config_str.push_str(&content);
+                                });
                         }
                         toml::de::from_str(&config_str).map_err(|e| {
                             sherlock_error!(
@@ -121,7 +121,7 @@ impl SherlockFlags {
                                 "The file \"{}\" is not in a valid format.",
                                 &path.to_string_lossy()
                             )
-                        ))
+                        ));
                     }
                 };
                 match config_res {

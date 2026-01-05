@@ -1,6 +1,6 @@
 use gio::glib::WeakRef;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::{prelude::*, Box, Widget};
+use gtk4::{Box, Widget, prelude::*};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -13,8 +13,8 @@ use crate::loader::util::AppData;
 use crate::prelude::{IconComp, TileHandler};
 use crate::ui::g_templates::AppTile;
 
-use super::util::update_tag;
 use super::Tile;
+use super::util::update_tag;
 
 impl Tile {
     pub fn app(value: &AppData, launcher: Rc<Launcher>, item: &TileItem) -> AppTile {

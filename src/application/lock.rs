@@ -1,10 +1,10 @@
 use std::env;
-use std::fs::{self, remove_file, File};
+use std::fs::{self, File, remove_file};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use nix::sys::signal::kill;
 use nix::sys::signal::Signal::SIGKILL;
+use nix::sys::signal::kill;
 use nix::unistd::Pid;
 use procfs::process::Process;
 
@@ -59,7 +59,7 @@ impl LockFile {
             ));
         }
 
-        match File::create(&path) {
+        match File::create(path) {
             Ok(mut f) => {
                 write!(f, "{}", std::process::id()).map_err(|e| {
                     sherlock_error!(

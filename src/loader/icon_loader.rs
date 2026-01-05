@@ -1,8 +1,8 @@
 use super::Loader;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::files::home_dir;
-use crate::{sherlock_error, ICONS};
-use gtk4::{gdk::Display, IconTheme};
+use crate::{ICONS, sherlock_error};
+use gtk4::{IconTheme, gdk::Display};
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};

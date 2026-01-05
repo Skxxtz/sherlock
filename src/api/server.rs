@@ -2,6 +2,7 @@ use gio::glib::MainContext;
 use std::{cell::RefCell, os::unix::net::UnixStream, rc::Rc, thread};
 
 use crate::{
+    SOCKET_PATH,
     daemon::daemon::{SherlockDaemon, SizedMessage},
     loader::pipe_loader::PipedData,
     sher_log, sherlock_error,
@@ -9,7 +10,6 @@ use crate::{
         config::ConfigGuard,
         errors::{SherlockError, SherlockErrorType},
     },
-    SOCKET_PATH,
 };
 
 use super::{api::SherlockAPI, call::ApiCall};
@@ -40,7 +40,7 @@ impl SherlockServer {
                             });
                         }
                         if let Some(elements) = data.elements.take() {
-                            let raw = ConfigGuard::read().map_or(false, |c| c.runtime.display_raw);
+                            let raw = ConfigGuard::read().is_ok_and(|c| c.runtime.display_raw);
                             let request = if raw {
                                 ApiCall::DisplayRaw(elements)
                             } else {

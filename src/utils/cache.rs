@@ -1,7 +1,7 @@
 use std::{fmt::Debug, fs, path::Path};
 
 use bincode;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{
     sherlock_error,
@@ -18,10 +18,10 @@ impl BinaryCache {
 
         // Encode to binary
         let cfg = bincode::config::standard().with_fixed_int_encoding();
-        let encoded = bincode::serde::encode_to_vec(&data, cfg)
+        let encoded = bincode::serde::encode_to_vec(data, cfg)
             .map_err(|e| sherlock_error!(SherlockErrorType::SerializationError, e.to_string()))?;
 
-        std::fs::write(&cache, encoded).map_err(|e| {
+        std::fs::write(cache, encoded).map_err(|e| {
             sherlock_error!(
                 SherlockErrorType::FileWriteError(cache.to_path_buf()),
                 e.to_string()
@@ -35,7 +35,7 @@ impl BinaryCache {
     ) -> Result<T, SherlockError> {
         let cache = path.as_ref();
 
-        let bytes = std::fs::read(&cache).map_err(|e| {
+        let bytes = std::fs::read(cache).map_err(|e| {
             sherlock_error!(
                 SherlockErrorType::FileReadError(cache.to_path_buf()),
                 e.to_string()

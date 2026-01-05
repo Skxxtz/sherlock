@@ -7,7 +7,7 @@ use crate::{
     loader::Loader,
     sherlock_error,
     utils::{
-        config::{imp::WithRoot, ConfigAppearance, ConfigFiles, SherlockConfig, SherlockFlags},
+        config::{ConfigAppearance, ConfigFiles, SherlockConfig, SherlockFlags, imp::WithRoot},
         errors::{SherlockError, SherlockErrorType},
         files::{expand_path, home_dir},
     },
@@ -130,11 +130,14 @@ impl SherlockConfig {
             skipped_message("fallback.json");
         }
 
-        if let Some(loc) = loc.to_str() {
-            if loc != "~/.config/sherlock/" {
-                let loc = loc.trim_end_matches("/");
-                println!("\nUse \x1b[32msherlock --config {}/config.toml\x1b[0m to run sherlock with the custom configuration.", loc);
-            }
+        if let Some(loc) = loc.to_str()
+            && loc != "~/.config/sherlock/"
+        {
+            let loc = loc.trim_end_matches("/");
+            println!(
+                "\nUse \x1b[32msherlock --config {}/config.toml\x1b[0m to run sherlock with the custom configuration.",
+                loc
+            );
         }
 
         std::process::exit(0);
@@ -151,39 +154,39 @@ impl SherlockConfig {
 
         // Override config files from flags
         config.files.config = expand_path(
-            &sherlock_flags
+            sherlock_flags
                 .config
                 .as_deref()
                 .unwrap_or(&config.files.config),
             &home,
         );
         config.files.fallback = expand_path(
-            &sherlock_flags
+            sherlock_flags
                 .fallback
                 .as_deref()
                 .unwrap_or(&config.files.fallback),
             &home,
         );
         config.files.css = expand_path(
-            &sherlock_flags.style.as_deref().unwrap_or(&config.files.css),
+            sherlock_flags.style.as_deref().unwrap_or(&config.files.css),
             &home,
         );
         config.files.alias = expand_path(
-            &sherlock_flags
+            sherlock_flags
                 .alias
                 .as_deref()
                 .unwrap_or(&config.files.alias),
             &home,
         );
         config.files.ignore = expand_path(
-            &sherlock_flags
+            sherlock_flags
                 .ignore
                 .as_deref()
                 .unwrap_or(&config.files.ignore),
             &home,
         );
         config.caching.cache = expand_path(
-            &sherlock_flags
+            sherlock_flags
                 .cache
                 .as_deref()
                 .unwrap_or(&config.caching.cache),

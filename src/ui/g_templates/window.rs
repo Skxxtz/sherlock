@@ -1,6 +1,6 @@
 mod imp {
     use gtk4::subclass::prelude::*;
-    use gtk4::{glib, ApplicationWindow};
+    use gtk4::{ApplicationWindow, glib};
     use gtk4::{Box, CompositeTemplate, Label, Spinner, Stack};
 
     #[derive(CompositeTemplate, Default)]
@@ -45,9 +45,8 @@ mod imp {
 
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
-    glib,
+    Application, glib,
     prelude::{GtkWindowExt, WidgetExt},
-    Application,
 };
 
 use crate::ui::util::ConfKeys;
@@ -56,7 +55,7 @@ use crate::utils::config::ConfigGuard;
 glib::wrapper! {
     pub struct MainWindow(ObjectSubclass<imp::MainWindow>)
         @extends gtk4::Widget, gtk4::Window, gtk4::ApplicationWindow,
-        @implements gtk4::Buildable;
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget, gtk4::Native, gtk4::Root, gtk4::ShortcutManager, gio::ActionGroup, gio::ActionMap;
 }
 
 impl MainWindow {
@@ -64,10 +63,10 @@ impl MainWindow {
         let obj = glib::Object::new::<Self>();
         let imp = obj.imp();
 
-        if let Ok(config) = ConfigGuard::read() {
-            if config.expand.enable {
-                obj.set_valign(gtk4::Align::Start);
-            }
+        if let Ok(config) = ConfigGuard::read()
+            && config.expand.enable
+        {
+            obj.set_valign(gtk4::Align::Start);
         }
 
         let custom_binds = ConfKeys::new();

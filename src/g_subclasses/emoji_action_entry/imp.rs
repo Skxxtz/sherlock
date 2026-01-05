@@ -3,7 +3,7 @@ use gio::glib::subclass::Signal;
 use gio::glib::{SignalHandlerId, WeakRef};
 use gtk4::prelude::{BoxExt, GestureSingleExt, WidgetExt};
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, prelude::*, GestureClick, Label};
+use gtk4::{GestureClick, Label, glib, prelude::*};
 use once_cell::sync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
@@ -62,11 +62,11 @@ impl ObjectImpl for EmojiContextAction {
 
             let obj = obj.downgrade();
             gesture.connect_pressed(move |_, n_clicks, _, _| {
-                if n_clicks >= 2 {
-                    if let Some(obj) = obj.upgrade() {
-                        let exit: u8 = 0;
-                        obj.emit_by_name::<()>("context-action-should-activate", &[&exit, &""]);
-                    }
+                if n_clicks >= 2
+                    && let Some(obj) = obj.upgrade()
+                {
+                    let exit: u8 = 0;
+                    obj.emit_by_name::<()>("context-action-should-activate", &[&exit, &""]);
                 }
             });
 
@@ -78,9 +78,11 @@ impl ObjectImpl for EmojiContextAction {
         static SIGNALS: OnceLock<Vec<Signal>> = OnceLock::new();
         // Signal used to activate actions connected to the SherlockRow
         SIGNALS.get_or_init(|| {
-            vec![Signal::builder("context-action-should-activate")
-                .param_types([u8::static_type()])
-                .build()]
+            vec![
+                Signal::builder("context-action-should-activate")
+                    .param_types([u8::static_type()])
+                    .build(),
+            ]
         })
     }
 }

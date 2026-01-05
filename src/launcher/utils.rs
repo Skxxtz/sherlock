@@ -51,15 +51,11 @@ pub fn to_title_case(input_str: &str) -> String {
     result
 }
 
-#[derive(Debug, Copy, Clone, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Copy, Clone, Deserialize, PartialEq, Serialize, Default)]
 pub enum HomeType {
     OnlyHome,
     Home,
+    #[default]
     Search,
     Persist,
-}
-impl Default for HomeType {
-    fn default() -> Self {
-        HomeType::Search
-    }
 }

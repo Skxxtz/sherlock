@@ -3,8 +3,8 @@ use crate::{
     daemon::daemon::SizedMessage,
     g_subclasses::sherlock_row::SherlockRow,
     launcher::{
-        pomodoro_launcher::{Pomodoro, PomodoroStyle},
         Launcher,
+        pomodoro_launcher::{Pomodoro, PomodoroStyle},
     },
     prelude::TileHandler,
     sherlock_error,
@@ -12,13 +12,13 @@ use crate::{
     utils::errors::{SherlockError, SherlockErrorType},
 };
 use gdk_pixbuf::{
-    prelude::PixbufAnimationExtManual, subclass::prelude::ObjectSubclassIsExt, Pixbuf,
+    Pixbuf, prelude::PixbufAnimationExtManual, subclass::prelude::ObjectSubclassIsExt,
 };
 use gio::glib::{
-    object::{Cast, ObjectExt},
     SourceId, WeakRef,
+    object::{Cast, ObjectExt},
 };
-use gtk4::{gdk::Texture, glib, prelude::WidgetExt, Box, Label, Picture, Widget};
+use gtk4::{Box, Label, Picture, Widget, gdk::Texture, glib, prelude::WidgetExt};
 use serde::Deserialize;
 use std::os::unix::net::UnixStream;
 use std::{
@@ -27,7 +27,6 @@ use std::{
     path::PathBuf,
     rc::Rc,
     time::{Duration, SystemTime, UNIX_EPOCH},
-    usize,
 };
 
 use super::Tile;
@@ -69,14 +68,11 @@ impl PomodoroInterface {
             style: pomodoro.style.clone(),
         };
 
-        match pomodoro.style {
-            PomodoroStyle::Minimal => {
-                if let Some(label) = instance.update_field.upgrade() {
-                    label.set_halign(gtk4::Align::Start);
-                    label.set_width_chars(0);
-                }
+        if pomodoro.style == PomodoroStyle::Minimal {
+            if let Some(label) = instance.update_field.upgrade() {
+                label.set_halign(gtk4::Align::Start);
+                label.set_width_chars(0);
             }
-            _ => {}
         }
 
         match instance.send_message("test") {
@@ -97,14 +93,11 @@ impl PomodoroInterface {
     fn replace_tile(&mut self, remaining: WeakRef<Label>, anim: WeakRef<Picture>) {
         self.animation = anim;
         self.update_field = remaining;
-        match self.style {
-            PomodoroStyle::Minimal => {
-                if let Some(label) = self.update_field.upgrade() {
-                    label.set_halign(gtk4::Align::Start);
-                    label.set_width_chars(0);
-                }
+        if self.style == PomodoroStyle::Minimal {
+            if let Some(label) = self.update_field.upgrade() {
+                label.set_halign(gtk4::Align::Start);
+                label.set_width_chars(0);
             }
-            _ => {}
         }
     }
     fn send_message(&self, message: &str) -> Result<(), SherlockError> {
@@ -145,8 +138,7 @@ impl PomodoroInterface {
                 frames.push(buf);
             }
 
-            let advanced = iter.advance(start_time);
-            if !advanced {
+            if !iter.advance(start_time) {
                 break;
             }
         }
@@ -174,11 +166,13 @@ impl PomodoroInterface {
             }
         }
     }
+
     fn start(&mut self) {
         if let Err(e) = self.send_message("start") {
             let _result = e.insert(false);
         }
     }
+
     fn stop(&mut self) {
         if !self.running.get() {
             return;
@@ -193,6 +187,7 @@ impl PomodoroInterface {
             self.running.set(false);
         }
     }
+
     fn get_timer(&self) -> Option<Timer> {
         let mut stream = UnixStream::connect(&self.socket).ok()?;
         stream.write_all(b"show").ok();
@@ -203,12 +198,13 @@ impl PomodoroInterface {
         }
         None
     }
+
     fn update_ui(&mut self) {
         if let Some(timer) = self.get_timer() {
-            if self.running.get() {
-                if let Some(handle) = self.handle.take() {
-                    handle.remove();
-                }
+            if self.running.get()
+                && let Some(handle) = self.handle.take()
+            {
+                handle.remove();
             }
             self.running.set(timer.active);
             let label = self.update_field.clone();
@@ -245,7 +241,7 @@ impl PomodoroInterface {
                 let handle = glib::timeout_add_local(Duration::new(1, 0), {
                     let is_running = Rc::clone(&self.running);
                     move || {
-                        while remaining > 0 {
+                        if remaining > 0 {
                             remaining -= 1;
                             let new_frame = length - length * remaining / 1500;
                             if current_frame.get() != new_frame {
@@ -266,6 +262,7 @@ impl PomodoroInterface {
             self.update_anim(0);
         }
     }
+
     fn update_label(&self, time: u64) {
         if let Some(label) = self.update_field.upgrade() {
             let mins = time / 60;
@@ -273,12 +270,13 @@ impl PomodoroInterface {
             label.set_text(&format!("{:0>2}:{:0>2}", mins, secs));
         }
     }
+
     fn update_anim(&self, frame: usize) {
-        if let Some(image) = self.animation.upgrade() {
-            if let Some(pix) = self.frames.as_deref().and_then(|f| f.get(frame)) {
-                let paintable = Texture::for_pixbuf(pix);
-                image.set_paintable(Some(&paintable));
-            }
+        if let Some(image) = self.animation.upgrade()
+            && let Some(pix) = self.frames.as_deref().and_then(|f| f.get(frame))
+        {
+            let paintable = Texture::for_pixbuf(pix);
+            image.set_paintable(Some(&paintable));
         }
     }
 }

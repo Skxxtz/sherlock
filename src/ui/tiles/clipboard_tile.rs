@@ -1,6 +1,6 @@
 use gio::glib::{Bytes, WeakRef};
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::{gdk, prelude::*, Box, Image, Widget};
+use gtk4::{Box, Image, Widget, gdk, prelude::*};
 use regex::Regex;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -9,8 +9,8 @@ use std::rc::Rc;
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
 use crate::g_subclasses::tile_item::UpdateHandler;
-use crate::launcher::clipboard_launcher::ClipboardLauncher;
 use crate::launcher::Launcher;
+use crate::launcher::clipboard_launcher::ClipboardLauncher;
 use crate::loader::launcher_loader::COLOR_RE;
 use crate::prelude::{IconComp, TileHandler};
 use crate::ui::g_templates::{AppTile, CalcTile};

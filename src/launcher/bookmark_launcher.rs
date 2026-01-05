@@ -31,11 +31,14 @@ impl BookmarkLauncher {
                 ))?;
                 Err(sherlock_error!(
                     SherlockErrorType::UnsupportedBrowser(browser.to_string()),
-                    format!("The browser \"<i>{}</i>\" is either not supported or not recognized.\n\
+                    format!(
+                        "The browser \"<i>{}</i>\" is either not supported or not recognized.\n\
                         Check the \
                         <span foreground=\"#247BA0\"><u><a href=\"https://github.com/Skxxtz/sherlock/blob/main/docs/launchers.md#bookmark-launcher\">documentation</a></u></span> \
                         for more information.\n\
-                        ", browser)
+                        ",
+                        browser
+                    )
                 ))
             }
         }
@@ -133,12 +136,11 @@ impl MozillaSqliteParser {
         let cache_dir = get_cache_dir()?;
         let cache = cache_dir.join(format!("bookmarks/{}-cache.bin", prefix));
         if file_has_changed(&cache, &self.path) {
-            self.read_new(raw).map(|v| {
-                if let Err(e) = BinaryCache::write(cache, &v) {
+            self.read_new(raw).inspect(|v| {
+                if let Err(e) = BinaryCache::write(cache, v) {
                     let _ = sher_log!("Updating cached bookmarks");
                     let _result = e.insert(false);
                 };
-                v
             })
         } else {
             BinaryCache::read::<Vec<AppData>, _>(cache).map(|mut app_data| {

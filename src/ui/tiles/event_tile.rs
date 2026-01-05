@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::vec;
 
+use gio::glib::WeakRef;
 use gio::glib::object::{Cast, ObjectExt};
 use gio::glib::variant::ToVariant;
-use gio::glib::WeakRef;
 use gtk4::prelude::WidgetExt;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{Box, Widget};
@@ -13,8 +13,8 @@ use gtk4::{Box, Widget};
 use super::Tile;
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::event_launcher::EventLauncher;
 use crate::launcher::Launcher;
+use crate::launcher::event_launcher::EventLauncher;
 use crate::prelude::TileHandler;
 use crate::ui::g_templates::EventTile;
 

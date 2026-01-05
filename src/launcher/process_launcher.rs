@@ -1,8 +1,9 @@
-use nix::sys::signal::{kill, Signal};
+use nix::sys::signal::{Signal, kill};
 use nix::unistd::Pid;
-use procfs::process::{all_processes, Process};
+use procfs::process::{Process, all_processes};
 use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 use crate::loader::util::AppData;
 use crate::sherlock_error;
@@ -16,7 +17,7 @@ pub struct ProcessLauncher {
 impl ProcessLauncher {
     pub fn new(prio: f32) -> Option<Self> {
         let processes = Self::get_all_processes(prio)?;
-        return Some(Self { processes });
+        Some(Self { processes })
     }
     pub fn kill(pid: (i32, i32)) -> Result<(), SherlockError> {
         if pid.0 != pid.1 {
@@ -42,7 +43,7 @@ impl ProcessLauncher {
                 let user_processes: Vec<Process> = procs
                     .par_bridge()
                     .filter_map(Result::ok)
-                    .filter(|p| p.uid().map_or(false, |uid| uid > 0))
+                    .filter(|p| p.uid().is_ok_and(|uid| uid > 0))
                     .collect();
                 let mut process_names: HashMap<i32, String> = user_processes
                     .par_iter()
@@ -66,16 +67,16 @@ impl ProcessLauncher {
                             let named_id = tmp.get(&item.pid).copied().unwrap_or(item.pid);
                             process_names
                                 .remove(&named_id)
-                                .and_then(|name| Some(((item.pid, named_id), name)))
+                                .map(|name| ((item.pid, named_id), name))
                         } else if item.tty_nr != 0 {
                             if let Some(r) = tmp.remove(&item.pid) {
                                 tmp.insert(item.ppid, r);
-                            } else if tmp.get(&item.ppid).is_none() {
-                                tmp.insert(item.ppid, item.pid);
+                            } else if let Entry::Vacant(e) = tmp.entry(item.ppid) {
+                                e.insert(item.pid);
                             }
                             None
-                        } else if tmp.get(&item.ppid).is_none() {
-                            tmp.insert(item.ppid, item.pid);
+                        } else if let Entry::Vacant(e) = tmp.entry(item.ppid) {
+                            e.insert(item.pid);
                             None
                         } else {
                             None

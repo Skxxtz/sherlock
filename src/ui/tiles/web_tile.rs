@@ -2,18 +2,18 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use gio::glib::object::{Cast, ObjectExt};
 use gio::glib::WeakRef;
+use gio::glib::object::{Cast, ObjectExt};
+use gtk4::Box;
 use gtk4::prelude::WidgetExt;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::Box;
 
-use super::util::update_tag;
 use super::Tile;
+use super::util::update_tag;
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::web_launcher::WebLauncher;
 use crate::launcher::Launcher;
+use crate::launcher::web_launcher::WebLauncher;
 use crate::prelude::{IconComp, TileHandler};
 use crate::ui::g_templates::AppTile;
 

@@ -1,8 +1,8 @@
 mod imp {
     use gtk4::subclass::prelude::*;
-    use gtk4::{glib, Entry, Image, ScrolledWindow};
     use gtk4::{Box as GtkBox, Label};
     use gtk4::{CompositeTemplate, GridView};
+    use gtk4::{Entry, Image, ScrolledWindow, glib};
 
     #[derive(CompositeTemplate, Default)]
     #[template(resource = "/dev/skxxtz/sherlock/ui/grid_search.ui")]
@@ -64,7 +64,7 @@ use gtk4::subclass::prelude::ObjectSubclassIsExt;
 glib::wrapper! {
     pub struct GridSearchUi(ObjectSubclass<imp::GridSearchUi>)
         @extends gtk4::Widget, gtk4::Box,
-        @implements gtk4::Buildable;
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
 }
 
 use crate::utils::config::ConfigGuard;

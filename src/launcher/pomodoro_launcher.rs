@@ -7,9 +7,10 @@ pub struct Pomodoro {
     pub style: PomodoroStyle,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub enum PomodoroStyle {
     Minimal,
+    #[default]
     Normal,
 }
 impl FromStr for PomodoroStyle {
@@ -19,10 +20,5 @@ impl FromStr for PomodoroStyle {
             "minimal" => Ok(Self::Minimal),
             _ => Ok(Self::Normal),
         }
-    }
-}
-impl Default for PomodoroStyle {
-    fn default() -> Self {
-        Self::Normal
     }
 }

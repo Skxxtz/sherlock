@@ -1,6 +1,6 @@
+use futures::StreamExt;
 use futures::future::join_all;
 use futures::stream::FuturesUnordered;
-use futures::StreamExt;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -10,14 +10,13 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::u32;
 
-use gio::glib::{self, Object, WeakRef};
 use gio::ListStore;
+use gio::glib::{self, Object, WeakRef};
 use gtk4::gdk::{Key, ModifierType};
 use gtk4::{
-    prelude::*, Box as GtkBox, CustomFilter, CustomSorter, Entry, Justification, Label, ListView,
-    ScrolledWindow, SignalListItemFactory, Spinner, Widget,
+    Box as GtkBox, CustomFilter, CustomSorter, Entry, Justification, Label, ListView,
+    ScrolledWindow, SignalListItemFactory, Spinner, Widget, prelude::*,
 };
 use serde::Deserialize;
 
@@ -179,11 +178,7 @@ impl ConfKeys {
             .ok()
             .and_then(|c| {
                 let s = &c.appearance.mod_key_ascii;
-                if s.len() == 8 {
-                    Some(s.clone())
-                } else {
-                    None
-                }
+                if s.len() == 8 { Some(s.clone()) } else { None }
             })
             .unwrap_or_else(BindDefaults::modkey_ascii);
 
@@ -359,23 +354,23 @@ impl SearchHandler {
 
             // Check if only one launcher exists
             if patches.len() == 1 {
-                let (launcher, _) = patches.get(0).unwrap();
-                if let LauncherType::Emoji(emj) = &launcher.launcher_type {
-                    if let Some(results) = self.results.upgrade() {
-                        let tone = emj.default_skin_tone.get_name();
-                        let _ = results.activate_action("win.emoji-page", Some(&tone.to_variant()));
-                        let _ = results.activate_action(
-                            "win.switch-page",
-                            Some(&String::from("x->emoji-page").to_variant()),
-                        );
-                    }
+                let (launcher, _) = patches.first().unwrap();
+                if let LauncherType::Emoji(emj) = &launcher.launcher_type
+                    && let Some(results) = self.results.upgrade()
+                {
+                    let tone = emj.default_skin_tone.get_name();
+                    let _ = results.activate_action("win.emoji-page", Some(&tone.to_variant()));
+                    let _ = results.activate_action(
+                        "win.switch-page",
+                        Some(&String::from("x->emoji-page").to_variant()),
+                    );
                 }
             }
 
             // Collect rows and holder
             let rows: Vec<TileItem> = patches
                 .into_iter()
-                .map(|(launcher, patch)| {
+                .flat_map(|(launcher, patch)| {
                     if let Some(alias) = &launcher.alias {
                         holder
                             .entry(format!("{} ", alias))
@@ -384,7 +379,6 @@ impl SearchHandler {
                     }
                     patch
                 })
-                .flatten()
                 .collect();
 
             let _freeze_guard = model.freeze_notify();
@@ -476,7 +470,7 @@ pub fn update_async(
     let current_task_clone = Rc::clone(current_task);
     let keyword = Arc::new(keyword);
     let spinner_row = update_tiles
-        .get(0)
+        .first()
         .and_then(|item| item.upgrade())
         .and_then(|row| row.parent().upgrade());
     let task = glib::MainContext::default().spawn_local({
@@ -525,6 +519,5 @@ pub fn display_raw<T: AsRef<str>>(content: T, center: bool) -> GtkBox {
                 ctx.set_justification(Justification::Center);
             }
         });
-    let row = builder.object.unwrap_or_default();
-    row
+    builder.object.unwrap_or_default()
 }

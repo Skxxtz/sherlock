@@ -1,7 +1,7 @@
-use gio::glib::object::ObjectExt;
 use gio::glib::WeakRef;
+use gio::glib::object::ObjectExt;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::{prelude::*, Widget};
+use gtk4::{Widget, prelude::*};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -9,8 +9,8 @@ use std::vec;
 
 use crate::actions::{execute_from_attrs, get_attrs_map};
 use crate::g_subclasses::sherlock_row::SherlockRow;
-use crate::launcher::bulk_text_launcher::{AsyncCommandResponse, BulkTextLauncher};
 use crate::launcher::Launcher;
+use crate::launcher::bulk_text_launcher::{AsyncCommandResponse, BulkTextLauncher};
 use crate::prelude::{IconComp, TileHandler};
 use crate::ui::g_templates::ApiTile;
 
@@ -61,9 +61,9 @@ impl ApiTileHandler {
         let tile = self.tile.upgrade()?;
         let imp = tile.imp();
 
-        imp.content_title.set_text(&keyword);
+        imp.content_title.set_text(keyword);
 
-        if let Some(response) = launcher.get_result(&keyword).await {
+        if let Some(response) = launcher.get_result(keyword).await {
             let AsyncCommandResponse {
                 title,
                 content,

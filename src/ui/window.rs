@@ -1,13 +1,13 @@
-use gio::glib::object::ObjectExt;
-use gio::glib::WeakRef;
 use gio::ActionEntry;
+use gio::glib::WeakRef;
+use gio::glib::object::ObjectExt;
+use gtk4::Stack;
 use gtk4::gdk::Key;
 use gtk4::prelude::{EventControllerExt, GtkWindowExt, WidgetExt};
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::Stack;
 use gtk4::{
-    prelude::*, Application, ApplicationWindow, EventControllerFocus, EventControllerKey,
-    StackTransitionType,
+    Application, ApplicationWindow, EventControllerFocus, EventControllerKey, StackTransitionType,
+    prelude::*,
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::RefCell;
@@ -15,7 +15,7 @@ use std::rc::Rc;
 
 use crate::api::server::SherlockServer;
 use crate::daemon::daemon::close_response;
-use crate::launcher::emoji_picker::{emojies, SkinTone};
+use crate::launcher::emoji_picker::{SkinTone, emojies};
 use crate::ui::g_templates::MainWindow;
 use crate::utils::config::ConfigGuard;
 
@@ -48,7 +48,7 @@ pub fn window(
     let current_stack_page = Rc::new(RefCell::new(String::from("search-page")));
 
     window.init_layer_shell();
-    window.set_namespace("sherlock");
+    window.set_namespace(Some("sherlock"));
     window.set_layer(Layer::Overlay);
     window.set_keyboard_mode(KeyboardMode::Exclusive);
 
@@ -266,11 +266,11 @@ pub fn window(
     let action_remove_page = ActionEntry::builder("rm-page")
         .parameter_type(Some(&String::static_variant_type()))
         .activate(move |_: &ApplicationWindow, _, parameter| {
-            if let Some(parameter) = parameter.and_then(|p| p.get::<String>()) {
-                if let Some(stack_clone) = stack_clone.upgrade() {
-                    if let Some(child) = stack_clone.child_by_name(&parameter) {
-                        stack_clone.remove(&child);
-                    }
+            if let Some(parameter) = parameter.and_then(|p| p.get::<String>())
+                && let Some(stack_clone) = stack_clone.upgrade()
+            {
+                if let Some(child) = stack_clone.child_by_name(&parameter) {
+                    stack_clone.remove(&child);
                 }
             }
         })
@@ -336,17 +336,17 @@ fn make_backdrop(
 
     // Set backdrop dimensions
     backdrop.connect_realize(|window| {
-        if let Some(surf) = window.surface() {
-            if let Some(monitor) = surf.display().monitor_at_surface(&surf) {
-                let rect = monitor.geometry();
-                window.set_default_size(rect.width(), rect.height());
-            }
+        if let Some(surf) = window.surface()
+            && let Some(monitor) = surf.display().monitor_at_surface(&surf)
+        {
+            let rect = monitor.geometry();
+            window.set_default_size(rect.width(), rect.height());
         }
     });
 
     // Initialize layershell
     backdrop.set_widget_name("backdrop");
-    backdrop.set_namespace("sherlock-backdrop");
+    backdrop.set_namespace(Some("sherlock-backdrop"));
     backdrop.set_exclusive_zone(0);
     backdrop.set_layer(gtk4_layer_shell::Layer::Overlay);
     backdrop.set_anchor(edge, true);
@@ -357,19 +357,25 @@ fn make_backdrop(
     backdrop.connect_show({
         let window = window_clone.clone();
         move |_| {
-            window.upgrade().map(|win| win.set_visible(true));
+            if let Some(win) = window.upgrade() {
+                win.set_visible(true)
+            }
         }
     });
     main_window.connect_destroy({
         let backdrop = backdrop_clone.clone();
         move |_| {
-            backdrop.upgrade().map(|win| win.close());
+            if let Some(win) = backdrop.upgrade() {
+                win.close()
+            }
         }
     });
     main_window.connect_hide({
         let backdrop = backdrop_clone.clone();
         move |_| {
-            backdrop.upgrade().map(|win| win.set_visible(false));
+            if let Some(win) = backdrop.upgrade() {
+                win.set_visible(false)
+            }
         }
     });
 

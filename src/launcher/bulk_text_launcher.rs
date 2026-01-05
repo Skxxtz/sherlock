@@ -3,7 +3,7 @@ use std::env::home_dir;
 use std::process::Stdio;
 use tokio::io::{AsyncReadExt, BufReader};
 use tokio::process::Command;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 use crate::loader::util::ApplicationAction;
 
@@ -40,7 +40,7 @@ impl BulkTextLauncher {
             return None;
         };
 
-        let a = self.args.replace("{keyword}", &keyword);
+        let a = self.args.replace("{keyword}", keyword);
         let args = a.split(" ");
 
         // build execution command
@@ -98,7 +98,7 @@ impl BulkTextLauncher {
                     let mut response = AsyncCommandResponse::new();
                     response.title = Some(String::from("Script returned an error."));
                     response.content = Some(format!("Status: {:?}", status));
-                    return Some(response);
+                    Some(response)
                 }
             }
             Ok((Err(_), _, _)) => {

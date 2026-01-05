@@ -1,8 +1,8 @@
-use gio::glib::WeakRef;
 use gio::ListStore;
+use gio::glib::WeakRef;
 use gtk4::gdk::ModifierType;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::{self, gdk::Key, prelude::*, EventControllerKey};
+use gtk4::{self, EventControllerKey, gdk::Key, prelude::*};
 use gtk4::{
     Box as GtkBox, CustomFilter, CustomSorter, Entry, FilterListModel, GridView, Label, Ordering,
     Overlay, SignalListItemFactory, SingleSelection, SortListModel, Widget,
@@ -24,13 +24,14 @@ use crate::ui::key_actions::EmojiKeyActions;
 use crate::ui::util::{ConfKeys, ContextUI, SearchHandler};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
-#[derive(Clone, Debug, Deserialize, Serialize, Copy)]
+#[derive(Clone, Debug, Deserialize, Serialize, Copy, Default)]
 pub enum SkinTone {
     Light,
     MediumLight,
     Medium,
     MediumDark,
     Dark,
+    #[default]
     Simpsons,
 }
 impl SkinTone {
@@ -74,11 +75,6 @@ impl SkinTone {
             Self::Dark => 4,
             Self::Simpsons => 5,
         }
-    }
-}
-impl Default for SkinTone {
-    fn default() -> Self {
-        Self::Simpsons
     }
 }
 
@@ -129,7 +125,7 @@ pub fn emojies(
     stack_page: &Rc<RefCell<String>>,
     skin_tone: SkinTone,
 ) -> Result<(Overlay, WeakRef<ListStore>), SherlockError> {
-    let (search_query, overlay, ui, handler, context) = construct(skin_tone.clone())?;
+    let (search_query, overlay, ui, handler, context) = construct(skin_tone)?;
     let imp = ui.imp();
 
     let search_bar = imp.search_bar.downgrade();
@@ -168,7 +164,7 @@ pub fn emojies(
     );
 
     let model = handler.model.unwrap();
-    return Ok((overlay, model.clone()));
+    Ok((overlay, model.clone()))
 }
 fn nav_event(
     search_bar: WeakRef<Entry>,
@@ -180,7 +176,7 @@ fn nav_event(
 ) {
     // Wrap the event controller in an Rc<RefCell> for shared mutability
     let event_controller = EventControllerKey::new();
-    let stack_page = Rc::clone(&stack_page);
+    let stack_page = Rc::clone(stack_page);
 
     event_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     event_controller.connect_key_pressed({
@@ -193,7 +189,7 @@ fn nav_event(
             }
             let matches = |comp: Option<Key>, comp_mod: Option<ModifierType>| {
                 let key_matches = Some(key) == comp;
-                let mod_matches = comp_mod.map_or(false, |m| modifiers.contains(m));
+                let mod_matches = comp_mod.is_some_and(|m| modifiers.contains(m));
                 key_matches && mod_matches
             };
             match key {
@@ -227,7 +223,7 @@ fn nav_event(
                 }
 
                 Key::BackSpace => {
-                    let empty = search_bar.upgrade().map_or(true, |s| s.text().is_empty());
+                    let empty = search_bar.upgrade().is_none_or(|s| s.text().is_empty());
                     if empty {
                         if let Some(view) = view.upgrade() {
                             let _ = view.activate_action(
@@ -253,9 +249,9 @@ fn nav_event(
             true.into()
         }
     });
-    search_bar
-        .upgrade()
-        .map(|entry| entry.add_controller(event_controller));
+    if let Some(entry) = search_bar.upgrade() {
+        entry.add_controller(event_controller)
+    }
 }
 
 fn construct(
@@ -365,7 +361,7 @@ fn make_factory() -> SignalListItemFactory {
             .expect("Last child should be a label");
 
         emoji_label.set_text(&emoji_obj.emoji());
-        emoji_name.set_text(&emoji_obj.title().split(';').next().unwrap_or_default());
+        emoji_name.set_text(emoji_obj.title().split(';').next().unwrap_or_default());
     });
     factory.connect_unbind(move |_, item| {
         let item = item
@@ -408,12 +404,12 @@ fn change_event(
         move |search_bar| {
             let current_text = search_bar.text().to_string();
             *search_query_clone.borrow_mut() = current_text.clone();
-            sorter
-                .upgrade()
-                .map(|sorter| sorter.changed(gtk4::SorterChange::Different));
-            filter
-                .upgrade()
-                .map(|filter| filter.changed(gtk4::FilterChange::Different));
+            if let Some(sorter) = sorter.upgrade() {
+                sorter.changed(gtk4::SorterChange::Different)
+            }
+            if let Some(filter) = filter.upgrade() {
+                filter.changed(gtk4::FilterChange::Different)
+            }
             view.upgrade()
                 .map(|view| view.focus_first(Some(&context_model), None, None));
         }
@@ -448,7 +444,7 @@ fn make_filter(search_text: &Rc<RefCell<String>>) -> CustomFilter {
 fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
     CustomSorter::new({
         fn search_score(query: &str, match_in: &str) -> f32 {
-            if match_in.len() == 0 {
+            if match_in.is_empty() {
                 return 0.0;
             }
             let (distance, element) = match_in
@@ -467,17 +463,17 @@ fn make_sorter(search_text: &Rc<RefCell<String>>) -> CustomSorter {
             } else {
                 0.0
             };
-            if let Ok(var) = std::env::var("DEBUG_SEARCH") {
-                if var == "true" {
-                    println!(
-                        "Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}",
-                        element,
-                        query,
-                        distance,
-                        normed,
-                        normed + starts_with
-                    );
-                }
+            if let Ok(var) = std::env::var("DEBUG_SEARCH")
+                && var == "true"
+            {
+                println!(
+                    "Candidate: {}\nFor Query: {}\nDistance {:?}\nNormed: {:?}\nTotal: {:?}",
+                    element,
+                    query,
+                    distance,
+                    normed,
+                    normed + starts_with
+                );
             }
             normed + starts_with
         }

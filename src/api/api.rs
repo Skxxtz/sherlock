@@ -1,12 +1,12 @@
 use gio::{
-    glib::{object::ObjectExt, variant::ToVariant, MainContext, WeakRef},
     ListStore,
+    glib::{MainContext, WeakRef, object::ObjectExt, variant::ToVariant},
+};
+use gtk4::{
+    Application, ApplicationWindow, Stack,
+    prelude::{EntryExt, GtkWindowExt, WidgetExt},
 };
 use gtk4::{prelude::EditableExt, subclass::prelude::ObjectSubclassIsExt};
-use gtk4::{
-    prelude::{EntryExt, GtkWindowExt, WidgetExt},
-    Application, ApplicationWindow, Stack,
-};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use simd_json::prelude::ArrayTrait;
@@ -23,7 +23,7 @@ use crate::{
     ui::{
         g_templates::{InputWindow, SearchUiObj},
         tiles::Tile,
-        util::{display_raw, SearchHandler, SherlockAction, SherlockCounter},
+        util::{SearchHandler, SherlockAction, SherlockCounter, display_raw},
     },
     utils::{
         config::ConfigGuard,
@@ -126,7 +126,10 @@ impl SherlockAPI {
         if let Some(ui) = self.search_ui.as_ref().and_then(|s| s.upgrade()) {
             let bar = &ui.imp().search_bar;
             bar.select_region(0, -1);
-            if let Ok(_) = bar.activate_action("win.switch-mode", Some(&submenu.to_variant())) {
+            if bar
+                .activate_action("win.switch-mode", Some(&submenu.to_variant()))
+                .is_ok()
+            {
                 let _ = ConfigGuard::write_key(|c| c.runtime.sub_menu = Some(submenu.to_string()));
             }
             let _ = bar.activate_action("win.update-items", Some(&false.to_variant()));
@@ -142,8 +145,8 @@ impl SherlockAPI {
             .position(|action| action.exec.as_deref() == Some("restart"));
         if let Some(pos) = pos {
             let removed = actions.remove(pos);
-            let on = removed.on.max(0).min(2);
-            if start_count % on == 0 {
+            let on = removed.on.clamp(0, 2);
+            if start_count.is_multiple_of(on) {
                 let call = ApiCall::Method("restart".to_string());
                 self.shutdown_queue.push(call);
             }
@@ -151,7 +154,7 @@ impl SherlockAPI {
 
         actions
             .into_iter()
-            .filter(|action| start_count % action.on == 0)
+            .filter(|action| start_count.is_multiple_of(action.on))
             .for_each(|action| {
                 let attrs = get_attrs_map(vec![
                     ("method", Some(&action.action)),
@@ -164,24 +167,19 @@ impl SherlockAPI {
         Some(())
     }
     pub fn call_method(&self, method: &str) -> Option<()> {
-        match method {
-            "restart" => {
-                if let Ok(config) = ConfigGuard::read() {
-                    if config.runtime.daemonize {
-                        if let Err(err) = command_launch("sherlock --take-over --daemonize", "") {
-                            let _result = err.insert(true);
-                        }
-                    }
-                }
-            }
-            _ => {}
+        if method == "restart"
+            && let Ok(config) = ConfigGuard::read()
+            && config.runtime.daemonize
+            && let Err(err) = command_launch("sherlock --take-over --daemonize", "")
+        {
+            let _result = err.insert(true);
         }
         Some(())
     }
     pub fn obfuscate(&self, vis: bool) -> Option<()> {
         let ui = self.search_ui.as_ref().and_then(|ui| ui.upgrade())?;
         let imp = ui.imp();
-        imp.search_bar.set_visibility(vis == false);
+        imp.search_bar.set_visibility(!vis);
         Some(())
     }
     pub fn create_socket<T: AsRef<str>>(&self, socket: Option<T>) -> Option<()> {
@@ -234,10 +232,8 @@ impl SherlockAPI {
     fn load_pipe_elements<T: AsRef<[u8]>>(&mut self, msg: T) -> Option<()> {
         let elements = if let Some(elements) = PipedData::elements(&msg) {
             Some(elements)
-        } else if let Some(elements) = PipedData::deserialize_pipe(&msg) {
-            Some(elements)
         } else {
-            None
+            PipedData::deserialize_pipe(&msg)
         };
         if let Some(elements) = elements {
             self.display_pipe(elements);
@@ -270,7 +266,7 @@ impl SherlockAPI {
         ];
         let all = stack.get_page_names();
         all.into_iter()
-            .filter(|name| !retain.contains(&name))
+            .filter(|name| !retain.contains(name))
             .filter_map(|name| stack.child_by_name(&name))
             .for_each(|child| stack.remove(&child));
 
@@ -285,10 +281,10 @@ impl SherlockAPI {
             let _ = handler.populate().await;
 
             let duration = start.elapsed();
-            if let Ok(timing_enabled) = std::env::var("TIMING") {
-                if timing_enabled == "true" {
-                    println!("Popuate {:?}", duration);
-                }
+            if let Ok(timing_enabled) = std::env::var("TIMING")
+                && timing_enabled == "true"
+            {
+                println!("Popuate {:?}", duration);
             }
         });
 

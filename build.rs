@@ -41,10 +41,10 @@ fn generate_resource_file() {
 
                 if path.is_dir() {
                     read_dir(path, buf, base)
-                } else if path.is_file() {
-                    if let Ok(rel) = path.strip_prefix(base) {
-                        buf.push(rel.to_string_lossy().to_string());
-                    }
+                } else if path.is_file()
+                    && let Ok(rel) = path.strip_prefix(base)
+                {
+                    buf.push(rel.to_string_lossy().to_string());
                 }
             }
         }
@@ -88,6 +88,6 @@ fn generate_resource_file() {
         file_wrapper, icon_wrapper
     );
 
-    fs::write(&"resources/resources.gresources.xml", file)
+    fs::write("resources/resources.gresources.xml", file)
         .expect("Failed to write resources.gresources.xml");
 }
