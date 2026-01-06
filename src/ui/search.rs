@@ -623,12 +623,23 @@ fn change_event(
             let mut current_text = search_bar.text().to_string();
 
             // Make search bar auto resize
-            let layout = search_bar.create_pango_layout(Some(&current_text));
-            let (w, h) = layout.size();
-            let hpx = w / gtk4::pango::SCALE;
-            let vpx = h / gtk4::pango::SCALE;
+            if current_text.is_empty() {
+                if let Some(placeholder) = search_bar.placeholder_text() {
+                    let layout = search_bar.create_pango_layout(Some(&placeholder));
+                    let (w, h) = layout.size();
+                    let hpx = w / gtk4::pango::SCALE;
+                    let vpx = h / gtk4::pango::SCALE;
 
-            search_bar.set_size_request(hpx + 1, vpx + 1);
+                    search_bar.set_size_request(hpx + 2, vpx + 1);
+                }
+            } else {
+                let layout = search_bar.create_pango_layout(Some(&current_text));
+                let (w, h) = layout.size();
+                let hpx = w / gtk4::pango::SCALE;
+                let vpx = h / gtk4::pango::SCALE;
+
+                search_bar.set_size_request(hpx + 1, vpx + 1);
+            }
 
             // logic to switch to search mode with respective icons
             if current_text.len() == 1 {
