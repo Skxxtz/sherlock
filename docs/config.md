@@ -101,6 +101,7 @@ The `[binds]` section allows you to configure additional keybindings for navigat
 | `<PageDown>` | `pgdown`  |
 | `<End>`    | `end`       |
 | `<Home>`   | `home`      |
+| `<Esc>`   | `escape`      |
 
 ### Available Modifiers
 
@@ -147,6 +148,7 @@ Keybinds are defined in the following manner:
 | `backspace`   | Clears the current mode whenever the searchbar is empty. |
 | `error_page`   | Opens a view containing any errors. |
 | `shortcut`   | Executes the nth shortcut. Requires the key to be some modifier and end with `-<digit>`, which is a generic placeholder for any number. |
+| `exit`   | Defines a key to close the app. |
 
 ### Key Names
 
