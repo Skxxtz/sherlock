@@ -155,6 +155,8 @@ pub struct ConfigBehavior {
     #[serde(default = "OtherDefaults::bool_true")]
     pub use_lr_nav: bool,
     #[serde(default)]
+    pub n_clicks: Option<u8>,
+    #[serde(default)]
     pub remember_query: bool,
 }
 

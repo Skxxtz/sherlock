@@ -181,6 +181,12 @@ impl EventPort {
                         .upgrade()
                         .map(|r| r.execute_by_index(internal_index as u32));
                 }
+
+                UIFunction::Exit => {
+                    if let Some(bar) = self.ui().upgrade().and_then(|ui| ui.current_bar()) {
+                        let _ = bar.activate_action("win.close", None);
+                    }
+                }
             }
             // If some action exists, capture event, else let pass
             true
@@ -263,6 +269,8 @@ impl EventPort {
 #[derive(Deserialize, Serialize, Hash, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum UIFunction {
+    Exit,
+
     ItemDown,
     ItemUp,
     ItemLeft,

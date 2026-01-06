@@ -66,6 +66,7 @@ The configuration file for Sherlock is located at `~/.config/sherlock/config.tom
 | `global_prefix` | `None`   | Prepends this to every command. ||
 | `global_flags` | `None`   | Appends these flags to every command. ||
 | `remember_query` | `false`   | Specifies whether the last query should maintain in the search bar when you open Sherlock next. Only works in daemonized mode. ||
+| `n_clicks` | `2`   | Specifies the number of mouse clicks on a tile required to execute the connected command. |
 
 ---
 

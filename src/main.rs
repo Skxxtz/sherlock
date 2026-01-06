@@ -49,7 +49,9 @@ async fn main() {
     let t0 = Instant::now();
     // Save original GSK_RENDERER to ORIGINAL_GSK_RENDERER as a temporary variable
     let original_gsk_renderer = env::var("GSK_RENDERER").unwrap_or_default();
-    env::set_var("ORIGINAL_GSK_RENDERER", original_gsk_renderer);
+    unsafe {
+        env::set_var("ORIGINAL_GSK_RENDERER", original_gsk_renderer);
+    }
 
     let setup = setup().await;
     let t01 = Instant::now();
@@ -285,7 +287,9 @@ async fn setup() -> StartupResponse {
 
     // Set GSK_RENDERER
     if let Ok(config) = ConfigGuard::read() {
-        env::set_var("GSK_RENDERER", &config.appearance.gsk_renderer);
+        unsafe {
+            env::set_var("GSK_RENDERER", &config.appearance.gsk_renderer);
+        }
     }
 
     if let Ok(timing_enabled) = std::env::var("TIMING") {
@@ -314,9 +318,11 @@ struct StartupResponse {
 fn post_startup() {
     // Restore original GSK_RENDERER from temporary variable
     let original_gsk_renderer = env::var("ORIGINAL_GSK_RENDERER").unwrap_or_default();
-    env::set_var("GSK_RENDERER", original_gsk_renderer);
-    // Remove temporary variable
-    env::remove_var("ORIGINAL_GSK_RENDERER");
+    unsafe {
+        env::set_var("GSK_RENDERER", original_gsk_renderer);
+        // Remove temporary variable
+        env::remove_var("ORIGINAL_GSK_RENDERER");
+    }
 
     // Print messages if icon parsers aren't installed
     let available: HashSet<String> = gdk_pixbuf::Pixbuf::formats()

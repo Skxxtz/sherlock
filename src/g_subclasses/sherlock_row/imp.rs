@@ -10,6 +10,7 @@ use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
 
 use crate::loader::util::ApplicationAction;
+use crate::utils::config::ConfigGuard;
 
 /// ## Fields:
 /// * **gesture**: State to hold and replace double-click gestures.
@@ -43,6 +44,7 @@ impl ObjectSubclass for SherlockRow {
 impl ObjectImpl for SherlockRow {
     fn constructed(&self) {
         self.parent_constructed();
+        let clicks = ConfigGuard::read().ok().and_then(|c| c.behavior.n_clicks).unwrap_or(2);
 
         // Only install gesture once
         self.gesture.get_or_init(|| {
@@ -51,7 +53,7 @@ impl ObjectImpl for SherlockRow {
 
             let obj = self.obj().downgrade();
             gesture.connect_pressed(move |_, n_clicks, _, _| {
-                if n_clicks >= 2 {
+                if n_clicks >= clicks as i32{
                     if let Some(obj) = obj.upgrade() {
                         let exit: u8 = 0;
                         obj.emit_by_name::<()>("row-should-activate", &[&exit, &""]);

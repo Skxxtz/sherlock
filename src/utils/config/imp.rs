@@ -75,6 +75,7 @@ impl Default for ConfigBehavior {
             global_flags: None,
             use_lr_nav: false,
             remember_query: false,
+            n_clicks: Some(2),
         }
     }
 }

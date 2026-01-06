@@ -235,6 +235,9 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             }
             "clear_cache" => {
                 let _result = clear_cached_files();
+            },
+            "exit" => {
+                exit = true;
             }
             k if k.starts_with("inner.") => {
                 if let Some(callback) = k.strip_prefix("inner.") {
