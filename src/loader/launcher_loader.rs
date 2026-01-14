@@ -10,6 +10,7 @@ use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::time::Instant;
 
 use crate::actions::util::read_from_clipboard;
 use crate::launcher::audio_launcher::AudioLauncherFunctions;
@@ -90,9 +91,13 @@ impl Loader {
                     }
                 }
                 let launcher_type: LauncherType = match raw.r#type.to_lowercase().as_str() {
-                    "app_launcher" => parse_app_launcher(&raw, &counts, max_decimals),
+                    "app_launcher" => {
+                        parse_app_launcher(&raw, &counts, max_decimals, config.caching.enable)
+                    }
                     "audio_sink" => parse_audio_sink_launcher(),
-                    "bookmarks" => parse_bookmarks_launcher(&raw),
+                    "bookmarks" => {
+                        parse_bookmarks_launcher(&raw, config.default_apps.browser.as_ref())
+                    }
                     "bulk_text" => parse_bulk_text_launcher(&raw),
                     "calculation" => parse_calculator(&raw),
                     "categories" => parse_category_launcher(&raw, &counts, max_decimals),
@@ -148,13 +153,14 @@ fn parse_appdata(
     let data: HashSet<AppData> =
         deserialize_named_appdata(value.clone().into_deserializer()).unwrap_or_default();
     data.into_iter()
-        .map(|c| {
+        .map(|mut c| {
             let count = c
                 .exec
-                .as_ref()
+                .as_deref()
                 .and_then(|exec| counts.get(exec))
-                .unwrap_or(&0);
-            c.with_priority(parse_priority(prio, *count, max_decimals))
+                .unwrap_or(&0u32);
+            c.priority = parse_priority(prio, *count, max_decimals);
+            c
         })
         .collect::<Vec<AppData>>()
 }
@@ -163,29 +169,24 @@ fn parse_app_launcher(
     raw: &RawLauncher,
     counts: &HashMap<String, u32>,
     max_decimals: i32,
+    caching: bool,
 ) -> LauncherType {
     let use_keywords = raw
         .args
         .get("use_keywords")
         .and_then(|s| s.as_bool())
         .unwrap_or(true);
-    let apps: Vec<AppData> = ConfigGuard::read().ok().map_or_else(
-        || Vec::new(),
-        |config| {
-            let prio = raw.priority;
-            let tmp = match config.caching.enable {
-                true => Loader::load_applications(prio, counts, max_decimals, use_keywords),
-                false => Loader::load_applications_from_disk(
-                    None,
-                    prio,
-                    counts,
-                    max_decimals,
-                    use_keywords,
-                ),
-            };
-            tmp.unwrap_or_default()
-        },
-    );
+    let apps = match caching {
+        true => Loader::load_applications(raw.priority, counts, max_decimals, use_keywords),
+        false => Loader::load_applications_from_disk(
+            None,
+            raw.priority,
+            counts,
+            max_decimals,
+            use_keywords,
+        ),
+    }
+    .unwrap_or_default();
     LauncherType::App(AppLauncher { apps })
 }
 #[sherlock_macro::timing(level = "launchers")]
@@ -201,14 +202,15 @@ fn parse_audio_sink_launcher() -> LauncherType {
         .unwrap_or(LauncherType::Empty)
 }
 #[sherlock_macro::timing(level = "launchers")]
-fn parse_bookmarks_launcher(raw: &RawLauncher) -> LauncherType {
-    if let Some(browser) = raw
+fn parse_bookmarks_launcher(raw: &RawLauncher, default_browser: Option<&String>) -> LauncherType {
+    let browser_target = raw
         .args
         .get("browser")
-        .and_then(|s| s.as_str())
-        .map(|s| s.to_string())
-        .or_else(|| ConstantDefaults::browser().ok())
-    {
+        .and_then(|s| s.as_str().map(|str| str.to_string()))
+        .or_else(|| default_browser.cloned())
+        .or_else(|| ConstantDefaults::browser().ok());
+
+    if let Some(browser) = browser_target {
         match BookmarkLauncher::find_bookmarks(&browser, raw) {
             Ok(bookmarks) => {
                 return LauncherType::Bookmark(BookmarkLauncher { bookmarks });
@@ -563,6 +565,7 @@ fn parse_web_launcher(raw: &RawLauncher) -> LauncherType {
     })
 }
 
+#[sherlock_macro::timing(name = "Parsing launcher config")]
 fn parse_launcher_configs(
     fallback_path: &PathBuf,
 ) -> Result<(Vec<RawLauncher>, Vec<SherlockError>), SherlockError> {

@@ -1,6 +1,7 @@
 use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::loader::application_loader::file_has_changed;
 use crate::loader::util::{AppData, RawLauncher};
@@ -12,10 +13,13 @@ use crate::{sher_log, sherlock_error};
 
 #[derive(Clone, Debug)]
 pub struct BookmarkLauncher {
-    pub bookmarks: Vec<AppData>,
+    pub bookmarks: Arc<Vec<AppData>>,
 }
 impl BookmarkLauncher {
-    pub fn find_bookmarks(browser: &str, raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
+    pub fn find_bookmarks(
+        browser: &str,
+        raw: &RawLauncher,
+    ) -> Result<Arc<Vec<AppData>>, SherlockError> {
         match browser.to_lowercase().as_str() {
             "zen" | "zen-browser" | "/opt/zen-browser-bin/zen-bin %u" => BookmarkParser::zen(raw),
             "brave" | "brave %u" => BookmarkParser::brave(raw),
@@ -44,27 +48,27 @@ impl BookmarkLauncher {
 
 struct BookmarkParser;
 impl BookmarkParser {
-    fn brave(raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
+    fn brave(raw: &RawLauncher) -> Result<Arc<Vec<AppData>>, SherlockError> {
         let path = home_dir()?.join(".config/BraveSoftware/Brave-Browser/Default/Bookmarks");
         let data = fs::read_to_string(&path)
             .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
 
         ChromeParser::parse(raw, data)
     }
-    fn thorium(raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
+    fn thorium(raw: &RawLauncher) -> Result<Arc<Vec<AppData>>, SherlockError> {
         let path = home_dir()?.join(".config/thorium/Default/Bookmarks");
         let data = fs::read_to_string(&path)
             .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
         ChromeParser::parse(raw, data)
     }
-    fn chrome(raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
+    fn chrome(raw: &RawLauncher) -> Result<Arc<Vec<AppData>>, SherlockError> {
         let path = home_dir()?.join(".config/google-chrome/Default/Bookmarks");
         let data = fs::read_to_string(&path)
             .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
         ChromeParser::parse(raw, data)
     }
 
-    fn zen(raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
+    fn zen(raw: &RawLauncher) -> Result<Arc<Vec<AppData>>, SherlockError> {
         fn get_path() -> Option<PathBuf> {
             let zen_root = home_dir().ok()?.join(".zen");
             fs::read_dir(&zen_root)
@@ -88,7 +92,7 @@ impl BookmarkParser {
         let parser = MozillaSqliteParser::new(path, "zen");
         parser.read(raw, "zen")
     }
-    fn firefox(raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
+    fn firefox(raw: &RawLauncher) -> Result<Arc<Vec<AppData>>, SherlockError> {
         fn get_path() -> Option<PathBuf> {
             let zen_root = home_dir().ok()?.join(".mozilla/firefox/");
             fs::read_dir(&zen_root)
@@ -129,35 +133,36 @@ impl MozillaSqliteParser {
         };
         Self { path }
     }
-    fn read(&self, raw: &RawLauncher, prefix: &str) -> Result<Vec<AppData>, SherlockError> {
+    fn read(&self, raw: &RawLauncher, prefix: &str) -> Result<Arc<Vec<AppData>>, SherlockError> {
         let cache_dir = get_cache_dir()?;
         let cache = cache_dir.join(format!("bookmarks/{}-cache.bin", prefix));
-        if file_has_changed(&cache, &self.path) {
-            self.read_new(raw).map(|v| {
-                if let Err(e) = BinaryCache::write(cache, &v) {
-                    let _ = sher_log!("Updating cached bookmarks");
-                    let _result = e.insert(false);
-                };
-                v
-            })
-        } else {
-            BinaryCache::read::<Vec<AppData>, _>(cache).map(|mut app_data| {
-                let _ = sher_log!("Reading cached bookmarks");
-                let icon_class = raw
-                    .args
-                    .get("icon_class")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
+
+        if !file_has_changed(&cache, &self.path) {
+            if let Ok(mut app_data) = BinaryCache::read::<Vec<AppData>, _>(&cache) {
+                let icon_class = raw.args.get("icon_class").and_then(|v| v.as_str());
 
                 app_data.iter_mut().for_each(|ad| {
-                    ad.icon_class = icon_class.clone();
-                    ad.tag_start = raw.tag_start.clone();
-                    ad.tag_end = raw.tag_end.clone();
+                    ad.icon_class = icon_class.map(|s| s.to_string());
+                    if raw.tag_start.is_some() {
+                        ad.tag_start = raw.tag_start.clone();
+                    }
+                    if raw.tag_end.is_some() {
+                        ad.tag_end = raw.tag_end.clone();
+                    }
                     ad.priority = raw.priority + 1.0;
                 });
-                app_data
-            })
+                return Ok(Arc::new(app_data));
+            }
         }
+
+        let bookmarks = Arc::new(self.read_new(raw)?);
+        tokio::spawn({
+            let bookmarks = Arc::clone(&bookmarks);
+            async move {
+                let _ = BinaryCache::write(&cache, &*bookmarks);
+            }
+        });
+        Ok(bookmarks)
     }
     fn read_new(&self, raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
         let mut res: Vec<AppData> = Vec::new();
@@ -240,7 +245,7 @@ impl MozillaSqliteParser {
 }
 struct ChromeParser;
 impl ChromeParser {
-    fn parse(raw: &RawLauncher, data: String) -> Result<Vec<AppData>, SherlockError> {
+    fn parse(raw: &RawLauncher, data: String) -> Result<Arc<Vec<AppData>>, SherlockError> {
         mod parser {
             use std::collections::HashMap;
 
@@ -307,6 +312,6 @@ impl ChromeParser {
             process_bookmark(raw, &mut bookmarks, bookmark);
         }
 
-        Ok(bookmarks)
+        Ok(Arc::new(bookmarks))
     }
 }

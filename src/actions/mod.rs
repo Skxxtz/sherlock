@@ -235,7 +235,7 @@ pub fn execute_from_attrs<T: IsA<Widget>>(
             }
             "clear_cache" => {
                 let _result = clear_cached_files();
-            },
+            }
             "exit" => {
                 exit = true;
             }
