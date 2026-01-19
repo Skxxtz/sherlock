@@ -30,6 +30,8 @@ Sherlock is a lightweight and efficient application launcher built with Rust and
   definitions from within Sherlock.
 - [sherlock-clipboard](https://github.com/Skxxtz/sherlock-clipboard): A
 way for you to display cliphist history in sherlock
+- [sherlock-clipvault](https://github.com/DeltaCream/sherlock-clipvault): Displays clipboard entries 
+powered by clipvault, a Rust-based clipboard history manager.
 <br><br>
 
 > **🚨 Warning:** This app is/was created on **Arch Linux** with the **Hyprland** tiling window manager in mind. It may cause errors or won't function at all on other system configurations.
