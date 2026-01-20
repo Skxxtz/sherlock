@@ -49,7 +49,7 @@ impl WeatherTileHandler {
             imp.date.set_text(&now.format("%a, %d %b %Y").to_string());
         }
 
-        if let Some((data, was_changed)) = launcher.get_weather().await {
+        let apply_data = |data: WeatherData, was_changed: bool| {
             let css_class = if was_changed {
                 "weather-animate"
             } else {
@@ -76,11 +76,26 @@ impl WeatherTileHandler {
             imp.location.set_text(&data.format_str);
             imp.spinner.set_spinning(false);
             self.data.borrow_mut().replace(data);
-        } else {
-            imp.location.set_text("! Failed to load weather");
-            imp.icon
-                .set_icon_name(Some("sherlock-weather-none-available"));
-            imp.spinner.set_spinning(false);
+        };
+
+        let mut update = true;
+        if let Some((data, should_update)) = launcher
+            .get_weather_launcher()
+            .and_then(|l| WeatherData::from_cache(l))
+        {
+            apply_data(data, false);
+            update = should_update;
+        }
+
+        if update {
+            if let Some((data, was_changed)) = launcher.get_weather().await {
+                apply_data(data, was_changed);
+            } else {
+                imp.location.set_text("! Failed to load weather");
+                imp.icon
+                    .set_icon_name(Some("sherlock-weather-none-available"));
+                imp.spinner.set_spinning(false);
+            }
         }
         Some(())
     }

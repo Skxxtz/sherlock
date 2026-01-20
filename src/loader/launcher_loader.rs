@@ -10,7 +10,6 @@ use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::time::Instant;
 
 use crate::actions::util::read_from_clipboard;
 use crate::launcher::audio_launcher::AudioLauncherFunctions;

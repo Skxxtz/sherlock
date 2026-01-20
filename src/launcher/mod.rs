@@ -336,7 +336,7 @@ impl Launcher {
     }
     pub async fn get_weather(&self) -> Option<(WeatherData, bool)> {
         match &self.launcher_type {
-            LauncherType::Weather(wtr) => wtr.get_result().await,
+            LauncherType::Weather(wtr) => wtr.fetch_new().await,
             _ => None,
         }
     }

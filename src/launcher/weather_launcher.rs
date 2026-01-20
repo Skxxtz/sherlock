@@ -2,12 +2,11 @@ use serde::{Deserialize, Serialize};
 use simd_json::base::{ValueAsArray, ValueAsScalar};
 use std::collections::HashSet;
 use std::fs::{self, File};
-use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 use super::utils::to_title_case;
 use crate::utils::config::ConfigGuard;
-use crate::utils::files::home_dir;
+use crate::utils::paths::get_cache_dir;
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum WeatherIconTheme {
@@ -23,12 +22,8 @@ pub struct WeatherLauncher {
     pub show_datetime: bool,
 }
 impl WeatherLauncher {
-    pub async fn get_result(&self) -> Option<(WeatherData, bool)> {
+    pub async fn fetch_new(&self) -> Option<(WeatherData, bool)> {
         let config = ConfigGuard::read().ok()?;
-        // try read cache
-        if let Some(data) = WeatherData::from(&self) {
-            return Some((data, false));
-        };
 
         let url = format!("https://de.wttr.in/{}?format=j2", self.location);
 
@@ -91,7 +86,7 @@ impl WeatherLauncher {
             css: WeatherLauncher::match_weather_code(code),
             sunset,
         };
-        data.cache();
+        data.to_cache();
 
         Some((data, true))
     }
@@ -127,39 +122,44 @@ pub struct WeatherData {
     pub sunset: chrono::NaiveTime,
 }
 impl WeatherData {
-    fn from(launcher: &WeatherLauncher) -> Option<Self> {
-        let mut path = home_dir().ok()?;
-        path.push(format!(
-            ".cache/sherlock/weather/{}.json",
-            launcher.location
-        ));
-        fn modtime(path: &PathBuf) -> Option<SystemTime> {
-            fs::metadata(path).ok().and_then(|m| m.modified().ok())
-        }
-        let mtime = modtime(&path)?;
-        let time_since = SystemTime::now().duration_since(mtime).ok()?;
-        if time_since < Duration::from_secs(60 * launcher.update_interval) {
-            let mut cached_data: Self = File::open(&path)
-                .ok()
-                .and_then(|f| simd_json::from_reader(f).ok())?;
+    pub fn from_cache(launcher: &WeatherLauncher) -> Option<(Self, bool)> {
+        let path = get_cache_dir()
+            .ok()?
+            .join("weather")
+            .join(format!("{}.json", launcher.location));
+        println!("{:?}", path);
 
-            cached_data.icon = if matches!(launcher.icon_theme, WeatherIconTheme::Sherlock) {
-                format!("sherlock-{}", cached_data.css)
-            } else {
-                cached_data.css.clone()
-            };
+        let mut cached_data: Self = File::open(&path)
+            .ok()
+            .and_then(|f| simd_json::from_reader(f).ok())?;
 
-            return Some(cached_data);
+        cached_data.icon = if matches!(launcher.icon_theme, WeatherIconTheme::Sherlock) {
+            format!("sherlock-{}", cached_data.css)
         } else {
-            return None;
+            cached_data.css.clone()
+        };
+
+        let mtime = fs::metadata(&path).ok()?.modified().ok()?;
+        let time_since = SystemTime::now().duration_since(mtime).ok()?;
+
+        let interval = Duration::from_secs(60 * launcher.update_interval);
+        if time_since > interval * 3 {
+            None
+        } else {
+            let is_fresh = time_since < interval;
+            Some((cached_data, is_fresh))
         }
     }
-    fn cache(&self) -> Option<()> {
-        let mut path = home_dir().ok()?;
-        path.push(format!(".cache/sherlock/weather/{}.json", self.location));
+    fn to_cache(&self) -> Option<()> {
+        let path = get_cache_dir()
+            .ok()?
+            .join("weather")
+            .join(format!("{}.json", self.location));
+
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).ok()?;
         }
+
         let tmp_path = path.with_extension(".tmp");
         if let Ok(f) = File::create(&tmp_path) {
             if let Ok(_) = simd_json::to_writer(f, &self) {
@@ -168,6 +168,7 @@ impl WeatherData {
                 let _ = fs::remove_file(&tmp_path);
             }
         }
-        None
+
+        Some(())
     }
 }
