@@ -127,7 +127,6 @@ impl WeatherData {
             .ok()?
             .join("weather")
             .join(format!("{}.json", launcher.location));
-        println!("{:?}", path);
 
         let mut cached_data: Self = File::open(&path)
             .ok()
