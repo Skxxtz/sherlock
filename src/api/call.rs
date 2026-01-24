@@ -12,7 +12,8 @@ pub enum ApiCall {
     Obfuscate(bool),
     // Actions
     Socket(Option<String>),
-    Show(String),
+    Show(Option<String>),
+    Toggle,
     Close,
     Clear,
     SherlockError(SherlockError),
@@ -30,7 +31,8 @@ impl Display for ApiCall {
             Self::InputOnly => write!(f, "setting.InputOnly"),
             Self::Obfuscate(val) => write!(f, "setting.Obfuscate:{}", val),
             // Actions
-            Self::Show(submenu) => write!(f, "action.Show:{}", submenu),
+            Self::Show(submenu) => write!(f, "action.Show:{:?}", submenu),
+            Self::Toggle => write!(f, "action.Toggle"),
             Self::Close => write!(f, "action.Close"),
             Self::Socket(socket) => write!(f, "action.Socket:{:?}", socket),
             Self::Clear => write!(f, "action.Clear"),

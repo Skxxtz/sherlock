@@ -27,6 +27,7 @@ pub struct SherlockFlags {
     pub multi: bool,
     pub photo_mode: bool,
     pub input: Option<bool>,
+    pub toggle: bool,
     pub placeholder: Option<String>,
 }
 

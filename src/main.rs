@@ -113,7 +113,7 @@ async fn main() {
         } else {
             sherlock
                 .borrow_mut()
-                .request(ApiCall::Show("all".to_string()));
+                .request(ApiCall::Show(Some("all".to_string())));
         }
 
         // Initialize error backend

@@ -84,6 +84,7 @@ impl SherlockFlags {
             multi: check_flag_existence("--multi"),
             photo_mode: check_flag_existence("--photo"),
             input: Self::extract_flag_value::<bool>(&args, "--input", None),
+            toggle: check_flag_existence("--toggle"),
             placeholder: Self::extract_flag_value::<String>(&args, "--placeholder", Some("-p")),
         })
     }

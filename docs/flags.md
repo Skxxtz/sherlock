@@ -20,6 +20,7 @@
 ## Behavioral Flags
 | Flag         | Description | Note |
 |--------------|----------------------|----------------------------------|
+| --toggle      | Toggles the open state for Sherlock | |
 | --daemonize      | Overrides the daemonizing value in `config.toml` | |
 | --time-inspect      | Prints startup time from 0 to content. Also prints the time it took to load the launchers.| (Removed) use `TIMING=true sherlock` instead.|
 | -sm, --sub-menu      | Launch Sherlock with a custom alias from the beginning. For example `sherlock --sub-menu pm`, where `pm` is an alias you defined in your fallbacks.| |

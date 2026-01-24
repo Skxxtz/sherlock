@@ -95,7 +95,8 @@ impl SherlockAPI {
             ApiCall::SherlockError(err) => self.insert_msg(err, true),
             ApiCall::SherlockWarning(err) => self.insert_msg(err, false),
             ApiCall::InputOnly => self.show_raw(),
-            ApiCall::Show(submenu) => self.open(submenu),
+            ApiCall::Show(submenu) => self.open(submenu.as_deref()),
+            ApiCall::Toggle => self.toggle(),
             ApiCall::Close => self.close(),
             ApiCall::ClearAwaiting => self.flush(),
             ApiCall::Pipe(pipe) => self.load_pipe_elements(pipe),
@@ -115,7 +116,7 @@ impl SherlockAPI {
         let _ = window.activate_action("win.close", None);
         Some(())
     }
-    pub fn open(&mut self, submenu: &str) -> Option<()> {
+    pub fn open(&mut self, submenu: Option<&str>) -> Option<()> {
         let window = self.window.as_ref().and_then(|win| win.upgrade())?;
         let open_window = self.open_window.as_ref().and_then(|win| win.upgrade())?;
         let start_count = SherlockCounter::new()
@@ -126,10 +127,13 @@ impl SherlockAPI {
         if let Some(ui) = self.search_ui.as_ref().and_then(|s| s.upgrade()) {
             let bar = &ui.imp().search_bar;
             bar.select_region(0, -1);
-            if let Ok(_) = bar.activate_action("win.switch-mode", Some(&submenu.to_variant())) {
-                let _ = ConfigGuard::write_key(|c| c.runtime.sub_menu = Some(submenu.to_string()));
+            if let Some(submenu) = submenu {
+                if let Ok(_) = bar.activate_action("win.switch-mode", Some(&submenu.to_variant())) {
+                    let _ =
+                        ConfigGuard::write_key(|c| c.runtime.sub_menu = Some(submenu.to_string()));
+                }
+                let _ = bar.activate_action("win.update-items", Some(&false.to_variant()));
             }
-            let _ = bar.activate_action("win.update-items", Some(&false.to_variant()));
         }
         // parse sherlock actions
         let config = ConfigGuard::read().ok()?;
@@ -162,6 +166,19 @@ impl SherlockAPI {
 
         open_window.present();
         Some(())
+    }
+    pub fn toggle(&mut self) -> Option<()> {
+        let win = self.window.as_ref().and_then(|weak| weak.upgrade())?;
+        match win.is_visible() {
+            true => self.close(),
+            false => {
+                if ConfigGuard::read().map_or(false, |c| c.runtime.daemonize) {
+                    self.open(Some("all"))
+                } else {
+                    self.open(None)
+                }
+            }
+        }
     }
     pub fn call_method(&self, method: &str) -> Option<()> {
         match method {

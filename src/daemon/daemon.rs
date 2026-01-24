@@ -63,6 +63,9 @@ impl SherlockDaemon {
                         format!(r#"{{"SwitchMode": {{"Input": {}}}}}"#, input).as_bytes(),
                     );
                 }
+                if flags.toggle {
+                    return stream.write_sized(&serde_json::to_vec(&ApiCall::Toggle).unwrap());
+                }
                 stream.write_sized(br#"{"Show": "all"}"#)?;
             } else {
                 stream.write_sized(br#"{"Show": "all"}"#)?;
