@@ -1,6 +1,3 @@
-use std::sync::Arc;
-
-use crate::launcher::LauncherType;
 use crate::launcher::children::{LauncherValues, RenderableChild};
 use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
 use crate::loader::utils::{ApplicationAction, ExecVariable};
@@ -10,6 +7,7 @@ use gpui::{AppContext, WeakEntity};
 use gpui::{AsyncApp, Task};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use simd_json::prelude::Indexed;
+use std::sync::Arc;
 
 use crate::ui::search_bar::TextInput;
 
@@ -171,14 +169,7 @@ impl SherlockMainWindow {
                             data.search().fuzzy_match(&query)
                         })
                         .map(|(i, data)| {
-                            let mut match_in = data.search();
-                            if let LauncherType::App(app) = data.launcher_type() {
-                                if !app.use_keywords {
-                                    match_in = data.name().unwrap_or_default()
-                                }
-                            }
-
-                            let prio = make_prio(data.priority(), &query, match_in);
+                            let prio = make_prio(data.priority(), &query, data.search());
                             (i, prio)
                         })
                         .collect();
@@ -286,7 +277,7 @@ fn search_score(query: &str, match_in: &str) -> f32 {
         }
 
         // prefix match
-        if element.starts_with(query) {
+        if element.len() >= query.len() && element[..query.len()].eq_ignore_ascii_case(query) {
             // bonus for coverage, e.g. 4 out of 5 chars match
             let coverage = query.len() as f32 / element.len() as f32;
             let score = 0.1 + (0.1 * (1.0 - coverage));
@@ -313,14 +304,16 @@ fn make_prio(prio: f32, query: &str, match_in: &str) -> f32 {
     // shift counts 3 to right; 1.34 → 1.0034 to make room for levenshtein (2 spaces for
     // max .99)
     let counters = prio.fract() / 100.0;
-    if let Ok(var) = std::env::var("DEBUG_SEARCH") {
-        if var == "true" {
-            println!("Base Prio: {}", prio);
-            println!(
-                "Resulting Prio: {}\n",
-                prio.trunc() + (counters + score).min(0.99)
-            );
-        }
+
+    if std::env::var("DEBUG_SEARCH").map_or(false, |v| v == "true") {
+        println!("Query: {}", query);
+        println!("Search In: {}", match_in);
+        println!("Base Prio: {}", prio);
+        println!(
+            "Resulting Prio: {}\n",
+            prio.trunc() + (counters + score).min(0.99)
+        );
+        println!("---------------");
     }
     prio.trunc() + (counters + score).min(0.99)
 }
