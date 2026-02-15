@@ -138,7 +138,6 @@ pub fn resolve_icon_path(name: &str) -> Option<Arc<Path>> {
     if result.is_none() {
         result = (|| {
             let icon_path = lookup_icon(name)
-                .with_size(128)
                 .with_search_paths(&["~/.local/share/icons/"])
                 .ok()?
                 .next()?
