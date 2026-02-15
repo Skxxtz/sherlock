@@ -3,6 +3,7 @@ use once_cell::sync::OnceCell;
 use std::{
     collections::HashMap,
     io::Write,
+    path::Path,
     sync::{Arc, OnceLock, RwLock},
 };
 use tokio::net::UnixListener;
@@ -21,7 +22,7 @@ use crate::{
         search_bar::{EmptyBackspace, ShortcutAction},
     },
     utils::{
-        config::{ConfigGuard, SherlockConfig},
+        config::{ConfigGuard, ConfigWatcher, SherlockConfig},
         errors::SherlockErrorType,
     },
 };
@@ -44,7 +45,7 @@ static CONFIG: OnceCell<RwLock<SherlockConfig>> = OnceCell::new();
 
 static CONTEXT_MENU_BIND: OnceLock<String> = OnceLock::new();
 
-fn setup() -> Result<(), SherlockError> {
+fn setup() -> Result<Box<Path>, SherlockError> {
     let mut flags = Loader::load_flags()?;
 
     let config = flags.to_config().map_or_else(
@@ -74,7 +75,19 @@ fn setup() -> Result<(), SherlockError> {
         .set(RwLock::new(config.clone()))
         .map_err(|_| sherlock_error!(SherlockErrorType::ConfigError(None), ""))?;
 
-    Ok(())
+    let config_dir: Box<Path> = config
+        .files
+        .config
+        .parent()
+        .ok_or_else(|| {
+            sherlock_error!(
+                SherlockErrorType::DirReadError("Config Root Dir".into()),
+                "Failed to read config root dir."
+            )
+        })?
+        .into();
+
+    Ok(config_dir)
 }
 
 #[tokio::main]
@@ -86,9 +99,13 @@ async fn main() {
         return;
     }
 
-    if let Err(e) = setup() {
-        eprintln!("{e}");
-    }
+    let mut watcher = match setup() {
+        Ok(root) => ConfigWatcher::new(root),
+        Err(e) => {
+            eprintln!("{e}");
+            return;
+        }
+    };
 
     // start primary instance
     let app = Application::new().with_assets(Assets);
@@ -163,6 +180,13 @@ async fn main() {
                 let mut active_update_task: Option<gpui::Task<()>> = None;
                 loop {
                     if let Ok((_stream, _)) = listener.accept().await {
+                        // check if config files changed
+                        if let Ok(audit) = watcher.audit() {
+                            if !audit.is_empty() {
+                                println!("Changed config files: {:?}", audit);
+                            }
+                        }
+
                         // to prevent never read warning while also dropping previous task
                         if let Some(task) = active_update_task.take() {
                             drop(task)

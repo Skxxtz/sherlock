@@ -56,6 +56,9 @@ pub enum SherlockErrorType {
     DirCreateError(String),
     DirRemoveError(String),
 
+    // Filesystem - Lazy
+    IO,
+
     // Config & Flags
     ConfigError(Option<String>),
     FlagLoadError,
@@ -156,6 +159,8 @@ impl SherlockErrorType {
             SherlockErrorType::DirReadError(dir) => dir_msg("read/access", dir),
             SherlockErrorType::DirCreateError(dir) => dir_msg("create", dir),
             SherlockErrorType::DirRemoveError(dir) => dir_msg("remove", dir),
+
+            SherlockErrorType::IO => "Unspecified IO Error".into(),
 
             // Config & Flags
             SherlockErrorType::ConfigError(val) => {
