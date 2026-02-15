@@ -88,7 +88,7 @@ pub fn spawn_detached(
 
     let mut child = command.spawn().map_err(|e| {
         sherlock_error!(
-            SherlockErrorType::CommandExecutionError(Some(cmd.to_string())),
+            SherlockErrorType::CommandExecutionError(cmd.to_string()),
             e.to_string()
         )
     })?;
@@ -101,7 +101,7 @@ pub fn spawn_detached(
         {
             send_sudo(&mut child, password.as_str()).map_err(|e| {
                 sherlock_error!(
-                    SherlockErrorType::CommandExecutionError(Some(cmd).into()),
+                    SherlockErrorType::CommandExecutionError(cmd.into()),
                     e.to_string()
                 )
             })?;
