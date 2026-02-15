@@ -1,6 +1,8 @@
 use std::{
+    io::Write,
     os::unix::process::CommandExt,
-    process::{Command, Stdio},
+    process::{Child, Command, Stdio},
+    sync::LazyLock,
 };
 
 use gpui::SharedString;
@@ -38,21 +40,32 @@ pub fn spawn_detached(
 
     drop(config);
 
-    let parts = split_as_command(&cmd);
+    let mut parts = split_as_command(&cmd);
     if parts.is_empty() {
         return Ok(());
+    }
+
+    // if sudo, insert -S flag to read sudo from stdin
+    let mut sudo_used = false;
+    if let Some(idx) = parts.iter().position(|p| *p == "sudo") {
+        parts.insert(idx + 1, "-S".into());
+        sudo_used = true;
     }
 
     let program = &parts[0];
     let args = &parts[1..];
 
     let mut command = Command::new(program);
-    command.args(args);
-
     command
-        .stdin(Stdio::null())
+        .args(args)
         .stdout(Stdio::null())
         .stderr(Stdio::null());
+
+    if sudo_used {
+        command.stdin(Stdio::piped());
+    } else {
+        command.stdin(Stdio::null());
+    }
 
     unsafe {
         command.pre_exec(|| {
@@ -75,10 +88,26 @@ pub fn spawn_detached(
 
     let mut child = command.spawn().map_err(|e| {
         sherlock_error!(
-            SherlockErrorType::CommandExecutionError(cmd.to_string()),
+            SherlockErrorType::CommandExecutionError(Some(cmd.to_string())),
             e.to_string()
         )
     })?;
+
+    // pass sudo password
+    if sudo_used {
+        if let Some((_, password)) = variables
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case("sudo"))
+        {
+            send_sudo(&mut child, password.as_str()).map_err(|e| {
+                sherlock_error!(
+                    SherlockErrorType::CommandExecutionError(Some(cmd).into()),
+                    e.to_string()
+                )
+            })?;
+        }
+    }
+
     let _ = child.wait();
 
     Ok(())
@@ -129,57 +158,80 @@ pub fn split_as_command(cmd: &str) -> Vec<String> {
     parts
 }
 
-pub fn parse_variables<'a>(
-    exec_input: &'a str,
+/// Regex pattern used for parsing variables from a command string
+///
+/// # Groups
+/// Group 1 & 2: `{key:value}`
+/// Group 3 & 4: `{prefix[key]:value}`
+static VAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\{([a-zA-Z_]+)(?::(.*?))?\}|\{prefix\[(.*?)\]:(.*?)\}"#).unwrap()
+});
+
+/// Replaces variables like `{variable:variable name}` and applies prefixes such as `{prefix[variable name]:string}` with
+/// the corresponding values.
+///
+/// This function is designed to efficiently find and replace occurences of variables and prefixes
+/// using regex while folling the `Sherlock variable input scheme`.
+pub fn parse_variables(
+    exec_input: &str,
     keyword: &str,
     variables: &[(SharedString, SharedString)],
     config: &SherlockConfig,
 ) -> String {
-    let mut exec = exec_input.to_string();
+    VAR_REGEX
+        .replace_all(exec_input, |caps: &Captures| {
+            // Handle prefixes `prefix[for]:text`
+            if let (Some(prefix_for), Some(prefix_text)) = (caps.get(3), caps.get(4)) {
+                let key = prefix_for.as_str();
+                let has_value = variables
+                    .iter()
+                    .any(|(k, v)| k.as_ref() == key && !v.is_empty());
 
-    // Handle standard variables
-    let pattern = r#"\{([a-zA-Z_]+)(?::(.*?))?\}"#;
-    let re = Regex::new(pattern).unwrap();
+                return if has_value {
+                    prefix_text.as_str().to_string()
+                } else {
+                    String::new()
+                };
+            }
 
-    exec = re
-        .replace_all(&exec, |caps: &Captures| {
+            // Handle vars `{terminal, keyword, or variable:text}`
             let key = &caps[1];
-            let value = caps.get(2).map(|m| m.as_str());
-
             match key {
                 "terminal" => format!("{} -e", config.default_apps.terminal),
                 "keyword" => keyword.to_string(),
-                "variable" => variables
-                    .iter()
-                    .find(|v| Some(v.0.as_ref()) == value)
-                    .map(|v| v.1.to_string())
-                    .unwrap_or_else(|| caps[0].to_string()),
+                "variable" => {
+                    let var_name = caps.get(2).map(|m| m.as_str());
+                    variables
+                        .iter()
+                        .find(|(k, _)| Some(k.as_ref()) == var_name)
+                        .map(|v| v.1.to_string())
+                        .unwrap_or_else(|| caps[0].to_string())
+                }
                 _ => caps[0].to_string(),
             }
         })
-        .into_owned();
+        .into_owned()
+}
 
-    // Handle prefixes
-    let prefix_pattern = r#"\{prefix\[(.*?)\]:(.*?)\}"#;
-    let re_prefix = Regex::new(prefix_pattern).unwrap();
+/// Send the sudo password to a child process's stdin.
+///
+/// This function is designed for commands prefixed with `sudo -S`. It writes the provided password
+/// followed by a newlines and flushes the buffer to ensure the child process reveices the
+/// credentials immediately.
+///
+/// # Errors
+/// * The child process doesn't have a piped stdin (e.g., was not spawned with `Stdio::piped()`)
+/// * The pipe is broken or the write operation failes
+fn send_sudo(child: &mut Child, sudo: &str) -> Result<(), std::io::Error> {
+    let mut stdin = child.stdin.take().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::BrokenPipe, "Stdin pipe not available.")
+    })?;
 
-    exec = re_prefix
-        .replace_all(&exec, |caps: &Captures| {
-            let prefix_for = &caps[1];
-            let prefix = &caps[2];
+    {
+        stdin.write_all(sudo.as_bytes())?;
+        stdin.write_all(b"\n")?;
+        stdin.flush()?;
+    }
 
-            let has_value = variables
-                .iter()
-                .find(|v| v.0.as_ref() == prefix_for)
-                .map_or(false, |v| !v.1.is_empty());
-
-            if has_value {
-                prefix.to_string()
-            } else {
-                "".to_string()
-            }
-        })
-        .into_owned();
-
-    exec
+    Ok(())
 }
