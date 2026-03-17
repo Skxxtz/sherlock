@@ -156,7 +156,9 @@ pub fn get_nth_path_completion(input: &str, n: usize) -> Option<String> {
         .filter(|name| !name.starts_with('.') && name.starts_with(prefix))
         .collect();
 
-    if matches.is_empty() { return None; }
+    if matches.is_empty() {
+        return None;
+    }
 
     matches.sort();
 
