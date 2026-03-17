@@ -165,7 +165,6 @@ async fn main() {
             }
         }
 
-        println!("{:?}", final_bindings);
         cx.bind_keys(final_bindings.into_values().collect::<Vec<_>>());
 
         let socket_path = "/tmp/sherlock.sock";
