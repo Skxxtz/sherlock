@@ -493,6 +493,8 @@ impl Element for TextElement {
             (content, style.color)
         };
 
+        // TODO: add path completion on tab?
+
         let run = TextRun {
             len: display_text.len(),
             font: style.font(),

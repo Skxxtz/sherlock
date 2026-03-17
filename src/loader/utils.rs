@@ -187,12 +187,14 @@ pub struct SherlockAlias {
 #[serde(rename_all = "snake_case")]
 pub enum ExecVariable {
     StringInput(SharedString),
+    PathInput(SharedString),
     PasswordInput(SharedString),
 }
 impl ExecVariable {
     pub fn placeholder(&self) -> SharedString {
         match self {
             Self::StringInput(s) => s.clone(),
+            Self::PathInput(s) => s.clone(),
             Self::PasswordInput(s) => s.clone(),
         }
     }
