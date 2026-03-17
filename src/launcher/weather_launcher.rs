@@ -1,6 +1,7 @@
 use gpui::{Hsla, LinearColorStop, hsla, linear_color_stop, rgb};
 use serde::{Deserialize, Serialize};
 use simd_json::base::{ValueAsArray, ValueAsScalar};
+use simd_json::derived::ValueObjectAccess;
 use std::collections::HashSet;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
@@ -107,7 +108,7 @@ impl WeatherData {
         let response = reqwest::get(url).await.ok()?.text().await.ok()?;
         let mut response_bytes = response.into_bytes();
         let json: simd_json::OwnedValue = simd_json::to_owned_value(&mut response_bytes).ok()?;
-        let current_condition = json["current_condition"].as_array()?.get(0)?;
+        let current_condition = json.get("current_condition")?.as_array()?.get(0)?;
 
         // Get sunset time
         let astronomy = json["weather"].as_array()?.get(0)?["astronomy"]
