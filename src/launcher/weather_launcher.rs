@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use simd_json::base::{ValueAsArray, ValueAsScalar};
+use simd_json::derived::ValueObjectAccess;
 use std::collections::HashSet;
 use std::fs::{self, File};
 use std::time::{Duration, SystemTime};
@@ -30,23 +31,27 @@ impl WeatherLauncher {
         let response = reqwest::get(url).await.ok()?.text().await.ok()?;
         let mut response_bytes = response.into_bytes();
         let json: simd_json::OwnedValue = simd_json::to_owned_value(&mut response_bytes).ok()?;
-        let current_condition = json["current_condition"].as_array()?.get(0)?;
+        let current_condition = json.get("current_condition")?.as_array()?.get(0)?;
 
         // Get sunset time
-        let astronomy = json["weather"].as_array()?.get(0)?["astronomy"]
+        let astronomy = json
+            .get("weather")?
+            .as_array()?
+            .get(0)?
+            .get("astronomy")?
             .as_array()?
             .get(0)?;
-        let sunset_raw = astronomy["sunset"].as_str()?;
+        let sunset_raw = astronomy.get("sunset")?.as_str()?;
         let sunset = chrono::NaiveTime::parse_from_str(sunset_raw, "%I:%M %p").ok()?;
 
         // Parse Temperature
         let temperature = match config.units.temperatures.as_str() {
-            "f" | "F" => format!("{}°F", current_condition["temp_F"].as_str()?),
-            _ => format!("{}°C", current_condition["temp_C"].as_str()?),
+            "f" | "F" => format!("{}°F", current_condition.get("temp_F")?.as_str()?),
+            _ => format!("{}°C", current_condition.get("temp_C")?.as_str()?),
         };
 
         // Parse Icon
-        let code = current_condition["weatherCode"].as_str()?;
+        let code = current_condition.get("weatherCode")?.as_str()?;
         let icon = if matches!(self.icon_theme, WeatherIconTheme::Sherlock) {
             format!("sherlock-{}", WeatherLauncher::match_weather_code(code))
         } else {
@@ -54,7 +59,8 @@ impl WeatherLauncher {
         };
 
         // Parse wind dir
-        let wind_deg = current_condition["winddirDegree"]
+        let wind_deg = current_condition
+            .get("winddirDegree")?
             .as_str()?
             .parse::<f32>()
             .ok()?;
@@ -69,10 +75,10 @@ impl WeatherLauncher {
             "mi",
         ]);
         let wind = if imperials.contains(config.units.lengths.to_lowercase().as_str()) {
-            let speed = current_condition["windspeedMiles"].as_str()?;
+            let speed = current_condition.get("windspeedMiles")?.as_str()?;
             format!("{} {}mph", wind_dir, speed)
         } else {
-            let speed = current_condition["windspeedKmph"].as_str()?;
+            let speed = current_condition.get("windspeedKmph")?.as_str()?;
             format!("{} {}km/h", wind_dir, speed)
         };
 
