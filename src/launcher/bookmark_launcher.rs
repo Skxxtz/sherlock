@@ -156,12 +156,17 @@ impl MozillaSqliteParser {
         }
 
         let bookmarks = Arc::new(self.read_new(raw)?);
-        tokio::spawn({
-            let bookmarks = Arc::clone(&bookmarks);
-            async move {
-                let _ = BinaryCache::write(&cache, &*bookmarks);
-            }
-        });
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn({
+                let bookmarks = Arc::clone(&bookmarks);
+                let cache = cache.clone();
+                async move {
+                    let _ = BinaryCache::write(&cache, &*bookmarks);
+                }
+            });
+        } else {
+            let _ = BinaryCache::write(&cache, &*bookmarks);
+        }
         Ok(bookmarks)
     }
     fn read_new(&self, raw: &RawLauncher) -> Result<Vec<AppData>, SherlockError> {
