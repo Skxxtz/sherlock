@@ -114,15 +114,19 @@ pub fn spawn_detached(
 }
 
 pub fn split_as_command(cmd: &str) -> Vec<String> {
-    let mut parts = Vec::new();
+    let mut args = Vec::new();
     let mut current = String::new();
-    let mut double_quoting = false;
-    let mut single_quoting = false;
+
+    // State machine
+    let mut in_single_quote = false;
+    let mut in_double_quote = false;
     let mut escaped = false;
 
-    let mut it = cmd.chars().peekable();
+    let chars: Vec<char> = cmd.chars().collect();
 
-    while let Some(c) = it.next() {
+    for i in 0..chars.len() {
+        let c = chars[i];
+
         if escaped {
             current.push(c);
             escaped = false;
@@ -130,32 +134,44 @@ pub fn split_as_command(cmd: &str) -> Vec<String> {
         }
 
         match c {
-            '\\' if !single_quoting => {
-                escaped = true;
-            }
-            '"' if !single_quoting => {
-                double_quoting = !double_quoting;
-            }
-            '\'' if !double_quoting => {
-                single_quoting = !single_quoting;
-            }
-            c if c.is_whitespace() && !double_quoting && !single_quoting => {
-                if !current.is_empty() {
-                    parts.push(current.split_off(0));
+            // Handle backslash escaping
+            '\\' => {
+                // Only mark as escaped if there's a character following it
+                if i + 1 < chars.len() {
+                    escaped = true;
+                } else {
+                    current.push('\\');
                 }
             }
-            c => {
+            // Single quote toggle — strip the quote character itself
+            '\'' if !in_double_quote => {
+                in_single_quote = !in_single_quote;
+            }
+            // Double quote toggle — strip the quote character itself
+            '"' if !in_single_quote => {
+                in_double_quote = !in_double_quote;
+            }
+            // Whitespace split
+            c if c.is_whitespace() && !in_single_quote && !in_double_quote => {
+                if !current.is_empty() {
+                    args.push(std::mem::take(&mut current));
+                }
+            }
+            // Literal characters
+            _ => {
                 current.push(c);
             }
         }
     }
 
+    // Push the final buffer
     if !current.is_empty() {
-        parts.push(current);
+        args.push(current);
     }
 
-    parts.retain(|s| !s.starts_with('%'));
-    parts
+    args.retain(|s| !s.starts_with('%'));
+
+    args
 }
 
 /// Regex pattern used for parsing variables from a command string
@@ -234,4 +250,78 @@ fn send_sudo(child: &mut Child, sudo: &str) -> Result<(), std::io::Error> {
     }
 
     Ok(())
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split_as_command() {
+        assert_eq!(
+            split_as_command(
+                "flatpak run --command=bottles-cli com.usebottles.bottles run -p 'FL Studio 2025' -b 'Apps' -- %u"
+            ),
+            vec![
+                "flatpak",
+                "run",
+                "--command=bottles-cli",
+                "com.usebottles.bottles",
+                "run",
+                "-p",
+                "FL Studio 2025",
+                "-b",
+                "Apps",
+                "--"
+            ]
+        );
+        // 1. Basic splitting
+        assert_eq!(split_as_command("ls -la /home"), vec!["ls", "-la", "/home"]);
+
+        // 2. Double quotes with spaces
+        assert_eq!(
+            split_as_command("echo \"hello world\""),
+            vec!["echo", "hello world"]
+        );
+
+        // 3. Single quotes
+        assert_eq!(
+            split_as_command("grep 'pattern with spaces' file.txt"),
+            vec!["grep", "pattern with spaces", "file.txt"]
+        );
+
+        // 4. Nested quotes (single inside double)
+        assert_eq!(
+            split_as_command("echo \"it's a trap\""),
+            vec!["echo", "it's a trap"]
+        );
+
+        // 5. Escaped characters inside double quotes
+        assert_eq!(
+            split_as_command("echo \"shout \\\"hello\\\"\""),
+            vec!["echo", "shout \"hello\""]
+        );
+
+        // 6. Filtering variables starting with %
+        assert_eq!(
+            split_as_command("mpv %file --fullscreen"),
+            vec!["mpv", "--fullscreen"]
+        );
+
+        // 7. Multiple spaces between arguments
+        assert_eq!(
+            split_as_command("rsync    -avz   source/   dest/"),
+            vec!["rsync", "-avz", "source/", "dest/"]
+        );
+
+        // 8. Empty input
+        let empty: Vec<String> = Vec::new();
+        assert_eq!(split_as_command(""), empty);
+        assert_eq!(split_as_command("   "), empty);
+
+        // 9. URL in double quotes (the original bug)
+        assert_eq!(
+            split_as_command("browser \"https://www.google.com\""),
+            vec!["browser", "https://www.google.com"]
+        );
+    }
 }
