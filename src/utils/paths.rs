@@ -148,31 +148,27 @@ pub fn get_nth_path_completion(input: &str, n: usize) -> Option<String> {
         )
     };
 
-    // Get all matches
-    if let Ok(entries) = std::fs::read_dir(&search_dir) {
-        let mut matches: Vec<_> = entries
-            .filter_map(|res| res.ok())
-            .map(|e| e.file_name().to_string_lossy().into_owned())
-            .filter(|name| !name.starts_with('.') && name.starts_with(prefix))
-            .collect();
+    let entries = std::fs::read_dir(&search_dir).ok()?;
 
-        if matches.is_empty() {
-            return None;
-        }
-        matches.sort();
+    let mut matches: Vec<String> = entries
+        .filter_map(|res| res.ok())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|name| !name.starts_with('.') && name.starts_with(prefix))
+        .collect();
 
-        let chosen_match = &matches[n % matches.len()];
+    if matches.is_empty() { return None; }
 
-        let last_slash_idx = input.rfind('/').map(|i| i + 1).unwrap_or(0);
-        let mut result = input[..last_slash_idx].to_string();
-        result.push_str(chosen_match);
+    matches.sort();
 
-        // append `/` if its a dir
-        if search_dir.join(chosen_match).is_dir() {
-            result.push('/');
-        }
+    let chosen_match = &matches[n % matches.len()];
 
-        return result.strip_prefix(input).map(|s| s.to_string());
+    let last_slash_idx = input.rfind('/').map(|i| i + 1).unwrap_or(0);
+    let mut result = input[..last_slash_idx].to_string();
+    result.push_str(chosen_match);
+
+    if search_dir.join(chosen_match).is_dir() {
+        result.push('/');
     }
-    None
+
+    result.strip_prefix(input).map(|s| s.to_string())
 }
