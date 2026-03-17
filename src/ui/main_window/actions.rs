@@ -107,7 +107,6 @@ impl SherlockMainWindow {
         }
     }
     pub(super) fn next_var(&mut self, _: &NextVar, win: &mut Window, cx: &mut Context<Self>) {
-        println!("called");
         let total_inputs = 1 + self.variable_input.len();
 
         if self.active_bar < total_inputs - 1 {
