@@ -40,11 +40,16 @@ use ui::search_bar::{
 
 use utils::errors::SherlockError;
 
+/// Holds the icon cache, containing all known icon names and their file locations.
 static ICONS: OnceCell<RwLock<CustomIconTheme>> = OnceCell::new();
+/// Holed the global config struct for user-specified config values.
 static CONFIG: OnceCell<RwLock<SherlockConfig>> = OnceCell::new();
-
+/// Holds the string used to show and hide the context menu.
 static CONTEXT_MENU_BIND: OnceLock<String> = OnceLock::new();
 
+/// Parses application flags and user config.
+///
+/// This function first parses and handles the application flags, then loads
 fn setup() -> Result<Box<Path>, SherlockError> {
     let mut flags = Loader::load_flags()?;
 
@@ -183,6 +188,9 @@ async fn main() {
                         // check if config files changed
                         if let Ok(audit) = watcher.audit() {
                             if !audit.is_empty() {
+                                // let _result = data.update(&mut cx, |myself, cx|{
+
+                                // });
                                 println!("Changed config files: {:?}", audit);
                             }
                         }
