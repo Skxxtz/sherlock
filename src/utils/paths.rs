@@ -1,5 +1,8 @@
 use crate::utils::files;
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 fn get_xdg_dirs() -> xdg::BaseDirectories {
     xdg::BaseDirectories::with_prefix("sherlock")
@@ -89,4 +92,87 @@ pub fn get_cache_dir() -> Result<PathBuf, crate::utils::errors::SherlockError> {
         )
     })?;
     Ok(dir)
+}
+
+/// Returns the nth completion candidate for a given file system path input.
+///
+/// This function simulates terminal-style path completion by:
+/// 1. Expanding `~` to the user's HOME directory.
+/// 2. Treating relative paths as relative to the user's HOME directory.
+/// 3. Searching the parent directory of the input for matches starting with the same prefix.
+/// 4. Sorting matches alphabetically and selecting one using modulo indexing (`n % count`).
+/// 5. Appending a trailing `/` if the match is a directory.
+///
+/// # Arguments
+/// * `input` - The partial path string typed by the user (e.g., "~/Down" or "Documents/").
+/// * `n` - The index used to cycle through multiple matches.
+///
+/// # Returns
+/// * `Some(String)` - The "ghost text" remainder of the completion (the part after `input`).
+/// * `None` - If the input is empty, the directory is unreadable, or no matches are found.
+///
+/// # Examples
+/// If the home directory contains `Documents/` and `Downloads/`:
+/// ```
+/// // input: "~/Doc", match: "Documents/"
+/// // returns: Some("uments/")
+/// ```
+pub fn get_nth_path_completion(input: &str, n: usize) -> Option<String> {
+    if input.is_empty() {
+        return None;
+    }
+
+    // Get absolute path. Default to home dir
+    let full_path = if input.starts_with('/') {
+        PathBuf::from(input)
+    } else if input.starts_with('~') {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+        PathBuf::from(input.replacen('~', &home, 1))
+    } else {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+        let mut path = PathBuf::from(home);
+        path.push(input);
+        path
+    };
+
+    // Determine search dir and the partial stub
+    let (search_dir, prefix) = if full_path.is_dir() && input.ends_with('/') {
+        (full_path.clone(), "")
+    } else {
+        (
+            full_path
+                .parent()
+                .unwrap_or_else(|| Path::new("/"))
+                .to_path_buf(),
+            full_path.file_name().and_then(|s| s.to_str()).unwrap_or(""),
+        )
+    };
+
+    // Get all matches
+    if let Ok(entries) = std::fs::read_dir(&search_dir) {
+        let mut matches: Vec<_> = entries
+            .filter_map(|res| res.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|name| !name.starts_with('.') && name.starts_with(prefix))
+            .collect();
+
+        if matches.is_empty() {
+            return None;
+        }
+        matches.sort();
+
+        let chosen_match = &matches[n % matches.len()];
+
+        let last_slash_idx = input.rfind('/').map(|i| i + 1).unwrap_or(0);
+        let mut result = input[..last_slash_idx].to_string();
+        result.push_str(chosen_match);
+
+        // append `/` if its a dir
+        if search_dir.join(chosen_match).is_dir() {
+            result.push('/');
+        }
+
+        return result.strip_prefix(input).map(|s| s.to_string());
+    }
+    None
 }

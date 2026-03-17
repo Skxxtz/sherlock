@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use gpui::{AppContext, ClipboardItem, Context, SharedString, Window, actions};
 use smallvec::SmallVec;
@@ -107,6 +107,7 @@ impl SherlockMainWindow {
         }
     }
     pub(super) fn next_var(&mut self, _: &NextVar, win: &mut Window, cx: &mut Context<Self>) {
+        println!("called");
         let total_inputs = 1 + self.variable_input.len();
 
         if self.active_bar < total_inputs - 1 {
@@ -214,7 +215,21 @@ impl SherlockMainWindow {
             let mut variables: SmallVec<[(SharedString, SharedString); 4]> = SmallVec::new();
             for s in &self.variable_input {
                 let guard = s.read(cx);
-                variables.push((guard.placeholder.clone(), guard.content.clone()));
+                let mut content = guard.content.to_string();
+
+                // Only transform if it's a PathInput
+                if let Some(ExecVariable::PathInput(_)) = &guard.variable {
+                    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+                    if content.starts_with('~') {
+                        content = content.replacen('~', &home, 1);
+                    } else if !content.starts_with('/') {
+                        let mut p = PathBuf::from(home);
+                        p.push(&content);
+                        content = p.to_string_lossy().to_string();
+                    }
+                }
+
+                variables.push((guard.placeholder.clone(), SharedString::from(content)));
             }
 
             let data = self.data.read(cx).clone();
@@ -295,6 +310,7 @@ impl SherlockMainWindow {
                 .into_iter()
                 .map(|var| {
                     cx.new(|cx| TextInput {
+                        scope: Some("variable"),
                         focus_handle: cx.focus_handle(),
                         content: "".into(),
                         placeholder: var.placeholder(),
@@ -306,6 +322,7 @@ impl SherlockMainWindow {
                         last_layout: None,
                         last_bounds: None,
                         is_selecting: false,
+                        ghost_text: None,
                     })
                 })
                 .collect();

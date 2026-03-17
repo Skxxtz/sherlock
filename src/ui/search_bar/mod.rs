@@ -6,17 +6,18 @@ use gpui::{
     GlobalElementId, InteractiveElement, IntoElement, LayoutId, MouseButton, MouseDownEvent,
     MouseMoveEvent, MouseUpEvent, PaintQuad, ParentElement, Pixels, Point, Render, ShapedLine,
     SharedString, Style, Styled, TextRun, UTF16Selection, UnderlineStyle, Window, actions, div,
-    fill, hsla, point, px, rgb, rgba,
+    fill, hsla, point, prelude::FluentBuilder, px, rgb, rgba,
 };
 use serde::Deserialize;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::loader::utils::ExecVariable;
+use crate::{loader::utils::ExecVariable, utils::paths::get_nth_path_completion};
 
 actions!(
     text_input,
     [
         Backspace,
+        Complete,
         Delete,
         DeleteAll,
         Left,
@@ -73,6 +74,7 @@ pub struct EmptyBackspace;
 impl EventEmitter<EmptyBackspace> for TextInput {}
 
 pub struct TextInput {
+    pub scope: Option<&'static str>,
     pub focus_handle: FocusHandle,
     pub content: SharedString,
     pub placeholder: SharedString,
@@ -83,6 +85,7 @@ pub struct TextInput {
     pub last_bounds: Option<Bounds<Pixels>>,
     pub is_selecting: bool,
     pub variable: Option<ExecVariable>,
+    pub ghost_text: Option<String>,
 }
 
 impl TextInput {
@@ -133,6 +136,27 @@ impl TextInput {
             self.select_to(self.previous_boundary(self.cursor_offset()), cx)
         }
         self.replace_text_in_range(None, "", window, cx);
+    }
+
+    fn complete(&mut self, _: &Complete, _win: &mut Window, cx: &mut Context<Self>) {
+        if let Some(ghost) = self.ghost_text.as_deref() {
+            let new_content = format!("{}{}", self.content, ghost);
+            let new_len = new_content.len();
+
+            // if the content is the same, return and propagate
+            if new_content.as_str() == self.content.as_str() {
+                cx.propagate();
+                return;
+            }
+
+            self.content = SharedString::from(new_content);
+            self.selected_range = new_len..new_len;
+            self.refresh_ghost_text();
+
+            cx.notify();
+        } else {
+            cx.propagate();
+        }
     }
 
     fn delete(&mut self, _: &Delete, window: &mut Window, cx: &mut Context<Self>) {
@@ -367,6 +391,10 @@ impl EntityInputHandler for TextInput {
                 .into();
         self.selected_range = range.start + new_text.len()..range.start + new_text.len();
         self.marked_range.take();
+
+        // update eventual completion
+        self.refresh_ghost_text();
+
         cx.notify();
     }
 
@@ -487,13 +515,11 @@ impl Element for TextElement {
         };
         let style = window.text_style();
 
-        let (display_text, text_color) = if content.is_empty() {
+        let (mut display_text, text_color) = if content.is_empty() {
             (input.placeholder.clone(), hsla(1., 1., 1., 0.2))
         } else {
-            (content, style.color)
+            (content.clone(), style.color)
         };
-
-        // TODO: add path completion on tab?
 
         let run = TextRun {
             len: display_text.len(),
@@ -503,13 +529,28 @@ impl Element for TextElement {
             underline: None,
             strikethrough: None,
         };
+
+        let completion_run = if let Some(completion) = &input.ghost_text {
+            display_text = SharedString::from(format!("{display_text}{completion}"));
+            Some(TextRun {
+                len: completion.len(),
+                font: style.font(),
+                color: text_color.alpha(0.3),
+                background_color: None,
+                underline: None,
+                strikethrough: None,
+            })
+        } else {
+            None
+        };
+
         let runs = if let Some(marked_range) = input.marked_range.as_ref() {
             vec![
-                TextRun {
+                Some(TextRun {
                     len: marked_range.start,
                     ..run.clone()
-                },
-                TextRun {
+                }),
+                Some(TextRun {
                     len: marked_range.end - marked_range.start,
                     underline: Some(UnderlineStyle {
                         color: Some(run.color),
@@ -517,17 +558,23 @@ impl Element for TextElement {
                         wavy: false,
                     }),
                     ..run.clone()
-                },
-                TextRun {
+                }),
+                Some(TextRun {
                     len: display_text.len() - marked_range.end,
                     ..run
-                },
+                }),
+                completion_run,
             ]
             .into_iter()
+            .filter_map(|run| run)
             .filter(|run| run.len > 0)
             .collect()
         } else {
-            vec![run]
+            if let Some(completion_run) = completion_run {
+                vec![run, completion_run]
+            } else {
+                vec![run]
+            }
         };
 
         let font_size = style.font_size.to_pixels(window.rem_size());
@@ -653,10 +700,11 @@ impl Render for TextInput {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .flex()
-            .key_context("TextInput")
+            .key_context(self.scope.unwrap_or("TextInput"))
             .track_focus(&self.focus_handle(cx))
             .cursor(CursorStyle::IBeam)
             .on_action(cx.listener(Self::backspace))
+            .on_action(cx.listener(Self::complete))
             .on_action(cx.listener(Self::delete))
             .on_action(cx.listener(Self::delete_all))
             .on_action(cx.listener(Self::left))
@@ -711,5 +759,16 @@ impl Render for TextInput {
 impl Focusable for TextInput {
     fn focus_handle(&self, _: &App) -> FocusHandle {
         self.focus_handle.clone()
+    }
+}
+
+impl TextInput {
+    pub(super) fn refresh_ghost_text(&mut self) {
+        self.ghost_text = match &self.variable {
+            Some(ExecVariable::PathInput(inner)) => {
+                get_nth_path_completion(self.content.as_str(), inner.index)
+            }
+            _ => None,
+        };
     }
 }

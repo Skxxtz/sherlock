@@ -187,14 +187,29 @@ pub struct SherlockAlias {
 #[serde(rename_all = "snake_case")]
 pub enum ExecVariable {
     StringInput(SharedString),
-    PathInput(SharedString),
     PasswordInput(SharedString),
+    PathInput(PathData), // Use a helper struct
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(from = "SharedString")] // Logic to convert String -> Struct
+pub struct PathData {
+    pub path: SharedString,
+    #[serde(skip)]
+    pub index: usize,
+}
+
+// Implement the conversion logic
+impl From<SharedString> for PathData {
+    fn from(path: SharedString) -> Self {
+        Self { path, index: 0 }
+    }
 }
 impl ExecVariable {
     pub fn placeholder(&self) -> SharedString {
         match self {
             Self::StringInput(s) => s.clone(),
-            Self::PathInput(s) => s.clone(),
+            Self::PathInput(p) => p.path.clone(),
             Self::PasswordInput(s) => s.clone(),
         }
     }

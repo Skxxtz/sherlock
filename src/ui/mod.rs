@@ -4,7 +4,10 @@ pub mod search_bar;
 use gpui::KeyBinding;
 use serde::{Deserialize, Serialize};
 
-use crate::ui::main_window::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit};
+use crate::ui::{
+    main_window::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit},
+    search_bar::Complete,
+};
 
 #[derive(Deserialize, Serialize, Hash, Debug, Clone, Copy, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -18,6 +21,8 @@ pub enum UIFunction {
 
     ArgNext,
     ArgPrev,
+
+    Complete,
 
     Exec,
     ExecInplace,
@@ -36,14 +41,23 @@ pub enum UIFunction {
 }
 impl UIFunction {
     pub fn into_bind(&self, key: &str) -> Option<KeyBinding> {
+        // split off namespace
+        let mut parts = key.rsplitn(2, '.');
+
+        // rsplitn gives us the right-most part first (the key)
+        let key_part = parts.next().unwrap_or("");
+        let scope = parts.next();
+
         match self {
-            Self::Exit => Some(KeyBinding::new(key, Quit, None)),
-            Self::ItemDown => Some(KeyBinding::new(key, FocusNext, None)),
-            Self::ItemUp => Some(KeyBinding::new(key, FocusPrev, None)),
-            Self::Exec => Some(KeyBinding::new(key, Execute, None)),
-            Self::ArgNext => Some(KeyBinding::new(key, NextVar, None)),
-            Self::ArgPrev => Some(KeyBinding::new(key, PrevVar, None)),
-            Self::ToggleContext => Some(KeyBinding::new(key, OpenContext, None)),
+            Self::Exit => Some(KeyBinding::new(key_part, Quit, scope)),
+            Self::ItemDown => Some(KeyBinding::new(key_part, FocusNext, scope)),
+            Self::ItemUp => Some(KeyBinding::new(key_part, FocusPrev, scope)),
+            Self::Exec => Some(KeyBinding::new(key_part, Execute, scope)),
+            Self::ArgNext => Some(KeyBinding::new(key_part, NextVar, scope)),
+            Self::ArgPrev => Some(KeyBinding::new(key_part, PrevVar, scope)),
+            Self::ToggleContext => Some(KeyBinding::new(key_part, OpenContext, scope)),
+            Self::Complete => Some(KeyBinding::new(key_part, Complete, scope)),
+
             _ => None,
         }
     }

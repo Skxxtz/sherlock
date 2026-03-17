@@ -68,6 +68,7 @@ impl SherlockMainWindow {
                         .into_iter()
                         .map(|var| {
                             cx.new(|cx| TextInput {
+                                scope: Some("variable"),
                                 focus_handle: cx.focus_handle(),
                                 content: "".into(),
                                 placeholder: var.placeholder(),
@@ -78,6 +79,7 @@ impl SherlockMainWindow {
                                 last_layout: None,
                                 last_bounds: None,
                                 is_selecting: false,
+                                ghost_text: None,
                             })
                         })
                         .collect();

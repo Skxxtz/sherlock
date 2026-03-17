@@ -19,7 +19,7 @@ use crate::{
     ui::{
         UIFunction,
         main_window::{LauncherMode, NextVar, OpenContext, PrevVar},
-        search_bar::{EmptyBackspace, ShortcutAction},
+        search_bar::{Complete, EmptyBackspace, ShortcutAction},
     },
     utils::{
         config::{ConfigGuard, ConfigWatcher, SherlockConfig},
@@ -140,6 +140,10 @@ async fn main() {
         add_binding("right", KeyBinding::new("right", Right, None));
         add_binding("down", KeyBinding::new("down", FocusNext, None));
         add_binding("up", KeyBinding::new("up", FocusPrev, None));
+        add_binding(
+            "variable.tab",
+            UIFunction::Complete.into_bind("tab").unwrap(),
+        );
         add_binding("enter", KeyBinding::new("enter", Execute, None));
         add_binding("tab", KeyBinding::new("tab", NextVar, None));
         add_binding("shift-tab", KeyBinding::new("shift-tab", PrevVar, None));
@@ -161,6 +165,7 @@ async fn main() {
             }
         }
 
+        println!("{:?}", final_bindings);
         cx.bind_keys(final_bindings.into_values().collect::<Vec<_>>());
 
         let socket_path = "/tmp/sherlock.sock";
@@ -282,6 +287,7 @@ fn spawn_launcher(
     let window = cx
         .open_window(get_window_options(), |_, cx| {
             let text_input = cx.new(|cx| TextInput {
+                scope: None,
                 focus_handle: cx.focus_handle(),
                 content: "".into(),
                 placeholder: "Search:".into(),
@@ -292,6 +298,7 @@ fn spawn_launcher(
                 last_layout: None,
                 last_bounds: None,
                 is_selecting: false,
+                ghost_text: None,
             });
             cx.new(|cx| {
                 let data_len = data.read(cx).len();
