@@ -7,7 +7,7 @@ use gpui::{AppContext, WeakEntity};
 use gpui::{AsyncApp, Task};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use simd_json::prelude::Indexed;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use crate::ui::search_bar::TextInput;
 
@@ -297,21 +297,22 @@ fn search_score(query: &str, match_in: &str) -> f32 {
     best_score
 }
 
+static DEBUG_SEARCH: LazyLock<bool> =
+    LazyLock::new(|| std::env::var("DEBUG_SEARCH").map_or(false, |v| v == "true"));
+
 fn make_prio(prio: f32, query: &str, match_in: &str) -> f32 {
     let score = search_score(query, match_in);
-    // shift counts 3 to right; 1.34 → 1.0034 to make room for levenshtein (2 spaces for
-    // max .99)
     let counters = prio.fract() / 100.0;
+    let result = prio.trunc() + (counters + score).min(0.99);
 
-    if std::env::var("DEBUG_SEARCH").map_or(false, |v| v == "true") {
-        println!("Query: {}", query);
-        println!("Search In: {}", match_in);
-        println!("Base Prio: {}", prio);
+    if *DEBUG_SEARCH {
+        let m = match_in.chars().take(30).collect::<String>();
+        let q = query.chars().take(20).collect::<String>();
         println!(
-            "Resulting Prio: {}\n",
-            prio.trunc() + (counters + score).min(0.99)
+            "[search] {:<30} | query: {:<20} | score: {:.3} | prio: {:.4} → {:.4}",
+            m, q, score, prio, result
         );
-        println!("---------------");
     }
-    prio.trunc() + (counters + score).min(0.99)
+
+    result
 }
