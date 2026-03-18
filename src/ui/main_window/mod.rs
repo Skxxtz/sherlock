@@ -272,7 +272,10 @@ fn search_score(query: &str, match_in: &str) -> f32 {
         }
 
         // prefix match
-        if element.len() >= query.len() && element[..query.len()].eq_ignore_ascii_case(query) {
+        if element.len() >= query.len()
+            && element.is_char_boundary(query.len())
+            && element[..query.len()].eq_ignore_ascii_case(query)
+        {
             // bonus for coverage, e.g. 4 out of 5 chars match
             let coverage = query.len() as f32 / element.len() as f32;
             let score = 0.1 + (0.1 * (1.0 - coverage));
