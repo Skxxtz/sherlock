@@ -1,3 +1,4 @@
+use chrono::NaiveTime;
 use gpui::{Hsla, LinearColorStop, hsla, linear_color_stop, rgb};
 use serde::{Deserialize, Serialize};
 use simd_json::base::{ValueAsArray, ValueAsScalar};
@@ -36,6 +37,7 @@ pub struct WeatherData {
     pub location: String,
     pub css: WeatherClass,
     pub sunset: chrono::NaiveTime,
+    pub sunrise: chrono::NaiveTime,
     pub init: bool,
 }
 impl WeatherData {
@@ -47,6 +49,7 @@ impl WeatherData {
             location: String::new(),
             css: WeatherClass::None,
             sunset: chrono::NaiveTime::default(),
+            sunrise: chrono::NaiveTime::default(),
             init: false,
         }
     }
@@ -126,6 +129,9 @@ impl WeatherData {
         let sunset_raw = astronomy.get("sunset")?.as_str()?;
         let sunset = chrono::NaiveTime::parse_from_str(sunset_raw, "%I:%M %p").ok()?;
 
+        let sunrise_raw = astronomy.get("sunrise")?.as_str()?;
+        let sunrise = chrono::NaiveTime::parse_from_str(sunrise_raw, "%I:%M %p").ok()?;
+
         // Parse Temperature
         let temperature = match config.units.temperatures.as_str() {
             "f" | "F" => format!("{}°F", current_condition.get("temp_F")?.as_str()?),
@@ -176,6 +182,7 @@ impl WeatherData {
             location: launcher.location.clone(),
             css: Self::match_weather_code(code),
             sunset,
+            sunrise,
             init: true,
         };
         data.cache();
@@ -239,11 +246,25 @@ pub enum WeatherClass {
     None,
 }
 impl WeatherClass {
-    pub fn background(&self) -> (LinearColorStop, LinearColorStop) {
+    pub fn background(
+        &self,
+        now: NaiveTime,
+        sunset: NaiveTime,
+        sunrise: NaiveTime,
+    ) -> (LinearColorStop, LinearColorStop) {
+        let is_night = now < sunrise || now > sunset;
+
+        if is_night {
+            return (
+                linear_color_stop(rgb(0x1E2333), 0.0),
+                linear_color_stop(rgb(0x2C3140), 1.0),
+            );
+        }
+
         match self {
             Self::Clear => (
-                linear_color_stop(hsla(2.1101, 0.5894, 0.7039, 1.0), 0.0),
-                linear_color_stop(hsla(2.113, 0.3067, 0.8529, 1.0), 0.5),
+                linear_color_stop(rgb(0x87B2E0), 0.0),
+                linear_color_stop(rgb(0xCED9E5), 1.0),
             ),
             Self::FewClouds => (
                 linear_color_stop(rgb(0xA1A1A1), 0.0),
@@ -278,7 +299,11 @@ impl WeatherClass {
             ),
         }
     }
-    pub fn color(&self) -> impl Into<Hsla> {
+    pub fn color(&self, now: NaiveTime, sunset: NaiveTime, sunrise: NaiveTime) -> impl Into<Hsla> {
+        let is_night = now < sunrise || now > sunset;
+        if is_night {
+            return rgb(0xffffff);
+        }
         match self {
             Self::Clear => rgb(0xffffff),
             Self::FewClouds => rgb(0xffffff),
