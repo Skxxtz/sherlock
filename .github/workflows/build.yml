@@ -59,15 +59,15 @@ jobs:
 
       - name: Install build dependencies
         run: |
-        sudo apt-get install -y \
-        meson ninja-build pkg-config \
-        libwayland-dev wayland-protocols \
-        libgtk-4-dev \
-        libxkbcommon-dev \
-        libdbus-1-dev \
-        libfontconfig1-dev \
-        libssl-dev \
-        clang
+          sudo apt-get install -y \
+          meson ninja-build pkg-config \
+          libwayland-dev wayland-protocols \
+          libgtk-4-dev \
+          libxkbcommon-dev \
+          libdbus-1-dev \
+          libfontconfig1-dev \
+          libssl-dev \
+          clang
 
       - name: Build gtk4-layer-shell
         run: |
