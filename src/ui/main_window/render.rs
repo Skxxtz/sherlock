@@ -104,6 +104,7 @@ impl Render for SherlockMainWindow {
                                 .right(px(10.))
                                 .flex()
                                 .flex_col()
+                                .min_w(px(200.))
                                 .gap(px(5.))
                                 .children(self.context_actions.iter().enumerate().map(
                                     |(i, child)| {
