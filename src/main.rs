@@ -1,4 +1,4 @@
-use futures::future::join_all;
+use futures::{StreamExt, future::join_all, stream::FuturesUnordered};
 use once_cell::sync::OnceCell;
 use std::{
     collections::HashMap,
@@ -232,40 +232,31 @@ async fn main() {
                                     let data_items = data_clone
                                         .read_with(&cx_inner, |this, _| this.clone())
                                         .ok();
-
                                     if let Some(items) = data_items {
-                                        let update_futures = items
+                                        let mut futures: FuturesUnordered<_> = items
                                             .iter()
                                             .enumerate()
                                             .filter(|(_, item)| item.is_async())
                                             .map(|(idx, item)| async move {
                                                 (idx, item.clone().update_async().await)
-                                            });
+                                            })
+                                            .collect();
 
-                                        let updates = join_all(update_futures).await;
-
-                                        let _ = cx_inner.update(|cx| {
-                                            if current_generation != this_generation {
-                                                return;
-                                            }
-
-                                            if !updates.is_empty() {
+                                        while let Some((idx, result)) = futures.next().await {
+                                            let Some(update) = result else { continue };
+                                            let _ = cx_inner.update(|cx| {
+                                                if current_generation != this_generation {
+                                                    return;
+                                                }
                                                 data_clone.update(cx, |items_arc, _cx| {
-                                                    let items_vec = Arc::make_mut(items_arc);
-                                                    for (idx, update) in updates
-                                                        .into_iter()
-                                                        .filter_map(|(i, u)| u.map(|v| (i, v)))
-                                                    {
-                                                        items_vec[idx] = update;
-                                                    }
+                                                    Arc::make_mut(items_arc)[idx] = update;
                                                 });
-
                                                 let _ = new_win.update(cx, |view, _, cx| {
-                                                    view.last_query = None; // forces update
+                                                    view.last_query = None;
                                                     view.filter_and_sort(cx);
                                                 });
-                                            }
-                                        });
+                                            });
+                                        }
                                     }
                                 }));
                         }
