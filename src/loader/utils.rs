@@ -191,8 +191,10 @@ pub enum ExecVariable {
     PathInput(PathData), // Use a helper struct
 }
 
+/// A path placeholder that deserializes from a plain string.
+/// The `index` field tracks cursor position in the UI and is not persisted.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(from = "SharedString")] // Logic to convert String -> Struct
+#[serde(from = "SharedString")]
 pub struct PathData {
     pub path: SharedString,
     #[serde(skip)]
@@ -249,6 +251,11 @@ pub struct RawLauncher {
     pub variables: Option<Vec<ExecVariable>>,
 }
 
+/// Persists and normalizes application launch counts across sessions.
+///
+/// On every increment, counts are re-ranked to contiguous integers (1, 2, 3...)
+/// rather than raw hit counts. This prevents frequently-used apps from
+/// dominating the sort order unboundedly over time.
 pub struct CounterReader {
     pub path: PathBuf,
 }
@@ -266,6 +273,8 @@ impl CounterReader {
         }
         Ok(CounterReader { path })
     }
+    /// Re-ranks all existing counts to contiguous values before incrementing,
+    /// so the ordering stays stable regardless of absolute hit counts.
     pub fn increment(&self, key: &str) -> Result<(), SherlockError> {
         let mut content: HashMap<String, u32> = BinaryCache::read(&self.path)?;
         let unique_values: HashMap<u32, u32> = content
@@ -289,6 +298,9 @@ impl CounterReader {
     }
 }
 
+/// Deserializes a map of `{ "App Name": AppData }` where the key becomes
+/// `AppData.name`. This is needed because the app name lives as the map key
+/// in the config format, not as a field inside the value.
 pub fn deserialize_named_appdata<'de, D>(deserializer: D) -> Result<HashSet<AppData>, D::Error>
 where
     D: Deserializer<'de>,
@@ -315,6 +327,11 @@ where
     deserializer.deserialize_map(AppDataMapVisitor)
 }
 
+/// Builds the search string used for fuzzy matching.
+///
+/// If `use_keywords` is true, produces `"name;keywords"` — the semicolon
+/// separates the display name from the keyword blob so both are searchable.
+/// If false, only the name is used.
 pub fn construct_search(name: Option<&str>, search_str: &str, use_keywords: bool) -> String {
     let mut s = if use_keywords {
         let name_val = name.unwrap_or("");
