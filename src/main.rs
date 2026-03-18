@@ -142,7 +142,7 @@ async fn main() {
         add_binding("up", KeyBinding::new("up", FocusPrev, None));
         add_binding(
             "variable.tab",
-            UIFunction::Complete.into_bind("tab").unwrap(),
+            UIFunction::Complete.into_bind("variable.tab").unwrap(),
         );
         add_binding("enter", KeyBinding::new("enter", Execute, None));
         add_binding("tab", KeyBinding::new("tab", NextVar, None));
