@@ -1,0 +1,80 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  GTK4_LAYER_SHELL_VERSION: v1.1.0
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Update apt
+        run: sudo apt-get update
+
+      - name: Install build dependencies
+        run: sudo apt-get install -y meson ninja-build pkg-config libwayland-dev wayland-protocols libgtk-4-dev libxkbcommon-dev libxkbcommon-x11-dev libdbus-1-dev libfontconfig1-dev libssl-dev clang valac gobject-introspection
+
+      - name: Build gtk4-layer-shell
+        run: |
+          curl -L "https://github.com/wmww/gtk4-layer-shell/archive/refs/tags/${GTK4_LAYER_SHELL_VERSION}.tar.gz" | tar -zx
+          mv gtk4-layer-shell-* gtk4-layer-shell
+          meson setup gtk4-layer-shell-build gtk4-layer-shell
+          sudo ninja -C gtk4-layer-shell-build install
+          sudo ldconfig
+
+      - name: Build release binary
+        run: cargo build --release --features wayland
+
+      - name: Create release archive
+        run: |
+          cp target/release/sherlock-gpui sherlock
+          tar -czf sherlock-${{ github.ref_name }}-x86_64.tar.gz sherlock resources/ LICENSE
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sherlock-${{ github.ref_name }}-x86_64.tar.gz
+          body_path: CHANGELOG.md
+          generate_release_notes: true
+
+      - name: Update PKGBUILD
+        run: |
+          VERSION=${{ github.ref_name }}
+          VERSION=${VERSION#v}
+          SHA=$(sha256sum sherlock-${{ github.ref_name }}-x86_64.tar.gz | cut -d' ' -f1)
+          sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('$SHA')/" PKGBUILD
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v2
+        with:
+          pkgname: sherlock-launcher-gpui-bin
+          pkgbuild: ./PKGBUILD
+          commit_username: github-actions[bot]
+          commit_email: github-actions[bot]@users.noreply.github.com
+          ssh_private_key: ${{ secrets.AUR_SSH_KEY }}
+          commit_message: update to ${{ github.ref_name }}
