@@ -1,9 +1,8 @@
-name: Build 
+name: Build
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main", "unstable"]
     paths-ignore:
-      - "cargo.**"
       - ".github/**"
       - "docs/**"
       - "resources/**"
@@ -13,20 +12,17 @@ on:
       - "**.rasi"
       - "**.nix"
       - "**.lock"
-      - "**.json"
       - "**.png"
       - "**.gif"
       - "**.svg"
-      - "**.toml"
       - "LICENSE"
-      
+
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
     paths-ignore:
       - "**.md"
       - "**.markdown"
       - "**.rasi"
-      - "**.json"
       - "**.flake"
 
 env:
@@ -40,36 +36,50 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    # Cargo fmt and commit if required
-    - name: Format
-      run: cargo fmt
+      # Format and commit if needed — before anything else
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
 
-    - name: Commit formatting changes
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git diff --quiet || git commit -am "style: auto-format"
-        git push
- 
-    # Ubuntu doesn't have gtk4-layer-shell packaged, so we need to prepare that first
-    - name: Pull apt
-      run: sudo apt-get update
-    - name: Install gtk4-layer-shell dependencies
-      run: sudo apt install meson libwayland-dev wayland-protocols libgtk-4-dev gobject-introspection libgirepository1.0-dev valac gtk-doc-tools
-    - name: Unpack gtk4-layer-shell
-      run: curl -L "https://github.com/wmww/gtk4-layer-shell/archive/refs/tags/${GTK4_LAYER_SHELL_VERSION}.tar.gz" | tar -zx && mv gtk4-layer-shell-* gtk4-layer-shell
-    - name: Prepare gtk4-layer-shell
-      run: meson setup gtk4-layer-shell-build gtk4-layer-shell
-    - name: Install gtk4-layer-shell
-      run: sudo ninja -C gtk4-layer-shell-build install
-    - name: Install dbus and pkg-config
-      run: sudo apt-get install libdbus-1-dev pkg-config
+      - name: Format
+        run: cargo fmt
 
-    # Build, test
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - name: Commit formatting changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet || (git commit -am "style: auto-format" && git push)
 
+      # System dependencies
+      - name: Update apt
+        run: sudo apt-get update
+
+      - name: Install build dependencies
+        run: |
+        sudo apt-get install -y \
+        meson ninja-build pkg-config \
+        libwayland-dev wayland-protocols \
+        libgtk-4-dev \
+        libxkbcommon-dev \
+        libdbus-1-dev \
+        libfontconfig1-dev \
+        libssl-dev \
+        clang
+
+      - name: Build gtk4-layer-shell
+        run: |
+          curl -L "https://github.com/wmww/gtk4-layer-shell/archive/refs/tags/${GTK4_LAYER_SHELL_VERSION}.tar.gz" | tar -zx
+          mv gtk4-layer-shell-* gtk4-layer-shell
+          meson setup gtk4-layer-shell-build gtk4-layer-shell
+          sudo ninja -C gtk4-layer-shell-build install
+          sudo ldconfig
+
+      # Build and test
+      - name: Build
+        run: cargo build --verbose --features wayland
+
+      - name: Run tests
+        run: cargo test --verbose --features wayland
