@@ -150,6 +150,23 @@ impl LauncherType {
                             .and_then(|i| i.to_str().and_then(resolve_icon_path));
                         inner.priority =
                             Some(parse_priority(launcher.priority as f32, count, decimals));
+                        inner.actions = inner
+                            .actions
+                            .iter()
+                            .map(|action| {
+                                let resolved = action
+                                    .icon
+                                    .as_deref()
+                                    .and_then(|p| p.to_str())
+                                    .and_then(|s| resolve_icon_path(s));
+                                Arc::new(ApplicationAction {
+                                    icon: resolved,
+                                    ..(**action).clone()
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                            .into();
+
                         RenderableChild::AppLike {
                             launcher: Arc::clone(&launcher),
                             inner,
