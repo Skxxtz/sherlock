@@ -1,0 +1,75 @@
+name: Build 
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - "cargo.**"
+      - ".github/**"
+      - "docs/**"
+      - "resources/**"
+      - "**build.yml"
+      - "**.md"
+      - "**.markdown"
+      - "**.rasi"
+      - "**.nix"
+      - "**.lock"
+      - "**.json"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "**.toml"
+      - "LICENSE"
+      
+  pull_request:
+    branches: [ "**" ]
+    paths-ignore:
+      - "**.md"
+      - "**.markdown"
+      - "**.rasi"
+      - "**.json"
+      - "**.flake"
+
+env:
+  CARGO_TERM_COLOR: always
+  GTK4_LAYER_SHELL_VERSION: v1.1.0
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    # Cargo fmt and commit if required
+    - name: Format
+      run: cargo fmt
+
+    - name: Commit formatting changes
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git diff --quiet || git commit -am "style: auto-format"
+        git push
+ 
+    # Ubuntu doesn't have gtk4-layer-shell packaged, so we need to prepare that first
+    - name: Pull apt
+      run: sudo apt-get update
+    - name: Install gtk4-layer-shell dependencies
+      run: sudo apt install meson libwayland-dev wayland-protocols libgtk-4-dev gobject-introspection libgirepository1.0-dev valac gtk-doc-tools
+    - name: Unpack gtk4-layer-shell
+      run: curl -L "https://github.com/wmww/gtk4-layer-shell/archive/refs/tags/${GTK4_LAYER_SHELL_VERSION}.tar.gz" | tar -zx && mv gtk4-layer-shell-* gtk4-layer-shell
+    - name: Prepare gtk4-layer-shell
+      run: meson setup gtk4-layer-shell-build gtk4-layer-shell
+    - name: Install gtk4-layer-shell
+      run: sudo ninja -C gtk4-layer-shell-build install
+    - name: Install dbus and pkg-config
+      run: sudo apt-get install libdbus-1-dev pkg-config
+
+    # Build, test
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+
