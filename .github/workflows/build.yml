@@ -82,7 +82,8 @@ jobs:
           libssl-dev \
           clang \
           valac \
-          gobject-introspection
+          gobject-introspection \
+          libxkbcommon-x11-dev
 
       - name: Build gtk4-layer-shell
         run: |
