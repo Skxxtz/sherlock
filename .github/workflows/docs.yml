@@ -2,6 +2,8 @@ name: Deploy docs
 on:
   push:
     branches: [main]
+    paths:
+      - "docs/**"
 permissions:
   contents: write
 jobs:
