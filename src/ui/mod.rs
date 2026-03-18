@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ui::{
     main_window::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit},
-    search_bar::Complete,
+    search_bar::actions::Complete,
 };
 
 #[derive(Deserialize, Serialize, Hash, Debug, Clone, Copy, Eq, PartialEq)]

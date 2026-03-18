@@ -19,7 +19,8 @@ use crate::{
     ui::{
         UIFunction,
         main_window::{LauncherMode, NextVar, OpenContext, PrevVar},
-        search_bar::{Complete, EmptyBackspace, ShortcutAction},
+        search_bar::EmptyBackspace,
+        search_bar::actions::ShortcutAction,
     },
     utils::{
         config::{ConfigGuard, ConfigWatcher, SherlockConfig},
@@ -35,7 +36,8 @@ mod utils;
 
 use ui::main_window::{Execute, FocusNext, FocusPrev, Quit, SherlockMainWindow};
 use ui::search_bar::{
-    Backspace, Copy, Cut, Delete, DeleteAll, End, Home, Left, Paste, Right, SelectAll, TextInput,
+    TextInput,
+    actions::{Backspace, Copy, Cut, Delete, DeleteAll, End, Home, Left, Paste, Right, SelectAll},
 };
 
 use utils::errors::SherlockError;
@@ -285,20 +287,7 @@ fn spawn_launcher(
     // For now load application here
     let window = cx
         .open_window(get_window_options(), |_, cx| {
-            let text_input = cx.new(|cx| TextInput {
-                scope: None,
-                focus_handle: cx.focus_handle(),
-                content: "".into(),
-                placeholder: "Search:".into(),
-                variable: None,
-                selected_range: 0..0,
-                selection_reversed: false,
-                marked_range: None,
-                last_layout: None,
-                last_bounds: None,
-                is_selecting: false,
-                ghost_text: None,
-            });
+            let text_input = cx.new(|cx| TextInput::builder().placeholder("Search").build(cx));
             cx.new(|cx| {
                 let data_len = data.read(cx).len();
                 let sub = cx.observe(
@@ -308,6 +297,8 @@ fn spawn_launcher(
                         this.filter_and_sort(cx);
                     },
                 );
+
+                // attatch backspace sub
                 let backspace_sub =
                     cx.subscribe(&text_input, |this, _, _ev: &EmptyBackspace, cx| {
                         if this.mode != LauncherMode::Home {
@@ -319,6 +310,9 @@ fn spawn_launcher(
                             this.filter_and_sort(cx);
                         }
                     });
+                text_input.update(cx, |this, _cx| {
+                    this._sub = Some(backspace_sub);
+                });
 
                 let list_state = ListState::new(data_len, ListAlignment::Top, px(48.));
 
@@ -326,7 +320,7 @@ fn spawn_launcher(
                     text_input,
                     focus_handle: cx.focus_handle(),
                     list_state,
-                    _subs: vec![sub, backspace_sub],
+                    _subs: vec![sub],
                     selected_index: 0,
                     // modes
                     mode: LauncherMode::Home,

@@ -9,7 +9,10 @@ use crate::{
         children::{LauncherValues, RenderableChild, RenderableChildDelegate},
     },
     loader::utils::{CounterReader, ExecVariable},
-    ui::{main_window::SherlockMainWindow, search_bar::TextInput},
+    ui::{
+        main_window::SherlockMainWindow,
+        search_bar::{EmptyBackspace, TextInput},
+    },
     utils::{command_launch::spawn_detached, errors::SherlockError, websearch::websearch},
 };
 
@@ -115,9 +118,24 @@ impl SherlockMainWindow {
             if self.active_bar == 0 {
                 self.text_input.read(cx).focus_handle.focus(win);
             } else {
+                // handle switching forward
                 let var_idx = self.active_bar - 1;
-                let handle = self.variable_input[var_idx].read(cx).focus_handle.clone();
+                let Some(active_bar) = self.variable_input.get(var_idx) else {
+                    return;
+                };
+                let handle = active_bar.read(cx).focus_handle.clone();
                 handle.focus(win);
+
+                // handle switching back if variable input is empty
+                let sub = Some(cx.subscribe(
+                    &active_bar.clone(),
+                    |_this, _entity, _ev: &EmptyBackspace, cx| {
+                        cx.dispatch_action(&PrevVar);
+                    },
+                ));
+                active_bar.update(cx, |var_input, _| {
+                    var_input._sub = sub;
+                });
             }
 
             cx.notify();
@@ -308,20 +326,12 @@ impl SherlockMainWindow {
             self.variable_input = vars_to_create
                 .into_iter()
                 .map(|var| {
-                    cx.new(|cx| TextInput {
-                        scope: Some("variable"),
-                        focus_handle: cx.focus_handle(),
-                        content: "".into(),
-                        placeholder: var.placeholder(),
-                        variable: Some(var),
-                        // Initialize your other fields here...
-                        selected_range: 0..0,
-                        selection_reversed: false,
-                        marked_range: None,
-                        last_layout: None,
-                        last_bounds: None,
-                        is_selecting: false,
-                        ghost_text: None,
+                    cx.new(|cx| {
+                        TextInput::builder()
+                            .scope("variable")
+                            .placeholder(var.placeholder())
+                            .variable(var)
+                            .build(cx)
                     })
                 })
                 .collect();

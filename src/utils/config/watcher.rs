@@ -6,6 +6,14 @@ use crate::{
     utils::errors::{SherlockError, SherlockErrorType},
 };
 
+/// **Unfinished**
+/// This struct aims at providing an audit function to check for config file changes and
+/// application data changes. This should be run on every startup.
+///
+/// TODO:
+/// Add functionality for .desktop files.
+/// Add audit file that contains last audit time.
+///
 pub struct ConfigWatcher {
     latest_audit: DateTime<Local>,
     root_dir: Box<Path>,

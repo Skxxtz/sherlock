@@ -67,19 +67,12 @@ impl SherlockMainWindow {
                     self.variable_input = vars_to_create
                         .into_iter()
                         .map(|var| {
-                            cx.new(|cx| TextInput {
-                                scope: Some("variable"),
-                                focus_handle: cx.focus_handle(),
-                                content: "".into(),
-                                placeholder: var.placeholder(),
-                                variable: Some(var),
-                                selected_range: 0..0,
-                                selection_reversed: false,
-                                marked_range: None,
-                                last_layout: None,
-                                last_bounds: None,
-                                is_selecting: false,
-                                ghost_text: None,
+                            cx.new(|cx| {
+                                TextInput::builder()
+                                    .scope("variable")
+                                    .placeholder(var.placeholder())
+                                    .variable(var)
+                                    .build(cx)
                             })
                         })
                         .collect();
