@@ -69,7 +69,8 @@ jobs:
           libdbus-1-dev \
           libfontconfig1-dev \
           libssl-dev \
-          clang
+          clang \
+          gobject-introspection
 
       - name: Build gtk4-layer-shell
         run: |
