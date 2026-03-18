@@ -50,10 +50,21 @@ jobs:
         run: cargo fmt
 
       - name: Commit formatting changes
+        if: github.event_name != 'pull_request'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git diff --quiet || (git commit -am "style: auto-format" && git push)
+          if ! git diff --quiet; then
+            git commit -am "style: auto-format"
+            git push
+            echo "FORMATTED=true" >> $GITHUB_ENV
+          fi
+
+      - name: Abort if formatted
+        if: env.FORMATTED == 'true'
+        run: |
+          echo "Code was reformatted, rerunning pipeline with formatted code."
+          exit 1
 
       # System dependencies
       - name: Update apt
@@ -70,6 +81,7 @@ jobs:
           libfontconfig1-dev \
           libssl-dev \
           clang \
+          valac \
           gobject-introspection
 
       - name: Build gtk4-layer-shell
