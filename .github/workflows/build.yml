@@ -25,6 +25,8 @@ on:
       - "**.rasi"
       - "**.flake"
 
+  workflow_dispatch:
+
 env:
   CARGO_TERM_COLOR: always
   GTK4_LAYER_SHELL_VERSION: v1.1.0
