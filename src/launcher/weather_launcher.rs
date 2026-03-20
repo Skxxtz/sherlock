@@ -1,5 +1,5 @@
 use chrono::NaiveTime;
-use gpui::{Hsla, LinearColorStop, hsla, linear_color_stop, rgb};
+use gpui::{Hsla, LinearColorStop, linear_color_stop, rgb};
 use serde::{Deserialize, Serialize};
 use simd_json::base::{ValueAsArray, ValueAsScalar};
 use simd_json::derived::ValueObjectAccess;

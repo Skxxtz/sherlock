@@ -1,0 +1,10 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Circle as thick filled ring -->
+  <path fill="#666" fill-rule="evenodd"
+    d="M16 2C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2zm0 2c6.627 0 12 5.373 12 12S22.627 28 16 28 4 22.627 4 16 9.373 4 16 4z"/>
+  <!-- X as two filled rotated rectangles -->
+  <rect x="14.5" y="8" width="3" height="16" rx="1.5" fill="#666"
+    transform="rotate(45 16 16)"/>
+  <rect x="14.5" y="8" width="3" height="16" rx="1.5" fill="#666"
+    transform="rotate(-45 16 16)"/>
+</svg>

@@ -1,12 +1,9 @@
-use linicon::lookup_icon;
-
-use crate::loader::assets::Assets;
+use crate::loader::icon::render::render_svg_to_cache;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::files::home_dir;
-use crate::utils::paths::get_cache_dir;
 use crate::{ICONS, sherlock_error};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 pub struct CustomIconTheme {
@@ -87,7 +84,7 @@ impl<'g> IconThemeGuard {
         })
     }
 
-    fn get_write() -> Result<RwLockWriteGuard<'g, CustomIconTheme>, SherlockError> {
+    pub fn get_write() -> Result<RwLockWriteGuard<'g, CustomIconTheme>, SherlockError> {
         Self::get_theme()?.write().map_err(|_| {
             sherlock_error!(
                 SherlockErrorType::ConfigError(None),
@@ -119,122 +116,4 @@ impl<'g> IconThemeGuard {
         key_fn(&mut config);
         Ok(())
     }
-}
-
-pub fn resolve_icon_path(name: &str) -> Option<Arc<Path>> {
-    // 1. Check in-memory HashMap cache
-    if let Ok(Some(icon)) = IconThemeGuard::lookup_icon(name) {
-        return icon;
-    }
-
-    let mut result: Option<Arc<Path>> = None;
-
-    // Check embedded files
-    if let Some(asset) = Assets::get(&format!("icons/{name}.svg")) {
-        result = render_to_png_cache(name, &asset.data);
-    }
-
-    // Fallback to local linicon lookup (~/.local/share/icons)
-    if result.is_none() {
-        result = (|| {
-            let icon_path = lookup_icon(name)
-                .with_search_paths(&["~/.local/share/icons/"])
-                .ok()?
-                .next()?
-                .map(|i| i.path)
-                .ok()?;
-            render_svg_to_cache(name, icon_path)
-        })();
-    }
-
-    // Fallback to global Freedesktop lookup
-    if result.is_none() {
-        result = freedesktop_icons::lookup(name)
-            .with_size(128)
-            .find()
-            .and_then(|i| render_svg_to_cache(name, i));
-    }
-
-    // Finalize: Write found result back to the Guard buffer
-    if let Ok(mut cache) = IconThemeGuard::get_write() {
-        cache.buf.insert(name.to_string(), result.clone());
-    }
-
-    result
-}
-
-/// Renders an svg icon into a high-resolution png version.
-fn render_svg_to_cache(key: &str, path: PathBuf) -> Option<Arc<Path>> {
-    // Early return if file does not exist
-    if !path.exists() {
-        return None;
-    }
-
-    // Early return if file is not svg
-    if path.extension().map_or(true, |s| s.to_str() != Some("svg")) {
-        return Some(Arc::from(path.into_boxed_path()));
-    }
-
-    // Read svg
-    let svg_data = match std::fs::read(&path) {
-        Ok(data) => data,
-        Err(e) => {
-            eprintln!("Failed to read SVG file {:?}: {}", path, e);
-            return None;
-        }
-    };
-
-    render_to_png_cache(key, &svg_data)
-}
-
-fn render_to_png_cache(key: &str, svg_data: &[u8]) -> Option<Arc<Path>> {
-    let mut out = get_cache_dir().ok()?.join("icons");
-
-    if let Err(e) = std::fs::create_dir_all(&out) {
-        eprintln!("Warning: Failed to create cache directory: {}", e);
-        return None;
-    }
-
-    out.push(format!("{}.png", key.replace('/', "_")));
-
-    if out.exists() {
-        return Some(Arc::from(out.into_boxed_path()));
-    }
-
-    // Parse svg
-    let opt = usvg::Options::default();
-    let tree = match usvg::Tree::from_data(&svg_data, &opt) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Failed to parse SVG {key}: {e}");
-            return None;
-        }
-    };
-
-    // Scale svg
-    let target_height = 96.0;
-    let zoom = target_height / tree.size().height();
-
-    let width = (tree.size().width() * zoom).round() as u32;
-    let height = (tree.size().height() * zoom).round() as u32;
-
-    let mut pixmap = tiny_skia::Pixmap::new(width, height).unwrap();
-
-    let sx = width as f32 / tree.size().width();
-    let sy = height as f32 / tree.size().height();
-
-    // Render
-    resvg::render(
-        &tree,
-        tiny_skia::Transform::from_scale(sx, sy),
-        &mut pixmap.as_mut(),
-    );
-
-    // Save svg to destination
-    if let Err(e) = pixmap.save_png(&out) {
-        eprintln!("Warning: Failed to cache file: {e}");
-        return None;
-    }
-
-    Some(Arc::from(out.into_boxed_path()))
 }
