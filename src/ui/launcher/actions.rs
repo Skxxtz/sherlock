@@ -10,7 +10,7 @@ use crate::{
     },
     loader::utils::{CounterReader, ExecVariable},
     ui::{
-        main_window::SherlockMainWindow,
+        launcher::LauncherView,
         search_bar::{EmptyBackspace, TextInput},
     },
     utils::{command_launch::spawn_detached, errors::SherlockError, websearch::websearch},
@@ -30,7 +30,7 @@ actions!(
     ]
 );
 
-impl SherlockMainWindow {
+impl LauncherView {
     pub fn focus_first(&mut self, cx: &mut Context<Self>) {
         // early return if no indices
         if self.filtered_indices.is_empty() {

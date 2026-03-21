@@ -33,7 +33,7 @@ use crate::{
         resolve_icon_path,
         utils::{AppData, ApplicationAction, RawLauncher, deserialize_named_appdata},
     },
-    ui::main_window::LauncherMode,
+    ui::launcher::LauncherMode,
     utils::{config::HomeType, intent::Capabilities},
 };
 

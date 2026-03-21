@@ -1,5 +1,5 @@
 pub mod error;
-pub mod main_window;
+pub mod launcher;
 pub mod search_bar;
 pub mod workspace;
 
@@ -7,7 +7,7 @@ use gpui::KeyBinding;
 use serde::{Deserialize, Serialize};
 
 use crate::ui::{
-    main_window::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit},
+    launcher::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit},
     search_bar::actions::Complete,
 };
 

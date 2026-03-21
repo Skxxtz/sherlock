@@ -17,7 +17,7 @@ use crate::{
     },
     loader::utils::RawLauncher,
     sherlock_error,
-    ui::main_window::LauncherMode,
+    ui::launcher::LauncherMode,
     utils::{
         cache::BinaryCache,
         config::{ConfigGuard, ConstantDefaults},

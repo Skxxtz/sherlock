@@ -131,6 +131,7 @@ impl TextInput {
             self.refresh_ghost_text();
 
             cx.notify();
+            cx.stop_propagation();
         } else {
             cx.propagate();
         }

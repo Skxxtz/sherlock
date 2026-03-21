@@ -1,12 +1,11 @@
 use crate::launcher::children::{LauncherValues, RenderableChild};
 use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
-use crate::loader::utils::{ApplicationAction, ExecVariable};
+use crate::loader::utils::ApplicationAction;
 use crate::utils::config::HomeType;
+use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, ListState, SharedString, Subscription};
-use gpui::{AppContext, WeakEntity};
 use gpui::{AsyncApp, Task};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use simd_json::prelude::Indexed;
 use std::sync::{Arc, LazyLock};
 
 use crate::ui::search_bar::TextInput;
@@ -16,7 +15,7 @@ pub mod render;
 
 pub use actions::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit};
 
-pub struct SherlockMainWindow {
+pub struct LauncherView {
     pub text_input: Entity<TextInput>,
     pub focus_handle: FocusHandle,
     pub list_state: ListState,
@@ -40,50 +39,24 @@ pub struct SherlockMainWindow {
     pub data: Entity<Arc<Vec<RenderableChild>>>,
     pub filtered_indices: Arc<[usize]>,
     pub last_query: Option<String>,
+    pub error_count: (usize, usize),
 
     // State
     pub config_initialized: bool,
 }
 
-impl Focusable for SherlockMainWindow {
+impl Focusable for LauncherView {
     fn focus_handle(&self, _: &App) -> FocusHandle {
         self.focus_handle.clone()
     }
 }
 
-impl SherlockMainWindow {
+impl LauncherView {
     pub fn apply_results(&mut self, results: Arc<[usize]>, query: String, cx: &mut Context<Self>) {
         let old_count = self.list_state.item_count();
         let new_count = results.len();
 
-        if let Some(&first_idx) = results.first() {
-            let needed_vars: Option<Vec<ExecVariable>> = {
-                let data_guard = self.data.read(cx);
-                data_guard
-                    .get(first_idx)
-                    .and_then(|data| data.vars().map(|slice| slice.to_vec()))
-            };
-
-            if let Some(vars_to_create) = needed_vars {
-                let current_top_idx = self.filtered_indices.get(self.selected_index).copied();
-                if current_top_idx != Some(first_idx) {
-                    self.variable_input = vars_to_create
-                        .into_iter()
-                        .map(|var| {
-                            cx.new(|cx| {
-                                TextInput::builder()
-                                    .scope("variable")
-                                    .placeholder(var.placeholder())
-                                    .variable(var)
-                                    .build(cx)
-                            })
-                        })
-                        .collect();
-                }
-            } else {
-                self.variable_input.clear();
-            }
-        }
+        self.update_vars(cx);
 
         self.active_bar = 0;
         self.filtered_indices = results;
@@ -117,7 +90,7 @@ impl SherlockMainWindow {
         let data_arc = self.data.read(cx).clone();
         let mode = self.mode.clone();
         self.deferred_render_task = Some(cx.spawn(
-            |this: WeakEntity<SherlockMainWindow>, cx: &mut AsyncApp| {
+            |this: WeakEntity<LauncherView>, cx: &mut AsyncApp| {
                 let mut cx = cx.clone();
                 async move {
                     let mode = mode.as_str();
