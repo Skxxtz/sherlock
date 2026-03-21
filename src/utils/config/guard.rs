@@ -50,3 +50,9 @@ impl<'g> ConfigGuard {
         Ok(())
     }
 }
+
+impl<'g> ConfigGuard {
+    pub fn is_initialized() -> bool {
+        Self::get_read().map_or(false, |s| s.initialized)
+    }
+}

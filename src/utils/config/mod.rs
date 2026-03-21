@@ -22,6 +22,11 @@ pub use watcher::ConfigWatcher;
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct SherlockConfig {
+    /// Whether the config was initialized or uses defaults
+    #[serde(skip)]
+    #[serde(default)]
+    pub initialized: bool,
+
     /// User-defined default applications (e.g., terminal, calendar)
     #[serde(default)]
     pub default_apps: ConfigDefaultApps,

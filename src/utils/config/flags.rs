@@ -127,6 +127,7 @@ impl SherlockFlags {
                 match config_res {
                     Ok(mut config) => {
                         config = SherlockConfig::apply_flags(self, config);
+                        config.initialized = true;
                         Ok((config, vec![]))
                     }
                     Err(e) => {

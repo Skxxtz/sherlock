@@ -3,7 +3,7 @@ use std::sync::Arc;
 use gpui::{
     AnyElement, Context, Element, Focusable, FontWeight, Image, ImageSource, InteractiveElement,
     IntoElement, ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window,
-    div, hsla, img, list, px, relative, rgb,
+    div, hsla, img, list, prelude::FluentBuilder, px, relative, rgb,
 };
 
 use crate::{
@@ -51,6 +51,37 @@ impl Render for SherlockMainWindow {
                     .border_b_2()
                     .border_color(hsla(0., 0., 0.1882, 1.0)),
             )
+            .when(!self.config_initialized, |this| {
+                this.child(
+                    div()
+                        .w_full()
+                        .px_4()
+                        .py(px(6.))
+                        .bg(hsla(0.11, 0.8, 0.12, 1.0))
+                        .border_b_1()
+                        .border_color(hsla(0.11, 0.9, 0.35, 1.0))
+                        .flex()
+                        .items_center()
+                        .gap_2()
+                        .child(
+                            div()
+                                .text_size(px(11.0))
+                                .text_color(hsla(0.11, 1.0, 0.65, 1.0))
+                                .child("⚠ Running with default config — run "),
+                        )
+                        .child(
+                            div()
+                                .px(px(4.))
+                                .py(px(1.))
+                                .rounded_sm()
+                                .bg(rgb(0x1e1e1e))
+                                .text_size(px(11.0))
+                                .text_color(rgb(0x89d4f5))
+                                .font_family("monospace")
+                                .child("sherlock --repair"),
+                        ),
+                )
+            })
             .child(
                 div()
                     .px(px(14.))

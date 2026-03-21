@@ -40,6 +40,9 @@ pub struct SherlockMainWindow {
     pub data: Entity<Arc<Vec<RenderableChild>>>,
     pub filtered_indices: Arc<[usize]>,
     pub last_query: Option<String>,
+
+    // State
+    pub config_initialized: bool,
 }
 
 impl Focusable for SherlockMainWindow {
@@ -305,7 +308,7 @@ fn make_prio(prio: f32, query: &str, match_in: &str) -> f32 {
     let counters = prio.fract() / 100.0;
     let result = prio.trunc() + (counters + score).min(0.99);
 
-    if *DEBUG_SEARCH {
+    if cfg!(debug_assertions) && *DEBUG_SEARCH {
         let m = match_in.chars().take(30).collect::<String>();
         let q = query.chars().take(20).collect::<String>();
         println!(

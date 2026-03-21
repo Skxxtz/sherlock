@@ -1,4 +1,4 @@
-use futures::{StreamExt, future::join_all, stream::FuturesUnordered};
+use futures::{StreamExt, stream::FuturesUnordered};
 use once_cell::sync::OnceCell;
 use std::{
     collections::HashMap,
@@ -18,9 +18,9 @@ use crate::{
     loader::{CustomIconTheme, IconThemeGuard, Loader, assets::Assets},
     ui::{
         UIFunction,
+        error::window::spawn_error_window,
         main_window::{LauncherMode, NextVar, OpenContext, PrevVar},
-        search_bar::EmptyBackspace,
-        search_bar::actions::ShortcutAction,
+        search_bar::{EmptyBackspace, actions::ShortcutAction},
     },
     utils::{
         config::{ConfigGuard, ConfigWatcher, SherlockConfig},
@@ -106,167 +106,126 @@ async fn main() {
         return;
     }
 
-    let mut watcher = match setup() {
-        Ok(root) => ConfigWatcher::new(root),
-        Err(e) => {
-            eprintln!("{e}");
-            return;
-        }
-    };
+    let setup_result = setup();
 
     // start primary instance
-    let app = Application::new().with_assets(Assets);
-    app.with_quit_mode(QuitMode::Explicit).run(|cx: &mut App| {
-        let mut final_bindings: HashMap<String, KeyBinding> = HashMap::new();
+    let app = Application::new()
+        .with_assets(Assets)
+        .with_quit_mode(QuitMode::Explicit);
 
-        let mut add_binding = |key: &str, binding: KeyBinding| {
-            final_bindings.insert(key.to_string(), binding);
-        };
-
-        // default binds
-        add_binding("backspace", KeyBinding::new("backspace", Backspace, None));
-        add_binding("delete", KeyBinding::new("delete", Delete, None));
-        add_binding(
-            "ctrl-backspace",
-            KeyBinding::new("ctrl-backspace", DeleteAll, None),
-        );
-        add_binding("ctrl-a", KeyBinding::new("ctrl-a", SelectAll, None));
-        add_binding("ctrl-v", KeyBinding::new("ctrl-v", Paste, None));
-        add_binding("ctrl-c", KeyBinding::new("ctrl-c", Copy, None));
-        add_binding("ctrl-x", KeyBinding::new("ctrl-x", Cut, None));
-        add_binding("escape", KeyBinding::new("escape", Quit, None));
-
-        add_binding("home", KeyBinding::new("home", Home, None));
-        add_binding("end", KeyBinding::new("end", End, None));
-        add_binding("left", KeyBinding::new("left", Left, None));
-        add_binding("right", KeyBinding::new("right", Right, None));
-        add_binding("down", KeyBinding::new("down", FocusNext, None));
-        add_binding("up", KeyBinding::new("up", FocusPrev, None));
-        add_binding(
-            "variable.tab",
-            UIFunction::Complete.into_bind("variable.tab").unwrap(),
-        );
-        add_binding("enter", KeyBinding::new("enter", Execute, None));
-        add_binding("tab", KeyBinding::new("tab", NextVar, None));
-        add_binding("shift-tab", KeyBinding::new("shift-tab", PrevVar, None));
-        add_binding("ctrl-l", KeyBinding::new("ctrl-l", OpenContext, None));
-
-        if let Ok(config) = ConfigGuard::read() {
-            for (key, action_type) in &config.keybinds {
-                if *action_type == UIFunction::Shortcut && key.contains("<digit>") {
-                    for i in 0..=9 {
-                        let actual_key = key.replace("<digit>", &i.to_string());
-                        add_binding(
-                            &actual_key,
-                            KeyBinding::new(&actual_key, ShortcutAction { index: i }, None),
-                        );
-                    }
-                } else if let Some(binding) = action_type.into_bind(key) {
-                    add_binding(key, binding);
-                }
-            }
-        }
-
-        cx.bind_keys(final_bindings.into_values().collect::<Vec<_>>());
-
-        let socket_path = "/tmp/sherlock.sock";
-        let data: Entity<Arc<Vec<RenderableChild>>> = cx.new(|_| Arc::new(Vec::new()));
-        let modes = match Loader::load_launchers(cx, data.clone()) {
-            Ok(modes) => modes,
+    app.run(|cx: &mut App| {
+        match setup_result {
             Err(e) => {
-                eprintln!("{e}");
-                return;
+                spawn_error_window(cx, e.to_string());
+            }
+            Ok(root) => {
+                let mut watcher = ConfigWatcher::new(root);
+
+                register_bindings(cx);
+
+                let socket_path = "/tmp/sherlock.sock";
+                let data: Entity<Arc<Vec<RenderableChild>>> = cx.new(|_| Arc::new(Vec::new()));
+                let modes = match Loader::load_launchers(cx, data.clone()) {
+                    Ok(modes) => modes,
+                    Err(e) => {
+                        eprintln!("{e}");
+                        return;
+                    }
+                };
+
+                // listen for open requests
+                let _ = std::fs::remove_file(socket_path);
+                let listener = UnixListener::bind(socket_path).unwrap();
+
+                cx.spawn(|cx: &mut AsyncApp| {
+                    let cx = cx.clone();
+                    async move {
+                        let mut win: Option<WindowHandle<SherlockMainWindow>> = None;
+                        let mut current_generation: u64 = 0;
+                        let mut active_update_task: Option<gpui::Task<()>> = None;
+                        loop {
+                            if let Ok((_stream, _)) = listener.accept().await {
+                                // check if config files changed
+                                if let Ok(audit) = watcher.audit() {
+                                    if !audit.is_empty() {
+                                        // let _result = data.update(&mut cx, |myself, cx|{
+
+                                        // });
+                                        println!("Changed config files: {:?}", audit);
+                                    }
+                                }
+
+                                // to prevent never read warning while also dropping previous task
+                                if let Some(task) = active_update_task.take() {
+                                    drop(task)
+                                }
+
+                                current_generation += 1;
+                                let this_generation = current_generation;
+
+                                // Create new window
+                                let new_win_handle = cx.update(|cx| {
+                                    if let Some(old_win) = win.take() {
+                                        let _ = old_win.update(cx, |_, win, _| {
+                                            win.remove_window();
+                                        });
+                                    }
+
+                                    let new_win =
+                                        spawn_launcher(cx, data.clone(), Arc::clone(&modes));
+                                    win = Some(new_win.clone());
+                                    new_win
+                                });
+
+                                // update content async
+                                if let Ok(new_win) = new_win_handle {
+                                    let cx_inner = cx.clone();
+                                    let data_clone = data.clone();
+
+                                    active_update_task =
+                                        Some(cx.spawn(move |_cx: &mut AsyncApp| async move {
+                                            let data_items = data_clone
+                                                .read_with(&cx_inner, |this, _| this.clone())
+                                                .ok();
+                                            if let Some(items) = data_items {
+                                                let mut futures: FuturesUnordered<_> = items
+                                                    .iter()
+                                                    .enumerate()
+                                                    .filter(|(_, item)| item.is_async())
+                                                    .map(|(idx, item)| async move {
+                                                        (idx, item.clone().update_async().await)
+                                                    })
+                                                    .collect();
+
+                                                while let Some((idx, result)) = futures.next().await
+                                                {
+                                                    let Some(update) = result else { continue };
+                                                    let _ = cx_inner.update(|cx| {
+                                                        if current_generation != this_generation {
+                                                            return;
+                                                        }
+                                                        data_clone.update(cx, |items_arc, _cx| {
+                                                            Arc::make_mut(items_arc)[idx] = update;
+                                                        });
+                                                        let _ =
+                                                            new_win.update(cx, |view, _, cx| {
+                                                                view.last_query = None;
+                                                                view.filter_and_sort(cx);
+                                                            });
+                                                    });
+                                                }
+                                            }
+                                        }));
+                                }
+                            } else {
+                                eprintln!("Broken UNIX Socket.");
+                            }
+                        }
+                    }
+                })
+                .detach();
             }
         };
-
-        // listen for open requests
-        let _ = std::fs::remove_file(socket_path);
-        let listener = UnixListener::bind(socket_path).unwrap();
-
-        cx.spawn(|cx: &mut AsyncApp| {
-            let cx = cx.clone();
-            async move {
-                let mut win: Option<WindowHandle<SherlockMainWindow>> = None;
-                let mut current_generation: u64 = 0;
-                let mut active_update_task: Option<gpui::Task<()>> = None;
-                loop {
-                    if let Ok((_stream, _)) = listener.accept().await {
-                        // check if config files changed
-                        if let Ok(audit) = watcher.audit() {
-                            if !audit.is_empty() {
-                                // let _result = data.update(&mut cx, |myself, cx|{
-
-                                // });
-                                println!("Changed config files: {:?}", audit);
-                            }
-                        }
-
-                        // to prevent never read warning while also dropping previous task
-                        if let Some(task) = active_update_task.take() {
-                            drop(task)
-                        }
-
-                        current_generation += 1;
-                        let this_generation = current_generation;
-
-                        // Create new window
-                        let new_win_handle = cx.update(|cx| {
-                            if let Some(old_win) = win.take() {
-                                let _ = old_win.update(cx, |_, win, _| {
-                                    win.remove_window();
-                                });
-                            }
-
-                            let new_win = spawn_launcher(cx, data.clone(), Arc::clone(&modes));
-                            win = Some(new_win.clone());
-                            new_win
-                        });
-
-                        // update content async
-                        if let Ok(new_win) = new_win_handle {
-                            let cx_inner = cx.clone();
-                            let data_clone = data.clone();
-
-                            active_update_task =
-                                Some(cx.spawn(move |_cx: &mut AsyncApp| async move {
-                                    let data_items = data_clone
-                                        .read_with(&cx_inner, |this, _| this.clone())
-                                        .ok();
-                                    if let Some(items) = data_items {
-                                        let mut futures: FuturesUnordered<_> = items
-                                            .iter()
-                                            .enumerate()
-                                            .filter(|(_, item)| item.is_async())
-                                            .map(|(idx, item)| async move {
-                                                (idx, item.clone().update_async().await)
-                                            })
-                                            .collect();
-
-                                        while let Some((idx, result)) = futures.next().await {
-                                            let Some(update) = result else { continue };
-                                            let _ = cx_inner.update(|cx| {
-                                                if current_generation != this_generation {
-                                                    return;
-                                                }
-                                                data_clone.update(cx, |items_arc, _cx| {
-                                                    Arc::make_mut(items_arc)[idx] = update;
-                                                });
-                                                let _ = new_win.update(cx, |view, _, cx| {
-                                                    view.last_query = None;
-                                                    view.filter_and_sort(cx);
-                                                });
-                                            });
-                                        }
-                                    }
-                                }));
-                        }
-                    } else {
-                        eprintln!("Broken UNIX Socket.");
-                    }
-                }
-            }
-        })
-        .detach();
     });
 }
 
@@ -327,6 +286,8 @@ fn spawn_launcher(
                     deferred_render_task: None,
                     last_query: None,
                     filtered_indices: (0..data_len).collect(),
+                    // State
+                    config_initialized: ConfigGuard::is_initialized(),
                 };
                 view.filter_and_sort(cx);
 
@@ -363,4 +324,58 @@ fn get_window_options() -> WindowOptions {
         window_background: WindowBackgroundAppearance::Blurred,
         ..Default::default()
     }
+}
+
+fn register_bindings(cx: &mut App) {
+    let mut bindings: HashMap<String, KeyBinding> = HashMap::new();
+
+    let mut add = |key: &str, binding: KeyBinding| {
+        bindings.insert(key.to_string(), binding);
+    };
+
+    // default binds
+    add("backspace", KeyBinding::new("backspace", Backspace, None));
+    add("delete", KeyBinding::new("delete", Delete, None));
+    add(
+        "ctrl-backspace",
+        KeyBinding::new("ctrl-backspace", DeleteAll, None),
+    );
+    add("ctrl-a", KeyBinding::new("ctrl-a", SelectAll, None));
+    add("ctrl-v", KeyBinding::new("ctrl-v", Paste, None));
+    add("ctrl-c", KeyBinding::new("ctrl-c", Copy, None));
+    add("ctrl-x", KeyBinding::new("ctrl-x", Cut, None));
+    add("escape", KeyBinding::new("escape", Quit, None));
+
+    add("home", KeyBinding::new("home", Home, None));
+    add("end", KeyBinding::new("end", End, None));
+    add("left", KeyBinding::new("left", Left, None));
+    add("right", KeyBinding::new("right", Right, None));
+    add("down", KeyBinding::new("down", FocusNext, None));
+    add("up", KeyBinding::new("up", FocusPrev, None));
+    add(
+        "variable.tab",
+        UIFunction::Complete.into_bind("variable.tab").unwrap(),
+    );
+    add("enter", KeyBinding::new("enter", Execute, None));
+    add("tab", KeyBinding::new("tab", NextVar, None));
+    add("shift-tab", KeyBinding::new("shift-tab", PrevVar, None));
+    add("ctrl-l", KeyBinding::new("ctrl-l", OpenContext, None));
+
+    if let Ok(config) = ConfigGuard::read() {
+        for (key, action_type) in &config.keybinds {
+            if *action_type == UIFunction::Shortcut && key.contains("<digit>") {
+                for i in 0..=9 {
+                    let actual_key = key.replace("<digit>", &i.to_string());
+                    add(
+                        &actual_key,
+                        KeyBinding::new(&actual_key, ShortcutAction { index: i }, None),
+                    );
+                }
+            } else if let Some(binding) = action_type.into_bind(key) {
+                add(key, binding);
+            }
+        }
+    }
+
+    cx.bind_keys(bindings.into_values().collect::<Vec<_>>());
 }

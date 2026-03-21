@@ -1,5 +1,7 @@
+pub mod error;
 pub mod main_window;
 pub mod search_bar;
+pub mod workspace;
 
 use gpui::KeyBinding;
 use serde::{Deserialize, Serialize};
