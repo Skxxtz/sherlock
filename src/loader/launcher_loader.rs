@@ -11,6 +11,7 @@ use crate::{
         calc_launcher::{CURRENCIES, CalculatorLauncher, Currency},
         category_launcher::CategoryLauncher,
         children::RenderableChild,
+        clipboard_launcher::ClipboardLauncher,
         system_cmd_launcher::CommandLauncher,
         weather_launcher::WeatherLauncher,
         web_launcher::WebLauncher,
@@ -84,8 +85,8 @@ impl Loader {
                     "debug" => parse_debug_launcher(&raw),
                     "weather" => parse_weather_launcher(&raw),
                     "web_launcher" => parse_web_launcher(&raw),
+                    "clipboard-execution" => parse_clipboard_launcher(&raw),
                     // "bulk_text" => parse_bulk_text_launcher(&raw),
-                    // "clipboard-execution" => parse_clipboard_launcher(&raw).ok()?,
                     // "emoji_picker" => parse_emoji_launcher(&raw),
                     // "files" => parse_file_launcher(&raw),
                     // "teams_event" => parse_event_launcher(&raw),
@@ -238,6 +239,10 @@ fn parse_calculator(raw: &RawLauncher) -> LauncherType {
 }
 fn parse_category_launcher(_raw: &RawLauncher) -> LauncherType {
     LauncherType::Category(CategoryLauncher {})
+}
+
+fn parse_clipboard_launcher(_raw: &RawLauncher) -> LauncherType {
+    LauncherType::Clipboard(ClipboardLauncher {})
 }
 
 fn parse_command_launcher(_raw: &RawLauncher) -> LauncherType {

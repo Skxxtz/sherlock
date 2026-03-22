@@ -1,26 +1,55 @@
+use gpui::SharedString;
 use smallvec::{SmallVec, smallvec};
 
 use crate::{launcher::calc_launcher::CURRENCIES, utils::intent::colors::ColorConverter};
 
 mod colors;
 
-#[derive(Debug, PartialEq)]
-pub enum Intent<'a> {
+#[derive(Clone, Debug, PartialEq)]
+pub enum Intent {
     ColorConvert {
-        from_space: &'a str,
+        from_space: &'static str,
         values: SmallVec<[f32; 4]>,
-        to_space: &'a str,
+        to_space: &'static str,
+    },
+    ColorDisplay {
+        from_space: &'static str,
+        values: SmallVec<[f32; 4]>,
     },
     Conversion {
         value: f64,
         from: Unit,
         to: Unit,
     },
+    Url {
+        url: SharedString,
+    },
     None,
 }
 
-impl<'a> Intent<'a> {
-    pub fn execute(&self) -> Option<String> {
+impl Intent {
+    #[inline]
+    pub fn is_some(&self) -> bool {
+        !matches!(self, Self::None)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum IntentResult {
+    String(SharedString),
+    Color(u32),
+}
+impl ToString for IntentResult {
+    fn to_string(&self) -> String {
+        match self {
+            Self::String(s) => s.to_string(),
+            Self::Color(hex) => format!("#{:06x}", hex),
+        }
+    }
+}
+
+impl Intent {
+    pub fn execute(&self) -> Option<IntentResult> {
         match self {
             Intent::Conversion { value, from, to } => {
                 // early return on domain mismatch
@@ -29,7 +58,9 @@ impl<'a> Intent<'a> {
                 }
 
                 if from.category() == UnitCategory::Currency && CURRENCIES.get().is_none() {
-                    return Some("Loading exchange rates...".to_string());
+                    return Some(IntentResult::String(
+                        "Loading exchange rates...".to_string().into(),
+                    ));
                 }
 
                 // handle temperature (non-linear)
@@ -39,20 +70,26 @@ impl<'a> Intent<'a> {
                         (Unit::Fahrenheit, Unit::Celsius) => (value - 32.0) * 5.0 / 9.0,
                         _ => *value,
                     };
-                    return Some(format!("{:.1} {}", result, to.symbol()));
+                    return Some(IntentResult::String(
+                        format!("{:.1} {}", result, to.symbol()).into(),
+                    ));
                 }
 
                 // handle linear
                 // Formula: y = val * (from_factor / to_factor)
                 let result = value * (from.factor() / to.factor());
 
-                Some(self.format_result(result, to))
+                Some(IntentResult::String(self.format_result(result, to).into()))
+            }
+            Intent::ColorDisplay { from_space, values } => {
+                ColorConverter::normalize(*from_space, values).map(IntentResult::Color)
             }
             Intent::ColorConvert {
                 from_space,
                 values,
                 to_space,
-            } => ColorConverter::convert(from_space, values, to_space),
+            } => ColorConverter::convert(from_space, values, to_space)
+                .map(|r| IntentResult::String(r.into())),
             _ => None,
         }
     }
@@ -73,28 +110,23 @@ impl<'a> Intent<'a> {
     }
 }
 
-impl<'a> Intent<'a> {
-    pub fn parse(input: &'a str, caps: &Capabilities) -> Intent<'a> {
+impl Intent {
+    pub fn parse(input: &str, caps: &Capabilities) -> Intent {
         let raw = input.trim();
         if raw.is_empty() {
             return Intent::None;
         }
 
         // Tokenization
-        let mut tokens: SmallVec<[&'a str; 8]> = SmallVec::new();
+        let mut tokens: SmallVec<[&str; 8]> = SmallVec::new();
         let bytes = raw.as_bytes();
         let mut last = 0;
 
         for i in 0..bytes.len() {
             let b = bytes[i];
-
-            let is_hard_delim = matches!(b, b' ' | b'(' | b')' | b'%');
-
-            let is_list_comma = b == b',' && (i + 1 == bytes.len() || bytes[i + 1] == b' ');
-
-            if is_hard_delim || is_list_comma {
+            if matches!(b, b' ' | b'(' | b')' | b'%' | b',') {
                 if last < i {
-                    let word = &raw[last..i].trim_matches(',');
+                    let word = raw[last..i].trim_matches(',');
                     Self::push_cleaned_token(&mut tokens, word);
                 }
                 last = i + 1;
@@ -118,11 +150,15 @@ impl<'a> Intent<'a> {
             return intent;
         }
 
+        if let Some(intent) = Intent::try_parse_url(raw) {
+            return intent;
+        }
+
         Intent::None
     }
 
     #[inline]
-    fn push_cleaned_token(tokens: &mut SmallVec<[&'a str; 8]>, word: &'a str) {
+    fn push_cleaned_token<'a>(tokens: &mut SmallVec<[&'a str; 8]>, word: &'a str) {
         let is_noise = matches!(word, w if
             w.eq_ignore_ascii_case("how") ||
             w.eq_ignore_ascii_case("much") ||
@@ -137,55 +173,68 @@ impl<'a> Intent<'a> {
         }
     }
 
-    fn try_parse_color_conversion(tokens: &[&'a str], caps: &Capabilities) -> Option<Intent<'a>> {
+    fn try_parse_color_conversion(tokens: &[&str], caps: &Capabilities) -> Option<Intent> {
+        fn to_static_space(s: &str) -> Option<&'static str> {
+            match s {
+                "rgb" => Some("rgb"),
+                "rgba" => Some("rgba"),
+                "hex" => Some("hex"),
+                "hsl" => Some("hsl"),
+                "hsv" => Some("hsv"),
+                "lab" => Some("lab"),
+                _ => None,
+            }
+        }
         if !caps.allows(Capabilities::COLORS) {
             return None;
         }
 
         let spaces = ["rgb", "rgba", "hex", "hsl", "hsv", "lab"];
 
-        // space start
-        let explicict_space_idx = tokens.iter().position(|t| spaces.contains(t));
+        let explicit_space_idx = tokens.iter().position(|t| spaces.contains(t));
         let (from_space, from_idx) = if tokens.first().map_or(false, |t| t.starts_with('#')) {
             ("hex", 0)
-        } else if let Some(idx) = explicict_space_idx {
-            (tokens[idx], idx)
+        } else if let Some(idx) = explicit_space_idx {
+            (to_static_space(tokens[idx])?, idx)
         } else {
             return None;
         };
 
-        // connector
-        let connector_idx = tokens
-            .iter()
-            .position(|t| matches!(*t, "to" | "in" | "as"))?;
+        // collect values — everything after the space name that isn't a connector
+        let connector_idx = tokens.iter().position(|t| matches!(*t, "to" | "in" | "as"));
 
-        // early return: connector must be after the space name
-        if connector_idx <= from_idx {
-            return None;
-        }
+        let values_end = connector_idx.unwrap_or(tokens.len());
 
-        // handle hex
-        let first_val_token = tokens.get(from_idx)?;
-        let values: SmallVec<[f32; 4]> = if from_space == "hex" || first_val_token.starts_with('#')
-        {
-            if let Some((r, g, b)) = ColorConverter::hex_to_rgb(first_val_token) {
-                smallvec![r, g, b]
+        let values: SmallVec<[f32; 4]> =
+            if from_space == "hex" || tokens.get(from_idx).map_or(false, |t| t.starts_with('#')) {
+                let token = tokens.get(from_idx)?;
+                if let Some((r, g, b)) = ColorConverter::hex_to_rgb(token) {
+                    smallvec![r, g, b]
+                } else {
+                    return None;
+                }
             } else {
-                return None;
-            }
-        } else {
-            tokens[from_idx + 1..connector_idx]
-                .iter()
-                .filter_map(|t| t.parse::<f32>().ok())
-                .collect()
-        };
+                tokens[from_idx + 1..values_end]
+                    .iter()
+                    .filter_map(|t| t.parse::<f32>().ok())
+                    .collect()
+            };
 
-        // return if no values provided
         if values.is_empty() {
             return None;
         }
 
-        let to_space = tokens.get(connector_idx + 1)?;
+        // no connector → ColorShow
+        let Some(connector_idx) = connector_idx else {
+            return Some(Intent::ColorDisplay { from_space, values });
+        };
+
+        // connector must be after space name
+        if connector_idx <= from_idx {
+            return None;
+        }
+
+        let to_space = to_static_space(tokens.get(connector_idx + 1)?)?;
         if spaces.contains(&to_space) {
             return Some(Intent::ColorConvert {
                 from_space,
@@ -193,10 +242,11 @@ impl<'a> Intent<'a> {
                 to_space,
             });
         }
+
         None
     }
 
-    fn try_parse_unit_conversion(tokens: &[&'a str], caps: &Capabilities) -> Option<Intent<'a>> {
+    fn try_parse_unit_conversion(tokens: &[&str], caps: &Capabilities) -> Option<Intent> {
         let connector_idx = tokens
             .iter()
             .position(|t| matches!(*t, "to" | "in" | "as"))?;
@@ -234,6 +284,35 @@ impl<'a> Intent<'a> {
 
         Some(Intent::Conversion { value, from, to })
     }
+
+    fn try_parse_url(input: &str) -> Option<Intent> {
+        let s = input.trim();
+
+        // explicit scheme
+        if s.starts_with("http://") || s.starts_with("https://") || s.starts_with("ftp://") {
+            return Some(Intent::Url {
+                url: s.to_string().into(),
+            });
+        }
+
+        // no spaces + contains a dot + looks like a domain
+        if !s.contains(' ') && s.contains('.') {
+            // must have something before and after the dot
+            let parts: Vec<&str> = s.splitn(2, '.').collect();
+            if parts[0].len() >= 1 && parts[1].len() >= 2 {
+                // avoid matching things like "50.0" (numbers) or ".hidden"
+                let first = parts[0];
+                let is_numeric = first.chars().all(|c| c.is_numeric());
+                if !is_numeric && !first.is_empty() {
+                    return Some(Intent::Url {
+                        url: s.to_string().into(),
+                    });
+                }
+            }
+        }
+
+        None
+    }
 }
 
 macro_rules! define_units {
@@ -255,7 +334,7 @@ macro_rules! define_units {
             }
         }
 
-        #[derive(Clone)]
+        #[derive(Clone, Copy)]
         pub struct Capabilities(u32);
         #[allow(dead_code)]
         impl Capabilities {
@@ -706,7 +785,12 @@ mod tests {
             ("50.0.0 to m", Intent::None),
             // --- Fallbacks ---
             ("firefox", Intent::None),
-            ("google.com", Intent::None),
+            (
+                "google.com",
+                Intent::Url {
+                    url: "google.com".to_string().into(),
+                },
+            ),
             ("show me the weather", Intent::None),
         ];
 

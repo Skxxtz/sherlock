@@ -8,7 +8,7 @@ use std::{
 use crate::{
     app::run_app,
     loader::{CustomIconTheme, Loader, assets::Assets},
-    utils::config::SherlockConfig,
+    utils::{clipboard::spawn_clipboard_watcher, config::SherlockConfig},
 };
 
 mod app;
@@ -36,6 +36,8 @@ async fn main() {
         let _ = stream.write_all(b"open");
         return;
     }
+
+    spawn_clipboard_watcher();
 
     let app = Application::new()
         .with_assets(Assets)

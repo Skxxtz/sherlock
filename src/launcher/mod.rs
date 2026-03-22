@@ -4,6 +4,7 @@ pub mod bookmark_launcher;
 pub mod calc_launcher;
 pub mod category_launcher;
 pub mod children;
+pub mod clipboard_launcher;
 pub mod event_launcher;
 pub mod system_cmd_launcher;
 pub mod utils;
@@ -24,7 +25,8 @@ use std::{collections::HashMap, sync::Arc, vec};
 
 use crate::{
     launcher::{
-        children::{RenderableChild, calc_data::CalcData},
+        children::{RenderableChild, calc_data::CalcData, clip_data::ClipData},
+        clipboard_launcher::ClipboardLauncher,
         weather_launcher::WeatherData,
     },
     loader::{
@@ -64,6 +66,7 @@ pub enum LauncherType {
     Bookmark(BookmarkLauncher),
     Calc(CalculatorLauncher),
     Category(CategoryLauncher),
+    Clipboard(ClipboardLauncher),
     Command(CommandLauncher),
     Event(EventLauncher),
     MusicPlayer(MusicPlayerLauncher),
@@ -74,7 +77,6 @@ pub enum LauncherType {
     // Integrate later: TODO
     // Pipe(PipeLauncher),
     // Api(BulkTextLauncher),
-    // Clipboard(ClipboardLauncher),
     // Emoji(EmojiPicker),
     // File(FileLauncher),
     // Pomodoro(Pomodoro),
@@ -175,6 +177,20 @@ impl LauncherType {
                     .collect();
 
                 Some(children)
+            }
+
+            Self::Clipboard(_) => {
+                let capabilities: Vec<String> = match opts.get("capabilities") {
+                    Some(Value::Array(arr)) => arr
+                        .iter()
+                        .filter_map(|v| v.as_str().map(str::to_string))
+                        .collect(),
+                    _ => vec![String::from("calc.math"), String::from("calc.units")],
+                };
+                let caps = Capabilities::from_strings(&capabilities);
+                let inner = ClipData::new(caps, SharedString::from(""));
+
+                Some(vec![RenderableChild::ClipLike { launcher, inner }])
             }
 
             Self::Command(_) => {
@@ -325,7 +341,7 @@ pub enum ExecMode {
         exec: Option<String>,
     },
     Copy {
-        content: SharedString,
+        content: String,
     },
     None,
 }

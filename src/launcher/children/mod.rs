@@ -1,9 +1,9 @@
-use std::sync::Arc;
-
 use gpui::{AnyElement, SharedString};
+use std::sync::Arc;
 
 pub mod app_data;
 pub mod calc_data;
+pub mod clip_data;
 pub mod mpris_data;
 pub mod weather_data;
 
@@ -17,6 +17,7 @@ use crate::{
 };
 
 use calc_data::CalcData;
+use clip_data::ClipData;
 
 /// Creates enum RenderableChild,
 /// ## Example:
@@ -137,6 +138,7 @@ macro_rules! renderable_enum {
 impl RenderableChild {
     pub fn based_show(&self, query: &str) -> Option<bool> {
         match self {
+            Self::ClipLike { inner, .. } => Some(inner.based_show()),
             Self::CalcLike { inner, .. } => Some(inner.based_show(query)),
             Self::MusicLike { inner, .. } => {
                 // this skips early if the music launcher is empty
@@ -151,6 +153,9 @@ impl RenderableChild {
     }
     pub async fn update_async(mut self) -> Option<Self> {
         match &mut self {
+            Self::ClipLike { inner, .. } => {
+                inner.update_async();
+            }
             Self::MusicLike { inner, .. } => {
                 let new_inner = AudioLauncherFunctions::new().and_then(|launcher| {
                     launcher
@@ -193,6 +198,7 @@ renderable_enum! {
     enum RenderableChild {
         AppLike(AppData),
         CalcLike(CalcData),
+        ClipLike(ClipData),
         MusicLike(MprisState),
         WeatherLike(WeatherData),
     }

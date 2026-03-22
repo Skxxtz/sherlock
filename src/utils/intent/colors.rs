@@ -1,6 +1,22 @@
 pub struct ColorConverter;
 
 impl ColorConverter {
+    pub fn normalize(from: &str, values: &[f32]) -> Option<u32> {
+        let (r, g, b) = match from {
+            "rgb" | "rgba" if values.len() >= 3 => (values[0], values[1], values[2]),
+            "hex" if values.len() >= 3 => (values[0], values[1], values[2]),
+            "hsl" if values.len() >= 3 => Self::hsl_to_rgb(values[0], values[1], values[2]),
+            "hsv" if values.len() >= 3 => Self::hsv_to_rgb(values[0], values[1], values[2]),
+            "lab" if values.len() >= 3 => Self::lab_to_rgb(values[0], values[1], values[2]),
+            _ => return None,
+        };
+
+        let r = r.round() as u32;
+        let g = g.round() as u32;
+        let b = b.round() as u32;
+
+        Some((r << 16) | (g << 8) | b)
+    }
     pub fn convert(from: &str, values: &[f32], to: &str) -> Option<String> {
         let rgb = match from {
             "rgb" | "rgba" if values.len() >= 3 => Some((values[0], values[1], values[2])),

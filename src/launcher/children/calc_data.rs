@@ -4,13 +4,13 @@ use gpui::{IntoElement, ParentElement, SharedString, Styled, div, px, rgb};
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl},
-    utils::intent::{Capabilities, Intent},
+    utils::intent::{Capabilities, Intent, IntentResult},
 };
 
 #[derive(Clone)]
 pub struct CalcData {
     capabilities: Capabilities,
-    result: Arc<RwLock<Option<(SharedString, SharedString)>>>,
+    result: Arc<RwLock<Option<(SharedString, IntentResult)>>>,
 }
 
 impl CalcData {
@@ -32,7 +32,7 @@ impl CalcData {
             if let Ok(r) = meval::eval_str(trimmed_keyword) {
                 let r = r.to_string();
                 if &r != trimmed_keyword {
-                    result = Some((r.clone(), format!("= {}", r)));
+                    result = Some((r.clone(), IntentResult::String(format!("= {}", r).into())));
                 }
             }
         }
@@ -42,17 +42,18 @@ impl CalcData {
             let r = match intent {
                 Intent::ColorConvert { .. } => intent.execute(),
                 Intent::Conversion { .. } => intent.execute(),
+                Intent::ColorDisplay { .. } => intent.execute(),
                 _ => None,
             };
 
             if let Some(r) = r {
-                result = Some((r.clone(), r));
+                result = Some((keyword.to_string(), r));
             }
         }
 
         let show = result.is_some();
         if let Ok(mut writer) = self.result.write() {
-            *writer = result.map(|(o, r)| (SharedString::from(o), SharedString::from(r)));
+            *writer = result.map(|(o, r)| (SharedString::from(o), r));
         }
         show
     }
@@ -66,7 +67,7 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
         let lock = self.result.read().ok()?;
         let (_, res) = lock.as_ref()?;
         Some(ExecMode::Copy {
-            content: res.clone(),
+            content: res.to_string().into(),
         })
     }
     fn priority(&self, launcher: &std::sync::Arc<crate::launcher::Launcher>) -> f32 {
@@ -85,27 +86,67 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
             res.clone()
         };
 
-        div()
-            .px_4()
-            .py_7()
-            .size_full()
-            .flex()
-            .gap_5()
-            .items_center()
-            .justify_center()
-            .child(
+        match result {
+            IntentResult::String(s) => calc_tile(s, is_selected),
+            IntentResult::Color(c) => color_show(c, is_selected),
+        }
+    }
+}
+
+fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {
+    div()
+        .px_4()
+        .py_7()
+        .size_full()
+        .flex()
+        .gap_5()
+        .items_center()
+        .justify_center()
+        .child(
+            div()
+                .text_size(px(24.0))
+                .text_color(if is_selected {
+                    rgb(0xDDD5D0)
+                } else {
+                    rgb(0x6E6E6E)
+                })
+                .overflow_hidden()
+                .text_ellipsis()
+                .whitespace_nowrap()
+                .child(result),
+        )
+        .into_any_element()
+}
+
+fn color_show(result: u32, is_selected: bool) -> gpui::AnyElement {
+    div()
+        .px_4()
+        .py_2()
+        .w_full()
+        .flex()
+        .gap_5()
+        .items_center()
+        .child(
+            div()
+                .size(px(24.))
+                .rounded_full()
+                .bg(rgb(result))
+                .flex_shrink_0(),
+        )
+        .child(
+            div().flex_col().justify_between().items_center().child(
                 div()
-                    .text_size(px(24.0))
+                    .text_sm()
                     .text_color(if is_selected {
-                        rgb(0xDDD5D0)
+                        rgb(0xffffff)
                     } else {
-                        rgb(0x6E6E6E)
+                        rgb(0xcccccc)
                     })
                     .overflow_hidden()
                     .text_ellipsis()
                     .whitespace_nowrap()
-                    .child(result),
-            )
-            .into_any_element()
-    }
+                    .child(format!("#{:06x}", result)),
+            ),
+        )
+        .into_any_element()
 }
