@@ -1,6 +1,7 @@
 use crate::launcher::children::{LauncherValues, RenderableChild};
 use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
 use crate::loader::utils::ApplicationAction;
+use crate::ui::error::view::ErrorCount;
 use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, ListState, SharedString, Subscription};
@@ -39,7 +40,7 @@ pub struct LauncherView {
     pub data: Entity<Arc<Vec<RenderableChild>>>,
     pub filtered_indices: Arc<[usize]>,
     pub last_query: Option<String>,
-    pub error_count: (usize, usize),
+    pub error_count: ErrorCount,
 
     // State
     pub config_initialized: bool,

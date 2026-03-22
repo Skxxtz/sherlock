@@ -13,7 +13,7 @@ use crate::{
     launcher::children::{LauncherValues, RenderableChild},
     loader::{LauncherLoadResult, Loader, SetupResult},
     ui::{
-        error::view::{DismissErrorEvent, ErrorView},
+        error::view::{DismissErrorEvent, ErrorCount, ErrorView},
         launcher::{LauncherMode, LauncherView},
         search_bar::{EmptyBackspace, TextInput},
         workspace::{LauncherErrorEvent, SherlockWorkspace, WorkspaceView},
@@ -164,7 +164,10 @@ fn spawn_launcher(
                     variable_input: Vec::new(),
                     active_bar: 0,
                     data,
-                    error_count: (initial_warnings.len(), initial_errors.len()),
+                    error_count: ErrorCount {
+                        errors: initial_errors.len(),
+                        warnings: initial_warnings.len(),
+                    },
                     deferred_render_task: None,
                     last_query: None,
                     filtered_indices: (0..data_len).collect(),
@@ -190,8 +193,10 @@ fn spawn_launcher(
                         match ev {
                             LauncherErrorEvent::Push(e) => {
                                 error_handle.update(cx, |view, cx| {
-                                    view.push(e.clone(), cx);
+                                    view.push_error(e.clone(), cx);
                                 });
+                                // note: updating the launcher view is done in the
+                                // `error_count_sub`
                             }
                             LauncherErrorEvent::ShowErrors => {
                                 this.transition_to(WorkspaceView::Error, 300, cx);
@@ -203,6 +208,13 @@ fn spawn_launcher(
                 let error_sub = cx.subscribe(&error, move |this, _, _: &DismissErrorEvent, cx| {
                     this.transition_to(WorkspaceView::Launcher, 300, cx);
                 });
+                let error_count_sub = cx.observe(&error, move |workspace, this, cx| {
+                    let error_count = this.read(cx).counts();
+                    workspace.launcher.update(cx, |this, _cx| {
+                        this.error_count = error_count;
+                    });
+                    cx.notify();
+                });
 
                 SherlockWorkspace {
                     launcher,
@@ -212,7 +224,7 @@ fn spawn_launcher(
                     } else {
                         WorkspaceView::Launcher
                     },
-                    _subs: vec![sub, error_sub],
+                    _subs: vec![sub, error_sub, error_count_sub],
 
                     opacity: 1.0,
                     transition_task: None,

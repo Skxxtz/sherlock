@@ -59,9 +59,9 @@ impl Loader {
             }
         });
 
-        CONFIG
-            .set(RwLock::new(config.clone()))
-            .map_err(|_| errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), "")));
+        if CONFIG.set(RwLock::new(config.clone())).is_err() {
+            errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
+        }
 
         let config_dir: Box<Path> = match config.files.config.parent() {
             Some(p) => p.into(),

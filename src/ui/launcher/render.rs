@@ -204,7 +204,7 @@ impl LauncherView {
             .items_center()
             .text_color(hsla(0.6, 0.0217, 0.3608, 1.0))
             .child(String::from("Sherlock"))
-            .when(self.error_count.0 > 0 || self.error_count.1 > 0, |this| {
+            .when(!self.error_count.is_empty(), |this| {
                 this.child(self.render_error_indicator(cx))
             })
             .child(div().flex_1())
@@ -225,7 +225,7 @@ impl LauncherView {
                     cx.emit(LauncherErrorEvent::ShowErrors);
                 }),
             )
-            .when(self.error_count.0 > 0, |this| {
+            .when(self.error_count.warnings > 0, |this| {
                 this.child(
                     div()
                         .h_full()
@@ -238,10 +238,10 @@ impl LauncherView {
                         .border_color(hsla(0.11, 0.8, 0.55, 0.25))
                         .text_color(rgb(0xef9f27))
                         .bg(hsla(0.11, 0.8, 0.1, 0.10))
-                        .child(self.error_count.0.to_string()),
+                        .child(self.error_count.warnings.to_string()),
                 )
             })
-            .when(self.error_count.1 > 0, |this| {
+            .when(self.error_count.errors > 0, |this| {
                 this.child(
                     div()
                         .h_full()
@@ -254,7 +254,7 @@ impl LauncherView {
                         .border_color(hsla(0.0, 0.7, 0.59, 0.25))
                         .text_color(hsla(0.0, 0.7, 0.59, 0.25))
                         .bg(hsla(0.0, 0.7, 0.1, 0.12))
-                        .child(self.error_count.1.to_string()),
+                        .child(self.error_count.errors.to_string()),
                 )
             })
     }

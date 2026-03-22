@@ -1,4 +1,6 @@
-use gpui::{IntoElement, ParentElement, Styled, div, hsla, px, rgb};
+use gpui::{
+    InteractiveElement, IntoElement, MouseButton, ParentElement, Styled, div, hsla, px, rgb,
+};
 
 #[allow(dead_code)]
 pub enum MessageType {
@@ -10,29 +12,34 @@ pub enum MessageType {
 pub struct ErrorBox {
     message: String,
     message_type: MessageType,
+    on_dismiss: Option<Box<dyn Fn(&mut gpui::App) + 'static>>,
 }
 
-#[allow(dead_code)]
 impl ErrorBox {
     pub fn new(message: String) -> Self {
         Self {
             message,
             message_type: MessageType::Error,
+            on_dismiss: None,
         }
     }
-
     pub fn warning(message: String) -> Self {
         Self {
             message,
             message_type: MessageType::Warning,
+            on_dismiss: None,
         }
     }
-
     pub fn info(message: String) -> Self {
         Self {
             message,
             message_type: MessageType::Info,
+            on_dismiss: None,
         }
+    }
+    pub fn on_dismiss(mut self, f: impl Fn(&mut gpui::App) + 'static) -> Self {
+        self.on_dismiss = Some(Box::new(f));
+        self
     }
 }
 
@@ -57,7 +64,27 @@ impl IntoElement for ErrorBox {
             ),
         };
 
+        let dismiss_btn = self.on_dismiss.map(|f| {
+            div()
+                .id("dismiss")
+                .absolute()
+                .top(px(6.))
+                .right(px(8.))
+                .px(px(4.))
+                .py(px(1.))
+                .rounded_sm()
+                .text_size(px(10.))
+                .text_color(text)
+                .cursor_pointer()
+                .group_hover("error-box", |s| s.text_color(text))
+                .hover(|s| s.bg(border))
+                .on_mouse_down(MouseButton::Left, move |_, _, cx| f(cx))
+                .child("✕")
+        });
+
         div()
+            .id("error-box")
+            .group("error-box")
             .w_full()
             .px_4()
             .py_3()
@@ -68,7 +95,9 @@ impl IntoElement for ErrorBox {
             .text_size(px(12.0))
             .text_color(text)
             .font_family("monospace")
+            .relative()
             .child(self.message)
+            .children(dismiss_btn)
             .into_any_element()
     }
 }

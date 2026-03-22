@@ -10,6 +10,16 @@ use gpui::{
 pub struct DismissErrorEvent;
 impl gpui::EventEmitter<DismissErrorEvent> for ErrorView {}
 
+pub struct ErrorCount {
+    pub errors: usize,
+    pub warnings: usize,
+}
+impl ErrorCount {
+    pub fn is_empty(&self) -> bool {
+        self.errors == 0 && self.warnings == 0
+    }
+}
+
 pub struct ErrorView {
     pub errors: Vec<SherlockError>,
     pub warnings: Vec<SherlockError>,
@@ -17,8 +27,35 @@ pub struct ErrorView {
 }
 
 impl ErrorView {
-    pub fn push(&mut self, error: SherlockError, cx: &mut Context<Self>) {
+    pub fn counts(&self) -> ErrorCount {
+        ErrorCount {
+            warnings: self.warnings.len(),
+            errors: self.errors.len(),
+        }
+    }
+
+    pub fn push_error(&mut self, error: SherlockError, cx: &mut Context<Self>) {
         self.errors.push(error);
+        cx.notify();
+    }
+
+    pub fn remove_error(&mut self, idx: usize, cx: &mut Context<Self>) {
+        if idx < self.errors.len() {
+            self.errors.remove(idx);
+        }
+        if self.errors.is_empty() && self.warnings.is_empty() {
+            cx.emit(DismissErrorEvent);
+        }
+        cx.notify();
+    }
+
+    pub fn remove_warning(&mut self, idx: usize, cx: &mut Context<Self>) {
+        if idx < self.warnings.len() {
+            self.warnings.remove(idx);
+        }
+        if self.errors.is_empty() && self.warnings.is_empty() {
+            cx.emit(DismissErrorEvent);
+        }
         cx.notify();
     }
 }
@@ -36,14 +73,24 @@ impl Render for ErrorView {
             .size_full()
             .p_6()
             .when(!self.errors.is_empty(), |this| {
-                this.children(self.errors.iter().map(|e| ErrorBox::new(e.to_string())))
+                this.children(self.errors.iter().enumerate().map(|(idx, e)| {
+                    let weak_self = cx.entity().downgrade();
+                    ErrorBox::new(e.to_string()).on_dismiss(move |cx: &mut App| {
+                        if let Some(view) = weak_self.upgrade() {
+                            view.update(cx, |this, cx| this.remove_error(idx, cx));
+                        }
+                    })
+                }))
             })
             .when(!self.warnings.is_empty(), |this| {
-                this.children(
-                    self.warnings
-                        .iter()
-                        .map(|e| ErrorBox::warning(e.to_string())),
-                )
+                this.children(self.warnings.iter().enumerate().map(|(idx, e)| {
+                    let weak_self = cx.entity().downgrade();
+                    ErrorBox::warning(e.to_string()).on_dismiss(move |cx: &mut App| {
+                        if let Some(view) = weak_self.upgrade() {
+                            view.update(cx, |this, cx| this.remove_warning(idx, cx));
+                        }
+                    })
+                }))
             })
             .child(div().flex_1())
     }
