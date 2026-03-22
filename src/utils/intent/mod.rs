@@ -255,7 +255,7 @@ macro_rules! define_units {
             }
         }
 
-        #[derive(Clone, Debug)]
+        #[derive(Clone)]
         pub struct Capabilities(u32);
         #[allow(dead_code)]
         impl Capabilities {
@@ -266,6 +266,14 @@ macro_rules! define_units {
             #[inline]
             pub fn allows(&self, cap: u32) -> bool {
                 (self.0 & cap) != 0
+            }
+        }
+
+        impl std::fmt::Debug for Capabilities {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let mut active: Vec<&'static str> = Vec::new();
+                $( if self.allows(Self::$cap_const) { active.push(stringify!($cap_const)); } )*
+                write!(f, "Capabilities({})", active.join(" | "))
             }
         }
 
