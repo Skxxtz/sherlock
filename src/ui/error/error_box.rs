@@ -1,5 +1,6 @@
 use gpui::{IntoElement, ParentElement, Styled, div, hsla, px, rgb};
 
+#[allow(dead_code)]
 pub enum MessageType {
     Info,
     Warning,
@@ -11,6 +12,7 @@ pub struct ErrorBox {
     message_type: MessageType,
 }
 
+#[allow(dead_code)]
 impl ErrorBox {
     pub fn new(message: String) -> Self {
         Self {

@@ -28,16 +28,20 @@ use crate::{
 use super::Loader;
 use super::utils::CounterReader;
 
+pub struct LauncherLoadResult {
+    pub modes: Arc<[LauncherMode]>,
+    pub warnings: Vec<SherlockError>,
+}
 impl Loader {
     pub fn load_launchers(
         cx: &mut App,
         data_handle: Entity<Arc<Vec<RenderableChild>>>,
-    ) -> Result<Arc<[LauncherMode]>, SherlockError> {
+    ) -> Result<LauncherLoadResult, SherlockError> {
         // read config
         let config = ConfigGuard::read()?;
 
         // Read fallback data here:
-        let (raw_launchers, _n) = parse_launcher_configs(&config.files.fallback)?;
+        let (raw_launchers, warnings) = parse_launcher_configs(&config.files.fallback)?;
 
         // Read cached counter file
         let counter_reader = CounterReader::new()?;
@@ -145,7 +149,10 @@ impl Loader {
             cx.notify();
         });
 
-        Ok(Arc::from(modes))
+        Ok(LauncherLoadResult {
+            modes: Arc::from(modes),
+            warnings,
+        })
     }
 }
 

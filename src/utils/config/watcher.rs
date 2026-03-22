@@ -3,7 +3,10 @@ use std::path::Path;
 
 use crate::{
     sherlock_error,
-    utils::errors::{SherlockError, SherlockErrorType},
+    utils::{
+        config::ConfigGuard,
+        errors::{SherlockError, SherlockErrorType},
+    },
 };
 
 /// **Unfinished**
@@ -27,8 +30,9 @@ impl ConfigWatcher {
         }
     }
 
-    pub fn audit(&mut self) -> Result<Vec<Box<Path>>, SherlockError> {
+    pub fn audit(&mut self) -> Result<Vec<ConfigFileChange>, SherlockError> {
         let current_audit_time = Local::now();
+        let since = self.latest_audit;
 
         // get entries
         let entries = std::fs::read_dir(&self.root_dir).map_err(|e| {
@@ -38,26 +42,46 @@ impl ConfigWatcher {
             )
         })?;
 
+        let files = ConfigGuard::read()
+            .map(|c| c.files.clone())
+            .unwrap_or_default();
+
         // collect out-of-date entries
-        let mut changed = Vec::new();
-        for entry in entries {
-            let entry = entry.map_err(|e| sherlock_error!(SherlockErrorType::IO, e.to_string()))?;
-            let metadata = entry
-                .metadata()
-                .map_err(|e| sherlock_error!(SherlockErrorType::IO, e.to_string()))?;
-
-            if metadata.is_file() {
-                if let Ok(modified_system_time) = metadata.modified() {
-                    let modified_chrono: DateTime<Local> = modified_system_time.into();
-
-                    if modified_chrono > self.latest_audit {
-                        changed.push(entry.path().into_boxed_path())
-                    }
+        let changed = entries
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| {
+                entry
+                    .metadata()
+                    .and_then(|m| m.modified())
+                    .map(|modified| {
+                        let modified: DateTime<Local> = modified.into();
+                        entry.path().is_file() && modified > since
+                    })
+                    .unwrap_or(false)
+            })
+            .map(|entry| {
+                let path_buf = entry.path().to_path_buf();
+                match path_buf {
+                    _ if path_buf == files.config => ConfigFileChange::Config,
+                    _ if path_buf == files.fallback => ConfigFileChange::Fallback,
+                    _ if path_buf == files.alias => ConfigFileChange::Alias,
+                    _ if path_buf == files.ignore => ConfigFileChange::Ignore,
+                    _ if path_buf == files.actions => ConfigFileChange::Actions,
+                    _ => ConfigFileChange::Other,
                 }
-            }
-        }
+            })
+            .collect();
 
         self.latest_audit = current_audit_time;
         Ok(changed)
     }
+}
+
+pub enum ConfigFileChange {
+    Fallback,
+    Config,
+    Alias,
+    Ignore,
+    Actions,
+    Other,
 }
