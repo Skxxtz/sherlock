@@ -12,6 +12,7 @@ use crate::{
     ui::{
         launcher::LauncherView,
         search_bar::{EmptyBackspace, TextInput},
+        workspace::LauncherErrorEvent,
     },
     utils::{command_launch::spawn_detached, errors::SherlockError, websearch::websearch},
 };
@@ -188,6 +189,9 @@ impl LauncherView {
                 spawn_detached(&exec, keyword, variables)?;
                 increment(&exec);
             }
+            ExecMode::CreateBookmark { url, name } => {
+
+            }
             ExecMode::Copy { content } => {
                 cx.write_to_clipboard(ClipboardItem::new_string(content.to_string()));
             }
@@ -221,7 +225,7 @@ impl LauncherView {
 
                     match self.execute_helper(what, "", &[], cx) {
                         Ok(exit) if exit => self.close_window(win, cx),
-                        Err(e) => eprintln!("{e}"),
+                        Err(e) => cx.emit(LauncherErrorEvent::Push(e)),
                         _ => {}
                     }
                 }
@@ -258,7 +262,7 @@ impl LauncherView {
                             return;
                         }
                         Err(e) => {
-                            eprintln!("{e}");
+                            cx.emit(LauncherErrorEvent::Push(e));
                             return;
                         }
                         _ => {}

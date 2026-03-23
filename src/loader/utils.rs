@@ -48,6 +48,23 @@ impl ApplicationAction {
     pub fn is_full(&self) -> bool {
         self.name.is_some() && self.exec.is_some() && self.icon.is_some()
     }
+
+    pub fn name(mut self, name: SharedString) -> Self {
+        self.name = Some(name);
+        self
+    }
+    pub fn icon(mut self, icon: Arc<Path>) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+    pub fn icon_name(mut self, icon_name: &str) -> Self {
+        self.icon = resolve_icon_path(icon_name);
+        self
+    }
+    pub fn exec(mut self, exec: String) -> Self {
+        self.exec = Some(exec);
+        self
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

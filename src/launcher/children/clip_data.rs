@@ -6,7 +6,7 @@ use gpui::{
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl},
-    loader::resolve_icon_path,
+    loader::{resolve_icon_path, utils::ApplicationAction},
     utils::{
         clipboard::get_clipboard,
         intent::{Capabilities, Intent, IntentResult},
@@ -18,6 +18,7 @@ pub struct ClipData {
     pub content: SharedString,
     pub capabilities: Capabilities,
     result: Arc<RwLock<Option<(Intent, IntentResult)>>>,
+    pub actions: Arc<[Arc<ApplicationAction>]>,
 }
 
 impl ClipData {
@@ -26,6 +27,7 @@ impl ClipData {
             content,
             capabilities,
             result: Arc::new(RwLock::new(None)),
+            actions: Arc::from([]),
         };
         this.update_async();
 
@@ -34,11 +36,28 @@ impl ClipData {
     pub fn update_async(&mut self) -> Option<()> {
         let content = get_clipboard()?;
         let intent = Intent::parse(&content, &self.capabilities);
+
+        // early return if intents are the same
+        if let Ok(guard) = self.result.read() {
+            if let Some((res_intent, _)) = guard.as_ref() {
+                if res_intent == &intent {
+                    return None;
+                }
+            }
+        }
+
         let r = match &intent {
             Intent::ColorConvert { .. } => intent.execute(),
             Intent::Conversion { .. } => intent.execute(),
             Intent::ColorDisplay { .. } => intent.execute(),
-            Intent::Url { url } => Some(IntentResult::String(url.into())),
+            Intent::Url { url } => {
+                self.actions = Arc::new([Arc::from(
+                    ApplicationAction::new("create_bookmark")
+                        .name("Create Bookmark".into())
+                        .icon_name("sherlock-bookmark"),
+                )]);
+                Some(IntentResult::String(url.into()))
+            }
             _ => None,
         }?;
 
