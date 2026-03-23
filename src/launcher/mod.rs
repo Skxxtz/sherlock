@@ -5,6 +5,7 @@ pub mod calc_launcher;
 pub mod category_launcher;
 pub mod children;
 pub mod clipboard_launcher;
+pub mod emoji_launcher;
 pub mod event_launcher;
 pub mod system_cmd_launcher;
 pub mod utils;
@@ -25,8 +26,11 @@ use std::{collections::HashMap, sync::Arc, vec};
 
 use crate::{
     launcher::{
-        children::{RenderableChild, calc_data::CalcData, clip_data::ClipData},
+        children::{
+            RenderableChild, RenderableChildDelegate, calc_data::CalcData, clip_data::ClipData,
+        },
         clipboard_launcher::ClipboardLauncher,
+        emoji_launcher::{EmojiData, data::EMOJIS},
         weather_launcher::WeatherData,
     },
     loader::{
@@ -44,6 +48,7 @@ use audio_launcher::MusicPlayerLauncher;
 use bookmark_launcher::BookmarkLauncher;
 use calc_launcher::CalculatorLauncher;
 use category_launcher::CategoryLauncher;
+use emoji_launcher::EmojiPicker;
 use event_launcher::EventLauncher;
 use gpui::SharedString;
 use serde_json::Value;
@@ -72,12 +77,12 @@ pub enum LauncherType {
     MusicPlayer(MusicPlayerLauncher),
     Weather(WeatherLauncher),
     Web(WebLauncher),
+    Emoji(EmojiPicker),
     #[default]
     Empty,
     // Integrate later: TODO
     // Pipe(PipeLauncher),
     // Api(BulkTextLauncher),
-    // Emoji(EmojiPicker),
     // File(FileLauncher),
     // Pomodoro(Pomodoro),
     // Process(ProcessLauncher),
@@ -221,6 +226,27 @@ impl LauncherType {
                 Some(children)
             }
 
+            Self::Emoji(_) => {
+                let children: Vec<RenderableChild> = EMOJIS
+                    .iter()
+                    .map(|entry| RenderableChild::EmojiLike {
+                        launcher: Arc::clone(&launcher),
+                        inner: EmojiData { entry },
+                    })
+                    .collect();
+
+                let entry_size = std::mem::size_of::<RenderableChild>();
+                let total = entry_size * children.len();
+                eprintln!(
+                    "[emoji] {} entries × {} bytes = {} KB",
+                    children.len(),
+                    entry_size,
+                    total / 1024
+                );
+
+                Some(children)
+            }
+
             Self::MusicPlayer(_) => {
                 let inner = utils::MprisState {
                     raw: None,
@@ -335,6 +361,10 @@ pub enum ExecMode {
     Category {
         category: LauncherMode,
     },
+    CreateBookmark {
+        url: String,
+        name: String,
+    },
     Web {
         engine: Option<String>,
         browser: Option<String>,
@@ -378,11 +408,22 @@ impl ExecMode {
             _ => Self::None,
         }
     }
-    pub fn from_app_action(action: &ApplicationAction, _launcher: &Arc<Launcher>) -> Self {
+    pub fn from_app_action(action: &ApplicationAction, data: &RenderableChild) -> Self {
         match action.method.as_str() {
             "app_launcher" | "command" => Self::Commmand {
                 exec: action.exec.clone().unwrap_or_default(),
             },
+
+            "create_bookmark" => {
+                if let (Some(exec), Some(name)) = (&action.exec, &action.name) {
+                    Self::CreateBookmark {
+                        url: exec.to_string(),
+                        name: name.to_string(),
+                    }
+                } else {
+                    Self::None
+                }
+            }
 
             _ => Self::None,
         }

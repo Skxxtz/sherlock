@@ -4,10 +4,12 @@ use std::sync::Arc;
 pub mod app_data;
 pub mod calc_data;
 pub mod clip_data;
+pub mod emoji_data;
 pub mod mpris_data;
 pub mod weather_data;
 
 use crate::{
+    launcher::EmojiData,
     launcher::{
         ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
         utils::MprisState, weather_launcher::WeatherData,
@@ -53,9 +55,7 @@ macro_rules! renderable_enum {
             }
 
             fn build_action_exec(&self, action: &ApplicationAction) -> ExecMode {
-                match self {
-                    $(Self::$variant {launcher, ..} => { ExecMode::from_app_action(action, launcher) }),*
-                }
+                ExecMode::from_app_action(action, &self)
             }
 
             fn build_exec(&self) -> Option<ExecMode> {
@@ -81,6 +81,7 @@ macro_rules! renderable_enum {
             fn actions(&self) -> Option<Arc<[Arc<ApplicationAction>]>> {
                 match self {
                     Self::AppLike { inner, ..} => Some(inner.actions.clone()),
+                    Self::ClipLike { inner, .. } => Some(inner.actions.clone()),
                     _ => None
                 }
             }
@@ -199,6 +200,7 @@ renderable_enum! {
         AppLike(AppData),
         CalcLike(CalcData),
         ClipLike(ClipData),
+        EmojiLike(EmojiData),
         MusicLike(MprisState),
         WeatherLike(WeatherData),
     }
@@ -251,56 +253,25 @@ impl<T: AsRef<str>> SherlockSearch for T {
         let t_bytes = self.as_ref().as_bytes();
         let p_bytes = pattern.as_bytes();
 
-        // Early return for empty bytes
         if p_bytes.is_empty() {
             return true;
         }
-        if t_bytes.is_empty() {
+        if t_bytes.len() < p_bytes.len() {
             return false;
         }
 
-        let mut current_target = t_bytes;
+        let mut p_idx = 0;
+        let p_len = p_bytes.len();
 
-        // memchr find first search byte
-        while let Some(pos) = memchr::memchr(p_bytes[0], current_target) {
-            if sequential_check(p_bytes, &current_target[pos..], 5) {
-                return true;
+        for &byte in t_bytes {
+            if byte.eq_ignore_ascii_case(&p_bytes[p_idx]) {
+                p_idx += 1;
+                if p_idx == p_len {
+                    return true;
+                }
             }
-            // Move past the current match to find the next possible start
-            if pos + 1 >= current_target.len() {
-                break;
-            }
-            current_target = &current_target[pos + 1..];
         }
 
         false
     }
-}
-
-fn sequential_check(pattern: &[u8], target: &[u8], window_size: usize) -> bool {
-    // pattern[0] was already matched by memchr at target[0]
-    let mut t_idx = 1;
-
-    // We start from the second character (index 1)
-    for &pattern_char in &pattern[1..] {
-        // The window starts at t_idx and ends at t_idx + window_size
-        let limit = std::cmp::min(t_idx + window_size, target.len());
-        let mut found = false;
-
-        while t_idx < limit {
-            if target[t_idx] == pattern_char {
-                t_idx += 1; // Start searching for the NEXT char from here
-                found = true;
-                break;
-            }
-            t_idx += 1;
-        }
-
-        // If the inner loop finishes without finding the char, the chain is broken
-        if !found {
-            return false;
-        }
-    }
-
-    true
 }
