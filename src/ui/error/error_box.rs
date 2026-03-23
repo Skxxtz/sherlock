@@ -15,6 +15,7 @@ pub struct ErrorBox {
     on_dismiss: Option<Box<dyn Fn(&mut gpui::App) + 'static>>,
 }
 
+#[allow(dead_code)]
 impl ErrorBox {
     pub fn new(message: String) -> Self {
         Self {
