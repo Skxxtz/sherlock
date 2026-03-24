@@ -141,11 +141,18 @@ fn spawn_launcher(
                 });
                 let backspace_sub =
                     cx.subscribe(&text_input, |this, _, _ev: &EmptyBackspace, cx| {
-                        if this.mode != LauncherMode::Home {
-                            this.mode = LauncherMode::Home;
-                            this.navigation.with_model_mut(cx, |this, _| this.last_query = None);
+                        if this.navigation.len() > 1 {
+                            this.navigation.pop();
                             this.navigation.current_mut().reset_selected_index();
                             this.filter_and_sort(cx);
+                        } else {
+                            if this.mode != LauncherMode::Home {
+                                this.mode = LauncherMode::Home;
+                                this.navigation
+                                    .with_model_mut(cx, |this, _| this.last_query = None);
+                                this.navigation.current_mut().reset_selected_index();
+                                this.filter_and_sort(cx);
+                            }
                         }
                     });
                 text_input.update(cx, |this, _cx| {

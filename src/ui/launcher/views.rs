@@ -34,6 +34,9 @@ impl NavigationStack {
     pub fn clear(&mut self) {
         self.stack.truncate(1);
     }
+    pub fn len(&self) -> usize {
+        self.stack.len()
+    }
     pub fn push(&mut self, view: NavigationView) {
         self.stack.push(view);
     }
