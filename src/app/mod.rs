@@ -1,7 +1,7 @@
 use futures::{StreamExt, stream::FuturesUnordered};
 use gpui::{
-    App, AppContext, AsyncApp, Bounds, Entity, Focusable, ListAlignment, ListState, Size,
-    WindowBackgroundAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions,
+    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Size, WindowBackgroundAppearance,
+    WindowBounds, WindowHandle, WindowKind, WindowOptions,
     layer_shell::{Layer, LayerShellOptions},
     point, px,
 };
@@ -14,7 +14,7 @@ use crate::{
     loader::{LauncherLoadResult, Loader, SetupResult},
     ui::{
         error::view::{DismissErrorEvent, ErrorCount, ErrorView},
-        launcher::{LauncherMode, LauncherView},
+        launcher::{LauncherMode, LauncherView, views::NavigationStack},
         search_bar::{EmptyBackspace, TextInput},
         workspace::{LauncherErrorEvent, SherlockWorkspace, WorkspaceView},
     },
@@ -91,8 +91,7 @@ pub async fn run_async_updates(
     current_generation: u64,
     this_generation: u64,
 ) {
-    let data_items = data.read_with(&cx, |this, _| this.clone()).ok();
-    let Some(items) = data_items else { return };
+    let items = data.read_with(&cx, |this, _| this.clone());
 
     let mut futures: FuturesUnordered<_> = items
         .iter()
@@ -112,7 +111,9 @@ pub async fn run_async_updates(
             });
             let _ = new_win.update(cx, |view, _, cx| {
                 view.launcher.update(cx, |launcher, cx| {
-                    launcher.last_query = None;
+                    launcher
+                        .navigation
+                        .with_model_mut(cx, |this, _| this.last_query = None);
                     launcher.filter_and_sort(cx);
                 });
             });
@@ -135,42 +136,36 @@ fn spawn_launcher(
             let launcher = cx.new(|cx| {
                 let data_len = data.read(cx).len();
                 let sub = cx.observe(&text_input, move |this: &mut LauncherView, _ev, cx| {
-                    this.selected_index = 0;
+                    this.navigation.current_mut().reset_selected_index();
                     this.filter_and_sort(cx);
                 });
                 let backspace_sub =
                     cx.subscribe(&text_input, |this, _, _ev: &EmptyBackspace, cx| {
                         if this.mode != LauncherMode::Home {
                             this.mode = LauncherMode::Home;
-                            this.last_query = None;
-                            this.selected_index = 0;
+                            this.navigation.with_model_mut(cx, |this, _| this.last_query = None);
+                            this.navigation.current_mut().reset_selected_index();
                             this.filter_and_sort(cx);
                         }
                     });
                 text_input.update(cx, |this, _cx| {
                     this._sub = Some(backspace_sub);
                 });
-                let list_state = ListState::new(data_len, ListAlignment::Top, px(48.));
                 let mut view = LauncherView {
                     text_input,
                     focus_handle: cx.focus_handle(),
-                    list_state,
                     _subs: vec![sub],
-                    selected_index: 0,
                     mode: LauncherMode::Home,
                     modes,
                     context_idx: None,
                     context_actions: Arc::new([]),
                     variable_input: Vec::new(),
                     active_bar: 0,
-                    data,
+                    navigation: NavigationStack::new(data, data_len, cx),
                     error_count: ErrorCount {
                         errors: initial_errors.len(),
                         warnings: initial_warnings.len(),
                     },
-                    deferred_render_task: None,
-                    last_query: None,
-                    filtered_indices: (0..data_len).collect(),
                     config_initialized: ConfigGuard::is_initialized(),
                 };
                 view.filter_and_sort(cx);
@@ -240,8 +235,8 @@ fn spawn_launcher(
                 WorkspaceView::Launcher => view.launcher.read(cx).text_input.focus_handle(cx),
                 WorkspaceView::Error => view.error.read(cx).focus_handle(cx),
             };
-            window.on_next_frame(move |window, _cx| {
-                window.focus(&focus);
+            window.on_next_frame(move |window, cx| {
+                window.focus(&focus, cx);
             });
             cx.activate(true);
         })

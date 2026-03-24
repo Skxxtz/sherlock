@@ -205,20 +205,22 @@ impl Intent {
 
         let values_end = connector_idx.unwrap_or(tokens.len());
 
-        let values: SmallVec<[f32; 4]> =
-            if from_space == "hex" || tokens.get(from_idx).map_or(false, |t| t.starts_with('#')) {
-                let token = tokens.get(from_idx)?;
-                if let Some((r, g, b)) = ColorConverter::hex_to_rgb(token) {
-                    smallvec![r, g, b]
-                } else {
-                    return None;
-                }
+        let values: SmallVec<[f32; 4]> = if from_idx >= values_end {
+            smallvec![]
+        } else if from_space == "hex" || tokens.get(from_idx).map_or(false, |t| t.starts_with('#'))
+        {
+            let token = tokens.get(from_idx)?;
+            if let Some((r, g, b)) = ColorConverter::hex_to_rgb(token) {
+                smallvec![r, g, b]
             } else {
-                tokens[from_idx + 1..values_end]
-                    .iter()
-                    .filter_map(|t| t.parse::<f32>().ok())
-                    .collect()
-            };
+                return None;
+            }
+        } else {
+            tokens[from_idx + 1..values_end]
+                .iter()
+                .filter_map(|t| t.parse::<f32>().ok())
+                .collect()
+        };
 
         if values.is_empty() {
             return None;

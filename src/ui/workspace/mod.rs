@@ -34,11 +34,11 @@ impl Render for SherlockWorkspace {
             match &self.workspace {
                 WorkspaceView::Error => {
                     let handle = self.error.read(cx).focus_handle.clone();
-                    window.focus(&handle);
+                    window.focus(&handle, cx);
                 }
                 WorkspaceView::Launcher => {
                     let handle = self.launcher.read(cx).text_input.focus_handle(cx);
-                    window.focus(&handle);
+                    window.focus(&handle, cx);
                 }
             }
         }

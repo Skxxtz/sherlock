@@ -26,11 +26,9 @@ use std::{collections::HashMap, sync::Arc, vec};
 
 use crate::{
     launcher::{
-        children::{
-            RenderableChild, RenderableChildDelegate, calc_data::CalcData, clip_data::ClipData,
-        },
+        children::{RenderableChild, calc_data::CalcData, clip_data::ClipData},
         clipboard_launcher::ClipboardLauncher,
-        emoji_launcher::{EmojiData, data::EMOJIS},
+        emoji_launcher::EmojiData,
         weather_launcher::WeatherData,
     },
     loader::{
@@ -39,7 +37,7 @@ use crate::{
         resolve_icon_path,
         utils::{AppData, ApplicationAction, RawLauncher, deserialize_named_appdata},
     },
-    ui::launcher::LauncherMode,
+    ui::launcher::{LauncherMode, views::NavigationViewType},
     utils::{config::HomeType, intent::Capabilities},
 };
 
@@ -227,24 +225,14 @@ impl LauncherType {
             }
 
             Self::Emoji(_) => {
-                let children: Vec<RenderableChild> = EMOJIS
-                    .iter()
-                    .map(|entry| RenderableChild::EmojiLike {
-                        launcher: Arc::clone(&launcher),
-                        inner: EmojiData { entry },
-                    })
-                    .collect();
+                let mut inner = AppData::new();
+                inner.name = launcher.name.as_ref().map(SharedString::from);
+                inner.search_string = "emoji".into();
+                inner.icon = resolve_icon_path("sherlock-emoji");
 
-                let entry_size = std::mem::size_of::<RenderableChild>();
-                let total = entry_size * children.len();
-                eprintln!(
-                    "[emoji] {} entries × {} bytes = {} KB",
-                    children.len(),
-                    entry_size,
-                    total / 1024
-                );
+                let child = RenderableChild::AppLike { launcher, inner };
 
-                Some(children)
+                Some(vec![child])
             }
 
             Self::MusicPlayer(_) => {
@@ -361,6 +349,10 @@ pub enum ExecMode {
     Category {
         category: LauncherMode,
     },
+    View {
+        mode: NavigationViewType,
+        launcher: Arc<Launcher>,
+    },
     CreateBookmark {
         url: String,
         name: String,
@@ -400,6 +392,10 @@ impl ExecMode {
             LauncherType::Command(_) => Self::Commmand {
                 exec: app_data.exec.clone().unwrap_or_default(),
             },
+            LauncherType::Emoji(_) => Self::View {
+                mode: NavigationViewType::Emoji,
+                launcher: Arc::clone(launcher),
+            },
             LauncherType::Web(web) => Self::Web {
                 engine: Some(web.engine.clone()),
                 browser: web.browser.clone(),
@@ -408,7 +404,7 @@ impl ExecMode {
             _ => Self::None,
         }
     }
-    pub fn from_app_action(action: &ApplicationAction, data: &RenderableChild) -> Self {
+    pub fn from_app_action(action: &ApplicationAction, _data: &RenderableChild) -> Self {
         match action.method.as_str() {
             "app_launcher" | "command" => Self::Commmand {
                 exec: action.exec.clone().unwrap_or_default(),

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use gpui::Image;
-use serde::Deserialize;
 use zbus::zvariant::{DeserializeDict, Type};
 
 #[derive(Clone, Default)]

@@ -39,10 +39,7 @@ pub async fn reload(
 
     // Reload launchers
     let modes = if needs.launchers {
-        let result = match cx
-            .update(|cx| Loader::load_launchers(cx, data.clone()))
-            .ok()?
-        {
+        let result = match cx.update(|cx| Loader::load_launchers(cx, data.clone())) {
             Ok(result) => result,
             Err(e) => {
                 errors.push(e);

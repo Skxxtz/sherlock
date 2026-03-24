@@ -1,11 +1,12 @@
-use crate::launcher::children::{LauncherValues, RenderableChild};
+use crate::launcher::children::LauncherValues;
 use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
 use crate::loader::utils::ApplicationAction;
 use crate::ui::error::view::ErrorCount;
+use crate::ui::launcher::views::NavigationStack;
 use crate::utils::config::HomeType;
+use gpui::AsyncApp;
 use gpui::WeakEntity;
-use gpui::{App, Context, Entity, FocusHandle, Focusable, ListState, SharedString, Subscription};
-use gpui::{AsyncApp, Task};
+use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::sync::{Arc, LazyLock};
 
@@ -13,15 +14,14 @@ use crate::ui::search_bar::TextInput;
 
 pub mod actions;
 pub mod render;
+pub mod views;
 
-pub use actions::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit};
+pub use actions::{Execute, SelectionUp, SelectionDown, SelectionLeft, SelectionRight, NextVar, OpenContext, PrevVar, Quit};
 
 pub struct LauncherView {
     pub text_input: Entity<TextInput>,
     pub focus_handle: FocusHandle,
-    pub list_state: ListState,
     pub _subs: Vec<Subscription>,
-    pub selected_index: usize,
 
     // mode
     pub mode: LauncherMode,
@@ -36,13 +36,10 @@ pub struct LauncherView {
     pub active_bar: usize,
 
     // Model
-    pub deferred_render_task: Option<Task<Option<()>>>,
-    pub data: Entity<Arc<Vec<RenderableChild>>>,
-    pub filtered_indices: Arc<[usize]>,
-    pub last_query: Option<String>,
-    pub error_count: ErrorCount,
+    pub navigation: NavigationStack,
 
     // State
+    pub error_count: ErrorCount,
     pub config_initialized: bool,
 }
 
@@ -54,16 +51,19 @@ impl Focusable for LauncherView {
 
 impl LauncherView {
     pub fn apply_results(&mut self, results: Arc<[usize]>, query: String, cx: &mut Context<Self>) {
-        let old_count = self.list_state.item_count();
-        let new_count = results.len();
+        if let Some(state) = self.navigation.current().style.list_state() {
+            state.splice(0..state.item_count(), results.len());
+        } else {
+            return
+        }
 
         self.update_vars(cx);
 
         self.active_bar = 0;
-        self.filtered_indices = results;
-        self.last_query = Some(query);
-
-        self.list_state.splice(0..old_count, new_count);
+        self.navigation.with_model_mut(cx, |mdl, _| {
+            mdl.filtered_indices = results;
+            mdl.last_query = Some(query);
+        });
 
         self.focus_first(cx);
 
@@ -72,13 +72,19 @@ impl LauncherView {
     pub fn filter_and_sort(&mut self, cx: &mut Context<Self>) {
         let mut query = self.text_input.read(cx).content.to_lowercase();
 
-        if Some(&query) == self.last_query.as_ref() {
-            return;
-        }
+        let snapshot = self.navigation.with_model_mut(cx, |mdl, _| {
+            if mdl.last_query.as_ref() == Some(&query) {
+                None
+            } else {
+                mdl.deferred_render_task = None;
+                Some(mdl.data.clone())
+            }
+        });
 
-        if let Some(task) = self.deferred_render_task.take() {
-            drop(task);
-        }
+        let Some(data_entity) = snapshot else {
+            return;
+        };
+
 
         // handle mode change
         if self.mode.transition_for_query(&query, &self.modes) {
@@ -88,9 +94,9 @@ impl LauncherView {
             query = "".into();
         }
 
-        let data_arc = self.data.read(cx).clone();
         let mode = self.mode.clone();
-        self.deferred_render_task = Some(cx.spawn(
+        let data_arc = data_entity.read(cx).clone();
+        let render_task = Some(cx.spawn(
             |this: WeakEntity<LauncherView>, cx: &mut AsyncApp| {
                 let mut cx = cx.clone();
                 async move {
@@ -170,6 +176,8 @@ impl LauncherView {
                 }
             },
         ));
+
+        self.navigation.with_model_mut(cx, |mdl, _| mdl.deferred_render_task = render_task);
     }
 }
 
