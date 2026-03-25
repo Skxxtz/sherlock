@@ -5,10 +5,12 @@ use gpui::{App, KeyBinding};
 use crate::{
     ui::{
         UIFunction,
-        launcher::{Execute, NextVar, OpenContext, PrevVar, Quit, SelectionDown, SelectionLeft, SelectionRight, SelectionUp},
+        launcher::{
+            Execute, NextVar, OpenContext, PrevVar, Quit, SelectionDown, SelectionLeft,
+            SelectionRight, SelectionUp,
+        },
         search_bar::actions::{
-            Backspace, Copy, Cut, Delete, DeleteAll, End, Home, Paste, SelectAll,
-            ShortcutAction,
+            Backspace, Copy, Cut, Delete, DeleteAll, End, Home, Paste, SelectAll, ShortcutAction,
         },
     },
     utils::config::ConfigGuard,

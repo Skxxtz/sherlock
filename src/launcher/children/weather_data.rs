@@ -49,4 +49,7 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
             )
             .into_any_element()
     }
+    fn actions(&self) -> Option<Arc<[Arc<crate::loader::utils::ApplicationAction>]>> {
+        None
+    }
 }

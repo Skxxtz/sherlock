@@ -8,7 +8,9 @@ use gpui::KeyBinding;
 use serde::{Deserialize, Serialize};
 
 use crate::ui::{
-    launcher::{Execute, SelectionUp, SelectionDown, SelectionLeft, NextVar, OpenContext, PrevVar, Quit},
+    launcher::{
+        Execute, NextVar, OpenContext, PrevVar, Quit, SelectionDown, SelectionLeft, SelectionUp,
+    },
     search_bar::actions::Complete,
 };
 

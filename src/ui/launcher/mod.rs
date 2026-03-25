@@ -16,7 +16,10 @@ pub mod actions;
 pub mod render;
 pub mod views;
 
-pub use actions::{Execute, SelectionUp, SelectionDown, SelectionLeft, SelectionRight, NextVar, OpenContext, PrevVar, Quit};
+pub use actions::{
+    Execute, NextVar, OpenContext, PrevVar, Quit, SelectionDown, SelectionLeft, SelectionRight,
+    SelectionUp,
+};
 
 pub struct LauncherView {
     pub text_input: Entity<TextInput>,
@@ -54,7 +57,7 @@ impl LauncherView {
         if let Some(state) = self.navigation.current().style.list_state() {
             state.splice(0..state.item_count(), results.len());
         } else {
-            return
+            return;
         }
 
         self.update_vars(cx);
@@ -85,7 +88,6 @@ impl LauncherView {
             return;
         };
 
-
         // handle mode change
         if self.mode.transition_for_query(&query, &self.modes) {
             self.text_input.update(cx, |this, _cx| {
@@ -96,8 +98,8 @@ impl LauncherView {
 
         let mode = self.mode.clone();
         let data_arc = data_entity.read(cx).clone();
-        let render_task = Some(cx.spawn(
-            |this: WeakEntity<LauncherView>, cx: &mut AsyncApp| {
+        let render_task = Some(
+            cx.spawn(|this: WeakEntity<LauncherView>, cx: &mut AsyncApp| {
                 let mut cx = cx.clone();
                 async move {
                     let mode = mode.as_str();
@@ -174,10 +176,11 @@ impl LauncherView {
 
                     Some(())
                 }
-            },
-        ));
+            }),
+        );
 
-        self.navigation.with_model_mut(cx, |mdl, _| mdl.deferred_render_task = render_task);
+        self.navigation
+            .with_model_mut(cx, |mdl, _| mdl.deferred_render_task = render_task);
     }
 }
 

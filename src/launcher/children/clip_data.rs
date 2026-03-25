@@ -117,6 +117,9 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
             _ => div().into_any_element(),
         }
     }
+    fn actions(&self) -> Option<Arc<[Arc<ApplicationAction>]>> {
+        Some(self.actions.clone())
+    }
 }
 
 fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {

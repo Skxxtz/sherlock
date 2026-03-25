@@ -5340,6 +5340,7 @@ dependencies = [
 name = "sherlock-gpui"
 version = "0.1.0"
 dependencies = [
+ "arrayvec",
  "bincode",
  "bytes",
  "chrono",

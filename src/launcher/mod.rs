@@ -26,9 +26,12 @@ use std::{collections::HashMap, sync::Arc, vec};
 
 use crate::{
     launcher::{
-        children::{RenderableChild, calc_data::CalcData, clip_data::ClipData},
+        children::{
+            RenderableChild, calc_data::CalcData, clip_data::ClipData,
+            emoji_data::set_selected_skin_tone,
+        },
         clipboard_launcher::ClipboardLauncher,
-        emoji_launcher::EmojiData,
+        emoji_launcher::{EmojiData, SkinTone},
         weather_launcher::WeatherData,
     },
     loader::{
@@ -229,6 +232,12 @@ impl LauncherType {
                 inner.name = launcher.name.as_ref().map(SharedString::from);
                 inner.search_string = "emoji".into();
                 inner.icon = resolve_icon_path("sherlock-emoji");
+
+                let default_skin_tone: SkinTone = opts
+                    .get("default_skin_color")
+                    .and_then(|s| serde_json::from_value(s.clone()).ok())
+                    .unwrap_or(SkinTone::Simpsons);
+                set_selected_skin_tone(default_skin_tone, 0);
 
                 let child = RenderableChild::AppLike { launcher, inner };
 

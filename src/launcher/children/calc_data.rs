@@ -91,6 +91,9 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
             IntentResult::Color(c) => color_show(c, is_selected),
         }
     }
+    fn actions(&self) -> Option<Arc<[Arc<crate::loader::utils::ApplicationAction>]>> {
+        None
+    }
 }
 
 fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {

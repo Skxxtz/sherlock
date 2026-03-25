@@ -68,4 +68,7 @@ impl<'a> RenderableChildImpl<'a> for AppData {
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
         &self.search_string
     }
+    fn actions(&self) -> Option<Arc<[Arc<crate::loader::utils::ApplicationAction>]>> {
+        Some(self.actions.clone())
+    }
 }

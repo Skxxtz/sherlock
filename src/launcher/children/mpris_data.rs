@@ -63,4 +63,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
         ""
     }
+    fn actions(&self) -> Option<Arc<[Arc<crate::loader::utils::ApplicationAction>]>> {
+        None
+    }
 }

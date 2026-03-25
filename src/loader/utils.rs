@@ -23,6 +23,7 @@ use crate::{
     },
 };
 
+// TODO: make this an enum like RenderableChild to accomodate for Row and Col actions
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationAction {
     pub name: Option<SharedString>,

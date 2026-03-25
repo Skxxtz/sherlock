@@ -80,9 +80,7 @@ macro_rules! renderable_enum {
 
             fn actions(&self) -> Option<Arc<[Arc<ApplicationAction>]>> {
                 match self {
-                    Self::AppLike { inner, ..} => Some(inner.actions.clone()),
-                    Self::ClipLike { inner, .. } => Some(inner.actions.clone()),
-                    _ => None
+                    $(Self::$variant {inner, launcher} => inner.actions()),*
                 }
             }
         }
@@ -241,6 +239,7 @@ pub trait RenderableChildImpl<'a> {
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode>;
     fn priority(&self, launcher: &Arc<Launcher>) -> f32;
     fn search(&'a self, launcher: &Arc<Launcher>) -> &'a str;
+    fn actions(&self) -> Option<Arc<[Arc<ApplicationAction>]>>;
 }
 
 pub trait SherlockSearch {

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use gpui::{AnyEntity, App, AppContext, Entity, ListState, ScrollStrategy, UniformListScrollHandle, px};
+use gpui::{
+    AnyEntity, App, AppContext, Entity, ListState, ScrollStrategy, UniformListScrollHandle, px,
+};
 use simd_json::prelude::Indexed;
 
 use crate::{
