@@ -3,7 +3,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use strum::FromRepr;
 
-use crate::launcher::emoji_launcher::data::EmojiEntry;
+use crate::launcher::{LauncherProvider, emoji_launcher::data::EmojiEntry};
 
 pub mod data;
 

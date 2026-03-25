@@ -1,5 +1,4 @@
 use gpui::{App, Entity};
-use simd_json::prelude::ArrayTrait;
 use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc};
 
 use crate::{
@@ -57,25 +56,15 @@ impl Loader {
         let config = ConfigGuard::read()?;
 
         // Read fallback data here:
-        let (raw_launchers, mut warnings) = parse_launcher_configs(&config.files.fallback)?;
+        let (raw_launchers, mut warnings) = parse_launcher_configs(&config.files.fallback);
 
         // Read cached counter file
         let ctx = LoadContext::new()?;
 
-        let submenu = config
-            .runtime
-            .sub_menu
-            .clone()
-            .unwrap_or(String::from("all"));
         // Parse the launchers
         let mut launchers: Vec<(Arc<Launcher>, Arc<serde_json::Value>)> = raw_launchers
             .into_iter()
-            .filter_map(|raw| {
-                // Logic to restrict in submenu mode
-                if submenu != "all" && raw.alias.as_ref() != Some(&submenu) {
-                    return None;
-                }
-
+            .map(|raw| {
                 let method = raw
                     .on_return
                     .clone()
@@ -90,51 +79,44 @@ impl Loader {
                     .map(|s| s.to_string());
 
                 let opts = Arc::clone(&raw.args);
-                let launcher = Arc::new(Launcher::from_raw(raw, method, launcher_type, icon));
 
-                Some((launcher, opts))
+                (
+                    Arc::new(Launcher::from_raw(raw, method, launcher_type, icon)),
+                    opts,
+                )
             })
             .collect();
 
         launchers.sort_by_key(|(l, _)| l.priority);
+
         let mut modes = Vec::with_capacity(launchers.len());
         let renders: Vec<RenderableChild> = launchers
             .into_iter()
-            .filter_map(|(launcher, opts)| {
-                // insert modes
+            .inspect(|(launcher, _)| {
+                // Collect modes
                 if let Some((alias, name)) = launcher.alias.as_ref().zip(launcher.name.as_ref()) {
                     modes.push(LauncherMode::Alias {
                         short: alias.into(),
                         name: name.into(),
                     });
                 }
-
+            })
+            .filter_map(|(launcher, opts)| {
                 match launcher
                     .launcher_type
                     .get_render_obj(Arc::clone(&launcher), &ctx, opts)
                 {
-                    Ok(vec) if !vec.is_empty() => Some(vec),
+                    Ok(vec) => (!vec.is_empty()).then_some(vec),
                     Err(e) => {
                         warnings.push(e);
                         None
                     }
-                    _ => None,
                 }
             })
             .flatten()
             .collect();
 
-        // Get errors and launchers
-        if ctx.counts.is_empty() {
-            let counts: HashMap<String, u32> = renders
-                .iter()
-                .filter_map(|render| render.get_exec())
-                .map(|exec| (exec, 0))
-                .collect();
-            if let Err(e) = BinaryCache::write(&ctx.path, &counts) {
-                warnings.push(e)
-            };
-        }
+        Self::sync_cache_if_empty(&ctx, &renders, &mut warnings);
 
         data_handle.update(cx, |items, cx| {
             *items = Arc::new(renders);
@@ -146,41 +128,48 @@ impl Loader {
             warnings,
         })
     }
-}
 
-fn parse_launcher_configs(
-    fallback_path: &PathBuf,
-) -> Result<(Vec<RawLauncher>, Vec<SherlockError>), SherlockError> {
-    // Reads all the configurations of launchers. Either from fallback.json or from default
-    // file.
-
-    let mut non_breaking: Vec<SherlockError> = Vec::new();
-
-    fn load_user_fallback(fallback_path: &PathBuf) -> Result<Vec<RawLauncher>, SherlockError> {
-        // Tries to load the user-specified launchers. If it failes, it returns a non breaking
-        // error.
-        match File::open(&fallback_path) {
-            Ok(f) => simd_json::from_reader(f).map_err(|e| {
-                sherlock_error!(
-                    SherlockErrorType::FileParseError(fallback_path.clone()),
-                    e.to_string()
-                )
-            }),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
-            Err(e) => Err(sherlock_error!(
-                SherlockErrorType::FileReadError(fallback_path.clone()),
-                e.to_string()
-            )),
+    fn sync_cache_if_empty(
+        ctx: &LoadContext,
+        renders: &[RenderableChild],
+        warnings: &mut Vec<SherlockError>,
+    ) {
+        if ctx.counts.is_empty() {
+            let counts: HashMap<String, u32> = renders
+                .iter()
+                .filter_map(|render| render.get_exec())
+                .map(|exec| (exec, 0))
+                .collect();
+            if let Err(e) = BinaryCache::write(&ctx.path, &counts) {
+                warnings.push(e)
+            };
         }
     }
+}
 
-    let config = match load_user_fallback(fallback_path)
-        .map_err(|e| non_breaking.push(e))
+fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockError>) {
+    let mut warnings = Vec::new();
+    let config = File::open(&path)
+        .map_err(|e| {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                warnings.push(sherlock_error!(
+                    SherlockErrorType::FileReadError(path.clone()),
+                    e.to_string()
+                ));
+            }
+        })
         .ok()
-    {
-        Some(v) => v,
-        None => Vec::new(),
-    };
+        .and_then(|f| {
+            simd_json::from_reader(f)
+                .map_err(|e| {
+                    warnings.push(sherlock_error!(
+                        SherlockErrorType::FileParseError(path.clone()),
+                        e.to_string()
+                    ));
+                })
+                .ok()
+        })
+        .unwrap_or_default();
 
-    return Ok((config, non_breaking));
+    (config, warnings)
 }
