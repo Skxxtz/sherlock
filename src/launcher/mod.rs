@@ -38,7 +38,9 @@ use crate::{
         Loader,
         application_loader::parse_priority,
         resolve_icon_path,
-        utils::{AppData, ApplicationAction, RawLauncher, deserialize_named_appdata},
+        utils::{
+            AppData, ApplicationAction, ContextMenuAction, RawLauncher, deserialize_named_appdata,
+        },
     },
     ui::launcher::{LauncherMode, views::NavigationViewType},
     utils::{config::HomeType, intent::Capabilities},
@@ -161,19 +163,25 @@ impl LauncherType {
                         inner.actions = inner
                             .actions
                             .iter()
-                            .map(|action| {
-                                let resolved = action
-                                    .icon
-                                    .as_deref()
-                                    .and_then(|p| p.to_str())
-                                    .and_then(|s| resolve_icon_path(s));
-                                Arc::new(ApplicationAction {
-                                    icon: resolved,
-                                    ..(**action).clone()
-                                })
+                            .map(|action_arc| {
+                                match action_arc.as_ref() {
+                                    ContextMenuAction::App(app_action) => {
+                                        // 1. Resolve the path
+                                        let resolved_icon = app_action
+                                            .icon
+                                            .as_deref()
+                                            .and_then(|p| p.to_str())
+                                            .and_then(|s| resolve_icon_path(s));
+
+                                        Arc::new(ContextMenuAction::App(ApplicationAction {
+                                            icon: resolved_icon,
+                                            ..app_action.clone()
+                                        }))
+                                    }
+                                    ContextMenuAction::Emoji(_) => Arc::clone(action_arc),
+                                }
                             })
-                            .collect::<Vec<_>>()
-                            .into();
+                            .collect();
 
                         RenderableChild::AppLike {
                             launcher: Arc::clone(&launcher),
@@ -413,24 +421,27 @@ impl ExecMode {
             _ => Self::None,
         }
     }
-    pub fn from_app_action(action: &ApplicationAction, _data: &RenderableChild) -> Self {
-        match action.method.as_str() {
-            "app_launcher" | "command" => Self::Commmand {
-                exec: action.exec.clone().unwrap_or_default(),
-            },
+    pub fn from_app_action(action: &ContextMenuAction, _data: &RenderableChild) -> Self {
+        match action {
+            ContextMenuAction::App(action) => match action.method.as_str() {
+                "app_launcher" | "command" => Self::Commmand {
+                    exec: action.exec.clone().unwrap_or_default(),
+                },
 
-            "create_bookmark" => {
-                if let (Some(exec), Some(name)) = (&action.exec, &action.name) {
-                    Self::CreateBookmark {
-                        url: exec.to_string(),
-                        name: name.to_string(),
+                "create_bookmark" => {
+                    if let (Some(exec), Some(name)) = (&action.exec, &action.name) {
+                        Self::CreateBookmark {
+                            url: exec.to_string(),
+                            name: name.to_string(),
+                        }
+                    } else {
+                        Self::None
                     }
-                } else {
-                    Self::None
                 }
-            }
 
-            _ => Self::None,
+                _ => Self::None,
+            },
+            ContextMenuAction::Emoji(_) => Self::None,
         }
     }
 }

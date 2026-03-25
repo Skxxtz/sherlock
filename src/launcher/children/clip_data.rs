@@ -6,7 +6,10 @@ use gpui::{
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl},
-    loader::{resolve_icon_path, utils::ApplicationAction},
+    loader::{
+        resolve_icon_path,
+        utils::{ApplicationAction, ContextMenuAction},
+    },
     utils::{
         clipboard::get_clipboard,
         intent::{Capabilities, Intent, IntentResult},
@@ -18,7 +21,7 @@ pub struct ClipData {
     pub content: SharedString,
     pub capabilities: Capabilities,
     result: Arc<RwLock<Option<(Intent, IntentResult)>>>,
-    pub actions: Arc<[Arc<ApplicationAction>]>,
+    pub actions: Arc<[Arc<ContextMenuAction>]>,
 }
 
 impl ClipData {
@@ -117,7 +120,7 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
             _ => div().into_any_element(),
         }
     }
-    fn actions(&self) -> Option<Arc<[Arc<ApplicationAction>]>> {
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         Some(self.actions.clone())
     }
 }

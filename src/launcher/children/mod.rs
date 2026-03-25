@@ -9,12 +9,11 @@ pub mod mpris_data;
 pub mod weather_data;
 
 use crate::{
-    launcher::EmojiData,
     launcher::{
-        ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
+        EmojiData, ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
         utils::MprisState, weather_launcher::WeatherData,
     },
-    loader::utils::{AppData, ApplicationAction, ExecVariable},
+    loader::utils::{AppData, ContextMenuAction, ExecVariable},
     utils::config::HomeType,
 };
 
@@ -54,7 +53,7 @@ macro_rules! renderable_enum {
                 }
             }
 
-            fn build_action_exec(&self, action: &ApplicationAction) -> ExecMode {
+            fn build_action_exec(&self, action: &ContextMenuAction) -> ExecMode {
                 ExecMode::from_app_action(action, &self)
             }
 
@@ -78,9 +77,9 @@ macro_rules! renderable_enum {
                 }
             }
 
-            fn actions(&self) -> Option<Arc<[Arc<ApplicationAction>]>> {
+            fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
                 match self {
-                    $(Self::$variant {inner, launcher} => inner.actions()),*
+                    $(Self::$variant {inner, ..} => inner.actions()),*
                 }
             }
         }
@@ -215,11 +214,11 @@ impl RenderableChild {
 
 pub trait RenderableChildDelegate<'a> {
     fn render(&self, is_selected: bool) -> AnyElement;
-    fn build_action_exec(&'a self, action: &'a ApplicationAction) -> ExecMode;
+    fn build_action_exec(&'a self, action: &'a ContextMenuAction) -> ExecMode;
     fn build_exec(&self) -> Option<ExecMode>;
     fn search(&'a self) -> &'a str;
     fn vars(&self) -> Option<&[ExecVariable]>;
-    fn actions(&self) -> Option<Arc<[Arc<ApplicationAction>]>>;
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>>;
 }
 
 #[allow(dead_code)]
@@ -239,7 +238,7 @@ pub trait RenderableChildImpl<'a> {
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode>;
     fn priority(&self, launcher: &Arc<Launcher>) -> f32;
     fn search(&'a self, launcher: &Arc<Launcher>) -> &'a str;
-    fn actions(&self) -> Option<Arc<[Arc<ApplicationAction>]>>;
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>>;
 }
 
 pub trait SherlockSearch {

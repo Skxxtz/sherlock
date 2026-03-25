@@ -7,9 +7,10 @@ use smallvec::SmallVec;
 use crate::{
     launcher::{
         ExecMode,
-        children::{LauncherValues, RenderableChildDelegate},
+        children::{LauncherValues, RenderableChildDelegate, emoji_data::set_selected_skin_tone},
+        emoji_launcher::SkinTone,
     },
-    loader::utils::{CounterReader, ExecVariable},
+    loader::utils::{ContextMenuAction, CounterReader, ExecVariable},
     ui::{
         launcher::{LauncherView, views::MoveDirection},
         search_bar::{EmptyBackspace, TextInput},
@@ -92,14 +93,39 @@ impl LauncherView {
     fn move_selection(&mut self, direction: MoveDirection, cx: &mut Context<Self>) {
         if let Some(idx) = self.context_idx {
             match direction {
-                MoveDirection::Down | MoveDirection::Right => {
+                MoveDirection::Down => {
                     if idx < self.context_actions.len().saturating_sub(1) {
                         self.context_idx = Some(idx + 1);
                     }
                 }
-                MoveDirection::Up | MoveDirection::Left => {
+                MoveDirection::Up => {
                     if idx > 0 {
                         self.context_idx = Some(idx - 1);
+                    }
+                }
+                MoveDirection::Left => {
+                    if let Some(action_arc) = self.context_actions.get(idx) {
+                        if let ContextMenuAction::Emoji(act) = action_arc.as_ref() {
+                            act.update_index(|i| {
+                                set_selected_skin_tone((i - 1).into(), act.for_tone as usize);
+                                i.saturating_sub(1)
+                            });
+                        } else if idx > 0 {
+                            self.context_idx = Some(idx - 1);
+                        }
+                    }
+                }
+                MoveDirection::Right => {
+                    if let Some(action_arc) = self.context_actions.get(idx) {
+                        if let ContextMenuAction::Emoji(act) = action_arc.as_ref() {
+                            act.update_index(|i| {
+                                let new = (i + 1).clamp(0, 5);
+                                set_selected_skin_tone(new.into(), act.for_tone as usize);
+                                new
+                            });
+                        } else if idx < self.context_actions.len().saturating_sub(1) {
+                            self.context_idx = Some(idx + 1);
+                        }
                     }
                 }
             }
@@ -230,7 +256,7 @@ impl LauncherView {
             ExecMode::View { mode, launcher } => {
                 self.text_input.update(cx, |this, _| this.reset());
                 self.navigation.push(mode.create_view(launcher, cx));
-                cx.notify();
+                self.filter_and_sort(cx);
                 return Ok(false);
             }
             ExecMode::Web {

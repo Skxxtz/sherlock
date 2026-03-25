@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use gpui::{AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, div, img, px, rgb};
 
-use crate::launcher::{ExecMode, Launcher, children::RenderableChildImpl, utils::MprisState};
+use crate::{
+    launcher::{ExecMode, Launcher, children::RenderableChildImpl, utils::MprisState},
+    loader::utils::ContextMenuAction,
+};
 
 impl<'a> RenderableChildImpl<'a> for MprisState {
     fn render(&self, _launcher: &Arc<Launcher>, is_selected: bool) -> AnyElement {
@@ -63,7 +66,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
         ""
     }
-    fn actions(&self) -> Option<Arc<[Arc<crate::loader::utils::ApplicationAction>]>> {
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         None
     }
 }

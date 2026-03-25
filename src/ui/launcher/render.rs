@@ -9,6 +9,7 @@ use gpui::{
 use crate::{
     CONTEXT_MENU_BIND,
     launcher::children::{RenderableChild, RenderableChildDelegate},
+    loader::utils::ContextMenuAction,
     ui::{
         UIFunction,
         launcher::{LauncherView, views::EntityStyle},
@@ -211,65 +212,36 @@ impl LauncherView {
                 .track_scroll(scroll_handle)
                 .size_full(),
             )
+            .child(self.render_context_menu())
     }
 
     fn render_context_menu(&self) -> impl IntoElement {
         if let Some(active) = self.context_idx {
-            div().inset_0().absolute().child(
-                div()
-                    .p(px(7.))
-                    .bg(rgb(0x0F0F0F))
-                    .border_color(hsla(0., 0., 0.1882, 1.0))
-                    .border(px(1.))
-                    .rounded_md()
-                    .absolute()
-                    .bottom(px(10.))
-                    .right(px(10.))
-                    .flex()
-                    .flex_col()
-                    .min_w(px(200.))
-                    .gap(px(5.))
-                    .children(self.context_actions.iter().enumerate().map(|(i, child)| {
-                        let is_selected = i == active;
-                        div()
-                            .group("")
-                            .rounded_md()
-                            .relative()
-                            .flex_1()
-                            .flex()
-                            .gap(px(10.))
-                            .p(px(10.))
-                            .cursor_pointer()
-                            .text_color(if is_selected {
-                                hsla(0.0, 0.0, 0.8, 1.0)
-                            } else {
-                                hsla(0.6, 0.0217, 0.3608, 1.0)
-                            })
-                            .text_size(px(13.))
-                            .line_height(relative(1.0))
-                            .items_center()
-                            .bg(if is_selected {
-                                hsla(0., 0., 0.149, 1.0)
-                            } else {
-                                hsla(0., 0., 0., 0.)
-                            })
-                            .hover(|s| {
-                                if is_selected {
-                                    s
-                                } else {
-                                    s.bg(hsla(0., 0., 0.12, 1.0))
-                                }
-                            })
-                            .child(if let Some(icon) = child.icon.as_ref() {
-                                img(Arc::clone(icon)).size(px(16.)).into_any_element()
-                            } else {
-                                img(ImageSource::Image(Arc::new(Image::empty())))
-                                    .size(px(16.))
-                                    .into_any_element()
-                            })
-                            .child(child.name.as_ref().unwrap().clone())
-                    })),
-            )
+            div()
+                .p(px(7.))
+                .bg(rgb(0x0F0F0F))
+                .border_color(hsla(0., 0., 0.1882, 1.0))
+                .border(px(1.))
+                .rounded_md()
+                .absolute()
+                .bottom(px(10.))
+                .right(px(10.))
+                .flex()
+                .flex_col()
+                .min_w(px(200.))
+                .items_stretch()
+                .gap(px(5.))
+                .children(self.context_actions.iter().enumerate().map(|(i, child)| {
+                    let is_selected = i == active;
+                    match child.as_ref() {
+                        ContextMenuAction::App(_) => {
+                            child.render_row(is_selected).into_any_element()
+                        }
+                        ContextMenuAction::Emoji(_) => {
+                            child.render_col(is_selected).into_any_element()
+                        }
+                    }
+                }))
         } else {
             div()
         }

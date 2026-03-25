@@ -1,18 +1,18 @@
 use crate::launcher::children::LauncherValues;
 use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
-use crate::loader::utils::ApplicationAction;
+use crate::loader::utils::{ApplicationAction, ContextMenuAction};
 use crate::ui::error::view::ErrorCount;
 use crate::ui::launcher::views::NavigationStack;
 use crate::utils::config::HomeType;
 use gpui::AsyncApp;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::sync::{Arc, LazyLock};
 
 use crate::ui::search_bar::TextInput;
 
 pub mod actions;
+pub mod context_menu;
 pub mod render;
 pub mod views;
 
@@ -32,7 +32,7 @@ pub struct LauncherView {
 
     // context menu
     pub context_idx: Option<usize>,
-    pub context_actions: Arc<[Arc<ApplicationAction>]>,
+    pub context_actions: Arc<[Arc<ContextMenuAction>]>,
 
     // variable input fields
     pub variable_input: Vec<Entity<TextInput>>,
@@ -107,7 +107,6 @@ impl LauncherView {
 
                     // collects Vec<(index, priority)>
                     let mut results: Vec<(usize, f32)> = (0..data_arc.len())
-                        .into_par_iter()
                         .map(|i| (i, &data_arc[i]))
                         .filter(|(_, data)| {
                             let home = data.home();

@@ -5,8 +5,9 @@ use gpui::{
 };
 use std::sync::Arc;
 
-use crate::launcher::{
-    ExecMode, Launcher, children::RenderableChildImpl, weather_launcher::WeatherData,
+use crate::{
+    launcher::{ExecMode, Launcher, children::RenderableChildImpl, weather_launcher::WeatherData},
+    loader::utils::ContextMenuAction,
 };
 
 impl<'a> RenderableChildImpl<'a> for WeatherData {
@@ -49,7 +50,7 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
             )
             .into_any_element()
     }
-    fn actions(&self) -> Option<Arc<[Arc<crate::loader::utils::ApplicationAction>]>> {
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         None
     }
 }

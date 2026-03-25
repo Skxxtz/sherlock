@@ -4,6 +4,7 @@ use gpui::{IntoElement, ParentElement, SharedString, Styled, div, px, rgb};
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl},
+    loader::utils::ContextMenuAction,
     utils::intent::{Capabilities, Intent, IntentResult},
 };
 
@@ -91,7 +92,7 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
             IntentResult::Color(c) => color_show(c, is_selected),
         }
     }
-    fn actions(&self) -> Option<Arc<[Arc<crate::loader::utils::ApplicationAction>]>> {
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         None
     }
 }

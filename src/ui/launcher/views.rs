@@ -10,7 +10,7 @@ use crate::{
         Launcher,
         children::{RenderableChild, RenderableChildDelegate},
     },
-    loader::utils::ApplicationAction,
+    loader::utils::{ApplicationAction, ContextMenuAction},
     ui::model::{Model, emoji::EmojiView, home::HomeView},
 };
 
@@ -130,7 +130,7 @@ impl NavigationStack {
         let idx = data_idx?;
         data_entity.read(cx).get(idx).cloned()
     }
-    pub fn current_actions(&self, cx: &mut App) -> Option<Arc<[Arc<ApplicationAction>]>> {
+    pub fn current_actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         let ui_idx = self.current().style.selected_index()?;
         let (data_idx, data_entity) = self.with_model(cx, |mdl| {
             if mdl.filtered_indices.is_empty() {

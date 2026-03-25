@@ -136,6 +136,7 @@ fn spawn_launcher(
             let launcher = cx.new(|cx| {
                 let data_len = data.read(cx).len();
                 let sub = cx.observe(&text_input, move |this: &mut LauncherView, _ev, cx| {
+                    this.context_idx = None;
                     this.navigation.current_mut().reset_selected_index();
                     this.filter_and_sort(cx);
                 });
