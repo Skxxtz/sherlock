@@ -1,8 +1,9 @@
 use gpui::SharedString;
 use serde::{
-    Deserialize, Deserializer, Serialize,
+    Deserialize, Deserializer, Serialize, Serializer,
     de::{MapAccess, Visitor},
 };
+use serde_json::Value;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     fmt::Debug,
@@ -23,10 +24,9 @@ use crate::{
     },
 };
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq)]
 pub enum ContextMenuAction {
     App(ApplicationAction),
-    #[serde(skip)]
     Emoji(EmojiAction),
 }
 impl From<ApplicationAction> for Arc<ContextMenuAction> {
@@ -34,8 +34,32 @@ impl From<ApplicationAction> for Arc<ContextMenuAction> {
         Arc::new(ContextMenuAction::App(value))
     }
 }
+impl<'de> Deserialize<'de> for ContextMenuAction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = serde_json::Value::deserialize(deserializer)?;
 
-// TODO: make this an enum like RenderableChild to accomodate for Row and Col actions
+        let app_action: ApplicationAction =
+            serde_json::from_value(v).map_err(serde::de::Error::custom)?;
+
+        Ok(ContextMenuAction::App(app_action))
+    }
+}
+
+impl Serialize for ContextMenuAction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            ContextMenuAction::App(app_action) => app_action.serialize(serializer),
+            _ => serializer.serialize_unit(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationAction {
     pub name: Option<SharedString>,
