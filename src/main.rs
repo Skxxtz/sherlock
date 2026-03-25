@@ -34,8 +34,6 @@ static SOCKET_PATH: &'static str = "/tmp/sherlock.sock";
 
 #[tokio::main]
 async fn main() {
-    let s = migrate_file("/home/basti/test/fallback.json");
-    println!("{:?}", s);
     let socket_path = "/tmp/sherlock.sock";
     if let Ok(mut stream) = std::os::unix::net::UnixStream::connect(socket_path) {
         let _ = stream.write_all(b"open");
