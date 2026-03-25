@@ -1,17 +1,57 @@
 use std::sync::Arc;
 
 use gpui::{
-    ImageSource, InteractiveElement, IntoElement, ParentElement, Render, Styled, div, hsla, img,
-    prelude::FluentBuilder, px, relative, rgb,
+    ImageSource, InteractiveElement, IntoElement, ParentElement, Styled, div, hsla, img,
+    prelude::FluentBuilder, px, relative,
 };
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     launcher::{
-        children::emoji_data::{apply_skin_tones, get_selected_skin_tones},
-        emoji_launcher::{ALL_SKIN_TONES, SkinTone},
+        children::emoji_data::{EmojiAction, apply_skin_tones, get_selected_skin_tones},
+        emoji_launcher::ALL_SKIN_TONES,
     },
-    loader::utils::ContextMenuAction,
+    loader::utils::ApplicationAction,
 };
+
+#[derive(Debug, PartialEq)]
+pub enum ContextMenuAction {
+    App(ApplicationAction),
+    Emoji(EmojiAction),
+}
+impl From<ApplicationAction> for Arc<ContextMenuAction> {
+    fn from(value: ApplicationAction) -> Self {
+        Arc::new(ContextMenuAction::App(value))
+    }
+}
+impl Serialize for ContextMenuAction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            ContextMenuAction::App(app) => serializer.serialize_some(app),
+
+            _ => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for ContextMenuAction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let opt = Option::<ApplicationAction>::deserialize(deserializer)?;
+
+        match opt {
+            Some(app_action) => Ok(ContextMenuAction::App(app_action)),
+            None => Err(serde::de::Error::custom(
+                "Found None where App was expected",
+            )),
+        }
+    }
+}
 
 impl ContextMenuAction {
     pub fn render_row(&self, is_selected: bool) -> impl IntoElement {
@@ -115,5 +155,42 @@ impl ContextMenuAction {
                             .child(apply_skin_tones(emoji, &tones).as_str().to_string()),
                     )
             }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::loader::utils::AppData;
+
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_context_menu_action_round_trip() {
+        // 1. Setup mock actions
+        let app_action = ContextMenuAction::App(ApplicationAction::new("test"));
+
+        // 2. Serialize to JSON
+        let serialized = serde_json::to_string(&app_action).expect("Failed to serialize");
+
+        // 3. Deserialize back
+        let deserialized: ContextMenuAction =
+            serde_json::from_str(&serialized).expect("Failed to deserialize");
+
+        assert_eq!(app_action, deserialized)
+    }
+
+    #[test]
+    fn test_appdata_round_trip() {
+        let app_action = ContextMenuAction::App(ApplicationAction::new("test"));
+        let mut app_data = AppData::new();
+        app_data.actions = Arc::new([Arc::new(app_action)]);
+
+        let serialized = serde_json::to_string(&app_data).expect("Failed to serialize");
+
+        let deserialized: AppData =
+            serde_json::from_str(&serialized).expect("Failed to deserialize");
+
+        assert_eq!(app_data, deserialized)
     }
 }

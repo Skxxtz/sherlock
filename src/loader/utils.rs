@@ -1,9 +1,8 @@
 use gpui::SharedString;
 use serde::{
-    Deserialize, Deserializer, Serialize, Serializer,
+    Deserialize, Deserializer, Serialize,
     de::{MapAccess, Visitor},
 };
-use serde_json::Value;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     fmt::Debug,
@@ -13,9 +12,10 @@ use std::{
 };
 
 use crate::{
-    launcher::{Launcher, LauncherType, children::emoji_data::EmojiAction},
+    launcher::{Launcher, LauncherType},
     loader::resolve_icon_path,
     sherlock_error,
+    ui::launcher::context_menu::ContextMenuAction,
     utils::{
         cache::BinaryCache,
         config::HomeType,
@@ -23,42 +23,6 @@ use crate::{
         paths,
     },
 };
-
-#[derive(Debug, PartialEq)]
-pub enum ContextMenuAction {
-    App(ApplicationAction),
-    Emoji(EmojiAction),
-}
-impl From<ApplicationAction> for Arc<ContextMenuAction> {
-    fn from(value: ApplicationAction) -> Self {
-        Arc::new(ContextMenuAction::App(value))
-    }
-}
-impl<'de> Deserialize<'de> for ContextMenuAction {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let v = serde_json::Value::deserialize(deserializer)?;
-
-        let app_action: ApplicationAction =
-            serde_json::from_value(v).map_err(serde::de::Error::custom)?;
-
-        Ok(ContextMenuAction::App(app_action))
-    }
-}
-
-impl Serialize for ContextMenuAction {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            ContextMenuAction::App(app_action) => app_action.serialize(serializer),
-            _ => serializer.serialize_unit(),
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationAction {

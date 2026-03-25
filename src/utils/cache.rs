@@ -46,9 +46,12 @@ impl BinaryCache {
         let cfg = bincode::config::standard().with_fixed_int_encoding();
         match bincode::serde::decode_from_slice::<T, _>(&bytes, cfg) {
             Ok(decoded) => Ok(decoded.0),
-            Err(_) => {
+            Err(e) => {
                 let _ = fs::remove_file(path);
-                Ok(T::default())
+                Err(sherlock_error!(
+                    SherlockErrorType::DeserializationError,
+                    e.to_string()
+                ))
             }
         }
     }

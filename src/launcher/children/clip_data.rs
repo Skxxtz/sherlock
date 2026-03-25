@@ -6,10 +6,8 @@ use gpui::{
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl},
-    loader::{
-        resolve_icon_path,
-        utils::{ApplicationAction, ContextMenuAction},
-    },
+    loader::{resolve_icon_path, utils::ApplicationAction},
+    ui::launcher::context_menu::ContextMenuAction,
     utils::{
         clipboard::get_clipboard,
         intent::{Capabilities, Intent, IntentResult},

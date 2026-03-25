@@ -13,7 +13,8 @@ use crate::{
         EmojiData, ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
         utils::MprisState, weather_launcher::WeatherData,
     },
-    loader::utils::{AppData, ContextMenuAction, ExecVariable},
+    loader::utils::{AppData, ExecVariable},
+    ui::launcher::context_menu::ContextMenuAction,
     utils::config::HomeType,
 };
 

@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl, weather_launcher::WeatherData},
-    loader::utils::ContextMenuAction,
+    ui::launcher::context_menu::ContextMenuAction,
 };
 
 impl<'a> RenderableChildImpl<'a> for WeatherData {

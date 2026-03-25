@@ -1,7 +1,7 @@
 use crate::launcher::children::LauncherValues;
 use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
-use crate::loader::utils::{ApplicationAction, ContextMenuAction};
 use crate::ui::error::view::ErrorCount;
+use crate::ui::launcher::context_menu::ContextMenuAction;
 use crate::ui::launcher::views::NavigationStack;
 use crate::utils::config::HomeType;
 use gpui::AsyncApp;

@@ -8,11 +8,10 @@ use crate::{
     launcher::{
         ExecMode,
         children::{LauncherValues, RenderableChildDelegate, emoji_data::set_selected_skin_tone},
-        emoji_launcher::SkinTone,
     },
-    loader::utils::{ContextMenuAction, CounterReader, ExecVariable},
+    loader::utils::{CounterReader, ExecVariable},
     ui::{
-        launcher::{LauncherView, views::MoveDirection},
+        launcher::{LauncherView, context_menu::ContextMenuAction, views::MoveDirection},
         search_bar::{EmptyBackspace, TextInput},
         workspace::LauncherErrorEvent,
     },
@@ -186,7 +185,7 @@ impl LauncherView {
                 let Some(active_bar) = self.variable_input.get(var_idx) else {
                     return;
                 };
-                let handle = active_bar.focus_handle(cx).focus(win, cx);
+                active_bar.focus_handle(cx).focus(win, cx);
 
                 // handle switching back if variable input is empty
                 let sub = Some(cx.subscribe(

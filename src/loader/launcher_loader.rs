@@ -43,12 +43,13 @@ impl Loader {
         let config = ConfigGuard::read()?;
 
         // Read fallback data here:
-        let (raw_launchers, warnings) = parse_launcher_configs(&config.files.fallback)?;
+        let (raw_launchers, mut warnings) = parse_launcher_configs(&config.files.fallback)?;
 
         // Read cached counter file
         let counter_reader = CounterReader::new()?;
-        let counts: HashMap<String, u32> =
-            BinaryCache::read(&counter_reader.path).unwrap_or_default();
+        let counts: HashMap<String, u32> = BinaryCache::read(&counter_reader.path)
+            .map_err(|e| warnings.push(e))
+            .unwrap_or_default();
 
         // Construct max decimal count
         let max_count = counts.values().max().cloned().unwrap_or(0);
@@ -123,18 +124,24 @@ impl Loader {
                     });
                 }
 
-                launcher.launcher_type.get_render_obj(
+                match launcher.launcher_type.get_render_obj(
                     Arc::clone(&launcher),
                     opts,
                     &counts,
                     max_decimals,
-                )
+                ) {
+                    Ok(vec) if !vec.is_empty() => Some(vec),
+                    Err(e) => {
+                        warnings.push(e);
+                        None
+                    }
+                    _ => None,
+                }
             })
             .flatten()
             .collect();
 
         // Get errors and launchers
-        let mut non_breaking = Vec::new();
         if counts.is_empty() {
             let counts: HashMap<String, u32> = renders
                 .iter()
@@ -142,7 +149,7 @@ impl Loader {
                 .map(|exec| (exec, 0))
                 .collect();
             if let Err(e) = BinaryCache::write(&counter_reader.path, &counts) {
-                non_breaking.push(e)
+                warnings.push(e)
             };
         }
 

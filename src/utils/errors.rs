@@ -62,6 +62,7 @@ pub enum SherlockErrorType {
     // Config & Flags
     ConfigError(Option<String>),
     FlagLoadError,
+    FallbackError,
 
     // Resources
     ResourceParseError,
@@ -171,6 +172,7 @@ impl SherlockErrorType {
                 }
             }
             SherlockErrorType::FlagLoadError => "Failed to load flags".into(),
+            SherlockErrorType::FallbackError => "Failed to load fallback entry".into(),
 
             // Resources
             SherlockErrorType::ResourceParseError => "Failed to parse resources".into(),

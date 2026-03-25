@@ -12,7 +12,7 @@ use crate::{
         children::RenderableChildImpl,
         emoji_launcher::{EmojiData, SkinTone},
     },
-    loader::utils::ContextMenuAction,
+    ui::launcher::context_menu::ContextMenuAction,
 };
 
 static SELECTED_SKIN_TONE: OnceLock<RwLock<[SkinTone; 2]>> = OnceLock::new();

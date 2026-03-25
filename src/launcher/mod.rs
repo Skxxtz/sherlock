@@ -38,12 +38,15 @@ use crate::{
         Loader,
         application_loader::parse_priority,
         resolve_icon_path,
-        utils::{
-            AppData, ApplicationAction, ContextMenuAction, RawLauncher, deserialize_named_appdata,
-        },
+        utils::{AppData, ApplicationAction, RawLauncher, deserialize_named_appdata},
     },
-    ui::launcher::{LauncherMode, views::NavigationViewType},
-    utils::{config::HomeType, intent::Capabilities},
+    sherlock_error,
+    ui::launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
+    utils::{
+        config::HomeType,
+        errors::{SherlockError, SherlockErrorType},
+        intent::Capabilities,
+    },
 };
 
 use app_launcher::AppLauncher;
@@ -99,7 +102,7 @@ impl LauncherType {
         opts: Arc<Value>,
         counts: &HashMap<String, u32>,
         decimals: i32,
-    ) -> Option<Vec<RenderableChild>> {
+    ) -> Result<Vec<RenderableChild>, SherlockError> {
         match self {
             Self::App(app) => {
                 Loader::load_applications(Arc::clone(&launcher), counts, decimals, app.use_keywords)
@@ -111,20 +114,19 @@ impl LauncherType {
                             })
                             .collect()
                     })
-                    .ok()
             }
 
             Self::Bookmark(bkm) => {
-                BookmarkLauncher::find_bookmarks(&bkm.target_browser, Arc::clone(&launcher))
-                    .map(|ad| {
+                BookmarkLauncher::find_bookmarks(&bkm.target_browser, Arc::clone(&launcher)).map(
+                    |ad| {
                         ad.into_iter()
                             .map(|inner| RenderableChild::AppLike {
                                 launcher: Arc::clone(&launcher),
                                 inner,
                             })
                             .collect()
-                    })
-                    .ok()
+                    },
+                )
             }
 
             Self::Calc(_) => {
@@ -138,11 +140,16 @@ impl LauncherType {
                 let caps = Capabilities::from_strings(&capabilities);
                 let inner = CalcData::new(caps);
 
-                Some(vec![RenderableChild::CalcLike { launcher, inner }])
+                Ok(vec![RenderableChild::CalcLike { launcher, inner }])
             }
 
             Self::Category(_) => {
-                let cmds = opts.get("categories")?;
+                let cmds = opts.get("categories").ok_or_else(|| {
+                    sherlock_error!(
+                        SherlockErrorType::FallbackError,
+                        "Category launcher does not contain any categories.".to_string()
+                    )
+                })?;
                 let app_data =
                     deserialize_named_appdata(cmds.clone().into_deserializer()).unwrap_or_default();
 
@@ -190,7 +197,7 @@ impl LauncherType {
                     })
                     .collect();
 
-                Some(children)
+                Ok(children)
             }
 
             Self::Clipboard(_) => {
@@ -204,11 +211,16 @@ impl LauncherType {
                 let caps = Capabilities::from_strings(&capabilities);
                 let inner = ClipData::new(caps, SharedString::from(""));
 
-                Some(vec![RenderableChild::ClipLike { launcher, inner }])
+                Ok(vec![RenderableChild::ClipLike { launcher, inner }])
             }
 
             Self::Command(_) => {
-                let cmds = opts.get("commands")?;
+                let cmds = opts.get("commands").ok_or_else(|| {
+                    sherlock_error!(
+                        SherlockErrorType::FallbackError,
+                        "Command launcher does not contain any commands.".to_string()
+                    )
+                })?;
                 let app_data =
                     deserialize_named_appdata(cmds.clone().into_deserializer()).unwrap_or_default();
                 let children: Vec<RenderableChild> = app_data
@@ -232,7 +244,7 @@ impl LauncherType {
                     })
                     .collect();
 
-                Some(children)
+                Ok(children)
             }
 
             Self::Emoji(_) => {
@@ -249,7 +261,7 @@ impl LauncherType {
 
                 let child = RenderableChild::AppLike { launcher, inner };
 
-                Some(vec![child])
+                Ok(vec![child])
             }
 
             Self::MusicPlayer(_) => {
@@ -257,15 +269,15 @@ impl LauncherType {
                     raw: None,
                     image: None,
                 };
-                Some(vec![RenderableChild::MusicLike { launcher, inner }])
+                Ok(vec![RenderableChild::MusicLike { launcher, inner }])
             }
 
             Self::Weather(wttr) => {
                 match WeatherData::from_cache(wttr) {
-                    Some(inner) => Some(vec![RenderableChild::WeatherLike { launcher, inner }]),
+                    Some(inner) => Ok(vec![RenderableChild::WeatherLike { launcher, inner }]),
                     None => {
                         // Return None or a "Loading" placeholder for now
-                        Some(vec![RenderableChild::WeatherLike {
+                        Ok(vec![RenderableChild::WeatherLike {
                             launcher: Arc::clone(&launcher),
                             inner: WeatherData::uninitialized(),
                         }])
@@ -280,10 +292,10 @@ impl LauncherType {
                     .and_then(Value::as_str)
                     .and_then(|i| resolve_icon_path(i));
 
-                Some(vec![RenderableChild::AppLike { launcher, inner }])
+                Ok(vec![RenderableChild::AppLike { launcher, inner }])
             }
 
-            _ => None,
+            _ => Ok(vec![]),
         }
     }
 }

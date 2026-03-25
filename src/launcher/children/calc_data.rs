@@ -4,7 +4,7 @@ use gpui::{IntoElement, ParentElement, SharedString, Styled, div, px, rgb};
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl},
-    loader::utils::ContextMenuAction,
+    ui::launcher::context_menu::ContextMenuAction,
     utils::intent::{Capabilities, Intent, IntentResult},
 };
 

@@ -4,7 +4,7 @@ use gpui::{AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, d
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl, utils::MprisState},
-    loader::utils::ContextMenuAction,
+    ui::launcher::context_menu::ContextMenuAction,
 };
 
 impl<'a> RenderableChildImpl<'a> for MprisState {

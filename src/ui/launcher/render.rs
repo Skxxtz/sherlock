@@ -1,18 +1,15 @@
-use std::sync::Arc;
-
 use gpui::{
-    AnyElement, Context, Element, Focusable, FontWeight, Image, ImageSource, InteractiveElement,
-    IntoElement, MouseDownEvent, ParentElement, Render, SharedString, StatefulInteractiveElement,
-    Styled, Window, div, hsla, img, list, prelude::FluentBuilder, px, relative, rgb,
+    AnyElement, Context, Element, Focusable, FontWeight, InteractiveElement, IntoElement,
+    MouseDownEvent, ParentElement, Render, SharedString, StatefulInteractiveElement, Styled,
+    Window, div, hsla, list, prelude::FluentBuilder, px, relative, rgb,
 };
 
 use crate::{
     CONTEXT_MENU_BIND,
     launcher::children::{RenderableChild, RenderableChildDelegate},
-    loader::utils::ContextMenuAction,
     ui::{
         UIFunction,
-        launcher::{LauncherView, views::EntityStyle},
+        launcher::{LauncherView, context_menu::ContextMenuAction, views::EntityStyle},
         workspace::LauncherErrorEvent,
     },
     utils::config::ConfigGuard,

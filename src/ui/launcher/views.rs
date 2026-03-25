@@ -10,8 +10,10 @@ use crate::{
         Launcher,
         children::{RenderableChild, RenderableChildDelegate},
     },
-    loader::utils::{ApplicationAction, ContextMenuAction},
-    ui::model::{Model, emoji::EmojiView, home::HomeView},
+    ui::{
+        launcher::context_menu::ContextMenuAction,
+        model::{Model, emoji::EmojiView, home::HomeView},
+    },
 };
 
 pub struct NavigationStack {
