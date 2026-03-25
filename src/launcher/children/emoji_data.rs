@@ -17,16 +17,17 @@ use crate::{
 
 static SELECTED_SKIN_TONE: OnceLock<RwLock<[SkinTone; 2]>> = OnceLock::new();
 static EMOJI_CONTEXT_ACTIONS: LazyLock<Arc<[Arc<ContextMenuAction>]>> = LazyLock::new(|| {
+    let default = get_selected_skin_tones()[0] as u8;
     Arc::from([
         Arc::new(ContextMenuAction::Emoji(EmojiAction {
             emoji: RwLock::new("😀"),
             for_tone: 0,
-            selected_index: AtomicU8::new(0),
+            selected_index: AtomicU8::new(default),
         })),
         Arc::new(ContextMenuAction::Emoji(EmojiAction {
             emoji: RwLock::new("👍"),
             for_tone: 1,
-            selected_index: AtomicU8::new(0),
+            selected_index: AtomicU8::new(default),
         })),
     ])
 });

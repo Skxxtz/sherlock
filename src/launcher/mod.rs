@@ -27,8 +27,10 @@ use std::{collections::HashMap, sync::Arc, vec};
 use crate::{
     launcher::{
         children::{
-            RenderableChild, calc_data::CalcData, clip_data::ClipData,
-            emoji_data::set_selected_skin_tone,
+            RenderableChild,
+            calc_data::CalcData,
+            clip_data::ClipData,
+            emoji_data::{apply_skin_tones, get_selected_skin_tones, set_selected_skin_tone},
         },
         clipboard_launcher::ClipboardLauncher,
         emoji_launcher::{EmojiData, SkinTone},
@@ -453,7 +455,14 @@ impl ExecMode {
 
                 _ => Self::None,
             },
-            ContextMenuAction::Emoji(_) => Self::None,
+            ContextMenuAction::Emoji(emj) => {
+                let emoji = emj.emoji();
+                let content = apply_skin_tones(emoji, &get_selected_skin_tones())
+                    .as_str()
+                    .to_string();
+
+                Self::Copy { content }
+            }
         }
     }
 }
