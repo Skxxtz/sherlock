@@ -1,5 +1,6 @@
 use bytes::Bytes;
 use gpui::{Image, ImageFormat};
+use serde_json::Value;
 use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -7,14 +8,38 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use zbus::blocking::{Connection, Proxy};
 
+use crate::launcher::children::RenderableChild;
+use crate::launcher::utils::MprisState;
 use crate::sherlock_error;
 use crate::utils::config::ConfigGuard;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
 use super::utils::MprisData;
 
+use crate::launcher::{LauncherProvider, LauncherType};
+use crate::loader::utils::RawLauncher;
+
 #[derive(Debug, Clone, Default)]
 pub struct MusicPlayerLauncher {}
+
+impl LauncherProvider for MusicPlayerLauncher {
+    fn parse(_raw: &RawLauncher) -> LauncherType {
+        LauncherType::MusicPlayer(MusicPlayerLauncher {})
+    }
+    fn objects(
+        &self,
+        launcher: Arc<super::Launcher>,
+        _: &crate::loader::LoadContext,
+        _opts: Arc<Value>,
+    ) -> Result<Vec<super::children::RenderableChild>, SherlockError> {
+        let inner = MprisState {
+            raw: None,
+            image: None,
+        };
+        Ok(vec![RenderableChild::MusicLike { launcher, inner }])
+    }
+}
+
 impl MprisData {
     /// Get current image
     /// Return:

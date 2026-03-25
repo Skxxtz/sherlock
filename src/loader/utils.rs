@@ -10,9 +10,16 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use strum::Display;
 
 use crate::{
-    launcher::{Launcher, LauncherType},
+    launcher::{
+        Launcher, LauncherProvider, LauncherType, app_launcher::AppLauncher,
+        audio_launcher::MusicPlayerLauncher, bookmark_launcher::BookmarkLauncher,
+        category_launcher::CategoryLauncher, clipboard_launcher::ClipboardLauncher,
+        system_cmd_launcher::CommandLauncher, weather_launcher::WeatherLauncher,
+        web_launcher::WebLauncher,
+    },
     loader::resolve_icon_path,
     sherlock_error,
     ui::launcher::context_menu::ContextMenuAction,
@@ -244,6 +251,56 @@ fn default_true() -> bool {
     true
 }
 
+#[derive(Deserialize, Debug, Serialize, Clone, Copy, Default, Display, PartialEq)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum LauncherVariant {
+    AppLauncher,
+    AudioSink,
+    Bookmarks,
+    BulkText,
+    Calculator,
+    Category,
+    Clipboard,
+    Command,
+    Debug,
+    Emoji,
+    Files,
+    Event,
+    Theme,
+    Process,
+    Pomodoro,
+    Weather,
+    WebLauncher,
+    #[default]
+    None,
+}
+impl LauncherVariant {
+    pub fn into_launcher_type(self, raw: &RawLauncher) -> LauncherType {
+        match self {
+            Self::AppLauncher => AppLauncher::parse(raw),
+            Self::AudioSink => MusicPlayerLauncher::parse(raw),
+            Self::Bookmarks => BookmarkLauncher::parse(raw),
+            Self::Calculator => ClipboardLauncher::parse(raw),
+            Self::Category => CategoryLauncher::parse(raw),
+            Self::Clipboard => ClipboardLauncher::parse(raw),
+            Self::Command => CommandLauncher::parse(raw),
+            Self::Debug => CommandLauncher::parse(raw),
+            Self::Weather => WeatherLauncher::parse(raw),
+            Self::WebLauncher => WebLauncher::parse(raw),
+            Self::None => LauncherType::Empty,
+            _ => LauncherType::Empty,
+            // "bulk_text" => parse_bulk_text_launcher(&raw),
+            // "emoji_picker" => parse_emoji_launcher(&raw),
+            // "files" => parse_file_launcher(&raw),
+            // "teams_event" => parse_event_launcher(&raw),
+            // "theme_picker" => parse_theme_launcher(&raw),
+            // "process" => parse_process_launcher(&raw),
+            // "pomodoro" => parse_pomodoro(&raw),
+        }
+    }
+}
+
 #[derive(Deserialize, Debug, Serialize)]
 pub struct RawLauncher {
     pub name: Option<String>,
@@ -251,7 +308,7 @@ pub struct RawLauncher {
     pub display_name: Option<String>,
     pub on_return: Option<String>,
     pub next_content: Option<String>,
-    pub r#type: String,
+    pub r#type: LauncherVariant,
     pub priority: f32,
 
     #[serde(default = "default_true")]

@@ -10,8 +10,8 @@ pub mod weather_data;
 
 use crate::{
     launcher::{
-        EmojiData, ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
-        utils::MprisState, weather_launcher::WeatherData,
+        ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
+        emoji_launcher::EmojiData, utils::MprisState, weather_launcher::WeatherData,
     },
     loader::utils::{AppData, ExecVariable},
     ui::launcher::context_menu::ContextMenuAction,

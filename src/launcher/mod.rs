@@ -21,35 +21,22 @@ pub mod web_launcher;
 // pub mod process_launcher;
 // pub mod theme_picker;
 
-use serde::de::IntoDeserializer;
-use std::{collections::HashMap, sync::Arc, vec};
-
 use crate::{
     launcher::{
         children::{
             RenderableChild,
-            calc_data::CalcData,
-            clip_data::ClipData,
-            emoji_data::{apply_skin_tones, get_selected_skin_tones, set_selected_skin_tone},
+            emoji_data::{apply_skin_tones, get_selected_skin_tones},
         },
         clipboard_launcher::ClipboardLauncher,
-        emoji_launcher::{EmojiData, SkinTone},
-        weather_launcher::WeatherData,
     },
     loader::{
-        Loader,
-        application_loader::parse_priority,
-        resolve_icon_path,
-        utils::{AppData, ApplicationAction, RawLauncher, deserialize_named_appdata},
+        LoadContext, resolve_icon_path,
+        utils::{AppData, ApplicationAction, RawLauncher},
     },
-    sherlock_error,
     ui::launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
-    utils::{
-        config::HomeType,
-        errors::{SherlockError, SherlockErrorType},
-        intent::Capabilities,
-    },
+    utils::{config::HomeType, errors::SherlockError},
 };
+use std::{path::Path, sync::Arc, vec};
 
 use app_launcher::AppLauncher;
 use audio_launcher::MusicPlayerLauncher;
@@ -72,6 +59,16 @@ use web_launcher::WebLauncher;
 // use pomodoro_launcher::Pomodoro;
 // use process_launcher::ProcessLauncher;
 // use theme_picker::ThemePicker;
+
+pub trait LauncherProvider {
+    fn parse(raw: &RawLauncher) -> LauncherType;
+    fn objects(
+        &self,
+        launcher: Arc<Launcher>,
+        ctx: &LoadContext,
+        opts: Arc<serde_json::Value>,
+    ) -> Result<Vec<RenderableChild>, SherlockError>;
+}
 
 #[derive(Clone, Debug, Default)]
 pub enum LauncherType {
@@ -101,202 +98,19 @@ impl LauncherType {
     pub fn get_render_obj(
         &self,
         launcher: Arc<Launcher>,
+        ctx: &LoadContext,
         opts: Arc<Value>,
-        counts: &HashMap<String, u32>,
-        decimals: i32,
     ) -> Result<Vec<RenderableChild>, SherlockError> {
         match self {
-            Self::App(app) => {
-                Loader::load_applications(Arc::clone(&launcher), counts, decimals, app.use_keywords)
-                    .map(|ad| {
-                        ad.into_iter()
-                            .map(|inner| RenderableChild::AppLike {
-                                launcher: Arc::clone(&launcher),
-                                inner,
-                            })
-                            .collect()
-                    })
-            }
-
-            Self::Bookmark(bkm) => {
-                BookmarkLauncher::find_bookmarks(&bkm.target_browser, Arc::clone(&launcher)).map(
-                    |ad| {
-                        ad.into_iter()
-                            .map(|inner| RenderableChild::AppLike {
-                                launcher: Arc::clone(&launcher),
-                                inner,
-                            })
-                            .collect()
-                    },
-                )
-            }
-
-            Self::Calc(_) => {
-                let capabilities: Vec<String> = match opts.get("capabilities") {
-                    Some(Value::Array(arr)) => arr
-                        .iter()
-                        .filter_map(|v| v.as_str().map(str::to_string))
-                        .collect(),
-                    _ => vec![String::from("calc.math"), String::from("calc.units")],
-                };
-                let caps = Capabilities::from_strings(&capabilities);
-                let inner = CalcData::new(caps);
-
-                Ok(vec![RenderableChild::CalcLike { launcher, inner }])
-            }
-
-            Self::Category(_) => {
-                let cmds = opts.get("categories").ok_or_else(|| {
-                    sherlock_error!(
-                        SherlockErrorType::FallbackError,
-                        "Category launcher does not contain any categories.".to_string()
-                    )
-                })?;
-                let app_data =
-                    deserialize_named_appdata(cmds.clone().into_deserializer()).unwrap_or_default();
-
-                let children: Vec<RenderableChild> = app_data
-                    .into_iter()
-                    .map(|mut inner| {
-                        let count = inner
-                            .exec
-                            .as_deref()
-                            .and_then(|exec| counts.get(exec))
-                            .copied()
-                            .unwrap_or(0u32);
-                        inner.icon = inner
-                            .icon
-                            .and_then(|i| i.to_str().and_then(resolve_icon_path));
-                        inner.priority =
-                            Some(parse_priority(launcher.priority as f32, count, decimals));
-                        inner.actions = inner
-                            .actions
-                            .iter()
-                            .map(|action_arc| {
-                                match action_arc.as_ref() {
-                                    ContextMenuAction::App(app_action) => {
-                                        // 1. Resolve the path
-                                        let resolved_icon = app_action
-                                            .icon
-                                            .as_deref()
-                                            .and_then(|p| p.to_str())
-                                            .and_then(|s| resolve_icon_path(s));
-
-                                        Arc::new(ContextMenuAction::App(ApplicationAction {
-                                            icon: resolved_icon,
-                                            ..app_action.clone()
-                                        }))
-                                    }
-                                    ContextMenuAction::Emoji(_) => Arc::clone(action_arc),
-                                }
-                            })
-                            .collect();
-
-                        RenderableChild::AppLike {
-                            launcher: Arc::clone(&launcher),
-                            inner,
-                        }
-                    })
-                    .collect();
-
-                Ok(children)
-            }
-
-            Self::Clipboard(_) => {
-                let capabilities: Vec<String> = match opts.get("capabilities") {
-                    Some(Value::Array(arr)) => arr
-                        .iter()
-                        .filter_map(|v| v.as_str().map(str::to_string))
-                        .collect(),
-                    _ => vec![String::from("calc.math"), String::from("calc.units")],
-                };
-                let caps = Capabilities::from_strings(&capabilities);
-                let inner = ClipData::new(caps, SharedString::from(""));
-
-                Ok(vec![RenderableChild::ClipLike { launcher, inner }])
-            }
-
-            Self::Command(_) => {
-                let cmds = opts.get("commands").ok_or_else(|| {
-                    sherlock_error!(
-                        SherlockErrorType::FallbackError,
-                        "Command launcher does not contain any commands.".to_string()
-                    )
-                })?;
-                let app_data =
-                    deserialize_named_appdata(cmds.clone().into_deserializer()).unwrap_or_default();
-                let children: Vec<RenderableChild> = app_data
-                    .into_iter()
-                    .map(|mut inner| {
-                        let count = inner
-                            .exec
-                            .as_deref()
-                            .and_then(|exec| counts.get(exec))
-                            .copied()
-                            .unwrap_or(0u32);
-                        inner.icon = inner
-                            .icon
-                            .and_then(|i| i.to_str().and_then(resolve_icon_path));
-                        inner.priority =
-                            Some(parse_priority(launcher.priority as f32, count, decimals));
-                        RenderableChild::AppLike {
-                            launcher: Arc::clone(&launcher),
-                            inner,
-                        }
-                    })
-                    .collect();
-
-                Ok(children)
-            }
-
-            Self::Emoji(_) => {
-                let mut inner = AppData::new();
-                inner.name = launcher.name.as_ref().map(SharedString::from);
-                inner.search_string = "emoji".into();
-                inner.icon = resolve_icon_path("sherlock-emoji");
-
-                let default_skin_tone: SkinTone = opts
-                    .get("default_skin_color")
-                    .and_then(|s| serde_json::from_value(s.clone()).ok())
-                    .unwrap_or(SkinTone::Simpsons);
-                set_selected_skin_tone(default_skin_tone, 0);
-
-                let child = RenderableChild::AppLike { launcher, inner };
-
-                Ok(vec![child])
-            }
-
-            Self::MusicPlayer(_) => {
-                let inner = utils::MprisState {
-                    raw: None,
-                    image: None,
-                };
-                Ok(vec![RenderableChild::MusicLike { launcher, inner }])
-            }
-
-            Self::Weather(wttr) => {
-                match WeatherData::from_cache(wttr) {
-                    Some(inner) => Ok(vec![RenderableChild::WeatherLike { launcher, inner }]),
-                    None => {
-                        // Return None or a "Loading" placeholder for now
-                        Ok(vec![RenderableChild::WeatherLike {
-                            launcher: Arc::clone(&launcher),
-                            inner: WeatherData::uninitialized(),
-                        }])
-                    }
-                }
-            }
-
-            Self::Web(_) => {
-                let mut inner = AppData::new();
-                inner.icon = opts
-                    .get("icon")
-                    .and_then(Value::as_str)
-                    .and_then(|i| resolve_icon_path(i));
-
-                Ok(vec![RenderableChild::AppLike { launcher, inner }])
-            }
-
+            Self::App(app) => app.objects(launcher, ctx, opts),
+            Self::Bookmark(bkm) => bkm.objects(launcher, ctx, opts),
+            Self::Calc(calc) => calc.objects(launcher, ctx, opts),
+            Self::Category(cat) => cat.objects(launcher, ctx, opts),
+            Self::Clipboard(clip) => clip.objects(launcher, ctx, opts),
+            Self::Command(cmd) => cmd.objects(launcher, ctx, opts),
+            Self::MusicPlayer(mus) => mus.objects(launcher, ctx, opts),
+            Self::Weather(wttr) => wttr.objects(launcher, ctx, opts),
+            Self::Web(web) => web.objects(launcher, ctx, opts),
             _ => Ok(vec![]),
         }
     }
@@ -328,13 +142,12 @@ impl LauncherType {
 pub struct Launcher {
     pub name: Option<String>,
     pub display_name: Option<SharedString>,
-    pub icon: Option<String>, // nu
+    pub icon: Option<Arc<Path>>, // nu
     pub alias: Option<String>,
-    pub method: String,               // nu
-    pub exit: bool,                   // nu
-    pub next_content: Option<String>, // nu
+    pub method: String, // nu
+    pub exit: bool,     // nu
     pub priority: u32,
-    pub r#async: bool, // nu
+    pub r#async: bool,
     pub home: HomeType,
     pub launcher_type: LauncherType,
     pub shortcut: bool,                              // nu
@@ -352,11 +165,10 @@ impl Launcher {
         Self {
             name: raw.name,
             display_name: raw.display_name.map(|n| SharedString::from(n)),
-            icon,
+            icon: icon.as_deref().and_then(resolve_icon_path),
             alias: raw.alias,
             method,
             exit: raw.exit,
-            next_content: raw.next_content,
             priority: raw.priority as u32,
             r#async: raw.r#async,
             home: raw.home,
