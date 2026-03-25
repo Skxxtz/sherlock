@@ -66,6 +66,8 @@ impl SherlockFlags {
             eprintln!("{:?}", x);
         }
 
+        println!("{:?}", extract_path_value("--fallback"));
+
         Ok(SherlockFlags {
             config_dir: extract_path_value("--config-dir"),
             config: extract_path_value("--config"),

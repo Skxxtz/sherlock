@@ -10,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use strum::Display;
 
 use crate::{
     launcher::{Launcher, LauncherType},
@@ -238,6 +239,31 @@ fn default_true() -> bool {
     true
 }
 
+#[derive(Deserialize, Debug, Serialize, Clone, Copy, Default, Display, PartialEq)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum LauncherVariant {
+    AppLauncher,
+    AudioSink,
+    Bookmarks,
+    BulkText,
+    Calculator,
+    Category,
+    Clipboard,
+    Command,
+    Debug,
+    Emoji,
+    Files,
+    Event,
+    Theme,
+    Process,
+    Pomodoro,
+    Weather,
+    WebLauncher,
+    #[default]
+    None,
+}
+
 #[derive(Deserialize, Debug, Serialize)]
 pub struct RawLauncher {
     pub name: Option<String>,
@@ -245,7 +271,7 @@ pub struct RawLauncher {
     pub display_name: Option<String>,
     pub on_return: Option<String>,
     pub next_content: Option<String>,
-    pub r#type: String,
+    pub r#type: LauncherVariant,
     pub priority: f32,
 
     #[serde(default = "default_true")]

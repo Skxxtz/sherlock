@@ -189,9 +189,6 @@ impl LauncherView {
                 spawn_detached(&exec, keyword, variables)?;
                 increment(&exec);
             }
-            ExecMode::CreateBookmark { url, name } => {
-
-            }
             ExecMode::Copy { content } => {
                 cx.write_to_clipboard(ClipboardItem::new_string(content.to_string()));
             }

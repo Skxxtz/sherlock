@@ -16,7 +16,7 @@ use crate::{
         weather_launcher::WeatherLauncher,
         web_launcher::WebLauncher,
     },
-    loader::utils::RawLauncher,
+    loader::utils::{LauncherVariant, RawLauncher},
     sherlock_error,
     ui::launcher::LauncherMode,
     utils::{
@@ -71,30 +71,12 @@ impl Loader {
                     return None;
                 }
 
-                let method = raw.on_return.clone().unwrap_or_else(|| raw.r#type.clone());
+                let method = raw
+                    .on_return
+                    .clone()
+                    .unwrap_or_else(|| raw.r#type.to_string());
 
-                let launcher_type: LauncherType = match raw.r#type.to_lowercase().as_str() {
-                    "app_launcher" => parse_app_launcher(&raw),
-                    "audio_sink" => parse_audio_sink_launcher(),
-                    "bookmarks" => {
-                        parse_bookmarks_launcher(&raw, config.default_apps.browser.as_ref())
-                    }
-                    "calculation" => parse_calculator(&raw),
-                    "categories" => parse_category_launcher(&raw),
-                    "command" => parse_command_launcher(&raw),
-                    "debug" => parse_debug_launcher(&raw),
-                    "weather" => parse_weather_launcher(&raw),
-                    "web_launcher" => parse_web_launcher(&raw),
-                    "clipboard-execution" => parse_clipboard_launcher(&raw),
-                    // "bulk_text" => parse_bulk_text_launcher(&raw),
-                    // "emoji_picker" => parse_emoji_launcher(&raw),
-                    // "files" => parse_file_launcher(&raw),
-                    // "teams_event" => parse_event_launcher(&raw),
-                    // "theme_picker" => parse_theme_launcher(&raw),
-                    // "process" => parse_process_launcher(&raw),
-                    // "pomodoro" => parse_pomodoro(&raw),
-                    _ => LauncherType::Empty,
-                };
+                let launcher_type: LauncherType = raw.r#type.into_launcher_type(&raw);
 
                 let icon = raw
                     .args
@@ -203,15 +185,16 @@ fn parse_app_launcher(raw: &RawLauncher) -> LauncherType {
 fn parse_audio_sink_launcher() -> LauncherType {
     LauncherType::MusicPlayer(MusicPlayerLauncher {})
 }
-fn parse_bookmarks_launcher(
-    launcher: &RawLauncher,
-    default_browser: Option<&String>,
-) -> LauncherType {
+fn parse_bookmarks_launcher(launcher: &RawLauncher) -> LauncherType {
     let browser_target = launcher
         .args
         .get("browser")
         .and_then(|s| s.as_str().map(|str| str.to_string()))
-        .or_else(|| default_browser.cloned())
+        .or_else(|| {
+            ConfigGuard::read()
+                .ok()
+                .and_then(|c| c.default_apps.browser.clone())
+        })
         .or_else(|| ConstantDefaults::browser().ok());
 
     // TODO parse bookmarks later
@@ -237,19 +220,19 @@ fn parse_calculator(raw: &RawLauncher) -> LauncherType {
 
     LauncherType::Calc(CalculatorLauncher {})
 }
-fn parse_category_launcher(_raw: &RawLauncher) -> LauncherType {
+fn parse_category_launcher() -> LauncherType {
     LauncherType::Category(CategoryLauncher {})
 }
 
-fn parse_clipboard_launcher(_raw: &RawLauncher) -> LauncherType {
+fn parse_clipboard_launcher() -> LauncherType {
     LauncherType::Clipboard(ClipboardLauncher {})
 }
 
-fn parse_command_launcher(_raw: &RawLauncher) -> LauncherType {
+fn parse_command_launcher() -> LauncherType {
     LauncherType::Command(CommandLauncher {})
 }
 
-fn parse_debug_launcher(_: &RawLauncher) -> LauncherType {
+fn parse_debug_launcher() -> LauncherType {
     LauncherType::Command(CommandLauncher {})
 }
 fn parse_weather_launcher(raw: &RawLauncher) -> LauncherType {
@@ -263,5 +246,31 @@ fn parse_web_launcher(raw: &RawLauncher) -> LauncherType {
     match serde_json::from_value::<WebLauncher>(raw.args.as_ref().clone()) {
         Ok(launcher) => LauncherType::Web(launcher),
         Err(_) => LauncherType::Empty,
+    }
+}
+
+impl LauncherVariant {
+    fn into_launcher_type(self, raw: &RawLauncher) -> LauncherType {
+        match self {
+            Self::AppLauncher => parse_app_launcher(raw),
+            Self::AudioSink => parse_audio_sink_launcher(),
+            Self::Bookmarks => parse_bookmarks_launcher(raw),
+            Self::Calculator => parse_calculator(raw),
+            Self::Category => parse_category_launcher(),
+            Self::Clipboard => parse_clipboard_launcher(),
+            Self::Command => parse_command_launcher(),
+            Self::Debug => parse_debug_launcher(),
+            Self::Weather => parse_weather_launcher(raw),
+            Self::WebLauncher => parse_web_launcher(raw),
+            Self::None => LauncherType::Empty,
+            _ => LauncherType::Empty,
+            // "bulk_text" => parse_bulk_text_launcher(&raw),
+            // "emoji_picker" => parse_emoji_launcher(&raw),
+            // "files" => parse_file_launcher(&raw),
+            // "teams_event" => parse_event_launcher(&raw),
+            // "theme_picker" => parse_theme_launcher(&raw),
+            // "process" => parse_process_launcher(&raw),
+            // "pomodoro" => parse_pomodoro(&raw),
+        }
     }
 }
