@@ -8,7 +8,6 @@ use crate::utils::config::transformer::fallback_migration::LegacyRawLauncher;
 pub fn migrate_file<P: AsRef<Path>>(path: P) -> Result<(), Box<dyn std::error::Error>> {
     let path_ref = path.as_ref();
     let content = fs::read_to_string(path_ref)?;
-    
 
     let legacy_configs: Vec<LegacyRawLauncher> = serde_json::from_str(&content)
         .map_err(|e| format!("File is neither modern nor legacy format: {}", e))?;
@@ -33,9 +32,11 @@ pub fn migrate_file<P: AsRef<Path>>(path: P) -> Result<(), Box<dyn std::error::E
     // 5. Save the upgraded version back to the file
     let new_json = serde_json::to_string_pretty(&upgraded_launchers)?;
     fs::write(path_ref, new_json)?;
-    
-    println!("[{}] Successfully migrated to new format.", path_ref.display());
+
+    println!(
+        "[{}] Successfully migrated to new format.",
+        path_ref.display()
+    );
 
     Ok(())
 }
-

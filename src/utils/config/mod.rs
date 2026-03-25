@@ -13,8 +13,8 @@ mod flags;
 mod guard;
 mod imp;
 mod reload;
-mod watcher;
 mod transformer;
+mod watcher;
 
 pub use defaults::{BindDefaults, ConstantDefaults, OtherDefaults};
 pub use flags::SherlockFlags;

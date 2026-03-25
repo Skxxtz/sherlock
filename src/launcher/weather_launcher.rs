@@ -11,9 +11,14 @@ use std::time::{Duration, SystemTime};
 use strum::Display;
 
 use super::utils::to_title_case;
+use crate::launcher::children::RenderableChild;
 use crate::loader::resolve_icon_path;
 use crate::utils::config::ConfigGuard;
 use crate::utils::files::home_dir;
+use crate::{
+    launcher::{LauncherProvider, LauncherType},
+    loader::utils::RawLauncher,
+};
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum WeatherIconTheme {
@@ -27,6 +32,32 @@ pub struct WeatherLauncher {
     pub update_interval: u64,
     pub icon_theme: WeatherIconTheme,
     pub show_datetime: bool,
+}
+
+impl LauncherProvider for WeatherLauncher {
+    fn parse(raw: &RawLauncher) -> LauncherType {
+        match serde_json::from_value::<WeatherLauncher>(raw.args.as_ref().clone()) {
+            Ok(launcher) => LauncherType::Weather(launcher),
+            Err(_) => LauncherType::Empty,
+        }
+    }
+    fn objects(
+        &self,
+        launcher: Arc<super::Launcher>,
+        _ctx: &crate::loader::LoadContext,
+        _opts: Arc<serde_json::Value>,
+    ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockError> {
+        match WeatherData::from_cache(self) {
+            Some(inner) => Ok(vec![RenderableChild::WeatherLike { launcher, inner }]),
+            None => {
+                // Return None or a "Loading" placeholder for now
+                Ok(vec![RenderableChild::WeatherLike {
+                    launcher: Arc::clone(&launcher),
+                    inner: WeatherData::uninitialized(),
+                }])
+            }
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

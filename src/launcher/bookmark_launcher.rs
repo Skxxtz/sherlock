@@ -5,19 +5,60 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::launcher::Launcher;
+use crate::launcher::children::RenderableChild;
 use crate::loader::application_loader::file_has_changed;
 use crate::loader::resolve_icon_path;
 use crate::loader::utils::{AppData, construct_search};
 use crate::utils::cache::BinaryCache;
+use crate::utils::config::{ConfigGuard, ConstantDefaults};
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 use crate::utils::files::home_dir;
 use crate::utils::paths::get_cache_dir;
 use crate::{sher_log, sherlock_error};
 
+use crate::launcher::{LauncherProvider, LauncherType};
+use crate::loader::utils::RawLauncher;
+
 #[derive(Clone, Debug)]
 pub struct BookmarkLauncher {
     pub target_browser: String,
 }
+
+impl LauncherProvider for BookmarkLauncher {
+    fn parse(raw: &RawLauncher) -> LauncherType {
+        let browser_target = raw
+            .args
+            .get("browser")
+            .and_then(|s| s.as_str().map(|str| str.to_string()))
+            .or_else(|| {
+                ConfigGuard::read()
+                    .ok()
+                    .and_then(|c| c.default_apps.browser.clone())
+            })
+            .or_else(|| ConstantDefaults::browser().ok());
+
+        match browser_target {
+            Some(target_browser) => LauncherType::Bookmark(BookmarkLauncher { target_browser }),
+            None => LauncherType::Empty,
+        }
+    }
+    fn objects(
+        &self,
+        launcher: Arc<Launcher>,
+        _ctx: &crate::loader::LoadContext,
+        _opts: Arc<serde_json::Value>,
+    ) -> Result<Vec<super::children::RenderableChild>, SherlockError> {
+        BookmarkLauncher::find_bookmarks(&self.target_browser, Arc::clone(&launcher)).map(|ad| {
+            ad.into_iter()
+                .map(|inner| RenderableChild::AppLike {
+                    launcher: Arc::clone(&launcher),
+                    inner,
+                })
+                .collect()
+        })
+    }
+}
+
 impl BookmarkLauncher {
     pub fn find_bookmarks(
         browser: &str,

@@ -8,7 +8,10 @@ use std::{
 use crate::{
     app::run_app,
     loader::{CustomIconTheme, Loader, assets::Assets},
-    utils::{clipboard::spawn_clipboard_watcher, config::{SherlockConfig, migrate_file}},
+    utils::{
+        clipboard::spawn_clipboard_watcher,
+        config::{SherlockConfig, migrate_file},
+    },
 };
 
 mod app;
@@ -31,7 +34,6 @@ static SOCKET_PATH: &'static str = "/tmp/sherlock.sock";
 
 #[tokio::main]
 async fn main() {
-
     let s = migrate_file("/home/basti/test/fallback.json");
     println!("{:?}", s);
     let socket_path = "/tmp/sherlock.sock";

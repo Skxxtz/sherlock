@@ -162,7 +162,7 @@ impl LegacyRawLauncher {
         }
 
         // 2. Check for removed keybinds
-        if let Some(binds) = &self.binds {
+        if self.binds.is_some() {
             logs.push(format!("[{}] Dropped custom keybind(s).", name));
         }
 
