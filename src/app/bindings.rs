@@ -5,10 +5,12 @@ use gpui::{App, KeyBinding};
 use crate::{
     ui::{
         UIFunction,
-        launcher::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit},
+        launcher::{
+            Execute, NextVar, OpenContext, PrevVar, Quit, SelectionDown, SelectionLeft,
+            SelectionRight, SelectionUp,
+        },
         search_bar::actions::{
-            Backspace, Copy, Cut, Delete, DeleteAll, End, Home, Left, Paste, Right, SelectAll,
-            ShortcutAction,
+            Backspace, Copy, Cut, Delete, DeleteAll, End, Home, Paste, SelectAll, ShortcutAction,
         },
     },
     utils::config::ConfigGuard,
@@ -36,10 +38,12 @@ pub(super) fn register_bindings(cx: &mut App) {
 
     add("home", KeyBinding::new("home", Home, None));
     add("end", KeyBinding::new("end", End, None));
-    add("left", KeyBinding::new("left", Left, None));
-    add("right", KeyBinding::new("right", Right, None));
-    add("down", KeyBinding::new("down", FocusNext, None));
-    add("up", KeyBinding::new("up", FocusPrev, None));
+    // add("left", KeyBinding::new("left", Left, None));
+    // add("right", KeyBinding::new("right", Right, None));
+    add("down", KeyBinding::new("down", SelectionDown, None));
+    add("up", KeyBinding::new("up", SelectionUp, None));
+    add("left", KeyBinding::new("left", SelectionLeft, None));
+    add("right", KeyBinding::new("right", SelectionRight, None));
     add(
         "variable.tab",
         UIFunction::Complete.into_bind("variable.tab").unwrap(),

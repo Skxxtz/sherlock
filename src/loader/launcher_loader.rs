@@ -12,6 +12,7 @@ use crate::{
         category_launcher::CategoryLauncher,
         children::RenderableChild,
         clipboard_launcher::ClipboardLauncher,
+        emoji_launcher::EmojiPicker,
         system_cmd_launcher::CommandLauncher,
         weather_launcher::WeatherLauncher,
         web_launcher::WebLauncher,
@@ -86,8 +87,8 @@ impl Loader {
                     "weather" => parse_weather_launcher(&raw),
                     "web_launcher" => parse_web_launcher(&raw),
                     "clipboard-execution" => parse_clipboard_launcher(&raw),
+                    "emoji_picker" => parse_emoji_launcher(),
                     // "bulk_text" => parse_bulk_text_launcher(&raw),
-                    // "emoji_picker" => parse_emoji_launcher(&raw),
                     // "files" => parse_file_launcher(&raw),
                     // "teams_event" => parse_event_launcher(&raw),
                     // "theme_picker" => parse_theme_launcher(&raw),
@@ -199,6 +200,9 @@ fn parse_app_launcher(raw: &RawLauncher) -> LauncherType {
         Ok(launcher) => LauncherType::App(launcher),
         Err(_) => LauncherType::Empty,
     }
+}
+fn parse_emoji_launcher() -> LauncherType {
+    LauncherType::Emoji(EmojiPicker {})
 }
 fn parse_audio_sink_launcher() -> LauncherType {
     LauncherType::MusicPlayer(MusicPlayerLauncher {})

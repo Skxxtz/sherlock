@@ -12,7 +12,7 @@ use std::{
 };
 
 use crate::{
-    launcher::{Launcher, LauncherType},
+    launcher::{Launcher, LauncherType, children::emoji_data::EmojiAction},
     loader::resolve_icon_path,
     sherlock_error,
     utils::{
@@ -23,6 +23,19 @@ use crate::{
     },
 };
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum ContextMenuAction {
+    App(ApplicationAction),
+    #[serde(skip)]
+    Emoji(EmojiAction),
+}
+impl From<ApplicationAction> for Arc<ContextMenuAction> {
+    fn from(value: ApplicationAction) -> Self {
+        Arc::new(ContextMenuAction::App(value))
+    }
+}
+
+// TODO: make this an enum like RenderableChild to accomodate for Row and Col actions
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationAction {
     pub name: Option<SharedString>,
@@ -32,6 +45,7 @@ pub struct ApplicationAction {
     #[serde(default = "default_true")]
     pub exit: bool,
 }
+
 impl ApplicationAction {
     pub fn new(method: &str) -> Self {
         Self {
@@ -78,7 +92,7 @@ pub struct AppData {
     pub icon: Option<Arc<Path>>,
     pub desktop_file: Option<PathBuf>,
     #[serde(default)]
-    pub actions: Arc<[Arc<ApplicationAction>]>,
+    pub actions: Arc<[Arc<ContextMenuAction>]>,
     #[serde(default)]
     #[serde(rename = "variables")]
     pub vars: Vec<ExecVariable>,
@@ -158,7 +172,11 @@ impl AppData {
                     })
                     .collect();
             } else {
-                self.actions = buffer.into();
+                self.actions = buffer
+                    .into_iter()
+                    .map(|a| Arc::new(ContextMenuAction::App((*a).clone())))
+                    .collect::<Vec<_>>()
+                    .into();
             }
 
             if let Some(variables) = alias.variables {

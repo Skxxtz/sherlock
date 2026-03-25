@@ -5,6 +5,7 @@ pub mod calc_launcher;
 pub mod category_launcher;
 pub mod children;
 pub mod clipboard_launcher;
+pub mod emoji_launcher;
 pub mod event_launcher;
 pub mod system_cmd_launcher;
 pub mod utils;
@@ -25,17 +26,23 @@ use std::{collections::HashMap, sync::Arc, vec};
 
 use crate::{
     launcher::{
-        children::{RenderableChild, calc_data::CalcData, clip_data::ClipData},
+        children::{
+            RenderableChild, calc_data::CalcData, clip_data::ClipData,
+            emoji_data::set_selected_skin_tone,
+        },
         clipboard_launcher::ClipboardLauncher,
+        emoji_launcher::{EmojiData, SkinTone},
         weather_launcher::WeatherData,
     },
     loader::{
         Loader,
         application_loader::parse_priority,
         resolve_icon_path,
-        utils::{AppData, ApplicationAction, RawLauncher, deserialize_named_appdata},
+        utils::{
+            AppData, ApplicationAction, ContextMenuAction, RawLauncher, deserialize_named_appdata,
+        },
     },
-    ui::launcher::LauncherMode,
+    ui::launcher::{LauncherMode, views::NavigationViewType},
     utils::{config::HomeType, intent::Capabilities},
 };
 
@@ -44,6 +51,7 @@ use audio_launcher::MusicPlayerLauncher;
 use bookmark_launcher::BookmarkLauncher;
 use calc_launcher::CalculatorLauncher;
 use category_launcher::CategoryLauncher;
+use emoji_launcher::EmojiPicker;
 use event_launcher::EventLauncher;
 use gpui::SharedString;
 use serde_json::Value;
@@ -72,12 +80,12 @@ pub enum LauncherType {
     MusicPlayer(MusicPlayerLauncher),
     Weather(WeatherLauncher),
     Web(WebLauncher),
+    Emoji(EmojiPicker),
     #[default]
     Empty,
     // Integrate later: TODO
     // Pipe(PipeLauncher),
     // Api(BulkTextLauncher),
-    // Emoji(EmojiPicker),
     // File(FileLauncher),
     // Pomodoro(Pomodoro),
     // Process(ProcessLauncher),
@@ -155,19 +163,25 @@ impl LauncherType {
                         inner.actions = inner
                             .actions
                             .iter()
-                            .map(|action| {
-                                let resolved = action
-                                    .icon
-                                    .as_deref()
-                                    .and_then(|p| p.to_str())
-                                    .and_then(|s| resolve_icon_path(s));
-                                Arc::new(ApplicationAction {
-                                    icon: resolved,
-                                    ..(**action).clone()
-                                })
+                            .map(|action_arc| {
+                                match action_arc.as_ref() {
+                                    ContextMenuAction::App(app_action) => {
+                                        // 1. Resolve the path
+                                        let resolved_icon = app_action
+                                            .icon
+                                            .as_deref()
+                                            .and_then(|p| p.to_str())
+                                            .and_then(|s| resolve_icon_path(s));
+
+                                        Arc::new(ContextMenuAction::App(ApplicationAction {
+                                            icon: resolved_icon,
+                                            ..app_action.clone()
+                                        }))
+                                    }
+                                    ContextMenuAction::Emoji(_) => Arc::clone(action_arc),
+                                }
                             })
-                            .collect::<Vec<_>>()
-                            .into();
+                            .collect();
 
                         RenderableChild::AppLike {
                             launcher: Arc::clone(&launcher),
@@ -219,6 +233,23 @@ impl LauncherType {
                     .collect();
 
                 Some(children)
+            }
+
+            Self::Emoji(_) => {
+                let mut inner = AppData::new();
+                inner.name = launcher.name.as_ref().map(SharedString::from);
+                inner.search_string = "emoji".into();
+                inner.icon = resolve_icon_path("sherlock-emoji");
+
+                let default_skin_tone: SkinTone = opts
+                    .get("default_skin_color")
+                    .and_then(|s| serde_json::from_value(s.clone()).ok())
+                    .unwrap_or(SkinTone::Simpsons);
+                set_selected_skin_tone(default_skin_tone, 0);
+
+                let child = RenderableChild::AppLike { launcher, inner };
+
+                Some(vec![child])
             }
 
             Self::MusicPlayer(_) => {
@@ -335,6 +366,14 @@ pub enum ExecMode {
     Category {
         category: LauncherMode,
     },
+    View {
+        mode: NavigationViewType,
+        launcher: Arc<Launcher>,
+    },
+    CreateBookmark {
+        url: String,
+        name: String,
+    },
     Web {
         engine: Option<String>,
         browser: Option<String>,
@@ -370,6 +409,10 @@ impl ExecMode {
             LauncherType::Command(_) => Self::Commmand {
                 exec: app_data.exec.clone().unwrap_or_default(),
             },
+            LauncherType::Emoji(_) => Self::View {
+                mode: NavigationViewType::Emoji,
+                launcher: Arc::clone(launcher),
+            },
             LauncherType::Web(web) => Self::Web {
                 engine: Some(web.engine.clone()),
                 browser: web.browser.clone(),
@@ -378,13 +421,27 @@ impl ExecMode {
             _ => Self::None,
         }
     }
-    pub fn from_app_action(action: &ApplicationAction, _launcher: &Arc<Launcher>) -> Self {
-        match action.method.as_str() {
-            "app_launcher" | "command" => Self::Commmand {
-                exec: action.exec.clone().unwrap_or_default(),
-            },
+    pub fn from_app_action(action: &ContextMenuAction, _data: &RenderableChild) -> Self {
+        match action {
+            ContextMenuAction::App(action) => match action.method.as_str() {
+                "app_launcher" | "command" => Self::Commmand {
+                    exec: action.exec.clone().unwrap_or_default(),
+                },
 
-            _ => Self::None,
+                "create_bookmark" => {
+                    if let (Some(exec), Some(name)) = (&action.exec, &action.name) {
+                        Self::CreateBookmark {
+                            url: exec.to_string(),
+                            name: name.to_string(),
+                        }
+                    } else {
+                        Self::None
+                    }
+                }
+
+                _ => Self::None,
+            },
+            ContextMenuAction::Emoji(_) => Self::None,
         }
     }
 }

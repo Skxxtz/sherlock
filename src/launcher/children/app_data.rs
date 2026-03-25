@@ -4,7 +4,7 @@ use gpui::{AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, d
 
 use crate::{
     launcher::{ExecMode, Launcher, children::RenderableChildImpl},
-    loader::utils::AppData,
+    loader::utils::{AppData, ContextMenuAction},
 };
 
 impl<'a> RenderableChildImpl<'a> for AppData {
@@ -67,5 +67,8 @@ impl<'a> RenderableChildImpl<'a> for AppData {
     }
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
         &self.search_string
+    }
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+        Some(self.actions.clone())
     }
 }

@@ -3,26 +3,32 @@ use std::sync::Arc;
 use gpui::{
     AnyElement, Context, Element, Focusable, FontWeight, Image, ImageSource, InteractiveElement,
     IntoElement, MouseDownEvent, ParentElement, Render, SharedString, StatefulInteractiveElement,
-    Styled, WeakEntity, Window, div, hsla, img, list, prelude::FluentBuilder, px, relative, rgb,
+    Styled, Window, div, hsla, img, list, prelude::FluentBuilder, px, relative, rgb,
 };
 
 use crate::{
     CONTEXT_MENU_BIND,
     launcher::children::{RenderableChild, RenderableChildDelegate},
-    ui::{UIFunction, launcher::LauncherView, workspace::LauncherErrorEvent},
+    loader::utils::ContextMenuAction,
+    ui::{
+        UIFunction,
+        launcher::{LauncherView, views::EntityStyle},
+        workspace::LauncherErrorEvent,
+    },
     utils::config::ConfigGuard,
 };
 
 impl Render for LauncherView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let weak_self = cx.entity().downgrade();
         div()
             .track_focus(&self.focus_handle(cx))
             .flex()
             .flex_col()
             .size_full()
-            .on_action(cx.listener(Self::focus_next))
-            .on_action(cx.listener(Self::focus_prev))
+            .on_action(cx.listener(Self::selection_up))
+            .on_action(cx.listener(Self::selection_down))
+            .on_action(cx.listener(Self::selection_left))
+            .on_action(cx.listener(Self::selection_right))
             .on_action(cx.listener(Self::next_var))
             .on_action(cx.listener(Self::prev_var))
             .on_action(cx.listener(Self::execute))
@@ -33,7 +39,12 @@ impl Render for LauncherView {
                 this.child(self.render_config_banner())
             })
             .child(self.render_mode_label())
-            .child(self.render_results(weak_self, cx))
+            .child({
+                match self.navigation.current().style {
+                    EntityStyle::Grid { .. } => self.render_result_grid(cx).into_any_element(),
+                    EntityStyle::Row { .. } => self.render_results(cx).into_any_element(),
+                }
+            })
             .child(self.render_status_bar(cx))
     }
 }
@@ -95,34 +106,110 @@ impl LauncherView {
             .child(self.mode.display_str())
     }
 
-    fn render_results(
-        &self,
-        weak_self: WeakEntity<Self>,
-        _cx: &mut Context<Self>,
-    ) -> impl IntoElement {
+    fn render_results(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let (indices, data) = self
+            .navigation
+            .with_model(cx, |mdl| (mdl.filtered_indices.clone(), mdl.data.clone()));
+        let EntityStyle::Row {
+            state,
+            selected_index,
+        } = &self.navigation.current().style
+        else {
+            return div().id("results-container");
+        };
+        let context_open = self.context_idx.is_some();
+
+        div()
+            .id("results-container")
+            .flex_1()
+            .min_h_0()
+            .px(px(10.))
+            .child({
+                let selected_idx = *selected_index;
+                list(state.clone(), move |idx, _win, cx| {
+                    let data_idx = match indices.get(idx) {
+                        Some(&i) => i,
+                        None => return div().into_any_element(),
+                    };
+                    let data_guard = data.read(cx);
+                    let child = match data_guard.get(data_idx) {
+                        Some(c) => c,
+                        None => return div().into_any_element(),
+                    };
+
+                    Self::render_list_item(&child, idx, data_idx, selected_idx, context_open)
+                })
+                .size_full()
+            })
+            .child(self.render_context_menu())
+    }
+
+    fn render_result_grid(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let (indices, data) = self
+            .navigation
+            .with_model(cx, |mdl| (mdl.filtered_indices.clone(), mdl.data.clone()));
+
+        let style = &self.navigation.current().style;
+        let EntityStyle::Grid {
+            scroll_handle,
+            selected_index,
+            columns,
+            ..
+        } = style
+        else {
+            return div().id("results-container");
+        };
+
+        let selected_idx = *selected_index;
+        let col_count = *columns;
+        let context_open = self.context_idx.is_some();
+
         div()
             .id("results-container")
             .flex_1()
             .min_h_0()
             .px(px(10.))
             .child(
-                list(self.list_state.clone(), move |idx, _win, cx| {
-                    let entity = weak_self.upgrade();
-                    if entity.is_none() {
-                        return div().into_any_element();
-                    }
-                    let state = entity.unwrap().read(cx);
-                    let data_idx = match state.filtered_indices.get(idx) {
-                        Some(&i) => i,
-                        None => return div().into_any_element(),
-                    };
-                    let data_guard = state.data.read(cx);
-                    let child = match data_guard.get(data_idx) {
-                        Some(c) => c,
-                        None => return div().into_any_element(),
-                    };
-                    state.render_list_item(&child, idx)
-                })
+                gpui::uniform_list(
+                    "emoji-grid",
+                    (indices.len() + col_count - 1) / col_count,
+                    move |range, _win, cx| {
+                        range
+                            .map(|row_idx| {
+                                div()
+                                    .flex()
+                                    .flex_row()
+                                    .w_full()
+                                    .gap(px(2.0))
+                                    .children((0..col_count).map(|col_idx| {
+                                        let item_idx = row_idx * col_count + col_idx;
+
+                                        if let Some(&data_idx) = indices.get(item_idx) {
+                                            let data_guard = data.read(cx);
+                                            if let Some(child) = data_guard.get(data_idx) {
+                                                return div()
+                                                    .w_0()
+                                                    .flex_1()
+                                                    .child(Self::render_list_item(
+                                                        child,
+                                                        item_idx,
+                                                        data_idx,
+                                                        selected_idx,
+                                                        context_open,
+                                                    ))
+                                                    .into_any_element();
+                                            }
+                                        }
+                                        // Empty cell for alignment
+                                        div().flex_1().into_any_element()
+                                    }))
+                                    .into_any_element()
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                )
+                .gap(px(2.0))
+                .track_scroll(scroll_handle)
                 .size_full(),
             )
             .child(self.render_context_menu())
@@ -130,61 +217,31 @@ impl LauncherView {
 
     fn render_context_menu(&self) -> impl IntoElement {
         if let Some(active) = self.context_idx {
-            div().inset_0().absolute().child(
-                div()
-                    .p(px(7.))
-                    .bg(rgb(0x0F0F0F))
-                    .border_color(hsla(0., 0., 0.1882, 1.0))
-                    .border(px(1.))
-                    .rounded_md()
-                    .absolute()
-                    .bottom(px(10.))
-                    .right(px(10.))
-                    .flex()
-                    .flex_col()
-                    .min_w(px(200.))
-                    .gap(px(5.))
-                    .children(self.context_actions.iter().enumerate().map(|(i, child)| {
-                        let is_selected = i == active;
-                        div()
-                            .group("")
-                            .rounded_md()
-                            .relative()
-                            .flex_1()
-                            .flex()
-                            .gap(px(10.))
-                            .p(px(10.))
-                            .cursor_pointer()
-                            .text_color(if is_selected {
-                                hsla(0.0, 0.0, 0.8, 1.0)
-                            } else {
-                                hsla(0.6, 0.0217, 0.3608, 1.0)
-                            })
-                            .text_size(px(13.))
-                            .line_height(relative(1.0))
-                            .items_center()
-                            .bg(if is_selected {
-                                hsla(0., 0., 0.149, 1.0)
-                            } else {
-                                hsla(0., 0., 0., 0.)
-                            })
-                            .hover(|s| {
-                                if is_selected {
-                                    s
-                                } else {
-                                    s.bg(hsla(0., 0., 0.12, 1.0))
-                                }
-                            })
-                            .child(if let Some(icon) = child.icon.as_ref() {
-                                img(Arc::clone(icon)).size(px(16.)).into_any_element()
-                            } else {
-                                img(ImageSource::Image(Arc::new(Image::empty())))
-                                    .size(px(16.))
-                                    .into_any_element()
-                            })
-                            .child(child.name.as_ref().unwrap().clone())
-                    })),
-            )
+            div()
+                .p(px(7.))
+                .bg(rgb(0x0F0F0F))
+                .border_color(hsla(0., 0., 0.1882, 1.0))
+                .border(px(1.))
+                .rounded_md()
+                .absolute()
+                .bottom(px(10.))
+                .right(px(10.))
+                .flex()
+                .flex_col()
+                .min_w(px(200.))
+                .items_stretch()
+                .gap(px(5.))
+                .children(self.context_actions.iter().enumerate().map(|(i, child)| {
+                    let is_selected = i == active;
+                    match child.as_ref() {
+                        ContextMenuAction::App(_) => {
+                            child.render_row(is_selected).into_any_element()
+                        }
+                        ContextMenuAction::Emoji(_) => {
+                            child.render_col(is_selected).into_any_element()
+                        }
+                    }
+                }))
         } else {
             div()
         }
@@ -259,15 +316,19 @@ impl LauncherView {
             })
     }
 
-    fn render_context_hint(&self, cx: &Context<Self>) -> impl IntoElement {
-        let guard = self.data.read(cx);
-        let has_actions = self
-            .filtered_indices
-            .get(self.selected_index)
-            .and_then(|i| guard.get(*i))
-            .and_then(RenderableChild::actions)
-            .map(|a| !a.is_empty())
-            .unwrap_or(false);
+    fn render_context_hint(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let Some(selected_idx) = self.navigation.selected_index() else {
+            return div();
+        };
+        let has_actions = self.navigation.with_model_mut(cx, |mdl, cx| {
+            let data = mdl.data.read(cx);
+            mdl.filtered_indices
+                .get(selected_idx)
+                .and_then(|i| data.get(*i))
+                .and_then(RenderableChild::actions)
+                .map(|a| !a.is_empty())
+                .unwrap_or(false)
+        });
 
         if has_actions {
             div()
@@ -281,10 +342,16 @@ impl LauncherView {
         }
     }
 
-    pub fn render_list_item(&self, ad: &RenderableChild, idx: usize) -> AnyElement {
-        let is_selected = self.selected_index == idx;
+    pub fn render_list_item(
+        ad: &RenderableChild,
+        idx: usize,
+        data_idx: usize,
+        selected_index: usize,
+        context_open: bool,
+    ) -> AnyElement {
+        let is_selected = selected_index == idx;
         div()
-            .id(("keystroke", idx))
+            .id(data_idx)
             .w_full()
             .on_click(move |_, _, _| {})
             .child(
@@ -301,7 +368,7 @@ impl LauncherView {
                         hsla(0., 0., 0., 0.)
                     })
                     .hover(|s| {
-                        if is_selected || self.context_idx.is_some() {
+                        if is_selected || context_open {
                             s
                         } else {
                             s.bg(hsla(0., 0., 0.12, 1.0))

@@ -1,5 +1,6 @@
 pub mod error;
 pub mod launcher;
+pub mod model;
 pub mod search_bar;
 pub mod workspace;
 
@@ -7,7 +8,9 @@ use gpui::KeyBinding;
 use serde::{Deserialize, Serialize};
 
 use crate::ui::{
-    launcher::{Execute, FocusNext, FocusPrev, NextVar, OpenContext, PrevVar, Quit},
+    launcher::{
+        Execute, NextVar, OpenContext, PrevVar, Quit, SelectionDown, SelectionLeft, SelectionUp,
+    },
     search_bar::actions::Complete,
 };
 
@@ -52,8 +55,10 @@ impl UIFunction {
 
         match self {
             Self::Exit => Some(KeyBinding::new(key_part, Quit, scope)),
-            Self::ItemDown => Some(KeyBinding::new(key_part, FocusNext, scope)),
-            Self::ItemUp => Some(KeyBinding::new(key_part, FocusPrev, scope)),
+            Self::ItemDown => Some(KeyBinding::new(key_part, SelectionDown, scope)),
+            Self::ItemUp => Some(KeyBinding::new(key_part, SelectionUp, scope)),
+            Self::ItemLeft => Some(KeyBinding::new(key_part, SelectionLeft, scope)),
+            Self::ItemRight => Some(KeyBinding::new(key_part, SelectionLeft, scope)),
             Self::Exec => Some(KeyBinding::new(key_part, Execute, scope)),
             Self::ArgNext => Some(KeyBinding::new(key_part, NextVar, scope)),
             Self::ArgPrev => Some(KeyBinding::new(key_part, PrevVar, scope)),

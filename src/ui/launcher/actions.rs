@@ -1,16 +1,18 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
-use gpui::{AppContext, ClipboardItem, Context, SharedString, Window, actions};
+use gpui::{AppContext, ClipboardItem, Context, Focusable, SharedString, Window, actions};
+use simd_json::prelude::Indexed;
 use smallvec::SmallVec;
 
 use crate::{
     launcher::{
         ExecMode,
-        children::{LauncherValues, RenderableChild, RenderableChildDelegate},
+        children::{LauncherValues, RenderableChildDelegate, emoji_data::set_selected_skin_tone},
+        emoji_launcher::SkinTone,
     },
-    loader::utils::{CounterReader, ExecVariable},
+    loader::utils::{ContextMenuAction, CounterReader, ExecVariable},
     ui::{
-        launcher::LauncherView,
+        launcher::{LauncherView, views::MoveDirection},
         search_bar::{EmptyBackspace, TextInput},
         workspace::LauncherErrorEvent,
     },
@@ -21,8 +23,10 @@ actions!(
     example_input,
     [
         Quit,
-        FocusNext,
-        FocusPrev,
+        SelectionDown,
+        SelectionUp,
+        SelectionLeft,
+        SelectionRight,
         NextVar,
         PrevVar,
         Execute,
@@ -33,83 +37,141 @@ actions!(
 
 impl LauncherView {
     pub fn focus_first(&mut self, cx: &mut Context<Self>) {
-        // early return if no indices
-        if self.filtered_indices.is_empty() {
-            return;
-        }
+        let snapshot = self.navigation.with_model(cx, |mdl| {
+            if mdl.filtered_indices.is_empty() {
+                None
+            } else {
+                Some((mdl.filtered_indices.clone(), mdl.data.clone()))
+            }
+        });
 
+        let Some((indices, data_entity)) = snapshot else {
+            return;
+        };
+
+        // Find the first focusable item
         let first_valid_index = {
-            let data_guard = self.data.read(cx);
-            self.filtered_indices
-                .iter()
-                .position(|idx| data_guard[*idx].spawn_focus())
+            let data_guard = data_entity.read(cx);
+            indices.iter().position(|&idx| {
+                data_guard
+                    .get(idx)
+                    .map_or(false, |child| child.spawn_focus())
+            })
         };
 
         if let Some(n) = first_valid_index {
             self.focus_nth(n, cx);
         }
     }
+    #[inline(always)]
+    fn valid_selection_idx(&self, n: usize, cx: &mut Context<Self>) -> bool {
+        let list_len = self
+            .navigation
+            .with_model(cx, |mdl| mdl.filtered_indices.len());
+        n < list_len && list_len != 0
+    }
     pub fn focus_nth(&mut self, n: usize, cx: &mut Context<Self>) {
         // early return on invalid index
-        if self.filtered_indices.len() <= n {
+        if !self.valid_selection_idx(n, cx) {
             return;
         }
 
-        self.selected_index = n;
-        self.list_state.scroll_to_reveal_item(n);
+        // early return if not a list view
+        if self.navigation.current_mut().style.focus_nth(n).is_none() {
+            return;
+        };
 
         // Handle variable inputs
         self.update_vars(cx);
         self.active_bar = 0;
 
         // Handle context menu entries
-        self.context_actions = self
-            .filtered_indices
-            .get(n)
-            .and_then(|i| self.data.read(cx).get(*i))
-            .and_then(RenderableChild::actions)
-            .unwrap_or_default();
+        self.context_actions = self.navigation.current_actions(cx).unwrap_or_default();
 
         cx.notify()
     }
-    pub(super) fn focus_next(&mut self, _: &FocusNext, _: &mut Window, cx: &mut Context<Self>) {
-        let count = self.filtered_indices.len();
-        if count == 0 {
+    fn move_selection(&mut self, direction: MoveDirection, cx: &mut Context<Self>) {
+        if let Some(idx) = self.context_idx {
+            match direction {
+                MoveDirection::Down => {
+                    if idx < self.context_actions.len().saturating_sub(1) {
+                        self.context_idx = Some(idx + 1);
+                    }
+                }
+                MoveDirection::Up => {
+                    if idx > 0 {
+                        self.context_idx = Some(idx - 1);
+                    }
+                }
+                MoveDirection::Left => {
+                    if let Some(action_arc) = self.context_actions.get(idx) {
+                        if let ContextMenuAction::Emoji(act) = action_arc.as_ref() {
+                            act.update_index(|i| {
+                                set_selected_skin_tone((i - 1).into(), act.for_tone as usize);
+                                i.saturating_sub(1)
+                            });
+                        } else if idx > 0 {
+                            self.context_idx = Some(idx - 1);
+                        }
+                    }
+                }
+                MoveDirection::Right => {
+                    if let Some(action_arc) = self.context_actions.get(idx) {
+                        if let ContextMenuAction::Emoji(act) = action_arc.as_ref() {
+                            act.update_index(|i| {
+                                let new = (i + 1).clamp(0, 5);
+                                set_selected_skin_tone(new.into(), act.for_tone as usize);
+                                new
+                            });
+                        } else if idx < self.context_actions.len().saturating_sub(1) {
+                            self.context_idx = Some(idx + 1);
+                        }
+                    }
+                }
+            }
+            cx.notify();
             return;
         }
 
-        if let Some(idx) = self.context_idx {
-            // handle context
-            if idx < self.context_actions.len() - 1 {
-                self.context_idx = Some(idx + 1);
-                cx.notify();
-            }
-        } else {
-            // handle normal view
-            if self.selected_index < count - 1 {
-                self.focus_nth(self.selected_index + 1, cx);
-            }
-        }
-    }
-    pub(super) fn focus_prev(&mut self, _: &FocusPrev, _: &mut Window, cx: &mut Context<Self>) {
-        let count = self.data.read(cx).len();
-        if count == 0 {
-            return;
-        }
+        let current_style = &mut self.navigation.current_mut().style;
 
-        if let Some(idx) = self.context_idx {
-            // handle context
-            if idx > 0 {
-                self.context_idx = Some(idx - 1);
-                cx.notify();
-            }
-        } else {
-            // handle normal view
-            if self.selected_index > 0 {
-                self.focus_nth(self.selected_index - 1, cx);
+        if let Some(target_idx) = current_style.next_index(direction) {
+            if self.valid_selection_idx(target_idx, cx) {
+                self.focus_nth(target_idx, cx);
             }
         }
     }
+    pub(super) fn selection_down(
+        &mut self,
+        _: &SelectionDown,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_selection(MoveDirection::Down, cx);
+    }
+
+    pub(super) fn selection_up(&mut self, _: &SelectionUp, _: &mut Window, cx: &mut Context<Self>) {
+        self.move_selection(MoveDirection::Up, cx);
+    }
+
+    pub(super) fn selection_left(
+        &mut self,
+        _: &SelectionLeft,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_selection(MoveDirection::Left, cx);
+    }
+
+    pub(super) fn selection_right(
+        &mut self,
+        _: &SelectionRight,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_selection(MoveDirection::Right, cx);
+    }
+
     pub(super) fn next_var(&mut self, _: &NextVar, win: &mut Window, cx: &mut Context<Self>) {
         let total_inputs = 1 + self.variable_input.len();
 
@@ -117,15 +179,14 @@ impl LauncherView {
             self.active_bar += 1;
 
             if self.active_bar == 0 {
-                self.text_input.read(cx).focus_handle.focus(win);
+                self.text_input.focus_handle(cx).focus(win, cx);
             } else {
                 // handle switching forward
                 let var_idx = self.active_bar - 1;
                 let Some(active_bar) = self.variable_input.get(var_idx) else {
                     return;
                 };
-                let handle = active_bar.read(cx).focus_handle.clone();
-                handle.focus(win);
+                let handle = active_bar.focus_handle(cx).focus(win, cx);
 
                 // handle switching back if variable input is empty
                 let sub = Some(cx.subscribe(
@@ -148,11 +209,10 @@ impl LauncherView {
             self.active_bar -= 1;
 
             if self.active_bar == 0 {
-                self.text_input.read(cx).focus_handle.focus(win);
+                self.text_input.focus_handle(cx).focus(win, cx);
             } else {
                 let var_idx = self.active_bar - 1;
-                let handle = self.variable_input[var_idx].read(cx).focus_handle.clone();
-                handle.focus(win);
+                self.variable_input[var_idx].focus_handle(cx).focus(win, cx);
             }
 
             cx.notify();
@@ -189,11 +249,15 @@ impl LauncherView {
                 spawn_detached(&exec, keyword, variables)?;
                 increment(&exec);
             }
-            ExecMode::CreateBookmark { url, name } => {
-
-            }
+            ExecMode::CreateBookmark { url, name } => {}
             ExecMode::Copy { content } => {
                 cx.write_to_clipboard(ClipboardItem::new_string(content.to_string()));
+            }
+            ExecMode::View { mode, launcher } => {
+                self.text_input.update(cx, |this, _| this.reset());
+                self.navigation.push(mode.create_view(launcher, cx));
+                self.filter_and_sort(cx);
+                return Ok(false);
             }
             ExecMode::Web {
                 engine,
@@ -216,11 +280,7 @@ impl LauncherView {
     pub(super) fn execute(&mut self, _: &Execute, win: &mut Window, cx: &mut Context<Self>) {
         if let Some(idx) = self.context_idx {
             if let Some(action) = self.context_actions.get(idx) {
-                if let Some(selected) = self
-                    .data
-                    .read(cx)
-                    .get(self.filtered_indices[self.selected_index])
-                {
+                if let Some(selected) = self.navigation.selected_item(cx) {
                     let what = selected.build_action_exec(action);
 
                     match self.execute_helper(what, "", &[], cx) {
@@ -253,8 +313,7 @@ impl LauncherView {
                 variables.push((guard.placeholder.clone(), SharedString::from(content)));
             }
 
-            let data = self.data.read(cx).clone();
-            if let Some(selected) = data.get(self.filtered_indices[self.selected_index]) {
+            if let Some(selected) = self.navigation.selected_item(cx) {
                 if let Some(what) = selected.build_exec() {
                     match self.execute_helper(what, keyword.as_ref(), &variables, cx) {
                         Ok(exit) if exit => {
@@ -303,10 +362,7 @@ impl LauncherView {
     pub(super) fn close_window(&mut self, win: &mut Window, cx: &mut Context<Self>) {
         // Cleanup
         self.variable_input.clear();
-        self.filtered_indices = Arc::new([]);
-        if let Some(task) = self.deferred_render_task.take() {
-            drop(task)
-        }
+        self.navigation.clear();
 
         // Close window
         win.remove_window();
@@ -315,15 +371,17 @@ impl LauncherView {
         cx.notify();
     }
     pub(super) fn update_vars(&mut self, cx: &mut Context<Self>) {
-        let Some(idx) = self.filtered_indices.get(self.selected_index).copied() else {
+        let Some(idx) = self.navigation.selected_item_index(cx) else {
             return;
         };
 
         let needed_vars: Option<Vec<ExecVariable>> = {
-            let data_guard = self.data.read(cx);
-            data_guard
-                .get(idx)
-                .and_then(|data| data.vars().map(|slice| slice.to_vec()))
+            self.navigation.with_model_mut(cx, |mdl, cx| {
+                let data_guard = mdl.data.read(cx);
+                data_guard
+                    .get(idx)
+                    .and_then(|data| data.vars().map(|slice| slice.to_vec()))
+            })
         };
 
         if let Some(vars_to_create) = needed_vars {

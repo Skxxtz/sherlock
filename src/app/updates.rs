@@ -62,19 +62,17 @@ pub(super) async fn run_event_loop(
                 new_win
             });
 
-            if let Ok(new_win) = new_win_handle {
-                let cx_inner = cx.clone();
-                let data_clone = data.clone();
-                active_update_task = Some(cx.spawn(move |_: &mut AsyncApp| {
-                    run_async_updates(
-                        cx_inner,
-                        data_clone,
-                        new_win,
-                        current_generation,
-                        this_generation,
-                    )
-                }));
-            }
+            let cx_inner = cx.clone();
+            let data_clone = data.clone();
+            active_update_task = Some(cx.spawn(move |_: &mut AsyncApp| {
+                run_async_updates(
+                    cx_inner,
+                    data_clone,
+                    new_win_handle,
+                    current_generation,
+                    this_generation,
+                )
+            }));
         } else {
             eprintln!("Broken UNIX Socket.");
         }
