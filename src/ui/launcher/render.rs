@@ -217,31 +217,32 @@ impl LauncherView {
 
     fn render_context_menu(&self) -> impl IntoElement {
         if let Some(active) = self.context_idx {
-            div()
-                .p(px(7.))
-                .bg(rgb(0x0F0F0F))
-                .border_color(hsla(0., 0., 0.1882, 1.0))
-                .border(px(1.))
-                .rounded_md()
-                .absolute()
-                .bottom(px(10.))
-                .right(px(10.))
-                .flex()
-                .flex_col()
-                .min_w(px(200.))
-                .items_stretch()
-                .gap(px(5.))
-                .children(self.context_actions.iter().enumerate().map(|(i, child)| {
-                    let is_selected = i == active;
-                    match child.as_ref() {
-                        ContextMenuAction::App(_) => {
-                            child.render_row(is_selected).into_any_element()
+            div().inset_0().absolute().child(
+                div()
+                    .p(px(7.))
+                    .bg(rgb(0x0F0F0F))
+                    .border_color(hsla(0., 0., 0.1882, 1.0))
+                    .border(px(1.))
+                    .rounded_md()
+                    .absolute()
+                    .bottom(px(10.))
+                    .right(px(10.))
+                    .flex()
+                    .flex_col()
+                    .min_w(px(200.))
+                    .gap(px(5.))
+                    .children(self.context_actions.iter().enumerate().map(|(i, child)| {
+                        let is_selected = i == active;
+                        match child.as_ref() {
+                            ContextMenuAction::App(_) => {
+                                child.render_row(is_selected).into_any_element()
+                            }
+                            ContextMenuAction::Emoji(_) => {
+                                child.render_col(is_selected).into_any_element()
+                            }
                         }
-                        ContextMenuAction::Emoji(_) => {
-                            child.render_col(is_selected).into_any_element()
-                        }
-                    }
-                }))
+                    })),
+            )
         } else {
             div()
         }

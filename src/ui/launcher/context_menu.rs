@@ -26,15 +26,14 @@ impl ContextMenuAction {
             .gap(px(10.))
             .p(px(10.))
             .cursor_pointer()
-            .text_size(px(13.))
-            .line_height(relative(1.0))
-            .items_center()
-            .justify_evenly()
             .text_color(if is_selected {
                 hsla(0.0, 0.0, 0.8, 1.0)
             } else {
                 hsla(0.6, 0.0217, 0.3608, 1.0)
             })
+            .text_size(px(13.))
+            .line_height(relative(1.0))
+            .items_center()
             .bg(if is_selected {
                 hsla(0., 0., 0.149, 1.0)
             } else {
@@ -113,8 +112,6 @@ impl ContextMenuAction {
                             .justify_center()
                             .items_center()
                             .w(px(24.))
-                            .h(px(24.))
-                            .overflow_hidden()
                             .child(apply_skin_tones(emoji, &tones).as_str().to_string()),
                     )
             }))
