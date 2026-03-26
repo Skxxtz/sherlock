@@ -16,6 +16,12 @@ use crate::{
     },
 };
 
+/// The number of views that have to remain in the NavigationStack. 
+///
+/// **Example:**
+/// `[Errors, Home, .. ]` => **2** Persistent views
+static REMAINING_VIEWS: usize = 1;
+
 pub struct NavigationStack {
     stack: Vec<NavigationView>,
 }
@@ -36,7 +42,7 @@ impl NavigationStack {
 
 impl NavigationStack {
     pub fn clear(&mut self) {
-        self.stack.truncate(1);
+        self.stack.truncate(REMAINING_VIEWS);
     }
     pub fn len(&self) -> usize {
         self.stack.len()
@@ -46,7 +52,7 @@ impl NavigationStack {
     }
     pub fn pop(&mut self) -> Option<NavigationView> {
         // ensures home view will always stay in view
-        if self.stack.len() == 1 {
+        if self.stack.len() == REMAINING_VIEWS {
             return None;
         }
 
