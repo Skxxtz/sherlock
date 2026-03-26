@@ -18,7 +18,7 @@ use crate::{
         search_bar::{EmptyBackspace, TextInput},
         workspace::LauncherErrorEvent,
     },
-    utils::{command_launch::spawn_detached, errors::SherlockError, websearch::websearch},
+    utils::{command_launch::spawn_detached, errors::SherlockMessage, websearch::websearch},
 };
 
 actions!(
@@ -226,7 +226,7 @@ impl LauncherView {
         keyword: &str,
         variables: &[(SharedString, SharedString)],
         cx: &mut Context<Self>,
-    ) -> Result<bool, SherlockError> {
+    ) -> Result<bool, SherlockMessage> {
         match what {
             ExecMode::Inner { func, exit } => {
                 if let Some(item) = self.navigation.selected_item(cx) {

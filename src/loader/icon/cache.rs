@@ -1,7 +1,8 @@
 use crate::loader::icon::render::render_svg_to_cache;
-use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::utils::errors::SherlockMessage;
+use crate::utils::errors::types::SherlockErrorType;
 use crate::utils::files::home_dir;
-use crate::{ICONS, sherlock_error};
+use crate::{ICONS, sherlock_msg};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -66,49 +67,52 @@ impl CustomIconTheme {
 
 pub struct IconThemeGuard;
 impl<'g> IconThemeGuard {
-    fn get_theme() -> Result<&'g RwLock<CustomIconTheme>, SherlockError> {
+    fn get_theme() -> Result<&'g RwLock<CustomIconTheme>, SherlockMessage> {
         ICONS.get().ok_or_else(|| {
-            sherlock_error!(
-                SherlockErrorType::ConfigError(None),
-                "Config not initialized".to_string()
+            sherlock_msg!(
+                Error,
+                SherlockErrorType::ConfigError("Failed to get ICONS singleton".into()),
+                "Config not initialized"
             )
         })
     }
 
-    fn get_read() -> Result<RwLockReadGuard<'g, CustomIconTheme>, SherlockError> {
+    fn get_read() -> Result<RwLockReadGuard<'g, CustomIconTheme>, SherlockMessage> {
         Self::get_theme()?.read().map_err(|_| {
-            sherlock_error!(
-                SherlockErrorType::ConfigError(None),
-                "Failed to acquire write lock on config".to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::ConfigError("Failed to read icon theme".into()),
+                "Failed to acquire write lock on config"
             )
         })
     }
 
-    pub fn get_write() -> Result<RwLockWriteGuard<'g, CustomIconTheme>, SherlockError> {
+    pub fn get_write() -> Result<RwLockWriteGuard<'g, CustomIconTheme>, SherlockMessage> {
         Self::get_theme()?.write().map_err(|_| {
-            sherlock_error!(
-                SherlockErrorType::ConfigError(None),
-                "Failed to acquire write lock on config".to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::ConfigError("Failed to get mutable icon theme".into()),
+                "Failed to acquire write lock on config"
             )
         })
     }
 
-    pub fn _read() -> Result<RwLockReadGuard<'g, CustomIconTheme>, SherlockError> {
+    pub fn _read() -> Result<RwLockReadGuard<'g, CustomIconTheme>, SherlockMessage> {
         Self::get_read()
     }
 
-    pub fn add_path<T: AsRef<Path>>(path: T) -> Result<(), SherlockError> {
+    pub fn add_path<T: AsRef<Path>>(path: T) -> Result<(), SherlockMessage> {
         let mut inner = Self::get_write()?;
         inner.add_path(path);
         Ok(())
     }
 
-    pub fn lookup_icon(name: &str) -> Result<Option<Option<Arc<Path>>>, SherlockError> {
+    pub fn lookup_icon(name: &str) -> Result<Option<Option<Arc<Path>>>, SherlockMessage> {
         let inner = Self::get_read()?;
         Ok(inner.lookup_icon(name))
     }
 
-    pub fn _write_key<F>(key_fn: F) -> Result<(), SherlockError>
+    pub fn _write_key<F>(key_fn: F) -> Result<(), SherlockMessage>
     where
         F: FnOnce(&mut CustomIconTheme),
     {

@@ -5,9 +5,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::sherlock_error;
+use crate::{sherlock_msg, utils::errors::types::SherlockErrorType};
 
-use super::errors::{SherlockError, SherlockErrorType};
+use super::errors::SherlockMessage;
 
 pub fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
@@ -26,13 +26,8 @@ pub fn expand_path<T: AsRef<Path>>(path: T, home: &Path) -> PathBuf {
     }
     path.to_path_buf()
 }
-pub fn home_dir() -> Result<PathBuf, SherlockError> {
+pub fn home_dir() -> Result<PathBuf, SherlockMessage> {
     env::var("HOME")
-        .map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError(String::from("HOME")),
-                e.to_string()
-            )
-        })
+        .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::EnvError("$HOME".into()), e))
         .map(PathBuf::from)
 }

@@ -4,10 +4,13 @@ use std::{
 };
 
 use crate::{
-    sherlock_error,
+    sherlock_msg,
     utils::{
         config::{ConfigAppearance, ConfigFiles, SherlockConfig, SherlockFlags, imp::WithRoot},
-        errors::{SherlockError, SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{DirAction, FileAction, SherlockErrorType},
+        },
         files::{expand_path, home_dir},
     },
 };
@@ -16,7 +19,7 @@ impl SherlockConfig {
     /// # Arguments
     /// loc: PathBuf
     /// Pathbuf should be a directory **not** a file
-    pub fn to_file(loc: PathBuf, ext: &str) -> Result<(), SherlockError> {
+    pub fn to_file(loc: PathBuf, ext: &str) -> Result<(), SherlockMessage> {
         // create config location
         let home = home_dir()?;
         let path = expand_path(&loc, &home);
@@ -36,18 +39,21 @@ impl SherlockConfig {
         fn skipped_message(name: &str) {
             println!("↷ Skipping '{}' since file exists already.", name);
         }
-        fn error_message(name: &str, reason: SherlockError) {
+        fn error_message(name: &str, reason: SherlockMessage) {
             eprintln!(
                 "✗ Failed to create '{}'. Reason: {}",
-                name,
-                reason.error.get_message().0
+                name, reason.error_type
             );
         }
         let write_file = |name: &str, content: &str| {
             let alias_path = path.join(name);
             if !alias_path.exists() {
                 if let Err(error) = fs::write(&alias_path, content).map_err(|e| {
-                    sherlock_error!(SherlockErrorType::FileWriteError(alias_path), e.to_string())
+                    sherlock_msg!(
+                        Warning,
+                        SherlockErrorType::FileError(FileAction::Write, alias_path),
+                        e
+                    )
                 }) {
                     error_message(name, error);
                 } else {
@@ -60,9 +66,10 @@ impl SherlockConfig {
 
         // mkdir -p
         fs::create_dir_all(&path).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::DirCreateError(format!("{:?}", path)),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::DirError(DirAction::Create, path.clone()),
+                e
             )
         })?;
         // create subdirs
@@ -75,13 +82,13 @@ impl SherlockConfig {
         match ext {
             "json" => {
                 let json_str = serde_json::to_string_pretty(&config).map_err(|e| {
-                    sherlock_error!(SherlockErrorType::SerializationError, e.to_string())
+                    sherlock_msg!(Warning, SherlockErrorType::SerializationError, e)
                 })?;
                 write_file("config.json", &json_str);
             }
             _ => {
                 let toml_str = toml::to_string(&config).map_err(|e| {
-                    sherlock_error!(SherlockErrorType::SerializationError, e.to_string())
+                    sherlock_msg!(Warning, SherlockErrorType::SerializationError, e)
                 })?;
                 write_file("config.toml", &toml_str);
             }

@@ -4,9 +4,12 @@ use crate::{
         children::{RenderableChild, calc_data::CalcData},
     },
     loader::utils::RawLauncher,
-    sherlock_error,
+    sherlock_msg,
     utils::{
-        errors::{SherlockError, SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{DirAction, FileAction, NetworkAction, SherlockErrorType},
+        },
         files::home_dir,
         intent::Capabilities,
     },
@@ -50,7 +53,7 @@ impl LauncherProvider for CalculatorLauncher {
         launcher: std::sync::Arc<super::Launcher>,
         _ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
-    ) -> Result<Vec<super::children::RenderableChild>, SherlockError> {
+    ) -> Result<Vec<super::children::RenderableChild>, SherlockMessage> {
         let capabilities: Vec<String> = match opts.get("capabilities") {
             Some(Value::Array(arr)) => arr
                 .iter()
@@ -122,31 +125,31 @@ impl Currency {
         }
         None
     }
-    fn cache<P: AsRef<Path>>(&self, loc: P) -> Result<(), SherlockError> {
+    fn cache<P: AsRef<Path>>(&self, loc: P) -> Result<(), SherlockMessage> {
         let absolute = loc.as_ref();
         if !absolute.is_file() {
             if let Some(parents) = absolute.parent() {
                 create_dir_all(parents).map_err(|e| {
-                    sherlock_error!(
-                        SherlockErrorType::DirCreateError(String::from(
-                            "~/.cache/sherlock/currency/"
-                        )),
-                        e.to_string()
+                    sherlock_msg!(
+                        Warning,
+                        SherlockErrorType::DirError(DirAction::Create, parents.to_path_buf()),
+                        e
                     )
                 })?;
             }
         }
         let content = simd_json::to_string(self)
-            .map_err(|e| sherlock_error!(SherlockErrorType::SerializationError, e.to_string()))?;
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
         std::fs::write(absolute, content).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileWriteError(absolute.to_path_buf()),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Write, absolute.to_path_buf()),
+                e
             )
         })
     }
 
-    pub async fn get_exchange(update_interval: u64) -> Result<Currency, SherlockError> {
+    pub async fn get_exchange(update_interval: u64) -> Result<Currency, SherlockMessage> {
         let home = home_dir()?;
         let absolute = home.join(".cache/sherlock/currency/currency.json");
         match Currency::load_cached(&absolute, update_interval) {
@@ -195,23 +198,25 @@ impl Currency {
             .send()
             .await
             .map_err(|e| {
-                sherlock_error!(
-                    SherlockErrorType::HttpRequestError(String::from(
-                        "GET tradingview.com || getting currencies"
-                    )),
-                    e.to_string()
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::NetworkError(
+                        NetworkAction::Get,
+                        "TradingView (Currencies)".into()
+                    ),
+                    e
                 )
             })?;
 
         let body = res
             .text()
             .await
-            .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))?;
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
 
         // simd-json requires &mut str
         let mut buf = body.into_bytes();
         let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut buf)
-            .map_err(|e| sherlock_error!(SherlockErrorType::DeserializationError, e.to_string()))?;
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
 
         let currencies: HashMap<String, f32> =
             if let Some(array) = parsed.get("data").and_then(OwnedValue::as_array) {
@@ -234,9 +239,10 @@ impl Currency {
                 curr.cache(absolute)?;
                 Ok(curr)
             }
-            _ => Err(sherlock_error!(
+            _ => Err(sherlock_msg!(
+                Warning,
                 SherlockErrorType::DeserializationError,
-                String::from("Failed to deserialize currency map into 'Currency' object.")
+                "Failed to deserialize currency map into 'Currency' object."
             )),
         }
     }

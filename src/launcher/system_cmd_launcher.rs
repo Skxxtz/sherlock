@@ -9,8 +9,8 @@ use crate::{
         resolve_icon_path,
         utils::{RawLauncher, deserialize_named_appdata},
     },
-    sherlock_error,
-    utils::errors::SherlockErrorType,
+    sherlock_msg,
+    utils::errors::types::SherlockErrorType,
 };
 
 #[derive(Clone, Debug)]
@@ -26,11 +26,12 @@ impl LauncherProvider for CommandLauncher {
         launcher: std::sync::Arc<super::Launcher>,
         ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
-    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockError> {
+    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
         let cmds = opts.get("commands").ok_or_else(|| {
-            sherlock_error!(
-                SherlockErrorType::FallbackError,
-                "Command launcher does not contain any commands.".to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::ConfigError("Invalid launcher configuration.".into()),
+                "Command launcher does not contain any commands."
             )
         })?;
         let app_data =

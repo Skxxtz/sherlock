@@ -13,14 +13,14 @@ use crate::{
     launcher::children::{LauncherValues, RenderableChild},
     loader::{LauncherLoadResult, Loader, SetupResult},
     ui::{
-        error::view::{DismissErrorEvent, ErrorCount, ErrorView},
+        error::view::{DismissErrorEvent, ErrorView},
         launcher::{LauncherMode, LauncherView, views::NavigationStack},
         search_bar::{EmptyBackspace, TextInput},
         workspace::{LauncherErrorEvent, SherlockWorkspace, WorkspaceView},
     },
     utils::{
         config::{ConfigGuard, ConfigWatcher},
-        errors::SherlockError,
+        errors::SherlockMessage,
     },
 };
 
@@ -30,34 +30,23 @@ mod updates;
 pub fn run_app(cx: &mut App, result: SetupResult) {
     let SetupResult {
         config_dir,
-        mut errors,
-        mut warnings,
+        mut messages,
     } = result;
     let watcher = ConfigWatcher::new(config_dir);
 
     bindings::register_bindings(cx);
 
     let data: Entity<Arc<Vec<RenderableChild>>> = cx.new(|_| Arc::new(Vec::new()));
-    let modes = load_modes(cx, &data, &mut errors, &mut warnings);
+    let modes = load_modes(cx, &data, &mut messages);
 
     let _ = std::fs::remove_file(SOCKET_PATH);
     let listener = UnixListener::bind(SOCKET_PATH).unwrap();
-    let initial_errors = errors;
-    let initial_warnings = warnings;
+    let initial_messages = messages;
 
     cx.spawn(|cx: &mut AsyncApp| {
         let cx = cx.clone();
         async move {
-            updates::run_event_loop(
-                cx,
-                data,
-                modes,
-                watcher,
-                listener,
-                initial_errors,
-                initial_warnings,
-            )
-            .await;
+            updates::run_event_loop(cx, data, modes, watcher, listener, initial_messages).await;
         }
     })
     .detach();
@@ -66,19 +55,18 @@ pub fn run_app(cx: &mut App, result: SetupResult) {
 fn load_modes(
     cx: &mut App,
     data: &Entity<Arc<Vec<RenderableChild>>>,
-    errors: &mut Vec<SherlockError>,
-    warnings: &mut Vec<SherlockError>,
+    messages: &mut Vec<SherlockMessage>,
 ) -> Arc<[LauncherMode]> {
     match Loader::load_launchers(cx, data.clone()) {
         Ok(LauncherLoadResult {
             modes,
-            warnings: warns,
+            messages: msgs,
         }) => {
-            warnings.extend(warns);
+            messages.extend(msgs);
             modes
         }
         Err(e) => {
-            errors.push(e);
+            messages.push(e);
             Arc::from([])
         }
     }
@@ -125,10 +113,9 @@ fn spawn_launcher(
     cx: &mut App,
     data: Entity<Arc<Vec<RenderableChild>>>,
     modes: Arc<[LauncherMode]>,
-    initial_warnings: Vec<SherlockError>,
-    initial_errors: Vec<SherlockError>,
+    initial_messages: Vec<SherlockMessage>,
 ) -> WindowHandle<SherlockWorkspace> {
-    let has_errors = !initial_errors.is_empty();
+    let has_errors = !initial_messages.is_empty();
     let window = cx
         .open_window(get_window_options(), |_, cx| {
             // Build launcher view
@@ -170,10 +157,7 @@ fn spawn_launcher(
                     variable_input: Vec::new(),
                     active_bar: 0,
                     navigation: NavigationStack::new(data, data_len, cx),
-                    error_count: ErrorCount {
-                        errors: initial_errors.len(),
-                        warnings: initial_warnings.len(),
-                    },
+                    message_count: initial_messages.len(),
                     config_initialized: ConfigGuard::is_initialized(),
                     active_update_task: None,
                 };
@@ -183,8 +167,7 @@ fn spawn_launcher(
 
             // Build error view
             let error = cx.new(|cx| ErrorView {
-                errors: initial_errors,
-                warnings: initial_warnings,
+                messages: initial_messages,
                 focus_handle: cx.focus_handle(),
                 scroll_handle: ScrollHandle::new(),
             });
@@ -216,7 +199,7 @@ fn spawn_launcher(
                 let error_count_sub = cx.observe(&error, move |workspace, this, cx| {
                     let error_count = this.read(cx).counts();
                     workspace.launcher.update(cx, |this, _cx| {
-                        this.error_count = error_count;
+                        this.message_count = error_count;
                     });
                     cx.notify();
                 });

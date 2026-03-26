@@ -4,12 +4,12 @@ use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc};
 use crate::{
     launcher::{Launcher, children::RenderableChild, variant_type::LauncherType},
     loader::utils::RawLauncher,
-    sherlock_error,
+    sherlock_msg,
     ui::launcher::LauncherMode,
     utils::{
         cache::BinaryCache,
         config::ConfigGuard,
-        errors::{SherlockError, SherlockErrorType},
+        errors::{SherlockMessage, types::SherlockErrorType},
     },
 };
 
@@ -22,7 +22,7 @@ pub struct LoadContext {
     pub path: PathBuf,
 }
 impl LoadContext {
-    fn new() -> Result<Self, SherlockError> {
+    fn new() -> Result<Self, SherlockMessage> {
         let counter_reader = CounterReader::new()?;
         let counts: HashMap<String, u32> =
             BinaryCache::read(&counter_reader.path).unwrap_or_default();
@@ -45,18 +45,18 @@ impl LoadContext {
 
 pub struct LauncherLoadResult {
     pub modes: Arc<[LauncherMode]>,
-    pub warnings: Vec<SherlockError>,
+    pub messages: Vec<SherlockMessage>,
 }
 impl Loader {
     pub fn load_launchers(
         cx: &mut App,
         data_handle: Entity<Arc<Vec<RenderableChild>>>,
-    ) -> Result<LauncherLoadResult, SherlockError> {
+    ) -> Result<LauncherLoadResult, SherlockMessage> {
         // read config
         let config = ConfigGuard::read()?;
 
         // Read fallback data here:
-        let (raw_launchers, mut warnings) = parse_launcher_configs(&config.files.fallback);
+        let (raw_launchers, mut messages) = parse_launcher_configs(&config.files.fallback);
 
         // Read cached counter file
         let ctx = LoadContext::new()?;
@@ -108,7 +108,7 @@ impl Loader {
                 {
                     Ok(vec) => (!vec.is_empty()).then_some(vec),
                     Err(e) => {
-                        warnings.push(e);
+                        messages.push(e);
                         None
                     }
                 }
@@ -116,7 +116,7 @@ impl Loader {
             .flatten()
             .collect();
 
-        Self::sync_cache_if_empty(&ctx, &renders, &mut warnings);
+        Self::sync_cache_if_empty(&ctx, &renders, &mut messages);
 
         data_handle.update(cx, |items, cx| {
             *items = Arc::new(renders);
@@ -125,14 +125,14 @@ impl Loader {
 
         Ok(LauncherLoadResult {
             modes: Arc::from(modes),
-            warnings,
+            messages,
         })
     }
 
     fn sync_cache_if_empty(
         ctx: &LoadContext,
         renders: &[RenderableChild],
-        warnings: &mut Vec<SherlockError>,
+        warnings: &mut Vec<SherlockMessage>,
     ) {
         if ctx.counts.is_empty() {
             let counts: HashMap<String, u32> = renders
@@ -157,7 +157,7 @@ impl Loader {
 /// # Returns
 /// A tuple containing the successfully parsed `Vec<RawLauncher>` and
 /// a `Vec<SherlockError>` containing any collected warnings.
-fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockError>) {
+fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockMessage>) {
     let mut warnings = Vec::new();
     let mut launchers = Vec::new();
 
@@ -168,9 +168,10 @@ fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockErro
     let raw_values: Vec<serde_json::Value> = match simd_json::from_reader(&mut file) {
         Ok(v) => v,
         Err(e) => {
-            warnings.push(sherlock_error!(
-                SherlockErrorType::FileParseError(path.clone()),
-                e.to_string()
+            warnings.push(sherlock_msg!(
+                Warning,
+                SherlockErrorType::DeserializationError,
+                e
             ));
             return (launchers, warnings);
         }
@@ -180,9 +181,10 @@ fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockErro
         match serde_json::from_value::<RawLauncher>(value) {
             Ok(launcher) => launchers.push(launcher),
             Err(e) => {
-                warnings.push(sherlock_error!(
-                    SherlockErrorType::FallbackError,
-                    e.to_string()
+                warnings.push(sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::ConfigError("Invalid launcher configuration".into()),
+                    e
                 ));
             }
         }

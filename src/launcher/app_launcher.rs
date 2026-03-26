@@ -26,7 +26,7 @@ impl LauncherProvider for AppLauncher {
         launcher: Arc<super::Launcher>,
         ctx: &LoadContext,
         _opts: Arc<Value>,
-    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockError> {
+    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
         Loader::load_applications(
             Arc::clone(&launcher),
             &ctx.counts,

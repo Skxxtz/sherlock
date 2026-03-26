@@ -11,10 +11,11 @@ use crate::loader::resolve_icon_path;
 use crate::loader::utils::{AppData, construct_search};
 use crate::utils::cache::BinaryCache;
 use crate::utils::config::{ConfigGuard, ConstantDefaults};
-use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::utils::errors::SherlockMessage;
+use crate::utils::errors::types::{DbAction, FileAction, SherlockErrorType};
 use crate::utils::files::home_dir;
 use crate::utils::paths::get_cache_dir;
-use crate::{sher_log, sherlock_error};
+use crate::{sher_log, sherlock_msg};
 
 use crate::launcher::{LauncherProvider, LauncherType};
 use crate::loader::utils::RawLauncher;
@@ -47,7 +48,7 @@ impl LauncherProvider for BookmarkLauncher {
         launcher: Arc<Launcher>,
         _ctx: &crate::loader::LoadContext,
         _opts: Arc<serde_json::Value>,
-    ) -> Result<Vec<super::children::RenderableChild>, SherlockError> {
+    ) -> Result<Vec<super::children::RenderableChild>, SherlockMessage> {
         BookmarkLauncher::find_bookmarks(&self.target_browser, Arc::clone(&launcher)).map(|ad| {
             ad.into_iter()
                 .map(|inner| RenderableChild::AppLike {
@@ -63,7 +64,7 @@ impl BookmarkLauncher {
     pub fn find_bookmarks(
         browser: &str,
         launcher: Arc<Launcher>,
-    ) -> Result<Vec<AppData>, SherlockError> {
+    ) -> Result<Vec<AppData>, SherlockMessage> {
         match browser.to_lowercase().as_str() {
             "zen" | "zen-browser" | "/opt/zen-browser-bin/zen-bin %u" => {
                 BookmarkParser::zen(launcher)
@@ -79,14 +80,11 @@ impl BookmarkLauncher {
                     r#"Failed to gather bookmarks for browser: "{}""#,
                     browser
                 ))?;
-                Err(sherlock_error!(
-                    SherlockErrorType::UnsupportedBrowser(browser.to_string()),
+                Err(sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::ConfigError("invalid browser configuration".into()),
                     format!(
-                        "The browser \"<i>{}</i>\" is either not supported or not recognized.\n\
-                        Check the \
-                        <span foreground=\"#247BA0\"><u><a href=\"https://github.com/Skxxtz/sherlock/blob/main/docs/launchers.md#bookmark-launcher\">documentation</a></u></span> \
-                        for more information.\n\
-                        ",
+                        "The browser \"{}\" is either not supported or not recognized.",
                         browser
                     )
                 ))
@@ -97,27 +95,42 @@ impl BookmarkLauncher {
 
 struct BookmarkParser;
 impl BookmarkParser {
-    fn brave(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockError> {
+    fn brave(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockMessage> {
         let path = home_dir()?.join(".config/BraveSoftware/Brave-Browser/Default/Bookmarks");
-        let data = fs::read_to_string(&path)
-            .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
+        let data = fs::read_to_string(&path).map_err(|e| {
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Read, path.to_path_buf()),
+                e
+            )
+        })?;
 
         ChromeParser::parse(launcher, data)
     }
-    fn thorium(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockError> {
+    fn thorium(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockMessage> {
         let path = home_dir()?.join(".config/thorium/Default/Bookmarks");
-        let data = fs::read_to_string(&path)
-            .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
+        let data = fs::read_to_string(&path).map_err(|e| {
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Read, path.to_path_buf()),
+                e
+            )
+        })?;
         ChromeParser::parse(launcher, data)
     }
-    fn chrome(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockError> {
+    fn chrome(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockMessage> {
         let path = home_dir()?.join(".config/google-chrome/Default/Bookmarks");
-        let data = fs::read_to_string(&path)
-            .map_err(|e| sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string()))?;
+        let data = fs::read_to_string(&path).map_err(|e| {
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Read, path.to_path_buf()),
+                e
+            )
+        })?;
         ChromeParser::parse(launcher, data)
     }
 
-    fn zen(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockError> {
+    fn zen(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockMessage> {
         fn get_path() -> Option<PathBuf> {
             let zen_root = home_dir().ok()?.join(".zen");
             fs::read_dir(&zen_root)
@@ -133,15 +146,19 @@ impl BookmarkParser {
                 .next()
         }
         let path = get_path().ok_or_else(|| {
-            sherlock_error!(
-                SherlockErrorType::FileExistError(PathBuf::from("~/.zen/../places.sqlite")),
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(
+                    FileAction::Find,
+                    PathBuf::from("~/.zen/../places.sqlite")
+                ),
                 "File does not exist"
             )
         })?;
         let parser = MozillaSqliteParser::new(path, "zen");
         parser.read(launcher, "zen")
     }
-    fn firefox(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockError> {
+    fn firefox(launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockMessage> {
         fn get_path() -> Option<PathBuf> {
             let zen_root = home_dir().ok()?.join(".mozilla/firefox/");
             fs::read_dir(&zen_root)
@@ -157,10 +174,12 @@ impl BookmarkParser {
                 .next()
         }
         let path = get_path().ok_or_else(|| {
-            sherlock_error!(
-                SherlockErrorType::FileExistError(PathBuf::from(
-                    "~/.mozilla/firefox/../places.sqlite",
-                )),
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(
+                    FileAction::Find,
+                    PathBuf::from("~/.mozilla/firefox/../places.sqlite",)
+                ),
                 "File does not exist"
             )
         })?;
@@ -182,7 +201,7 @@ impl MozillaSqliteParser {
         };
         Self { path }
     }
-    fn read(&self, launcher: Arc<Launcher>, prefix: &str) -> Result<Vec<AppData>, SherlockError> {
+    fn read(&self, launcher: Arc<Launcher>, prefix: &str) -> Result<Vec<AppData>, SherlockMessage> {
         let cache_dir = get_cache_dir()?;
         let cache = cache_dir.join(format!("bookmarks/{}-cache.bin", prefix));
 
@@ -201,7 +220,7 @@ impl MozillaSqliteParser {
         });
         Ok(bookmarks)
     }
-    fn read_new(&self, launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockError> {
+    fn read_new(&self, launcher: Arc<Launcher>) -> Result<Vec<AppData>, SherlockMessage> {
         let mut res: Vec<AppData> = Vec::new();
         let query = "
             SELECT b.title, p.url
@@ -212,8 +231,13 @@ impl MozillaSqliteParser {
             AND p.url IS NOT NULL
             AND b.parent != 7;
             ";
-        let conn = Connection::open(&self.path)
-            .map_err(|e| sherlock_error!(SherlockErrorType::SqlConnectionError(), e.to_string()))?;
+        let conn = Connection::open(&self.path).map_err(|e| {
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::DatabaseError(DbAction::Connect),
+                e
+            )
+        })?;
 
         if let Ok(mut stmt) = conn.prepare(query) {
             let event_iter = stmt.query_map([], |row| {
@@ -275,7 +299,7 @@ impl MozillaSqliteParser {
 }
 struct ChromeParser;
 impl ChromeParser {
-    fn parse(launcher: Arc<Launcher>, data: String) -> Result<Vec<AppData>, SherlockError> {
+    fn parse(launcher: Arc<Launcher>, data: String) -> Result<Vec<AppData>, SherlockMessage> {
         mod parser {
             use std::collections::HashMap;
 
@@ -297,7 +321,7 @@ impl ChromeParser {
 
         let mut bookmarks = Vec::new();
         let file = serde_json::from_str::<parser::ChromeFile>(&data)
-            .map_err(|e| sherlock_error!(SherlockErrorType::FlagLoadError, e.to_string()))?;
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
 
         fn process_bookmark(
             launcher: Arc<Launcher>,

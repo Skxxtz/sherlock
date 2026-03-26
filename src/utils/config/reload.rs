@@ -5,32 +5,30 @@ use gpui::{AsyncApp, Entity};
 use super::{SherlockConfig, watcher::ConfigFileChange};
 use crate::{
     CONFIG, launcher::children::RenderableChild, loader::Loader, ui::launcher::LauncherMode,
-    utils::errors::SherlockError,
+    utils::errors::SherlockMessage,
 };
 
 pub async fn reload(
     cx: &AsyncApp,
     data: &Entity<Arc<Vec<RenderableChild>>>,
-    initial_errors: &mut Vec<SherlockError>,
-    initial_warnings: &mut Vec<SherlockError>,
+    initial_messages: &mut Vec<SherlockMessage>,
     changes: Vec<ConfigFileChange>,
 ) -> Option<Arc<[LauncherMode]>> {
     let needs = ReloadNeeds::from_changes(&changes);
-    let mut warnings: Vec<SherlockError> = Vec::new();
-    let mut errors: Vec<SherlockError> = Vec::new();
+    let mut messages: Vec<SherlockMessage> = Vec::new();
 
     if needs.config {
         let mut flags = Loader::load_flags().ok()?;
-        let config = flags.to_config().map_or_else(
-            |e| {
-                errors.push(e);
+        let config = match flags.to_config() {
+            Err(e) => {
+                messages.push(e);
                 SherlockConfig::apply_flags(&mut flags, SherlockConfig::default())
-            },
-            |(cfg, non_crit)| {
-                warnings.extend(non_crit);
+            }
+            Ok((cfg, msgs)) => {
+                messages.extend(msgs);
                 cfg
-            },
-        );
+            }
+        };
         // Update global config
         if let Ok(mut guard) = CONFIG.get()?.write() {
             *guard = config;
@@ -42,18 +40,17 @@ pub async fn reload(
         let result = match cx.update(|cx| Loader::load_launchers(cx, data.clone())) {
             Ok(result) => result,
             Err(e) => {
-                errors.push(e);
+                messages.push(e);
                 return None;
             }
         };
-        warnings.extend(result.warnings);
+        messages.extend(result.messages);
         Some(result.modes)
     } else {
         None // caller keeps existing modes
     };
 
-    *initial_errors = errors;
-    *initial_warnings = warnings;
+    *initial_messages = messages;
     modes
 }
 

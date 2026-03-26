@@ -46,7 +46,7 @@ impl LauncherProvider for WeatherLauncher {
         launcher: Arc<super::Launcher>,
         _ctx: &crate::loader::LoadContext,
         _opts: Arc<serde_json::Value>,
-    ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockError> {
+    ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockMessage> {
         match WeatherData::from_cache(self) {
             Some(inner) => Ok(vec![RenderableChild::WeatherLike { launcher, inner }]),
             None => {

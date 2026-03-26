@@ -6,10 +6,13 @@ use std::{
 use crate::{
     CONFIG, ICONS,
     loader::{CustomIconTheme, IconThemeGuard},
-    sherlock_error,
+    sherlock_msg,
     utils::{
         config::SherlockConfig,
-        errors::{SherlockError, SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{DirAction, SherlockErrorType},
+        },
         paths::get_config_dir,
     },
 };
@@ -18,8 +21,7 @@ use super::Loader;
 
 pub struct SetupResult {
     pub config_dir: Box<Path>,
-    pub errors: Vec<SherlockError>,
-    pub warnings: Vec<SherlockError>,
+    pub messages: Vec<SherlockMessage>,
 }
 impl Loader {
     /// Initializes the application by loading flags, configuration, and icon themes.
@@ -34,44 +36,44 @@ impl Loader {
     /// - Set the global CONFIG static
     /// - Resolve the config root directory, falling back to XDG config dir or `/tmp/sherlock`
     pub fn setup() -> SetupResult {
-        let mut warnings: Vec<SherlockError> = Vec::new();
-        let mut errors: Vec<SherlockError> = Vec::new();
+        let mut messages: Vec<SherlockMessage> = Vec::new();
         let mut flags = Self::load_flags()
-            .map_err(|e| errors.push(e))
+            .map_err(|e| messages.push(e))
             .unwrap_or_default();
 
-        let config = flags.to_config().map_or_else(
-            |e| {
-                errors.push(e);
+        let config = match flags.to_config() {
+            Err(e) => {
+                messages.push(e);
                 let defaults = SherlockConfig::default();
                 SherlockConfig::apply_flags(&mut flags, defaults)
-            },
-            |(cfg, non_crit)| {
-                warnings.extend(non_crit);
+            }
+            Ok((cfg, non_crit)) => {
+                messages.extend(non_crit);
                 cfg
-            },
-        );
-
-        // if let Err(e) = migrate_file(&config.files.fallback) {
-        //     warnings.push(e);
-        // }
+            }
+        };
 
         let _ = ICONS.set(RwLock::new(CustomIconTheme::new()));
         config.appearance.icon_paths.iter().for_each(|path| {
             if let Err(e) = IconThemeGuard::add_path(path) {
-                warnings.push(e);
+                messages.push(e);
             }
         });
 
         if CONFIG.set(RwLock::new(config.clone())).is_err() {
-            errors.push(sherlock_error!(SherlockErrorType::ConfigError(None), ""));
+            messages.push(sherlock_msg!(
+                Warning,
+                SherlockErrorType::ConfigError("Failed to set global config singleton.".into()),
+                ""
+            ));
         }
 
         let config_dir: Box<Path> = match config.files.config.parent() {
             Some(p) => p.into(),
             None => {
-                errors.push(sherlock_error!(
-                    SherlockErrorType::DirReadError("Config Root Dir".into()),
+                messages.push(sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::DirError(DirAction::Find, "Config Root Dir".into()),
                     "Failed to read config root dir."
                 ));
                 get_config_dir()
@@ -83,8 +85,7 @@ impl Loader {
 
         SetupResult {
             config_dir,
-            errors,
-            warnings,
+            messages,
         }
     }
 }

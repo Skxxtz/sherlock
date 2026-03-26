@@ -19,7 +19,7 @@ use crate::{
         web_launcher::WebLauncher,
     },
     loader::utils::RawLauncher,
-    utils::errors::SherlockError,
+    utils::errors::SherlockMessage,
 };
 
 macro_rules! create_variants {
@@ -59,7 +59,7 @@ macro_rules! create_variants {
                 launcher: std::sync::Arc<crate::launcher::Launcher>,
                 ctx: &crate::loader::LoadContext,
                 opts: std::sync::Arc<serde_json::Value>,
-            ) -> Result<Vec<crate::launcher::children::RenderableChild>, crate::utils::errors::SherlockError> {
+            ) -> Result<Vec<RenderableChild>, SherlockMessage> {
                 match self {
                     $(
                         Self::$variant(inner) => <$inner as LauncherProvider>::objects(inner, launcher, ctx, opts),
@@ -75,7 +75,7 @@ macro_rules! create_variants {
                     Self::Empty => None
                 }
             }
-            pub fn execute_function(&self, func: InnerFunction, child: &RenderableChild) -> Result<bool, SherlockError> {
+            pub fn execute_function(&self, func: InnerFunction, child: &RenderableChild) -> Result<bool, SherlockMessage> {
                 match self {
                     $(
                         Self::$variant(inner) => <$inner as LauncherProvider>::execute_function(inner, func, child),
@@ -127,7 +127,8 @@ macro_rules! ensure_func {
         if let $variant(inner) = $val {
             inner
         } else {
-            return Err(sherlock_error!(
+            return Err(sherlock_msg!(
+                Warning,
                 SherlockErrorType::InvalidFunction,
                 format!("Invalid function {:?} for this launcher", $val)
             ));

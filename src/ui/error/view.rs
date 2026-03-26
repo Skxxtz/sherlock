@@ -1,6 +1,6 @@
 use crate::{
     ui::{error::error_box::ErrorBox, launcher::Quit},
-    utils::errors::SherlockError,
+    utils::errors::SherlockMessage,
 };
 use gpui::{
     App, Context, FocusHandle, Focusable, InteractiveElement, IntoElement, ParentElement, Render,
@@ -10,51 +10,37 @@ use gpui::{
 pub struct DismissErrorEvent;
 impl gpui::EventEmitter<DismissErrorEvent> for ErrorView {}
 
-pub struct ErrorCount {
-    pub errors: usize,
-    pub warnings: usize,
-}
-impl ErrorCount {
-    pub fn is_empty(&self) -> bool {
-        self.errors == 0 && self.warnings == 0
-    }
-}
-
 pub struct ErrorView {
-    pub errors: Vec<SherlockError>,
-    pub warnings: Vec<SherlockError>,
+    pub messages: Vec<SherlockMessage>,
     pub focus_handle: FocusHandle,
     pub scroll_handle: ScrollHandle,
 }
 
 impl ErrorView {
-    pub fn counts(&self) -> ErrorCount {
-        ErrorCount {
-            warnings: self.warnings.len(),
-            errors: self.errors.len(),
-        }
+    pub fn counts(&self) -> usize {
+        self.messages.len()
     }
 
-    pub fn push_error(&mut self, error: SherlockError, cx: &mut Context<Self>) {
-        self.errors.push(error);
+    pub fn push_error(&mut self, error: SherlockMessage, cx: &mut Context<Self>) {
+        self.messages.push(error);
         cx.notify();
     }
 
     pub fn remove_error(&mut self, idx: usize, cx: &mut Context<Self>) {
-        if idx < self.errors.len() {
-            self.errors.remove(idx);
+        if idx < self.messages.len() {
+            self.messages.remove(idx);
         }
-        if self.errors.is_empty() && self.warnings.is_empty() {
+        if self.messages.is_empty() && self.messages.is_empty() {
             cx.emit(DismissErrorEvent);
         }
         cx.notify();
     }
 
     pub fn remove_warning(&mut self, idx: usize, cx: &mut Context<Self>) {
-        if idx < self.warnings.len() {
-            self.warnings.remove(idx);
+        if idx < self.messages.len() {
+            self.messages.remove(idx);
         }
-        if self.errors.is_empty() && self.warnings.is_empty() {
+        if self.messages.is_empty() && self.messages.is_empty() {
             cx.emit(DismissErrorEvent);
         }
         cx.notify();
@@ -82,22 +68,12 @@ impl Render for ErrorView {
                     .flex()
                     .flex_col()
                     .gap_4()
-                    .when(!self.errors.is_empty(), |this| {
-                        this.children(self.errors.iter().enumerate().map(|(idx, e)| {
+                    .when(!self.messages.is_empty(), |this| {
+                        this.children(self.messages.iter().cloned().enumerate().map(|(idx, e)| {
                             let weak_self = cx.entity().downgrade();
-                            ErrorBox::new(e.to_string()).on_dismiss(move |cx: &mut App| {
+                            ErrorBox::new(e).on_dismiss(move |cx: &mut App| {
                                 if let Some(view) = weak_self.upgrade() {
                                     view.update(cx, |this, cx| this.remove_error(idx, cx));
-                                }
-                            })
-                        }))
-                    })
-                    .when(!self.warnings.is_empty(), |this| {
-                        this.children(self.warnings.iter().enumerate().map(|(idx, e)| {
-                            let weak_self = cx.entity().downgrade();
-                            ErrorBox::warning(e.to_string()).on_dismiss(move |cx: &mut App| {
-                                if let Some(view) = weak_self.upgrade() {
-                                    view.update(cx, |this, cx| this.remove_warning(idx, cx));
                                 }
                             })
                         }))

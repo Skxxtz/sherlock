@@ -2,10 +2,13 @@ use chrono::{DateTime, Local};
 use std::path::Path;
 
 use crate::{
-    sherlock_error,
+    sherlock_msg,
     utils::{
         config::ConfigGuard,
-        errors::{SherlockError, SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{DirAction, SherlockErrorType},
+        },
     },
 };
 
@@ -30,15 +33,16 @@ impl ConfigWatcher {
         }
     }
 
-    pub fn audit(&mut self) -> Result<Vec<ConfigFileChange>, SherlockError> {
+    pub fn audit(&mut self) -> Result<Vec<ConfigFileChange>, SherlockMessage> {
         let current_audit_time = Local::now();
         let since = self.latest_audit;
 
         // get entries
         let entries = std::fs::read_dir(&self.root_dir).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::DirReadError(self.root_dir.to_string_lossy().to_string()),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::DirError(DirAction::Read, self.root_dir.to_path_buf()),
+                e
             )
         })?;
 

@@ -5,7 +5,7 @@ use gpui::SharedString;
 use super::command_launch::spawn_detached;
 use crate::utils::{
     config::{ConfigGuard, ConstantDefaults},
-    errors::SherlockError,
+    errors::SherlockMessage,
 };
 
 pub fn websearch(
@@ -13,7 +13,7 @@ pub fn websearch(
     query: &str,
     browser: Option<&str>,
     variables: &[(SharedString, SharedString)],
-) -> Result<(), SherlockError> {
+) -> Result<(), SherlockMessage> {
     if is_url(query) {
         engine = "plain";
     }

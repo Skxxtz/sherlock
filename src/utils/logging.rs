@@ -4,15 +4,17 @@ use std::{fs, fs::OpenOptions, sync::Mutex};
 use chrono::Local;
 use once_cell::sync::Lazy;
 
-use crate::sherlock_error;
-use crate::utils::{errors::SherlockError, errors::SherlockErrorType, paths};
+use crate::sherlock_msg;
+use crate::utils::errors::types::{DirAction, FileAction, SherlockErrorType};
+use crate::utils::{errors::SherlockMessage, paths};
 
-static LOG_FILE: Lazy<Result<Mutex<std::fs::File>, SherlockError>> = Lazy::new(|| {
+static LOG_FILE: Lazy<Result<Mutex<std::fs::File>, SherlockMessage>> = Lazy::new(|| {
     let cache_dir = paths::get_cache_dir()?;
     fs::create_dir_all(&cache_dir).map_err(|e| {
-        sherlock_error!(
-            SherlockErrorType::DirCreateError(cache_dir.display().to_string()),
-            e.to_string()
+        sherlock_msg!(
+            Warning,
+            SherlockErrorType::DirError(DirAction::Create, cache_dir.clone()),
+            e
         )
     })?;
 
@@ -21,12 +23,18 @@ static LOG_FILE: Lazy<Result<Mutex<std::fs::File>, SherlockError>> = Lazy::new(|
         .create(true)
         .append(true)
         .open(&location)
-        .map_err(|e| sherlock_error!(SherlockErrorType::FileWriteError(location), e.to_string()))?;
+        .map_err(|e| {
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Read, location),
+                e
+            )
+        })?;
 
     Ok(Mutex::new(file))
 });
 
-pub fn write_log<T: AsRef<str>>(message: T, file: &str, line: u32) -> Result<(), SherlockError> {
+pub fn write_log<T: AsRef<str>>(message: T, file: &str, line: u32) -> Result<(), SherlockMessage> {
     let message = message.as_ref();
     let now = Local::now().format("%Y-%m-%d %H:%M:%S");
     let mut log_file = LOG_FILE

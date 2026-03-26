@@ -2,9 +2,12 @@ use std::{path::PathBuf, process::Command};
 
 use crate::{
     loader::application_loader::{get_applications_dir, get_desktop_files},
-    sherlock_error,
+    sherlock_msg,
     utils::{
-        errors::{SherlockError, SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{FileAction, SherlockErrorType},
+        },
         files::read_lines,
         paths,
     },
@@ -15,7 +18,7 @@ impl ConstantDefaults {
     pub fn terminal() -> String {
         Self::get_terminal().unwrap_or_default()
     }
-    pub fn get_terminal() -> Result<String, SherlockError> {
+    pub fn get_terminal() -> Result<String, SherlockMessage> {
         let mut terminal = None;
 
         //Check if $TERMAINAL is set
@@ -58,8 +61,9 @@ impl ConstantDefaults {
         if let Some(t) = terminal {
             Ok(t)
         } else {
-            Err(sherlock_error!(
-                SherlockErrorType::ConfigError(Some("Failed to get terminal".to_string())),
+            Err(sherlock_msg!(
+                Warning,
+                SherlockErrorType::ConfigError("Failed to get terminal".into()),
                 "Unable to locate or parse a valid terminal app. Ensure that the terminal app is correctly specified in the configuration file or environment variables."
             ))
         }
@@ -67,25 +71,27 @@ impl ConstantDefaults {
     fn is_terminal_installed(terminal: &str) -> bool {
         Command::new(terminal).arg("--version").output().is_ok()
     }
-    pub fn browser() -> Result<String, SherlockError> {
+    pub fn browser() -> Result<String, SherlockMessage> {
         // Find default browser desktop file
         let output = Command::new("xdg-settings")
             .arg("get")
             .arg("default-web-browser")
             .output()
             .map_err(|e| {
-                sherlock_error!(
-                    SherlockErrorType::EnvVarNotFoundError(String::from("default browser")),
-                    e.to_string()
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::EnvError("default browser".into()),
+                    e
                 )
             })?;
 
         let desktop_file: String = if output.status.success() {
             String::from_utf8_lossy(&output.stdout).trim().to_string()
         } else {
-            return Err(sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("default browser".to_string()),
-                ""
+            return Err(sherlock_msg!(
+                Warning,
+                SherlockErrorType::EnvError("default browser".into()),
+                "Command 'xdg-settings get default-web-browser' failed to produce a valid output."
             ));
         };
         let desktop_dirs = get_applications_dir();
@@ -94,24 +100,30 @@ impl ConstantDefaults {
             .iter()
             .find(|f| f.ends_with(&desktop_file))
             .ok_or_else(|| {
-                sherlock_error!(
-                    SherlockErrorType::EnvVarNotFoundError("default browser".to_string()),
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::EnvError("default browser".into()),
                     ""
                 )
             })?;
         // read default browser desktop file
         let browser = read_lines(browser_file)
             .map_err(|e| {
-                sherlock_error!(
-                    SherlockErrorType::FileReadError(browser_file.clone()),
-                    e.to_string()
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::FileError(FileAction::Read, browser_file.clone()),
+                    e
                 )
             })?
             .filter_map(Result::ok)
             .find(|line| line.starts_with("Exec="))
             .and_then(|line| line.strip_prefix("Exec=").map(|l| l.to_string()))
             .ok_or_else(|| {
-                sherlock_error!(SherlockErrorType::FileParseError(browser_file.clone()), "")
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::FileError(FileAction::Parse, browser_file.clone()),
+                    ""
+                )
             })?;
         Ok(browser)
     }

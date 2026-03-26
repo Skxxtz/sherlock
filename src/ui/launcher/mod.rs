@@ -1,6 +1,5 @@
 use crate::launcher::children::LauncherValues;
 use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
-use crate::ui::error::view::ErrorCount;
 use crate::ui::launcher::context_menu::ContextMenuAction;
 use crate::ui::launcher::views::NavigationStack;
 use crate::utils::config::HomeType;
@@ -42,7 +41,7 @@ pub struct LauncherView {
     pub navigation: NavigationStack,
 
     // State
-    pub error_count: ErrorCount,
+    pub message_count: usize,
     pub config_initialized: bool,
 
     pub active_update_task: Option<Task<()>>,

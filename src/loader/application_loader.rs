@@ -17,12 +17,9 @@ use crate::launcher::Launcher;
 use crate::loader::resolve_icon_path;
 use crate::prelude::PathHelpers;
 use crate::utils::cache::BinaryCache;
-use crate::utils::{
-    config::ConfigGuard,
-    errors::{SherlockError, SherlockErrorType},
-    files::read_lines,
-};
-use crate::{sher_log, sherlock_error};
+use crate::utils::errors::types::{FileAction, SherlockErrorType};
+use crate::utils::{config::ConfigGuard, errors::SherlockMessage, files::read_lines};
+use crate::{sher_log, sherlock_msg};
 
 impl Loader {
     pub fn load_applications_from_disk(
@@ -31,7 +28,7 @@ impl Loader {
         counts: &HashMap<String, u32>,
         decimals: i32,
         use_keywords: bool,
-    ) -> Result<Vec<AppData>, SherlockError> {
+    ) -> Result<Vec<AppData>, SherlockMessage> {
         let config = ConfigGuard::read()?;
 
         // Define required paths for application parsing
@@ -44,24 +41,22 @@ impl Loader {
                 .filter_map(|line| Pattern::new(&line.to_lowercase()).ok())
                 .collect(),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Default::default(),
-            Err(e) => Err(sherlock_error!(
-                SherlockErrorType::FileReadError(config.files.ignore.clone()),
-                e.to_string()
+            Err(e) => Err(sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Read, config.files.ignore.clone()),
+                e
             ))?,
         };
 
         // Parse user-specified 'sherlock_alias.json' file
         let aliases: HashMap<String, SherlockAlias> = match File::open(&config.files.alias) {
-            Ok(f) => simd_json::from_reader(f).map_err(|e| {
-                sherlock_error!(
-                    SherlockErrorType::FileReadError(config.files.alias.clone()),
-                    e.to_string()
-                )
-            })?,
+            Ok(f) => simd_json::from_reader(f)
+                .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Default::default(),
-            Err(e) => Err(sherlock_error!(
-                SherlockErrorType::FileReadError(config.files.alias.clone()),
-                e.to_string()
+            Err(e) => Err(sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Read, config.files.alias.clone()),
+                e
             ))?,
         };
         let aliases = Arc::new(RwLock::new(aliases));
@@ -181,7 +176,7 @@ impl Loader {
         decimals: i32,
         last_changed: Option<SystemTime>,
         use_keywords: bool,
-    ) -> Result<Vec<AppData>, SherlockError> {
+    ) -> Result<Vec<AppData>, SherlockMessage> {
         let system_apps = get_applications_dir();
 
         // get all desktop files
@@ -231,7 +226,7 @@ impl Loader {
         counts: &HashMap<String, u32>,
         decimals: i32,
         use_keywords: bool,
-    ) -> Result<Vec<AppData>, SherlockError> {
+    ) -> Result<Vec<AppData>, SherlockMessage> {
         let config = ConfigGuard::read()?;
         // check if sherlock_alias was modified
         let changed = file_has_changed(&config.files.alias, &config.caching.cache)
@@ -272,7 +267,7 @@ impl Loader {
                         use_keywords,
                     ) {
                         if let Err(e) = BinaryCache::write(cache, &new_apps) {
-                            eprintln!("{e}");
+                            eprintln!("{}", e.error_type);
                         }
                     }
                 }
@@ -288,7 +283,7 @@ impl Loader {
         let cache = config.caching.cache.clone();
         rayon::spawn_fifo(move || {
             if let Err(e) = BinaryCache::write(cache, &app_clone) {
-                eprintln!("{e}");
+                eprintln!("{}", e.error_type);
             }
         });
         Ok(apps)

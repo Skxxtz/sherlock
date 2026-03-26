@@ -27,7 +27,7 @@ impl LauncherProvider for WebLauncher {
         launcher: std::sync::Arc<super::Launcher>,
         _ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
-    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockError> {
+    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
         let mut inner = AppData::new();
         inner.icon = opts
             .get("icon")

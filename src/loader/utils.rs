@@ -17,12 +17,15 @@ use crate::{
         variant_type::{LauncherType, LauncherVariant},
     },
     loader::resolve_icon_path,
-    sherlock_error,
+    sherlock_msg,
     ui::launcher::context_menu::ContextMenuAction,
     utils::{
         cache::BinaryCache,
         config::HomeType,
-        errors::{SherlockError, SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{DirAction, SherlockErrorType},
+        },
         paths,
     },
 };
@@ -287,14 +290,15 @@ pub struct CounterReader {
     pub path: PathBuf,
 }
 impl CounterReader {
-    pub fn new() -> Result<Self, SherlockError> {
+    pub fn new() -> Result<Self, SherlockMessage> {
         let data_dir = paths::get_data_dir()?;
         let path = data_dir.join("counts.bin");
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
-                sherlock_error!(
-                    SherlockErrorType::DirCreateError(parent.to_string_lossy().to_string()),
-                    e.to_string()
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::DirError(DirAction::Create, parent.to_path_buf()),
+                    e
                 )
             })?;
         }
@@ -302,7 +306,7 @@ impl CounterReader {
     }
     /// Re-ranks all existing counts to contiguous values before incrementing,
     /// so the ordering stays stable regardless of absolute hit counts.
-    pub fn increment(&self, key: &str) -> Result<(), SherlockError> {
+    pub fn increment(&self, key: &str) -> Result<(), SherlockMessage> {
         let mut content: HashMap<String, u32> = BinaryCache::read(&self.path)?;
         let unique_values: HashMap<u32, u32> = content
             .values()

@@ -9,10 +9,10 @@ use gpui::SharedString;
 use regex::{Captures, Regex};
 
 use crate::{
-    sherlock_error,
+    sherlock_msg,
     utils::{
         config::{ConfigGuard, SherlockConfig},
-        errors::{SherlockError, SherlockErrorType},
+        errors::{SherlockMessage, types::SherlockErrorType},
     },
 };
 
@@ -34,7 +34,7 @@ pub fn spawn_detached(
     cmd: &str,
     keyword: &str,
     variables: &[(SharedString, SharedString)],
-) -> Result<(), SherlockError> {
+) -> Result<(), SherlockMessage> {
     let config = ConfigGuard::read().unwrap();
     let cmd = parse_variables(cmd, keyword, variables, &config);
 
@@ -86,12 +86,9 @@ pub fn spawn_detached(
         });
     }
 
-    let mut child = command.spawn().map_err(|e| {
-        sherlock_error!(
-            SherlockErrorType::CommandExecutionError(cmd.to_string()),
-            e.to_string()
-        )
-    })?;
+    let mut child = command
+        .spawn()
+        .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::CommandError(cmd.clone()), e))?;
 
     // pass sudo password
     if sudo_used {
@@ -100,10 +97,7 @@ pub fn spawn_detached(
             .find(|(k, _)| k.eq_ignore_ascii_case("sudo"))
         {
             send_sudo(&mut child, password.as_str()).map_err(|e| {
-                sherlock_error!(
-                    SherlockErrorType::CommandExecutionError(cmd.into()),
-                    e.to_string()
-                )
+                sherlock_msg!(Warning, SherlockErrorType::CommandError(cmd.clone()), e)
             })?;
         }
     }

@@ -18,8 +18,6 @@ mod prelude;
 mod ui;
 mod utils;
 
-use utils::errors::SherlockError;
-
 /// Holds the icon cache, containing all known icon names and their file locations.
 static ICONS: OnceCell<RwLock<CustomIconTheme>> = OnceCell::new();
 /// Holed the global config struct for user-specified config values.

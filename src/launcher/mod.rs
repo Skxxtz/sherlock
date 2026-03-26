@@ -32,11 +32,11 @@ use crate::{
         LoadContext, resolve_icon_path,
         utils::{AppData, ApplicationAction, RawLauncher},
     },
-    sherlock_error,
+    sherlock_msg,
     ui::launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
     utils::{
         config::HomeType,
-        errors::{SherlockError, SherlockErrorType},
+        errors::{SherlockMessage, types::SherlockErrorType},
     },
 };
 use gpui::{Keystroke, SharedString};
@@ -57,7 +57,7 @@ pub trait LauncherProvider {
         launcher: Arc<Launcher>,
         ctx: &LoadContext,
         opts: Arc<serde_json::Value>,
-    ) -> Result<Vec<RenderableChild>, SherlockError>;
+    ) -> Result<Vec<RenderableChild>, SherlockMessage>;
     fn binds(&self) -> Option<Arc<Vec<Bind>>> {
         None
     }
@@ -65,8 +65,9 @@ pub trait LauncherProvider {
         &self,
         func: InnerFunction,
         _child: &RenderableChild,
-    ) -> Result<bool, SherlockError> {
-        Err(sherlock_error!(
+    ) -> Result<bool, SherlockMessage> {
+        Err(sherlock_msg!(
+            Warning,
             SherlockErrorType::InvalidFunction,
             format!("{} does not provide function: {:?}", stringify!(self), func)
         ))

@@ -2,6 +2,8 @@ use gpui::{
     InteractiveElement, IntoElement, MouseButton, ParentElement, Styled, div, hsla, px, rgb,
 };
 
+use crate::utils::errors::{SherlockMessage, SherlockMessageLevel};
+
 #[allow(dead_code)]
 pub enum MessageType {
     Info,
@@ -10,31 +12,15 @@ pub enum MessageType {
 }
 
 pub struct ErrorBox {
-    message: String,
-    message_type: MessageType,
+    message: SherlockMessage,
     on_dismiss: Option<Box<dyn Fn(&mut gpui::App) + 'static>>,
 }
 
 #[allow(dead_code)]
 impl ErrorBox {
-    pub fn new(message: String) -> Self {
+    pub fn new(message: SherlockMessage) -> Self {
         Self {
             message,
-            message_type: MessageType::Error,
-            on_dismiss: None,
-        }
-    }
-    pub fn warning(message: String) -> Self {
-        Self {
-            message,
-            message_type: MessageType::Warning,
-            on_dismiss: None,
-        }
-    }
-    pub fn info(message: String) -> Self {
-        Self {
-            message,
-            message_type: MessageType::Info,
             on_dismiss: None,
         }
     }
@@ -47,18 +33,18 @@ impl ErrorBox {
 impl IntoElement for ErrorBox {
     type Element = gpui::AnyElement;
     fn into_element(self) -> Self::Element {
-        let (bg, border, text) = match self.message_type {
-            MessageType::Error => (
+        let (bg, border, text) = match self.message.level {
+            SherlockMessageLevel::Error => (
                 hsla(0.0, 0.7, 0.08, 1.0),
                 hsla(0.0, 0.7, 0.35, 0.4),
                 rgb(0xcc8888),
             ),
-            MessageType::Warning => (
+            SherlockMessageLevel::Warning => (
                 hsla(0.11, 0.8, 0.08, 1.0),
                 hsla(0.11, 0.8, 0.4, 0.4),
                 rgb(0xc9943a),
             ),
-            MessageType::Info => (
+            SherlockMessageLevel::Info => (
                 hsla(0.6, 0.5, 0.08, 1.0),
                 hsla(0.6, 0.5, 0.4, 0.4),
                 rgb(0x7a9ec4),
@@ -97,7 +83,11 @@ impl IntoElement for ErrorBox {
             .text_color(text)
             .font_family("monospace")
             .relative()
-            .child(self.message)
+            .child(
+                div()
+                    .child(self.message.error_type.to_string())
+                    .child(self.message.traceback),
+            )
             .children(dismiss_btn)
             .into_any_element()
     }

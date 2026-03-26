@@ -7,9 +7,9 @@ use crate::launcher::{LauncherProvider, LauncherType};
 use crate::loader::application_loader::parse_priority;
 use crate::loader::resolve_icon_path;
 use crate::loader::utils::{ApplicationAction, RawLauncher, deserialize_named_appdata};
-use crate::sherlock_error;
+use crate::sherlock_msg;
 use crate::ui::launcher::context_menu::ContextMenuAction;
-use crate::utils::errors::SherlockErrorType;
+use crate::utils::errors::types::SherlockErrorType;
 
 #[derive(Clone, Debug)]
 pub struct CategoryLauncher {}
@@ -23,11 +23,12 @@ impl LauncherProvider for CategoryLauncher {
         launcher: std::sync::Arc<super::Launcher>,
         ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
-    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockError> {
+    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
         let cmds = opts.get("categories").ok_or_else(|| {
-            sherlock_error!(
-                SherlockErrorType::FallbackError,
-                "Category launcher does not contain any categories.".to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::ConfigError("Invalid launcher configuration.".into()),
+                "Category launcher does not contain any categories."
             )
         })?;
         let app_data =

@@ -3,11 +3,11 @@ use std::{env, path::PathBuf, str::FromStr};
 use super::Loader;
 use crate::utils::{
     config::{SherlockConfig, SherlockFlags},
-    errors::SherlockError,
+    errors::SherlockMessage,
 };
 
 impl Loader {
-    pub fn load_flags() -> Result<SherlockFlags, SherlockError> {
+    pub fn load_flags() -> Result<SherlockFlags, SherlockMessage> {
         let args: Vec<String> = env::args().collect();
         if args.contains(&"--help".to_string()) {
             let _ = flag_documentation();
@@ -52,7 +52,7 @@ impl SherlockFlags {
             _ => long,
         }
     }
-    fn new(args: Vec<String>) -> Result<Self, SherlockError> {
+    fn new(args: Vec<String>) -> Result<Self, SherlockMessage> {
         // Helper closure to extract flag values
         let extract_path_value =
             |flag: &str| Self::extract_flag_value::<PathBuf>(&args, flag, None);
@@ -88,14 +88,14 @@ impl SherlockFlags {
     }
 }
 
-pub fn print_version() -> Result<(), SherlockError> {
+pub fn print_version() -> Result<(), SherlockMessage> {
     let version = env!("CARGO_PKG_VERSION");
     println!("Sherlock v{}", version);
     println!("Developed by Skxxtz");
 
     Ok(())
 }
-pub fn flag_documentation() -> Result<(), SherlockError> {
+pub fn flag_documentation() -> Result<(), SherlockMessage> {
     let allowed_flags: Vec<(&str, &str)> = vec![
         ("\nBASICS:", ""),
         ("-v, --version", "Print the version of the application."),

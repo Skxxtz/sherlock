@@ -8,7 +8,7 @@ use crate::{
     ui::{launcher::LauncherMode, workspace::SherlockWorkspace},
     utils::{
         config::{ConfigWatcher, reload},
-        errors::SherlockError,
+        errors::SherlockMessage,
     },
 };
 
@@ -18,8 +18,7 @@ pub(super) async fn run_event_loop(
     mut modes: Arc<[LauncherMode]>,
     mut watcher: ConfigWatcher,
     listener: UnixListener,
-    mut initial_errors: Vec<SherlockError>,
-    mut initial_warnings: Vec<SherlockError>,
+    mut initial_messages: Vec<SherlockMessage>,
 ) {
     let mut win: Option<WindowHandle<SherlockWorkspace>> = None;
     let mut current_generation: u64 = 0;
@@ -29,14 +28,7 @@ pub(super) async fn run_event_loop(
         if let Ok((_stream, _)) = listener.accept().await {
             if let Ok(audit) = watcher.audit() {
                 if !audit.is_empty() {
-                    if let Some(new_modes) = reload(
-                        &cx,
-                        &data,
-                        &mut initial_errors,
-                        &mut initial_warnings,
-                        audit,
-                    )
-                    .await
+                    if let Some(new_modes) = reload(&cx, &data, &mut initial_messages, audit).await
                     {
                         modes = new_modes;
                     }
@@ -55,8 +47,7 @@ pub(super) async fn run_event_loop(
                     cx,
                     data.clone(),
                     Arc::clone(&modes),
-                    initial_warnings.clone(),
-                    initial_errors.clone(),
+                    initial_messages.clone(),
                 );
                 win = Some(new_win.clone());
                 new_win

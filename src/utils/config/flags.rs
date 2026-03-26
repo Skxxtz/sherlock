@@ -1,8 +1,11 @@
 use crate::{
-    sherlock_error,
+    sherlock_msg,
     utils::{
         config::{ConfigSourceFiles, SherlockConfig},
-        errors::{SherlockError, SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{FileAction, SherlockErrorType},
+        },
         files::{expand_path, home_dir},
         paths,
     },
@@ -31,7 +34,7 @@ pub struct SherlockFlags {
 }
 
 impl SherlockFlags {
-    pub fn to_config(&mut self) -> Result<(SherlockConfig, Vec<SherlockError>), SherlockError> {
+    pub fn to_config(&mut self) -> Result<(SherlockConfig, Vec<SherlockMessage>), SherlockMessage> {
         // Get location of config file
         let config_dir = self.config_dir.take().unwrap_or(paths::get_config_dir()?);
         let home = home_dir()?;
@@ -41,48 +44,43 @@ impl SherlockFlags {
         };
 
         // logic to either use json or toml
-        let mut filetype: String = String::new();
-        if let Some(ext) = path.extension() {
-            let ext = ext.to_string_lossy();
-            match ext.as_ref() {
-                "json" => {
-                    if !path.exists() {
+        let filetype = if let Some(ext) = path.extension() {
+            let mut ext_str = ext.to_string_lossy().to_string();
+            if !path.exists() {
+                match ext_str.as_str() {
+                    "json" => {
                         path.set_extension("toml");
-                        filetype = "toml".to_string();
-                    } else {
-                        filetype = "json".to_string();
+                        ext_str = "toml".into();
                     }
-                }
-                "toml" => {
-                    if !path.exists() {
+                    "toml" => {
                         path.set_extension("json");
-                        filetype = "json".to_string();
-                    } else {
-                        filetype = "toml".to_string();
+                        ext_str = "json".into();
+                    }
+                    _ => {
+                        return Err(sherlock_msg!(
+                            Warning,
+                            SherlockErrorType::FileError(FileAction::Parse, path.clone()),
+                            format!("unsupported format: '{}'", ext_str)
+                        ));
                     }
                 }
-                _ => {}
             }
+            ext_str
         } else {
-            return Err(sherlock_error!(
-                SherlockErrorType::FileParseError(path.clone()),
-                format!(
-                    "The file \"{}\" is not in a valid format.",
-                    &path.to_string_lossy()
-                )
+            return Err(sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Parse, path.clone()),
+                "file has no extension and cannot be parsed"
             ));
-        }
+        };
 
         match std::fs::read_to_string(&path) {
             Ok(mut config_str) => {
-                let config_res: Result<SherlockConfig, SherlockError> = match filetype.as_str() {
+                let config_res: Result<SherlockConfig, SherlockMessage> = match filetype.as_str() {
                     "json" => {
                         let mut bytes = config_str.into_bytes();
                         simd_json::from_slice(&mut bytes).map_err(|e| {
-                            sherlock_error!(
-                                SherlockErrorType::FileParseError(path.clone()),
-                                e.to_string()
-                            )
+                            sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e)
                         })
                     }
                     "toml" => {
@@ -108,19 +106,19 @@ impl SherlockFlags {
                             }
                         }
                         toml::de::from_str(&config_str).map_err(|e| {
-                            sherlock_error!(
-                                SherlockErrorType::FileParseError(path.clone()),
-                                e.to_string()
-                            )
+                            sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e)
                         })
                     }
                     _ => {
-                        return Err(sherlock_error!(
-                            SherlockErrorType::FileParseError(path.clone()),
-                            format!(
-                                "The file \"{}\" is not in a valid format.",
-                                &path.to_string_lossy()
-                            )
+                        let ext = path
+                            .extension()
+                            .map(|s| s.to_string_lossy())
+                            .unwrap_or_else(|| "none".into());
+
+                        return Err(sherlock_msg!(
+                            Warning,
+                            SherlockErrorType::FileError(FileAction::Parse, path.clone()),
+                            format!("the file extension '{}' is not a supported format", ext)
                         ));
                     }
                 };
@@ -141,7 +139,11 @@ impl SherlockFlags {
             Err(e) => {
                 let mut config = SherlockConfig::default();
                 config = SherlockConfig::apply_flags(self, config);
-                let e = sherlock_error!(SherlockErrorType::FileReadError(path), e.to_string());
+                let e = sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::FileError(FileAction::Read, path),
+                    e
+                );
                 Ok((config, vec![e]))
             }
         }

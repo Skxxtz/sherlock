@@ -14,8 +14,9 @@ use crate::launcher::children::RenderableChild;
 use crate::launcher::utils::MprisState;
 use crate::launcher::variant_type::InnerFunction;
 use crate::utils::config::ConfigGuard;
-use crate::utils::errors::{SherlockError, SherlockErrorType};
-use crate::{ensure_func, sherlock_error};
+use crate::utils::errors::SherlockMessage;
+use crate::utils::errors::types::{DBusAction, DirAction, FileAction, SherlockErrorType};
+use crate::{ensure_func, sherlock_msg};
 
 use super::utils::MprisData;
 
@@ -54,7 +55,7 @@ impl LauncherProvider for MusicPlayerLauncher {
         launcher: Arc<super::Launcher>,
         _: &crate::loader::LoadContext,
         _opts: Arc<Value>,
-    ) -> Result<Vec<super::children::RenderableChild>, SherlockError> {
+    ) -> Result<Vec<super::children::RenderableChild>, SherlockMessage> {
         let inner = MprisState::default();
         Ok(vec![RenderableChild::MusicLike { launcher, inner }])
     }
@@ -65,11 +66,12 @@ impl LauncherProvider for MusicPlayerLauncher {
         &self,
         func: InnerFunction,
         child: &RenderableChild,
-    ) -> Result<bool, SherlockError> {
+    ) -> Result<bool, SherlockMessage> {
         let func = ensure_func!(func, InnerFunction::MusicPlayer);
 
         let RenderableChild::MusicLike { inner, .. } = child else {
-            return Err(sherlock_error!(
+            return Err(sherlock_msg!(
+                Warning,
                 SherlockErrorType::Unreachable,
                 format!("Tried to unpack music tile but received: {:?}", child)
             ));
@@ -120,24 +122,22 @@ impl MprisData {
         let image_arc = Arc::new(Image::from_bytes(format, bytes));
         Some((image_arc, was_cached))
     }
-    fn cache_cover(image: &Bytes, loc: &str) -> Result<(), SherlockError> {
+    fn cache_cover(image: &Bytes, loc: &str) -> Result<(), SherlockMessage> {
         // Create dir and parents
         let home = env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
+            sherlock_msg!(Warning, SherlockErrorType::EnvError("HOME".to_string()), e)
         })?;
 
         let home_dir = PathBuf::from(home);
         let path = home_dir.join(".cache/sherlock/mpris-cache/").join(loc);
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).map_err(|e| sherlock_error!(
-                SherlockErrorType::DirCreateError(
-                    "~/.cache/sherlock/mpris-cache/".to_string(),
-                ),
-                e.to_string()
-            ))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::DirError(DirAction::Create, parent.to_path_buf(),),
+                    e.to_string()
+                )
+            })?;
         };
 
         let mut file = if path.exists() {
@@ -146,76 +146,83 @@ impl MprisData {
             File::create(&path)
         }
         .map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileExistError(path.clone()),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Find, path.clone()),
+                e
             )
         })?;
 
         file.write_all(&image).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileExistError(path.clone()),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Find, path.clone()),
+                e
             )
         })?;
         // if file not exist, create and write it
         Ok(())
     }
-    fn read_cached_cover(loc: &str) -> Result<Vec<u8>, SherlockError> {
-        let home = env::var("HOME").map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::EnvVarNotFoundError("HOME".to_string()),
-                e.to_string()
-            )
-        })?;
+    fn read_cached_cover(loc: &str) -> Result<Vec<u8>, SherlockMessage> {
+        let home = env::var("HOME")
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::EnvError("$HOME".into()), e))?;
         let home_dir = PathBuf::from(home);
         let path = home_dir.join(".cache/sherlock/mpris-cache/").join(loc);
 
         let mut file = File::open(&path).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileExistError(path.clone()),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Find, path.clone()),
+                e
             )
         })?;
         let mut buffer = vec![];
         file.read_to_end(&mut buffer).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileReadError(path.clone()),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Read, path.clone()),
+                e
             )
         })?;
         Ok(buffer)
     }
-    fn read_image_file(loc: &str) -> Result<Vec<u8>, SherlockError> {
+    fn read_image_file(loc: &str) -> Result<Vec<u8>, SherlockMessage> {
         let path = PathBuf::from(loc.trim_start_matches("file://"));
 
         let mut file = File::open(&path).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileExistError(path.clone()),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Find, path.clone()),
+                e
             )
         })?;
         let mut buffer = vec![];
         file.read_to_end(&mut buffer).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::FileReadError(path.clone()),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::FileError(FileAction::Read, path.clone()),
+                e
             )
         })?;
         Ok(buffer)
     }
-    pub fn playpause(player: &str) -> Result<(), SherlockError> {
+    pub fn playpause(player: &str) -> Result<(), SherlockMessage> {
         Self::player_method(player, "PlayPause")
     }
-    pub fn next(player: &str) -> Result<(), SherlockError> {
+    pub fn next(player: &str) -> Result<(), SherlockMessage> {
         Self::player_method(player, "Next")
     }
-    pub fn previous(player: &str) -> Result<(), SherlockError> {
+    pub fn previous(player: &str) -> Result<(), SherlockMessage> {
         Self::player_method(player, "Previous")
     }
-    fn player_method(player: &str, method: &str) -> Result<(), SherlockError> {
-        let conn = Connection::session()
-            .map_err(|e| sherlock_error!(SherlockErrorType::DBusConnectionError, e.to_string()))?;
+    fn player_method(player: &str, method: &str) -> Result<(), SherlockMessage> {
+        let conn = Connection::session().map_err(|e| {
+            sherlock_msg!(
+                Error,
+                SherlockErrorType::DBusError(DBusAction::Connect, "Session Bus".into()),
+                e
+            )
+        })?;
         let proxy = Proxy::new(
             &conn,
             player,
@@ -223,15 +230,17 @@ impl MprisData {
             "org.mpris.MediaPlayer2.Player",
         )
         .map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::DBusMessageConstructError(format!("PlayPause for {}", player)),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::DBusError(DBusAction::Construct, player.to_string()),
+                e
             )
         })?;
         proxy.call_method(method, &()).map_err(|e| {
-            sherlock_error!(
-                SherlockErrorType::DBusMessageSendError(format!("PlayPause to {}", player)),
-                e.to_string()
+            sherlock_msg!(
+                Warning,
+                SherlockErrorType::DBusError(DBusAction::Call, method.to_string()),
+                e
             )
         })?;
         Ok(())

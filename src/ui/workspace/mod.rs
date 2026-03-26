@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::{
     ui::{error::view::ErrorView, launcher::LauncherView},
-    utils::errors::SherlockError,
+    utils::errors::SherlockMessage,
 };
 
 pub struct SherlockWorkspace {
@@ -145,7 +145,7 @@ fn ease_in_out(t: f32) -> f32 {
 }
 
 pub enum LauncherErrorEvent {
-    Push(SherlockError),
+    Push(SherlockMessage),
     ShowErrors,
 }
 impl gpui::EventEmitter<LauncherErrorEvent> for LauncherView {}
