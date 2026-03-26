@@ -21,22 +21,12 @@ impl ErrorView {
         self.messages.len()
     }
 
-    pub fn push_error(&mut self, error: SherlockMessage, cx: &mut Context<Self>) {
+    pub fn push_message(&mut self, error: SherlockMessage, cx: &mut Context<Self>) {
         self.messages.push(error);
         cx.notify();
     }
 
-    pub fn remove_error(&mut self, idx: usize, cx: &mut Context<Self>) {
-        if idx < self.messages.len() {
-            self.messages.remove(idx);
-        }
-        if self.messages.is_empty() && self.messages.is_empty() {
-            cx.emit(DismissErrorEvent);
-        }
-        cx.notify();
-    }
-
-    pub fn remove_warning(&mut self, idx: usize, cx: &mut Context<Self>) {
+    pub fn remove_message(&mut self, idx: usize, cx: &mut Context<Self>) {
         if idx < self.messages.len() {
             self.messages.remove(idx);
         }
@@ -73,7 +63,7 @@ impl Render for ErrorView {
                             let weak_self = cx.entity().downgrade();
                             ErrorBox::new(e).on_dismiss(move |cx: &mut App| {
                                 if let Some(view) = weak_self.upgrade() {
-                                    view.update(cx, |this, cx| this.remove_error(idx, cx));
+                                    view.update(cx, |this, cx| this.remove_message(idx, cx));
                                 }
                             })
                         }))

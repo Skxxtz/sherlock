@@ -62,6 +62,20 @@ pub struct SherlockMessage {
     pub traceback: SharedString,
 }
 
+impl std::error::Error for SherlockMessage {}
+
+impl Display for SherlockMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{:?}] {} | {}",
+            self.level,
+            self.error_type.as_ref(),
+            self.error_type
+        )
+    }
+}
+
 impl SherlockMessage {
     pub fn new<T: Display>(
         level: SherlockMessageLevel,

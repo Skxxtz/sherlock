@@ -1,5 +1,6 @@
 use gpui::{
-    InteractiveElement, IntoElement, MouseButton, ParentElement, Styled, div, hsla, px, rgb,
+    FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled, div, hsla, px,
+    rgb,
 };
 
 use crate::utils::errors::{SherlockMessage, SherlockMessageLevel};
@@ -85,10 +86,33 @@ impl IntoElement for ErrorBox {
             .relative()
             .child(
                 div()
-                    .child(self.message.error_type.to_string())
-                    .child(self.message.traceback),
+                    .child(
+                        div()
+                            .flex()
+                            .justify_between()
+                            .items_center()
+                            .child(
+                                // Main Error Title
+                                div()
+                                    .text_size(px(13.))
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(text)
+                                    .child(self.message.error_type.to_string()),
+                            )
+                            .children(dismiss_btn),
+                    )
+                    .child(
+                        // Traceback / Content
+                        div()
+                            .mt_1()
+                            .text_size(px(11.))
+                            .line_height(px(16.))
+                            .font_family("monospace")
+                            .text_color(text)
+                            .opacity(0.8) // Makes it look less "busy"
+                            .child(self.message.traceback.clone()),
+                    ),
             )
-            .children(dismiss_btn)
             .into_any_element()
     }
 }

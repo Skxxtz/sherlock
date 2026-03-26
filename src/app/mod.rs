@@ -180,11 +180,11 @@ fn spawn_launcher(
                     move |this: &mut SherlockWorkspace, _, ev: &LauncherErrorEvent, cx| {
                         match ev {
                             LauncherErrorEvent::Push(e) => {
-                                error_handle.update(cx, |view, cx| {
-                                    view.push_error(e.clone(), cx);
-                                });
                                 // note: updating the launcher view is done in the
                                 // `error_count_sub`
+                                error_handle.update(cx, |view, cx| {
+                                    view.push_message(e.clone(), cx);
+                                });
                             }
                             LauncherErrorEvent::ShowErrors => {
                                 this.transition_to(WorkspaceView::Error, 100, cx);
