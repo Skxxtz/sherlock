@@ -13,10 +13,8 @@ pub mod variant_type;
 pub mod weather_launcher;
 pub mod web_launcher;
 // Integrate later: TODO
-// pub mod clipboard_launcher;
 // pub mod bulk_text_launcher;
 // pub mod pipe_launcher;
-// pub mod emoji_picker;
 // pub mod file_launcher;
 // pub mod pomodoro_launcher;
 // pub mod process_launcher;
@@ -47,8 +45,6 @@ use std::{path::Path, sync::Arc};
 
 // Integrate later: TODO
 // use bulk_text_launcher::BulkTextLauncher;
-// use clipboard_launcher::ClipboardLauncher;
-// use emoji_picker::EmojiPicker;
 // use file_launcher::FileLauncher;
 // use pomodoro_launcher::Pomodoro;
 // use process_launcher::ProcessLauncher;
