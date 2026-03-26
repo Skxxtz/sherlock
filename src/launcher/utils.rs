@@ -5,6 +5,7 @@ use zbus::zvariant::{DeserializeDict, Type};
 
 #[derive(Clone, Default)]
 pub struct MprisState {
+    pub player: Option<String>,
     pub raw: Option<MprisData>,
     pub image: Option<Arc<Image>>,
 }

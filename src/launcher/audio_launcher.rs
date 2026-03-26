@@ -1,30 +1,53 @@
 use bytes::Bytes;
 use gpui::{Image, ImageFormat};
 use serde_json::Value;
+use simd_json::prelude::ArrayTrait;
 use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use zbus::blocking::{Connection, Proxy};
 
 use crate::launcher::children::RenderableChild;
 use crate::launcher::utils::MprisState;
-use crate::sherlock_error;
+use crate::launcher::variant_type::InnerFunction;
 use crate::utils::config::ConfigGuard;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
+use crate::{ensure_func, sherlock_error};
 
 use super::utils::MprisData;
 
-use crate::launcher::{LauncherProvider, LauncherType};
+use crate::launcher::{Bind, LauncherProvider, LauncherType};
 use crate::loader::utils::RawLauncher;
 
 #[derive(Debug, Clone, Default)]
-pub struct MusicPlayerLauncher {}
+pub struct MusicPlayerLauncher {
+    binds: Option<Arc<Vec<Bind>>>,
+}
+
+#[derive(Debug, Clone, Copy, strum::VariantNames, strum::EnumString)]
+#[strum(serialize_all = "snake_case")]
+pub enum MusicPlayerFunctions {
+    TogglePlayback,
+    Previous,
+    Next,
+}
 
 impl LauncherProvider for MusicPlayerLauncher {
-    fn parse(_raw: &RawLauncher) -> LauncherType {
-        LauncherType::MusicPlayer(MusicPlayerLauncher {})
+    fn parse(raw: &RawLauncher) -> LauncherType {
+        let binds = raw.binds.as_ref().map(|vec| {
+            Arc::new(
+                vec.iter()
+                    .filter_map(|b| {
+                        let func = MusicPlayerFunctions::from_str(&b.callback).ok()?;
+                        b.get_bind(InnerFunction::MusicPlayer(func))
+                    })
+                    .collect(),
+            )
+        });
+        LauncherType::MusicPlayer(MusicPlayerLauncher { binds })
     }
     fn objects(
         &self,
@@ -32,11 +55,37 @@ impl LauncherProvider for MusicPlayerLauncher {
         _: &crate::loader::LoadContext,
         _opts: Arc<Value>,
     ) -> Result<Vec<super::children::RenderableChild>, SherlockError> {
-        let inner = MprisState {
-            raw: None,
-            image: None,
-        };
+        let inner = MprisState::default();
         Ok(vec![RenderableChild::MusicLike { launcher, inner }])
+    }
+    fn binds(&self) -> Option<Arc<Vec<Bind>>> {
+        self.binds.clone()
+    }
+    fn execute_function(
+        &self,
+        func: InnerFunction,
+        child: &RenderableChild,
+    ) -> Result<bool, SherlockError> {
+        let func = ensure_func!(func, InnerFunction::MusicPlayer);
+
+        let RenderableChild::MusicLike { inner, .. } = child else {
+            return Err(sherlock_error!(
+                SherlockErrorType::Unreachable,
+                format!("Tried to unpack music tile but received: {:?}", child)
+            ));
+        };
+
+        let Some(player) = &inner.player else {
+            return Ok(false);
+        };
+
+        match func {
+            MusicPlayerFunctions::Next => MprisData::next(player)?,
+            MusicPlayerFunctions::Previous => MprisData::previous(player)?,
+            MusicPlayerFunctions::TogglePlayback => MprisData::playpause(player)?,
+        }
+
+        Ok(true)
     }
 }
 

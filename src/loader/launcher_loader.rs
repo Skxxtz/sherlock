@@ -147,29 +147,46 @@ impl Loader {
     }
 }
 
+/// Incrementally parses launchers from the `fallback.json` file.
+///
+/// Each launcher is deserialized individually. If an entry is invalid—for instance,
+/// due to an unknown `LauncherVariant`—a warning is appended to the
+/// returned list and the specific launcher is skipped, allowing the rest
+/// of the configuration to load.
+///
+/// # Returns
+/// A tuple containing the successfully parsed `Vec<RawLauncher>` and
+/// a `Vec<SherlockError>` containing any collected warnings.
 fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockError>) {
     let mut warnings = Vec::new();
-    let config = File::open(&path)
-        .map_err(|e| {
-            if e.kind() != std::io::ErrorKind::NotFound {
+    let mut launchers = Vec::new();
+
+    let Ok(mut file) = File::open(path) else {
+        return (launchers, warnings);
+    };
+
+    let raw_values: Vec<serde_json::Value> = match simd_json::from_reader(&mut file) {
+        Ok(v) => v,
+        Err(e) => {
+            warnings.push(sherlock_error!(
+                SherlockErrorType::FileParseError(path.clone()),
+                e.to_string()
+            ));
+            return (launchers, warnings);
+        }
+    };
+
+    for value in raw_values.into_iter() {
+        match serde_json::from_value::<RawLauncher>(value) {
+            Ok(launcher) => launchers.push(launcher),
+            Err(e) => {
                 warnings.push(sherlock_error!(
-                    SherlockErrorType::FileReadError(path.clone()),
+                    SherlockErrorType::FallbackError,
                     e.to_string()
                 ));
             }
-        })
-        .ok()
-        .and_then(|f| {
-            simd_json::from_reader(f)
-                .map_err(|e| {
-                    warnings.push(sherlock_error!(
-                        SherlockErrorType::FileParseError(path.clone()),
-                        e.to_string()
-                    ));
-                })
-                .ok()
-        })
-        .unwrap_or_default();
+        }
+    }
 
-    (config, warnings)
+    (launchers, warnings)
 }

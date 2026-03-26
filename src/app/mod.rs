@@ -1,6 +1,9 @@
 use futures::{StreamExt, stream::FuturesUnordered};
 use gpui::{
-    App, AppContext, AsyncApp, Bounds, Entity, Focusable, ScrollHandle, Size, WindowBackgroundAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions, layer_shell::{Layer, LayerShellOptions}, point, px
+    App, AppContext, AsyncApp, Bounds, Entity, Focusable, ScrollHandle, Size,
+    WindowBackgroundAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions,
+    layer_shell::{Layer, LayerShellOptions},
+    point, px,
 };
 use std::sync::Arc;
 use tokio::net::UnixListener;
@@ -172,6 +175,7 @@ fn spawn_launcher(
                         warnings: initial_warnings.len(),
                     },
                     config_initialized: ConfigGuard::is_initialized(),
+                    active_update_task: None,
                 };
                 view.filter_and_sort(cx);
                 view

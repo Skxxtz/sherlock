@@ -47,6 +47,16 @@ macro_rules! renderable_enum {
             ),*
         }
 
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $(
+                        Self::$variant { .. } => write!(f, "{}", stringify!($variant)),
+                    )*
+                }
+            }
+        }
+
         impl<'a> RenderableChildDelegate<'a> for $name {
             fn render(&self, is_selected: bool) -> AnyElement {
                 match self {
@@ -156,11 +166,9 @@ impl RenderableChild {
                 inner.update_async();
             }
             Self::MusicLike { inner, .. } => {
-                let new_inner = AudioLauncherFunctions::new().and_then(|launcher| {
-                    launcher
-                        .get_current_player()
-                        .and_then(|player| launcher.get_metadata(&player))
-                });
+                let launcher = AudioLauncherFunctions::new()?;
+                inner.player = launcher.get_current_player();
+                let new_inner = launcher.get_metadata(inner.player.as_ref()?);
 
                 // early return if nothing has changed
                 if new_inner.as_ref().and_then(|i| i.metadata.title.as_ref())

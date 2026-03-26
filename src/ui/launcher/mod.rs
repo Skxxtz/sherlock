@@ -4,9 +4,9 @@ use crate::ui::error::view::ErrorCount;
 use crate::ui::launcher::context_menu::ContextMenuAction;
 use crate::ui::launcher::views::NavigationStack;
 use crate::utils::config::HomeType;
-use gpui::AsyncApp;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
+use gpui::{AsyncApp, Task};
 use std::sync::{Arc, LazyLock};
 
 use crate::ui::search_bar::TextInput;
@@ -44,6 +44,8 @@ pub struct LauncherView {
     // State
     pub error_count: ErrorCount,
     pub config_initialized: bool,
+
+    pub active_update_task: Option<Task<()>>,
 }
 
 impl Focusable for LauncherView {

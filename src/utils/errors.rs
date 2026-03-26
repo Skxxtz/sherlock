@@ -39,6 +39,7 @@ impl SherlockError {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SherlockErrorType {
+    Unreachable,
     // Debug
     DebugError(String),
     // Environment
@@ -111,9 +112,12 @@ pub enum SherlockErrorType {
 
     // Actions
     InvalidAction,
+    InvalidFunction,
 
     // Abort
     Abort(String),
+
+    BorrowCongestion,
 
     None,
 }
@@ -142,6 +146,7 @@ impl SherlockErrorType {
             format!("Failed to {} socket at location \"{}\"", action, socket)
         }
         let message = match self {
+            SherlockErrorType::Unreachable => "It should never come to this".to_string(),
             // Debug
             SherlockErrorType::DebugError(msg) => msg.to_string(),
             // Environment
@@ -246,6 +251,13 @@ impl SherlockErrorType {
             // Actions
             SherlockErrorType::InvalidAction => {
                 format!(r#"Invalid Action Defined"#)
+            }
+            SherlockErrorType::InvalidFunction => {
+                format!(r#"The function is inavailable for this launcher"#)
+            }
+
+            SherlockErrorType::BorrowCongestion => {
+                "Tried borrowing a value that is currently used.".to_string()
             }
 
             // Abort

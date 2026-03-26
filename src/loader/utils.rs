@@ -13,7 +13,7 @@ use std::{
 
 use crate::{
     launcher::{
-        Launcher,
+        BindSerde, Launcher,
         variant_type::{LauncherType, LauncherVariant},
     },
     loader::resolve_icon_path,
@@ -266,6 +266,8 @@ pub struct RawLauncher {
     pub r#async: bool,
     #[serde(default)]
     pub home: HomeType,
+    #[serde(default)]
+    pub binds: Option<Vec<BindSerde>>,
     #[serde(default)]
     pub args: Arc<serde_json::Value>,
     #[serde(default)]

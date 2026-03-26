@@ -6,7 +6,7 @@ use gpui::{
 
 use crate::{
     CONTEXT_MENU_BIND,
-    launcher::children::{RenderableChild, RenderableChildDelegate},
+    launcher::children::{LauncherValues, RenderableChild, RenderableChildDelegate},
     ui::{
         UIFunction,
         launcher::{LauncherView, context_menu::ContextMenuAction, views::EntityStyle},
@@ -17,6 +17,10 @@ use crate::{
 
 impl Render for LauncherView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let selected_binds = self
+            .navigation
+            .selected_item(cx)
+            .and_then(|i| i.launcher_type().binds());
         div()
             .track_focus(&self.focus_handle(cx))
             .flex()
@@ -28,9 +32,16 @@ impl Render for LauncherView {
             .on_action(cx.listener(Self::selection_right))
             .on_action(cx.listener(Self::next_var))
             .on_action(cx.listener(Self::prev_var))
-            .on_action(cx.listener(Self::execute))
+            .on_action(cx.listener(Self::execute_listener))
             .on_action(cx.listener(Self::quit))
             .on_action(cx.listener(Self::open_context))
+            .on_key_up(cx.listener(move |this, ev: &gpui::KeyUpEvent, win, cx| {
+                if let Some(binds) = &selected_binds {
+                    if let Some(pressed) = binds.iter().find(|bind| bind.matches(&ev.keystroke)) {
+                        this.execute_inner_function(pressed.get_exec(), win, cx);
+                    }
+                }
+            }))
             .child(self.render_search_bar())
             .when(!self.config_initialized, |this| {
                 this.child(self.render_config_banner())

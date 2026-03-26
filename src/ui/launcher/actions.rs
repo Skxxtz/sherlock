@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
-use gpui::{AppContext, ClipboardItem, Context, Focusable, SharedString, Window, actions};
+use futures::{StreamExt, stream::FuturesUnordered};
+use gpui::{
+    AppContext, AsyncApp, ClipboardItem, Context, Focusable, SharedString, Window, actions,
+};
 use simd_json::prelude::Indexed;
 use smallvec::SmallVec;
 
@@ -225,6 +228,13 @@ impl LauncherView {
         cx: &mut Context<Self>,
     ) -> Result<bool, SherlockError> {
         match what {
+            ExecMode::Inner { func, exit } => {
+                if let Some(item) = self.navigation.selected_item(cx) {
+                    let _was_executed = item.launcher_type().execute_function(func, &item)?;
+                    self.update_async(cx);
+                    return Ok(exit);
+                }
+            }
             ExecMode::App { exec, terminal } => {
                 let cmd = if terminal {
                     format!(r#"{{terminal}} {exec}"#)
@@ -276,7 +286,12 @@ impl LauncherView {
 
         Ok(true)
     }
-    pub(super) fn execute(&mut self, _: &Execute, win: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn execute_listener(
+        &mut self,
+        _: &Execute,
+        win: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if let Some(idx) = self.context_idx {
             if let Some(action) = self.context_actions.get(idx) {
                 if let Some(selected) = self.navigation.selected_item(cx) {
@@ -328,6 +343,25 @@ impl LauncherView {
                 }
             }
         }
+    }
+    pub(super) fn execute_inner_function(
+        &mut self,
+        what: ExecMode,
+        win: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        match self.execute_helper(what, "", &[], cx) {
+            Ok(exit) if exit => {
+                self.close_window(win, cx);
+                return;
+            }
+            Err(e) => {
+                cx.emit(LauncherErrorEvent::Push(e));
+                return;
+            }
+            _ => {}
+        }
+        cx.notify();
     }
     pub(super) fn open_context(
         &mut self,
@@ -399,6 +433,29 @@ impl LauncherView {
         } else {
             self.variable_input.clear();
         }
+    }
+    pub(self) fn update_async(&mut self, cx: &mut Context<Self>) {
+        let data = self.navigation.with_model(cx, |mdl| mdl.data.clone());
+        self.active_update_task = Some(cx.spawn(async move |this, cx: &mut AsyncApp| {
+            let items = data.read_with(cx, |this, _| this.clone());
+
+            let mut futures: FuturesUnordered<_> = items
+                .iter()
+                .enumerate()
+                .filter(|(_, item)| item.is_async())
+                .map(|(idx, item)| async move { (idx, item.clone().update_async().await) })
+                .collect();
+
+            while let Some((idx, result)) = futures.next().await {
+                let Some(update) = result else { continue };
+                let _ = cx.update(|cx| {
+                    data.update(cx, |items_arc, _| {
+                        Arc::make_mut(items_arc)[idx] = update;
+                    });
+                    cx.notify(this.entity_id());
+                });
+            }
+        }));
     }
 }
 

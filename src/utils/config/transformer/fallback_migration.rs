@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
-    launcher::variant_type::LauncherVariant,
+    launcher::{BindSerde, variant_type::LauncherVariant},
     loader::utils::{ApplicationAction, ExecVariable, RawLauncher},
     utils::config::HomeType,
 };
@@ -43,7 +43,7 @@ pub struct LegacyRawLauncher {
     #[serde(default)]
     pub args: Value,
     #[serde(default)]
-    pub binds: Option<Vec<Value>>,
+    pub binds: Option<Vec<BindSerde>>,
     #[serde(default)]
     pub actions: Option<Vec<ApplicationAction>>,
     #[serde(default)]
@@ -194,6 +194,7 @@ impl LegacyRawLauncher {
             spawn_focus: self.spawn_focus,
             r#async: self.r#async,
             home: self.home,
+            binds: self.binds,
             args: Arc::new(self.args),
             actions: self.actions,
             add_actions: self.add_actions,

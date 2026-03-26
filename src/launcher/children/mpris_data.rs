@@ -3,7 +3,10 @@ use std::sync::Arc;
 use gpui::{AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, div, img, px, rgb};
 
 use crate::{
-    launcher::{ExecMode, Launcher, children::RenderableChildImpl, utils::MprisState},
+    launcher::{
+        ExecMode, Launcher, audio_launcher::MusicPlayerFunctions, children::RenderableChildImpl,
+        utils::MprisState, variant_type::InnerFunction,
+    },
     ui::launcher::context_menu::ContextMenuAction,
 };
 
@@ -57,8 +60,11 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
             )
             .into_any_element()
     }
-    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
-        None
+    fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode> {
+        Some(ExecMode::Inner {
+            func: InnerFunction::MusicPlayer(MusicPlayerFunctions::TogglePlayback),
+            exit: launcher.exit,
+        })
     }
     fn priority(&self, launcher: &Arc<Launcher>) -> f32 {
         launcher.priority as f32

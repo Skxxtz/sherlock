@@ -1,21 +1,31 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
 use crate::{
     launcher::{
-        LauncherProvider, app_launcher::AppLauncher, audio_launcher::MusicPlayerLauncher,
-        bookmark_launcher::BookmarkLauncher, calc_launcher::CalculatorLauncher,
-        category_launcher::CategoryLauncher, clipboard_launcher::ClipboardLauncher,
-        emoji_launcher::EmojiPicker, system_cmd_launcher::CommandLauncher,
-        weather_launcher::WeatherLauncher, web_launcher::WebLauncher,
+        Bind, LauncherProvider,
+        app_launcher::AppLauncher,
+        audio_launcher::{MusicPlayerFunctions, MusicPlayerLauncher},
+        bookmark_launcher::BookmarkLauncher,
+        calc_launcher::CalculatorLauncher,
+        category_launcher::CategoryLauncher,
+        children::RenderableChild,
+        clipboard_launcher::ClipboardLauncher,
+        emoji_launcher::EmojiPicker,
+        system_cmd_launcher::CommandLauncher,
+        weather_launcher::WeatherLauncher,
+        web_launcher::WebLauncher,
     },
     loader::utils::RawLauncher,
+    utils::errors::SherlockError,
 };
 
 macro_rules! create_variants {
     (
         enum $name:ident {
-            $($variant:ident($inner:ty)),* $(,)?
+            $( $variant:ident( $inner:ty $(, $extra:ty)* ) ),* $(,)?
         }
     ) => {
         #[derive(Clone, Debug, Default)]
@@ -34,6 +44,15 @@ macro_rules! create_variants {
             Empty,
         }
 
+        #[derive(Clone, Copy, Debug)]
+        pub enum InnerFunction {
+            $(
+                $( $variant($extra), )?
+            )*
+            #[allow(dead_code)]
+            __Placeholder
+        }
+
         impl $name {
             pub fn get_render_obj(
                 &self,
@@ -46,6 +65,22 @@ macro_rules! create_variants {
                         Self::$variant(inner) => <$inner as LauncherProvider>::objects(inner, launcher, ctx, opts),
                     )*
                     Self::Empty => Ok(vec![]),
+                }
+            }
+            pub fn binds(&self) -> Option<Arc<Vec<Bind>>> {
+                match self {
+                    $(
+                        Self::$variant(inner) => <$inner as LauncherProvider>::binds(inner),
+                    )*
+                    Self::Empty => None
+                }
+            }
+            pub fn execute_function(&self, func: InnerFunction, child: &RenderableChild) -> Result<bool, SherlockError> {
+                match self {
+                    $(
+                        Self::$variant(inner) => <$inner as LauncherProvider>::execute_function(inner, func, child),
+                    )*
+                    Self::Empty => unimplemented!(),
                 }
             }
         }
@@ -71,7 +106,7 @@ create_variants! {
         Categories(CategoryLauncher),
         Clipboard(ClipboardLauncher),
         Commands(CommandLauncher),
-        MusicPlayer(MusicPlayerLauncher),
+        MusicPlayer(MusicPlayerLauncher, MusicPlayerFunctions),
         Weather(WeatherLauncher),
         Web(WebLauncher),
         Emoji(EmojiPicker),
@@ -84,4 +119,18 @@ create_variants! {
         // Process(ProcessLauncher),
         // Theme(ThemePicker),
     }
+}
+
+#[macro_export]
+macro_rules! ensure_func {
+    ($val:expr, $variant:path) => {
+        if let $variant(inner) = $val {
+            inner
+        } else {
+            return Err(sherlock_error!(
+                SherlockErrorType::InvalidFunction,
+                format!("Invalid function {:?} for this launcher", $val)
+            ));
+        }
+    };
 }

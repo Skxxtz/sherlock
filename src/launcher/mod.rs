@@ -28,16 +28,21 @@ use crate::{
             RenderableChild,
             emoji_data::{apply_skin_tones, get_selected_skin_tones},
         },
-        variant_type::LauncherType,
+        variant_type::{InnerFunction, LauncherType},
     },
     loader::{
         LoadContext, resolve_icon_path,
         utils::{AppData, ApplicationAction, RawLauncher},
     },
+    sherlock_error,
     ui::launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
-    utils::{config::HomeType, errors::SherlockError},
+    utils::{
+        config::HomeType,
+        errors::{SherlockError, SherlockErrorType},
+    },
 };
-use gpui::SharedString;
+use gpui::{Keystroke, SharedString};
+use serde::{Deserialize, Serialize};
 use std::{path::Path, sync::Arc};
 
 // Integrate later: TODO
@@ -57,6 +62,54 @@ pub trait LauncherProvider {
         ctx: &LoadContext,
         opts: Arc<serde_json::Value>,
     ) -> Result<Vec<RenderableChild>, SherlockError>;
+    fn binds(&self) -> Option<Arc<Vec<Bind>>> {
+        None
+    }
+    fn execute_function(
+        &self,
+        func: InnerFunction,
+        _child: &RenderableChild,
+    ) -> Result<bool, SherlockError> {
+        Err(sherlock_error!(
+            SherlockErrorType::InvalidFunction,
+            format!("{} does not provide function: {:?}", stringify!(self), func)
+        ))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Bind {
+    pub exit: bool,
+    bind: Keystroke,
+    callback: InnerFunction,
+}
+impl Bind {
+    pub fn matches(&self, stroke: &Keystroke) -> bool {
+        &self.bind == stroke
+    }
+    pub fn get_exec(&self) -> ExecMode {
+        ExecMode::Inner {
+            func: self.callback,
+            exit: self.exit,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BindSerde {
+    bind: String,
+    callback: String,
+    exit: bool,
+}
+
+impl BindSerde {
+    pub fn get_bind(&self, func: InnerFunction) -> Option<Bind> {
+        Some(Bind {
+            bind: Keystroke::parse(&self.bind).ok()?,
+            callback: func,
+            exit: self.exit,
+        })
+    }
 }
 
 // // Async tiles
@@ -125,6 +178,10 @@ impl Launcher {
 }
 
 pub enum ExecMode {
+    Inner {
+        func: InnerFunction,
+        exit: bool,
+    },
     App {
         exec: String,
         terminal: bool,
