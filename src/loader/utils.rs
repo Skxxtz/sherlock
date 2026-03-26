@@ -14,11 +14,7 @@ use strum::Display;
 
 use crate::{
     launcher::{
-        Launcher, LauncherProvider, LauncherType, app_launcher::AppLauncher,
-        audio_launcher::MusicPlayerLauncher, bookmark_launcher::BookmarkLauncher,
-        category_launcher::CategoryLauncher, clipboard_launcher::ClipboardLauncher,
-        emoji_launcher::EmojiPicker, system_cmd_launcher::CommandLauncher,
-        weather_launcher::WeatherLauncher, web_launcher::WebLauncher,
+        Launcher, LauncherProvider, LauncherType, app_launcher::AppLauncher, audio_launcher::MusicPlayerLauncher, bookmark_launcher::BookmarkLauncher, category_launcher::CategoryLauncher, clipboard_launcher::ClipboardLauncher, emoji_launcher::EmojiPicker, system_cmd_launcher::CommandLauncher, weather_launcher::WeatherLauncher, web_launcher::WebLauncher
     },
     loader::resolve_icon_path,
     sherlock_error,
@@ -286,6 +282,7 @@ impl LauncherVariant {
             Self::Clipboard => ClipboardLauncher::parse(raw),
             Self::Command => CommandLauncher::parse(raw),
             Self::Debug => CommandLauncher::parse(raw),
+            Self::Emoji => EmojiPicker::parse(raw),
             Self::Weather => WeatherLauncher::parse(raw),
             Self::WebLauncher => WebLauncher::parse(raw),
             Self::None => LauncherType::Empty,

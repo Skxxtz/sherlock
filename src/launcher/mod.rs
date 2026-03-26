@@ -108,6 +108,7 @@ impl LauncherType {
             Self::Category(cat) => cat.objects(launcher, ctx, opts),
             Self::Clipboard(clip) => clip.objects(launcher, ctx, opts),
             Self::Command(cmd) => cmd.objects(launcher, ctx, opts),
+            Self::Emoji(emj) => emj.objects(launcher, ctx, opts),
             Self::MusicPlayer(mus) => mus.objects(launcher, ctx, opts),
             Self::Weather(wttr) => wttr.objects(launcher, ctx, opts),
             Self::Web(web) => web.objects(launcher, ctx, opts),

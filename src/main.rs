@@ -8,10 +8,7 @@ use std::{
 use crate::{
     app::run_app,
     loader::{CustomIconTheme, Loader, assets::Assets},
-    utils::{
-        clipboard::spawn_clipboard_watcher,
-        config::{SherlockConfig, migrate_file},
-    },
+    utils::{clipboard::spawn_clipboard_watcher, config::SherlockConfig},
 };
 
 mod app;

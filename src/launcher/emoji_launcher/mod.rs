@@ -1,9 +1,18 @@
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
+use gpui::SharedString;
 use serde::{Deserialize, Serialize};
 use strum::FromRepr;
 
-use crate::launcher::{LauncherProvider, emoji_launcher::data::EmojiEntry};
+use crate::{
+    launcher::{
+        Launcher, LauncherProvider, LauncherType,
+        children::{RenderableChild, emoji_data::set_selected_skin_tone},
+        emoji_launcher::data::EmojiEntry,
+    },
+    loader::{resolve_icon_path, utils::AppData},
+    utils::errors::SherlockError,
+};
 
 pub mod data;
 
@@ -18,6 +27,34 @@ pub static ALL_SKIN_TONES: [SkinTone; 6] = [
 
 #[derive(Clone, Debug, Default)]
 pub struct EmojiPicker {}
+
+impl LauncherProvider for EmojiPicker {
+    fn parse(_raw: &crate::loader::utils::RawLauncher) -> super::LauncherType {
+        LauncherType::Emoji(Self {})
+    }
+
+    fn objects(
+        &self,
+        launcher: Arc<Launcher>,
+        _ctx: &crate::loader::LoadContext,
+        opts: std::sync::Arc<serde_json::Value>,
+    ) -> Result<Vec<RenderableChild>, SherlockError> {
+        let mut inner = AppData::new();
+        inner.name = launcher.name.as_ref().map(SharedString::from);
+        inner.search_string = "emoji".into();
+        inner.icon = resolve_icon_path("sherlock-emoji");
+
+        let default_skin_tone: SkinTone = opts
+            .get("default_skin_tone")
+            .and_then(|s| serde_json::from_value(s.clone()).ok())
+            .unwrap_or(SkinTone::Simpsons);
+        set_selected_skin_tone(default_skin_tone, 0);
+
+        let child = RenderableChild::AppLike { launcher, inner };
+
+        Ok(vec![child])
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct EmojiData {
