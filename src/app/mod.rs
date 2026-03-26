@@ -204,14 +204,14 @@ fn spawn_launcher(
                                 // `error_count_sub`
                             }
                             LauncherErrorEvent::ShowErrors => {
-                                this.transition_to(WorkspaceView::Error, 300, cx);
+                                this.transition_to(WorkspaceView::Error, 100, cx);
                             }
                         }
                         cx.notify();
                     },
                 );
                 let error_sub = cx.subscribe(&error, move |this, _, _: &DismissErrorEvent, cx| {
-                    this.transition_to(WorkspaceView::Launcher, 300, cx);
+                    this.transition_to(WorkspaceView::Launcher, 75, cx);
                 });
                 let error_count_sub = cx.observe(&error, move |workspace, this, cx| {
                     let error_count = this.read(cx).counts();
