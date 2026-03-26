@@ -1,9 +1,6 @@
 use futures::{StreamExt, stream::FuturesUnordered};
 use gpui::{
-    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Size, WindowBackgroundAppearance,
-    WindowBounds, WindowHandle, WindowKind, WindowOptions,
-    layer_shell::{Layer, LayerShellOptions},
-    point, px,
+    App, AppContext, AsyncApp, Bounds, Entity, Focusable, ScrollHandle, Size, WindowBackgroundAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions, layer_shell::{Layer, LayerShellOptions}, point, px
 };
 use std::sync::Arc;
 use tokio::net::UnixListener;
@@ -185,6 +182,7 @@ fn spawn_launcher(
                 errors: initial_errors,
                 warnings: initial_warnings,
                 focus_handle: cx.focus_handle(),
+                scroll_handle: ScrollHandle::new(),
             });
 
             // Build workspace, wire up error subscription

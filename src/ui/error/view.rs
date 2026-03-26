@@ -4,7 +4,7 @@ use crate::{
 };
 use gpui::{
     App, Context, FocusHandle, Focusable, InteractiveElement, IntoElement, ParentElement, Render,
-    Styled, Window, div, prelude::FluentBuilder,
+    ScrollHandle, StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder,
 };
 
 pub struct DismissErrorEvent;
@@ -24,6 +24,7 @@ pub struct ErrorView {
     pub errors: Vec<SherlockError>,
     pub warnings: Vec<SherlockError>,
     pub focus_handle: FocusHandle,
+    pub scroll_handle: ScrollHandle,
 }
 
 impl ErrorView {
@@ -69,30 +70,39 @@ impl Render for ErrorView {
             }))
             .flex()
             .flex_col()
-            .gap_4()
             .size_full()
-            .p_6()
-            .when(!self.errors.is_empty(), |this| {
-                this.children(self.errors.iter().enumerate().map(|(idx, e)| {
-                    let weak_self = cx.entity().downgrade();
-                    ErrorBox::new(e.to_string()).on_dismiss(move |cx: &mut App| {
-                        if let Some(view) = weak_self.upgrade() {
-                            view.update(cx, |this, cx| this.remove_error(idx, cx));
-                        }
+            .child(
+                div()
+                    .id("scroll-container")
+                    .flex_1()
+                    .size_full()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.scroll_handle)
+                    .p_6()
+                    .flex()
+                    .flex_col()
+                    .gap_4()
+                    .when(!self.errors.is_empty(), |this| {
+                        this.children(self.errors.iter().enumerate().map(|(idx, e)| {
+                            let weak_self = cx.entity().downgrade();
+                            ErrorBox::new(e.to_string()).on_dismiss(move |cx: &mut App| {
+                                if let Some(view) = weak_self.upgrade() {
+                                    view.update(cx, |this, cx| this.remove_error(idx, cx));
+                                }
+                            })
+                        }))
                     })
-                }))
-            })
-            .when(!self.warnings.is_empty(), |this| {
-                this.children(self.warnings.iter().enumerate().map(|(idx, e)| {
-                    let weak_self = cx.entity().downgrade();
-                    ErrorBox::warning(e.to_string()).on_dismiss(move |cx: &mut App| {
-                        if let Some(view) = weak_self.upgrade() {
-                            view.update(cx, |this, cx| this.remove_warning(idx, cx));
-                        }
-                    })
-                }))
-            })
-            .child(div().flex_1())
+                    .when(!self.warnings.is_empty(), |this| {
+                        this.children(self.warnings.iter().enumerate().map(|(idx, e)| {
+                            let weak_self = cx.entity().downgrade();
+                            ErrorBox::warning(e.to_string()).on_dismiss(move |cx: &mut App| {
+                                if let Some(view) = weak_self.upgrade() {
+                                    view.update(cx, |this, cx| this.remove_warning(idx, cx));
+                                }
+                            })
+                        }))
+                    }),
+            )
     }
 }
 
