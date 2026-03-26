@@ -2,7 +2,7 @@ use gpui::{App, Entity};
 use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc};
 
 use crate::{
-    launcher::{Launcher, LauncherType, children::RenderableChild},
+    launcher::{Launcher, children::RenderableChild, variant_type::LauncherType},
     loader::utils::RawLauncher,
     sherlock_error,
     ui::launcher::LauncherMode,

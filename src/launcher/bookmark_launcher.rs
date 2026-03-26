@@ -38,7 +38,7 @@ impl LauncherProvider for BookmarkLauncher {
             .or_else(|| ConstantDefaults::browser().ok());
 
         match browser_target {
-            Some(target_browser) => LauncherType::Bookmark(BookmarkLauncher { target_browser }),
+            Some(target_browser) => LauncherType::Bookmarks(BookmarkLauncher { target_browser }),
             None => LauncherType::Empty,
         }
     }

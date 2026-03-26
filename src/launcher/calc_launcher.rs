@@ -43,7 +43,7 @@ impl LauncherProvider for CalculatorLauncher {
             let _result = CURRENCIES.set(result);
         });
 
-        LauncherType::Calc(CalculatorLauncher {})
+        LauncherType::Calculator(CalculatorLauncher {})
     }
     fn objects(
         &self,

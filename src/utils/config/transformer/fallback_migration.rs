@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
-    loader::utils::{ApplicationAction, ExecVariable, LauncherVariant, RawLauncher},
+    launcher::variant_type::LauncherVariant,
+    loader::utils::{ApplicationAction, ExecVariable, RawLauncher},
     utils::config::HomeType,
 };
 
@@ -124,26 +125,30 @@ impl LegacyRawLauncher {
         }
     }
 
-    pub fn migrate_type(&self) -> LauncherVariant {
+    pub fn migrate_type(&self) -> Option<LauncherVariant> {
+        let new_type: Option<LauncherVariant> = serde_json::from_str(&self.r#type.as_str()).ok();
+        if new_type.is_some() {
+            return new_type;
+        }
         match self.r#type.as_str() {
-            "app_launcher" => LauncherVariant::AppLauncher,
-            "audio_sink" => LauncherVariant::AudioSink,
-            "bookmarks" => LauncherVariant::Bookmarks,
-            "bulk_text" => LauncherVariant::BulkText,
-            "calculation" | "calculator" => LauncherVariant::Calculator,
-            "categories" | "category" => LauncherVariant::Category,
-            "clipboard-execution" | "clipboard" => LauncherVariant::Clipboard,
-            "command" => LauncherVariant::Command,
-            "debug" => LauncherVariant::Debug,
-            "emoji_picker" | "emoji" => LauncherVariant::Emoji,
-            "files" => LauncherVariant::Files,
-            "teams_event" | "event" => LauncherVariant::Event,
-            "theme_picker" | "theme" => LauncherVariant::Theme,
-            "process" => LauncherVariant::Process,
-            "pomodoro" => LauncherVariant::Pomodoro,
-            "weather" => LauncherVariant::Weather,
-            "web_launcher" => LauncherVariant::WebLauncher,
-            _ => LauncherVariant::None,
+            "app_launcher" => Some(LauncherVariant::Apps),
+            "audio_sink" => Some(LauncherVariant::MusicPlayer),
+            "bookmarks" => Some(LauncherVariant::Bookmarks),
+            "categories" | "category" => Some(LauncherVariant::Categories),
+            "clipboard-execution" | "clipboard" => Some(LauncherVariant::Clipboard),
+            "command" => Some(LauncherVariant::Commands),
+            "emoji_picker" | "emoji" => Some(LauncherVariant::Emoji),
+            "weather" => Some(LauncherVariant::Weather),
+            "web_launcher" => Some(LauncherVariant::Web),
+            "debug" => None,
+            "calculation" | "calculator" => None,
+            "bulk_text" => None,
+            "files" => None,
+            "teams_event" | "event" => None,
+            "theme_picker" | "theme" => None,
+            "process" => None,
+            "pomodoro" => None,
+            _ => None,
         }
     }
 
@@ -182,7 +187,7 @@ impl LegacyRawLauncher {
             display_name: self.display_name,
             on_return: self.on_return,
             next_content: self.next_content,
-            r#type: new_type,
+            r#type: new_type.unwrap_or_default(),
             priority: self.priority,
             exit: self.exit,
             shortcut: self.shortcut,
@@ -203,8 +208,6 @@ impl LegacyRawLauncher {
 
 #[cfg(test)]
 mod tests {
-    use crate::loader::utils::LauncherVariant;
-
     use super::*;
     use serde_json::json;
 
@@ -232,7 +235,7 @@ mod tests {
 
         // 4. Assertions
         assert_eq!(result.launcher.name, Some("Test Launcher".to_string()));
-        assert_eq!(result.launcher.r#type, LauncherVariant::Command);
+        assert_eq!(result.launcher.r#type, LauncherVariant::Commands);
 
         // Check if Arc wrapping worked
         assert_eq!(result.launcher.args.get("cmd").unwrap(), "ls");

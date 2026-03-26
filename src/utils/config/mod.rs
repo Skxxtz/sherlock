@@ -20,7 +20,6 @@ pub use defaults::{BindDefaults, ConstantDefaults, OtherDefaults};
 pub use flags::SherlockFlags;
 pub use guard::ConfigGuard;
 pub use reload::reload;
-pub use transformer::migrate_file;
 pub use watcher::ConfigWatcher;
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]

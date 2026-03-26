@@ -8,7 +8,7 @@ use crate::{
     loader::{CustomIconTheme, IconThemeGuard},
     sherlock_error,
     utils::{
-        config::{SherlockConfig, migrate_file},
+        config::SherlockConfig,
         errors::{SherlockError, SherlockErrorType},
         paths::get_config_dir,
     },
@@ -52,9 +52,9 @@ impl Loader {
             },
         );
 
-        if let Err(e) = migrate_file(&config.files.fallback) {
-            warnings.push(e);
-        }
+        // if let Err(e) = migrate_file(&config.files.fallback) {
+        //     warnings.push(e);
+        // }
 
         let _ = ICONS.set(RwLock::new(CustomIconTheme::new()));
         config.appearance.icon_paths.iter().for_each(|path| {

@@ -18,7 +18,7 @@ pub struct CommandLauncher {}
 
 impl LauncherProvider for CommandLauncher {
     fn parse(_raw: &RawLauncher) -> LauncherType {
-        LauncherType::Command(CommandLauncher {})
+        LauncherType::Commands(CommandLauncher {})
     }
 
     fn objects(

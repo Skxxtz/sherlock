@@ -17,7 +17,7 @@ pub struct AppLauncher {
 impl LauncherProvider for AppLauncher {
     fn parse(raw: &RawLauncher) -> LauncherType {
         match serde_json::from_value::<AppLauncher>(raw.args.as_ref().clone()) {
-            Ok(launcher) => LauncherType::App(launcher),
+            Ok(launcher) => LauncherType::Apps(launcher),
             Err(_) => LauncherType::Empty,
         }
     }

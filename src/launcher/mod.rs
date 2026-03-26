@@ -9,6 +9,7 @@ pub mod emoji_launcher;
 pub mod event_launcher;
 pub mod system_cmd_launcher;
 pub mod utils;
+pub mod variant_type;
 pub mod weather_launcher;
 pub mod web_launcher;
 // Integrate later: TODO
@@ -27,7 +28,7 @@ use crate::{
             RenderableChild,
             emoji_data::{apply_skin_tones, get_selected_skin_tones},
         },
-        clipboard_launcher::ClipboardLauncher,
+        variant_type::LauncherType,
     },
     loader::{
         LoadContext, resolve_icon_path,
@@ -36,20 +37,8 @@ use crate::{
     ui::launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
     utils::{config::HomeType, errors::SherlockError},
 };
-use std::{path::Path, sync::Arc, vec};
-
-use app_launcher::AppLauncher;
-use audio_launcher::MusicPlayerLauncher;
-use bookmark_launcher::BookmarkLauncher;
-use calc_launcher::CalculatorLauncher;
-use category_launcher::CategoryLauncher;
-use emoji_launcher::EmojiPicker;
-use event_launcher::EventLauncher;
 use gpui::SharedString;
-use serde_json::Value;
-use system_cmd_launcher::CommandLauncher;
-use weather_launcher::WeatherLauncher;
-use web_launcher::WebLauncher;
+use std::{path::Path, sync::Arc};
 
 // Integrate later: TODO
 // use bulk_text_launcher::BulkTextLauncher;
@@ -68,53 +57,6 @@ pub trait LauncherProvider {
         ctx: &LoadContext,
         opts: Arc<serde_json::Value>,
     ) -> Result<Vec<RenderableChild>, SherlockError>;
-}
-
-#[derive(Clone, Debug, Default)]
-pub enum LauncherType {
-    App(AppLauncher),
-    Bookmark(BookmarkLauncher),
-    Calc(CalculatorLauncher),
-    Category(CategoryLauncher),
-    Clipboard(ClipboardLauncher),
-    Command(CommandLauncher),
-    Event(EventLauncher),
-    MusicPlayer(MusicPlayerLauncher),
-    Weather(WeatherLauncher),
-    Web(WebLauncher),
-    Emoji(EmojiPicker),
-    #[default]
-    Empty,
-    // Integrate later: TODO
-    // Pipe(PipeLauncher),
-    // Api(BulkTextLauncher),
-    // File(FileLauncher),
-    // Pomodoro(Pomodoro),
-    // Process(ProcessLauncher),
-    // Theme(ThemePicker),
-}
-
-impl LauncherType {
-    pub fn get_render_obj(
-        &self,
-        launcher: Arc<Launcher>,
-        ctx: &LoadContext,
-        opts: Arc<Value>,
-    ) -> Result<Vec<RenderableChild>, SherlockError> {
-        match self {
-            Self::App(app) => app.objects(launcher, ctx, opts),
-            Self::Bookmark(bkm) => bkm.objects(launcher, ctx, opts),
-            Self::Calc(calc) => calc.objects(launcher, ctx, opts),
-            Self::Category(cat) => cat.objects(launcher, ctx, opts),
-            Self::Clipboard(clip) => clip.objects(launcher, ctx, opts),
-            Self::Command(cmd) => cmd.objects(launcher, ctx, opts),
-            Self::Emoji(emj) => emj.objects(launcher, ctx, opts),
-            Self::MusicPlayer(mus) => mus.objects(launcher, ctx, opts),
-            Self::Weather(wttr) => wttr.objects(launcher, ctx, opts),
-            Self::Web(web) => web.objects(launcher, ctx, opts),
-            _ => Ok(vec![]),
-        }
-    }
 }
 
 // // Async tiles
@@ -214,16 +156,16 @@ pub enum ExecMode {
 impl ExecMode {
     pub fn from_appdata(app_data: &AppData, launcher: &Arc<Launcher>) -> Self {
         match &launcher.launcher_type {
-            LauncherType::App(_) => Self::App {
+            LauncherType::Apps(_) => Self::App {
                 exec: app_data.exec.clone().unwrap_or_default(),
                 terminal: app_data.terminal,
             },
-            LauncherType::Bookmark(bkm) => Self::Web {
+            LauncherType::Bookmarks(bkm) => Self::Web {
                 engine: None,
                 browser: Some(bkm.target_browser.clone()),
                 exec: app_data.exec.clone(),
             },
-            LauncherType::Category(_) => Self::Category {
+            LauncherType::Categories(_) => Self::Category {
                 category: LauncherMode::Alias {
                     short: app_data
                         .exec
@@ -233,7 +175,7 @@ impl ExecMode {
                     name: app_data.name.clone().unwrap_or_default(),
                 },
             },
-            LauncherType::Command(_) => Self::Commmand {
+            LauncherType::Commands(_) => Self::Commmand {
                 exec: app_data.exec.clone().unwrap_or_default(),
             },
             LauncherType::Emoji(_) => Self::View {

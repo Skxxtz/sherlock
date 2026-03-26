@@ -7,6 +7,7 @@ use crate::sherlock_error;
 use crate::utils::config::transformer::fallback_migration::LegacyRawLauncher;
 use crate::utils::errors::{SherlockError, SherlockErrorType};
 
+#[allow(dead_code)]
 pub fn migrate_file<P: AsRef<Path>>(path: P) -> Result<(), SherlockError> {
     let path_ref = path.as_ref();
     let content = fs::read_to_string(&path_ref).map_err(|e| {

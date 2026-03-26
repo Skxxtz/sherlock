@@ -16,7 +16,7 @@ pub struct CategoryLauncher {}
 
 impl LauncherProvider for CategoryLauncher {
     fn parse(_raw: &RawLauncher) -> LauncherType {
-        LauncherType::Category(CategoryLauncher {})
+        LauncherType::Categories(CategoryLauncher {})
     }
     fn objects(
         &self,
