@@ -118,15 +118,15 @@ impl LauncherView {
                             }
 
                             // [Rule 3]
-                            // Early return if based show (calc for example) applies
-                            if let Some(based) = data.based_show(&query) {
-                                return based;
-                            }
-
-                            // [Rule 4]
                             // Early return if not home but item is assigned to only show on home
                             if !is_home && home == HomeType::OnlyHome {
                                 return false;
+                            }
+
+                            // [Rule 4]
+                            // Early return if based show (calc for example) applies
+                            if let Some(based) = data.based_show(&query) {
+                                return based;
                             }
 
                             // [Rule 5]
