@@ -7,6 +7,7 @@ pub mod children;
 pub mod clipboard_launcher;
 pub mod emoji_launcher;
 pub mod event_launcher;
+pub mod message_launcher;
 pub mod system_cmd_launcher;
 pub mod utils;
 pub mod variant_type;
@@ -189,9 +190,12 @@ pub enum ExecMode {
     Category {
         category: LauncherMode,
     },
-    View {
+    CreateView {
         mode: NavigationViewType,
         launcher: Arc<Launcher>,
+    },
+    SwitchView {
+        idx: usize,
     },
     CreateBookmark {
         url: String,
@@ -232,10 +236,11 @@ impl ExecMode {
             LauncherType::Commands(_) => Self::Commmand {
                 exec: app_data.exec.clone().unwrap_or_default(),
             },
-            LauncherType::Emoji(_) => Self::View {
+            LauncherType::Emoji(_) => Self::CreateView {
                 mode: NavigationViewType::Emoji,
                 launcher: Arc::clone(launcher),
             },
+            LauncherType::Message(_) => Self::SwitchView { idx: 0 },
             LauncherType::Web(web) => Self::Web {
                 engine: Some(web.engine.clone()),
                 browser: web.browser.clone(),

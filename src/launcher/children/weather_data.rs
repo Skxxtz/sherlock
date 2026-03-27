@@ -6,7 +6,11 @@ use gpui::{
 use std::sync::Arc;
 
 use crate::{
-    launcher::{ExecMode, Launcher, children::RenderableChildImpl, weather_launcher::WeatherData},
+    launcher::{
+        ExecMode, Launcher,
+        children::{RenderableChildImpl, Selection},
+        weather_launcher::WeatherData,
+    },
     ui::launcher::context_menu::ContextMenuAction,
 };
 
@@ -20,7 +24,7 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
     fn search(&self, _launcher: &Arc<Launcher>) -> &'a str {
         ""
     }
-    fn render(&self, _launcher: &Arc<Launcher>, _is_selected: bool) -> AnyElement {
+    fn render(&self, _launcher: &Arc<Launcher>, _selection: Selection) -> AnyElement {
         let now = Local::now().time();
         div()
             .px_4()

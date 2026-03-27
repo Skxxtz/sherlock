@@ -115,6 +115,27 @@ impl AppData {
             terminal: false,
         }
     }
+    pub fn with_name(mut self, name: SharedString) -> Self {
+        self.name = Some(name);
+        self
+    }
+    pub fn with_icon(mut self, icon: Arc<Path>) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+    pub fn with_icon_opt(mut self, icon: Option<Arc<Path>>) -> Self {
+        self.icon = icon;
+        self
+    }
+    pub fn with_priority(mut self, prio: f32) -> Self {
+        self.priority = Some(prio);
+        self
+    }
+    pub fn with_search_string(mut self, search_str: &str) -> Self {
+        self.search_string = search_str.to_lowercase();
+        self
+    }
+
     pub fn apply_alias(
         &mut self,
         launcher: &Arc<Launcher>,

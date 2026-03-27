@@ -1,8 +1,6 @@
-pub mod error;
 pub mod launcher;
 pub mod model;
 pub mod search_bar;
-pub mod workspace;
 
 use gpui::KeyBinding;
 use serde::{Deserialize, Serialize};

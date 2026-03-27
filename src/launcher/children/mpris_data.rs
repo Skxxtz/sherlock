@@ -4,14 +4,17 @@ use gpui::{AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, d
 
 use crate::{
     launcher::{
-        ExecMode, Launcher, audio_launcher::MusicPlayerFunctions, children::RenderableChildImpl,
-        utils::MprisState, variant_type::InnerFunction,
+        ExecMode, Launcher,
+        audio_launcher::MusicPlayerFunctions,
+        children::{RenderableChildImpl, Selection},
+        utils::MprisState,
+        variant_type::InnerFunction,
     },
     ui::launcher::context_menu::ContextMenuAction,
 };
 
 impl<'a> RenderableChildImpl<'a> for MprisState {
-    fn render(&self, _launcher: &Arc<Launcher>, is_selected: bool) -> AnyElement {
+    fn render(&self, _launcher: &Arc<Launcher>, selection: Selection) -> AnyElement {
         div()
             .px_4()
             .py_2()
@@ -28,7 +31,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
             })
             .child(
                 div()
-                    .text_color(if is_selected {
+                    .text_color(if selection.is_selected {
                         rgb(0xffffff)
                     } else {
                         rgb(0xcccccc)

@@ -41,7 +41,6 @@ pub struct LauncherView {
     pub navigation: NavigationStack,
 
     // State
-    pub message_count: usize,
     pub config_initialized: bool,
 
     pub active_update_task: Option<Task<()>>,
@@ -76,18 +75,10 @@ impl LauncherView {
     pub fn filter_and_sort(&mut self, cx: &mut Context<Self>) {
         let mut query = self.text_input.read(cx).content.to_lowercase();
 
-        let snapshot = self.navigation.with_model_mut(cx, |mdl, _| {
-            if mdl.last_query.as_ref() == Some(&query) {
-                None
-            } else {
-                mdl.deferred_render_task = None;
-                Some(mdl.data.clone())
-            }
+        let data_entity = self.navigation.with_model_mut(cx, |mdl, _| {
+            mdl.deferred_render_task = None;
+            mdl.data.clone()
         });
-
-        let Some(data_entity) = snapshot else {
-            return;
-        };
 
         // handle mode change
         if self.mode.transition_for_query(&query, &self.modes) {

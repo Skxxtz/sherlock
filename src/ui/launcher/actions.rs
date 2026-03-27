@@ -16,7 +16,6 @@ use crate::{
     ui::{
         launcher::{LauncherView, context_menu::ContextMenuAction, views::MoveDirection},
         search_bar::{EmptyBackspace, TextInput},
-        workspace::LauncherErrorEvent,
     },
     utils::{command_launch::spawn_detached, errors::SherlockMessage, websearch::websearch},
 };
@@ -262,11 +261,18 @@ impl LauncherView {
             ExecMode::Copy { content } => {
                 cx.write_to_clipboard(ClipboardItem::new_string(content.to_string()));
             }
-            ExecMode::View { mode, launcher } => {
+            ExecMode::CreateView { mode, launcher } => {
                 self.text_input.update(cx, |this, _| this.reset());
                 self.navigation.push(mode.create_view(launcher, cx));
                 self.filter_and_sort(cx);
                 return Ok(false);
+            }
+            ExecMode::SwitchView { idx } => {
+                if self.navigation.set_active_idx(idx) {
+                    self.text_input.update(cx, |this, _| this.reset());
+                    self.filter_and_sort(cx);
+                    return Ok(false);
+                }
             }
             ExecMode::Web {
                 engine,
@@ -299,7 +305,7 @@ impl LauncherView {
 
                     match self.execute_helper(what, "", &[], cx) {
                         Ok(exit) if exit => self.close_window(win, cx),
-                        Err(e) => cx.emit(LauncherErrorEvent::Push(e)),
+                        Err(e) => self.navigation.push_message(e, cx),
                         _ => {}
                     }
                 }
@@ -335,7 +341,7 @@ impl LauncherView {
                             return;
                         }
                         Err(e) => {
-                            cx.emit(LauncherErrorEvent::Push(e));
+                            self.navigation.push_message(e, cx);
                             return;
                         }
                         _ => {}
@@ -356,7 +362,7 @@ impl LauncherView {
                 return;
             }
             Err(e) => {
-                cx.emit(LauncherErrorEvent::Push(e));
+                self.navigation.push_message(e, cx);
                 return;
             }
             _ => {}

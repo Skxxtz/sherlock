@@ -5,13 +5,15 @@ pub mod app_data;
 pub mod calc_data;
 pub mod clip_data;
 pub mod emoji_data;
+pub mod message;
 pub mod mpris_data;
 pub mod weather_data;
 
 use crate::{
     launcher::{
         ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
-        emoji_launcher::EmojiData, utils::MprisState, weather_launcher::WeatherData,
+        children::message::MessageChild, emoji_launcher::EmojiData, utils::MprisState,
+        weather_launcher::WeatherData,
     },
     loader::utils::{AppData, ExecVariable},
     ui::launcher::context_menu::ContextMenuAction,
@@ -58,9 +60,9 @@ macro_rules! renderable_enum {
         }
 
         impl<'a> RenderableChildDelegate<'a> for $name {
-            fn render(&self, is_selected: bool) -> AnyElement {
+            fn render(&self, selection: Selection) -> AnyElement {
                 match self {
-                    $(Self::$variant {inner, launcher} => inner.render(launcher, is_selected)),*
+                    $(Self::$variant {inner, launcher} => inner.render(launcher, selection)),*
                 }
             }
 
@@ -209,6 +211,7 @@ renderable_enum! {
         EmojiLike(EmojiData),
         MusicLike(MprisState),
         WeatherLike(WeatherData),
+        MessageLike(MessageChild),
     }
 }
 
@@ -222,7 +225,7 @@ impl RenderableChild {
 }
 
 pub trait RenderableChildDelegate<'a> {
-    fn render(&self, is_selected: bool) -> AnyElement;
+    fn render(&self, selection: Selection) -> AnyElement;
     fn build_action_exec(&'a self, action: &'a ContextMenuAction) -> ExecMode;
     fn build_exec(&self) -> Option<ExecMode>;
     fn search(&'a self) -> &'a str;
@@ -243,7 +246,7 @@ pub trait LauncherValues<'a> {
 }
 
 pub trait RenderableChildImpl<'a> {
-    fn render(&self, launcher: &Arc<Launcher>, is_selected: bool) -> AnyElement;
+    fn render(&self, launcher: &Arc<Launcher>, selection: Selection) -> AnyElement;
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode>;
     fn priority(&self, launcher: &Arc<Launcher>) -> f32;
     fn search(&'a self, launcher: &Arc<Launcher>) -> &'a str;
@@ -280,5 +283,21 @@ impl<T: AsRef<str>> SherlockSearch for T {
         }
 
         false
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Selection {
+    pub data_idx: usize,
+    pub is_selected: bool,
+}
+
+impl Selection {
+    #[inline(always)]
+    pub fn new(data_idx: usize, is_selected: bool) -> Self {
+        Self {
+            data_idx,
+            is_selected,
+        }
     }
 }

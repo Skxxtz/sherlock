@@ -1,16 +1,15 @@
 use gpui::{
-    AnyElement, Context, Element, Focusable, FontWeight, InteractiveElement, IntoElement,
-    MouseDownEvent, ParentElement, Render, SharedString, StatefulInteractiveElement, Styled,
-    Window, div, hsla, list, prelude::FluentBuilder, px, relative, rgb,
+    AnyElement, Context, Element, FontWeight, InteractiveElement, IntoElement, MouseDownEvent,
+    ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, div, hsla,
+    list, prelude::FluentBuilder, px, relative, rgb,
 };
 
 use crate::{
     CONTEXT_MENU_BIND,
-    launcher::children::{LauncherValues, RenderableChild, RenderableChildDelegate},
+    launcher::children::{LauncherValues, RenderableChild, RenderableChildDelegate, Selection},
     ui::{
         UIFunction,
         launcher::{LauncherView, context_menu::ContextMenuAction, views::EntityStyle},
-        workspace::LauncherErrorEvent,
     },
     utils::config::ConfigGuard,
 };
@@ -22,10 +21,16 @@ impl Render for LauncherView {
             .selected_item(cx)
             .and_then(|i| i.launcher_type().binds());
         div()
-            .track_focus(&self.focus_handle(cx))
+            .id("sherlock")
             .flex()
             .flex_col()
             .size_full()
+            .bg(rgb(0x0F0F0F))
+            .border_2()
+            .border_color(hsla(0., 0., 0.1882, 1.0))
+            .rounded(px(5.))
+            .shadow_xl()
+            .overflow_hidden()
             .on_action(cx.listener(Self::selection_up))
             .on_action(cx.listener(Self::selection_down))
             .on_action(cx.listener(Self::selection_left))
@@ -145,7 +150,11 @@ impl LauncherView {
                         None => return div().into_any_element(),
                     };
 
-                    Self::render_list_item(&child, idx, data_idx, selected_idx, context_open)
+                    Self::render_list_item(
+                        &child,
+                        Selection::new(data_idx, idx == selected_idx),
+                        context_open,
+                    )
                 })
                 .size_full()
             })
@@ -200,9 +209,10 @@ impl LauncherView {
                                                     .flex_1()
                                                     .child(Self::render_list_item(
                                                         child,
-                                                        item_idx,
-                                                        data_idx,
-                                                        selected_idx,
+                                                        Selection::new(
+                                                            data_idx,
+                                                            item_idx == selected_idx,
+                                                        ),
                                                         context_open,
                                                     ))
                                                     .into_any_element();
@@ -257,6 +267,7 @@ impl LauncherView {
     }
 
     fn render_status_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let message_count = self.navigation.message_count(cx);
         div()
             .h(px(30.))
             .line_height(px(30.))
@@ -270,28 +281,32 @@ impl LauncherView {
             .items_center()
             .text_color(hsla(0.6, 0.0217, 0.3608, 1.0))
             .child(String::from("Sherlock"))
-            .when(self.message_count > 0, |this| {
-                this.child(self.render_error_indicator(cx))
+            .when(message_count > 0, |this| {
+                this.child(self.render_error_indicator(message_count, cx))
             })
             .child(div().flex_1())
             .child(self.render_context_hint(cx))
     }
 
-    fn render_error_indicator(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_error_indicator(&self, count: usize, cx: &mut Context<Self>) -> impl IntoElement {
         div()
+            .ml(px(10.))
             .h_full()
             .flex()
             .items_center()
             .gap(px(2.))
-            .p(px(3.))
+            .p(px(5.))
             .cursor_pointer()
             .on_mouse_down(
                 gpui::MouseButton::Left,
-                cx.listener(|_, _: &MouseDownEvent, _, cx| {
-                    cx.emit(LauncherErrorEvent::ShowErrors);
+                cx.listener(|this, _: &MouseDownEvent, _, cx| {
+                    this.text_input.update(cx, |this, _| this.reset());
+                    this.navigation.set_messages_active();
+                    this.filter_and_sort(cx);
+                    cx.notify();
                 }),
             )
-            .when(self.message_count > 0, |this| {
+            .when(count > 0, |this| {
                 this.child(
                     div()
                         .h_full()
@@ -304,7 +319,8 @@ impl LauncherView {
                         .border_color(hsla(0.0, 0.7, 0.59, 0.25))
                         .text_color(hsla(0.0, 0.7, 0.59, 0.25))
                         .bg(hsla(0.0, 0.7, 0.1, 0.12))
-                        .child(self.message_count.to_string()),
+                        .text_xs()
+                        .child(count.to_string()),
                 )
             })
     }
@@ -337,14 +353,11 @@ impl LauncherView {
 
     pub fn render_list_item(
         ad: &RenderableChild,
-        idx: usize,
-        data_idx: usize,
-        selected_index: usize,
+        selection: Selection,
         context_open: bool,
     ) -> AnyElement {
-        let is_selected = selected_index == idx;
         div()
-            .id(data_idx)
+            .id(selection.data_idx)
             .w_full()
             .on_click(move |_, _, _| {})
             .child(
@@ -355,19 +368,19 @@ impl LauncherView {
                     .mb(px(5.0))
                     .w_full()
                     .cursor_pointer()
-                    .bg(if is_selected {
+                    .bg(if selection.is_selected {
                         hsla(0., 0., 0.149, 1.0)
                     } else {
                         hsla(0., 0., 0., 0.)
                     })
                     .hover(|s| {
-                        if is_selected || context_open {
+                        if selection.is_selected || context_open {
                             s
                         } else {
                             s.bg(hsla(0., 0., 0.12, 1.0))
                         }
                     })
-                    .child(ad.render(is_selected)),
+                    .child(ad.render(selection)),
             )
             .into_any_element()
     }

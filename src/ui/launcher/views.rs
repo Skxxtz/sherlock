@@ -1,9 +1,8 @@
-use std::sync::Arc;
-
 use gpui::{
     AnyEntity, App, AppContext, Entity, ListState, ScrollStrategy, UniformListScrollHandle, px,
 };
-use simd_json::prelude::Indexed;
+use simd_json::prelude::{ArrayTrait, Indexed};
+use std::sync::Arc;
 
 use crate::{
     launcher::{
@@ -12,22 +11,29 @@ use crate::{
     },
     ui::{
         launcher::context_menu::ContextMenuAction,
-        model::{Model, emoji::EmojiView, home::HomeView},
+        model::{Model, emoji::EmojiView, home::HomeView, message::MessageView},
     },
+    utils::errors::SherlockMessage,
 };
 
-/// The number of views that have to remain in the NavigationStack. 
+/// The number of views that have to remain in the NavigationStack.
 ///
 /// **Example:**
 /// `[Errors, Home, .. ]` => **2** Persistent views
-static REMAINING_VIEWS: usize = 1;
+static REMAINING_VIEWS: usize = 2;
 
 pub struct NavigationStack {
     stack: Vec<NavigationView>,
+    active_idx: Option<usize>,
 }
 
 impl NavigationStack {
-    pub fn new(initial: Entity<Arc<Vec<RenderableChild>>>, len: usize, cx: &mut App) -> Self {
+    pub fn new(
+        initial: Entity<Arc<Vec<RenderableChild>>>,
+        messages: Vec<SherlockMessage>,
+        len: usize,
+        cx: &mut App,
+    ) -> Self {
         let home = NavigationView {
             view: cx.new(|cx| HomeView::new(initial, cx)).into(),
             style: EntityStyle::Row {
@@ -36,11 +42,79 @@ impl NavigationStack {
             },
             kind: NavigationViewType::Home,
         };
-        Self { stack: vec![home] }
+        let message_len = messages.len();
+        let errors = NavigationView {
+            view: cx.new(|cx| MessageView::new(messages, cx)).into(),
+            style: EntityStyle::Row {
+                state: ListState::new(message_len, gpui::ListAlignment::Top, px(100.)),
+                selected_index: 0,
+            },
+            kind: NavigationViewType::Message,
+        };
+        Self {
+            stack: vec![errors, home],
+            active_idx: None,
+        }
     }
 }
 
 impl NavigationStack {
+    #[inline(always)]
+    fn get_message_view(&self) -> Option<&NavigationView> {
+        self.stack
+            .iter()
+            .find(|s| s.kind == NavigationViewType::Message)
+    }
+    pub fn push_message(&self, message: SherlockMessage, cx: &mut App) {
+        if let Some(message_view) = self.get_message_view() {
+            let view = message_view.view.clone().downcast::<MessageView>().unwrap();
+            let weak_entity = view.downgrade();
+
+            view.update(cx, |this, cx| {
+                this.push_message(message, weak_entity, cx);
+            });
+        }
+    }
+    pub fn set_messages_active(&mut self) {
+        self.active_idx = self
+            .stack
+            .iter()
+            .position(|view| view.kind == NavigationViewType::Message);
+    }
+    pub fn message_count(&self, cx: &mut App) -> usize {
+        if let Some(view) = self.get_message_view() {
+            view.view
+                .clone()
+                .downcast::<MessageView>()
+                .unwrap()
+                .read(cx)
+                .count
+                .get()
+        } else {
+            0
+        }
+    }
+
+    pub fn set_prev_and_cleanup(&mut self) {
+        if self.active_idx.take().is_none() {
+            self.pop();
+        }
+        self.current_mut().reset_selected_index();
+    }
+}
+
+impl NavigationStack {
+    pub fn set_active_idx(&mut self, idx: usize) -> bool {
+        if self.stack.len() > idx {
+            self.active_idx = Some(idx);
+            true
+        } else {
+            false
+        }
+    }
+    pub fn current_kind(&self) -> NavigationViewType {
+        self.current().kind
+    }
     pub fn clear(&mut self) {
         self.stack.truncate(REMAINING_VIEWS);
     }
@@ -61,22 +135,34 @@ impl NavigationStack {
     pub fn current(&self) -> &NavigationView {
         // Since we ensure to always keep the stack populated with at least the home item, this is
         // safe
-        self.stack
-            .last()
+        self.active_idx
+            .and_then(|idx| self.stack.get(idx))
+            .or(self.stack.last())
             .expect("NavigationStack must always contain a root view.")
     }
     pub fn current_mut(&mut self) -> &mut NavigationView {
+        if let Some(idx) = self.active_idx {
+            if idx < self.stack.len() {
+                return &mut self.stack[idx];
+            }
+        }
+
         // Since we ensure to always keep the stack populated with at least the home item, this is
         // safe
         self.stack
             .last_mut()
-            .expect("NavigationStuck must always contain a root view.")
+            .expect("NavigationStack must always contain a root view.")
     }
     pub fn with_model<R>(&self, cx: &mut App, f: impl FnOnce(&Model) -> R) -> R {
         let current = self.current();
         match current.kind {
             NavigationViewType::Home => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
+                f(&view.read(cx).model)
+            }
+
+            NavigationViewType::Message => {
+                let view = current.view.clone().downcast::<MessageView>().unwrap();
                 f(&view.read(cx).model)
             }
 
@@ -95,6 +181,11 @@ impl NavigationStack {
         match current.kind {
             NavigationViewType::Home => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
+                view.update(cx, |this, cx| f(&mut this.model, cx))
+            }
+
+            NavigationViewType::Message => {
+                let view = current.view.clone().downcast::<MessageView>().unwrap();
                 view.update(cx, |this, cx| f(&mut this.model, cx))
             }
 
@@ -272,6 +363,7 @@ impl EntityStyle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NavigationViewType {
     Emoji,
+    Message,
     Home,
 }
 
@@ -293,8 +385,8 @@ impl NavigationViewType {
                 }
             }
 
-            Self::Home => {
-                // This is not implemented because the initial plugin should be implemented
+            Self::Message | Self::Home => {
+                // This is not implemented because the initial views should be implemented
                 // manually because its not dependent on a launcher
                 unimplemented!()
             }

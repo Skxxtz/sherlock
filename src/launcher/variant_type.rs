@@ -14,6 +14,7 @@ use crate::{
         children::RenderableChild,
         clipboard_launcher::ClipboardLauncher,
         emoji_launcher::EmojiPicker,
+        message_launcher::MessageLauncher,
         system_cmd_launcher::CommandLauncher,
         weather_launcher::WeatherLauncher,
         web_launcher::WebLauncher,
@@ -110,6 +111,7 @@ create_variants! {
         Weather(WeatherLauncher),
         Web(WebLauncher),
         Emoji(EmojiPicker),
+        Message(MessageLauncher)
         // Integrate later: TODO
         // Event(EventLauncher),
         // Pipe(PipeLauncher),

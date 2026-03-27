@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 pub mod emoji;
 pub mod home;
+pub mod message;
 
 pub struct Model {
     pub deferred_render_task: Option<Task<Option<()>>>,

@@ -5,7 +5,10 @@ use gpui::{
 };
 
 use crate::{
-    launcher::{ExecMode, Launcher, children::RenderableChildImpl},
+    launcher::{
+        ExecMode, Launcher,
+        children::{RenderableChildImpl, Selection},
+    },
     loader::{resolve_icon_path, utils::ApplicationAction},
     ui::launcher::context_menu::ContextMenuAction,
     utils::{
@@ -95,7 +98,7 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
     fn render(
         &self,
         _launcher: &std::sync::Arc<crate::launcher::Launcher>,
-        is_selected: bool,
+        selection: Selection,
     ) -> gpui::AnyElement {
         let guard = self.result.read().ok();
         let Some((intent, result)) = guard
@@ -107,14 +110,16 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
         };
 
         match (&intent, &result) {
-            (Intent::Url { url }, _) => url_show(url.clone(), is_selected),
+            (Intent::Url { url }, _) => url_show(url.clone(), selection.is_selected),
             (Intent::Conversion { .. }, IntentResult::String(s)) => {
-                calc_tile(s.clone(), is_selected)
+                calc_tile(s.clone(), selection.is_selected)
             }
             (Intent::ColorConvert { .. }, IntentResult::String(s)) => {
-                calc_tile(s.clone(), is_selected)
+                calc_tile(s.clone(), selection.is_selected)
             }
-            (Intent::ColorDisplay { .. }, IntentResult::Color(c)) => color_show(*c, is_selected),
+            (Intent::ColorDisplay { .. }, IntentResult::Color(c)) => {
+                color_show(*c, selection.is_selected)
+            }
             _ => div().into_any_element(),
         }
     }

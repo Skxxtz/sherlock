@@ -3,7 +3,10 @@ use std::sync::{Arc, RwLock};
 use gpui::{IntoElement, ParentElement, SharedString, Styled, div, px, rgb};
 
 use crate::{
-    launcher::{ExecMode, Launcher, children::RenderableChildImpl},
+    launcher::{
+        ExecMode, Launcher,
+        children::{RenderableChildImpl, Selection},
+    },
     ui::launcher::context_menu::ContextMenuAction,
     utils::intent::{Capabilities, Intent, IntentResult},
 };
@@ -77,7 +80,7 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
     fn render(
         &self,
         _launcher: &std::sync::Arc<crate::launcher::Launcher>,
-        is_selected: bool,
+        selection: Selection,
     ) -> gpui::AnyElement {
         let result = {
             let guard = self.result.read().unwrap();
@@ -88,8 +91,8 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
         };
 
         match result {
-            IntentResult::String(s) => calc_tile(s, is_selected),
-            IntentResult::Color(c) => color_show(c, is_selected),
+            IntentResult::String(s) => calc_tile(s, selection.is_selected),
+            IntentResult::Color(c) => color_show(c, selection.is_selected),
         }
     }
     fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {

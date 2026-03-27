@@ -1,39 +1,40 @@
+use std::sync::Arc;
+
 use gpui::{
-    FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled, div, hsla, px,
-    rgb,
+    AnyElement, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled,
+    div, hsla, px, rgb,
 };
 
-use crate::utils::errors::{SherlockMessage, SherlockMessageLevel};
+use crate::{
+    launcher::{
+        ExecMode, Launcher,
+        children::{RenderableChildImpl, Selection},
+    },
+    ui::launcher::context_menu::ContextMenuAction,
+    utils::errors::{SherlockMessage, SherlockMessageLevel},
+};
 
-#[allow(dead_code)]
-pub enum MessageType {
-    Info,
-    Warning,
-    Error,
+#[derive(Clone)]
+pub struct MessageChild {
+    pub message: SherlockMessage,
+    pub on_dismiss: Option<Arc<dyn Fn(&mut gpui::App, usize) + Send + Sync + 'static>>,
 }
 
-pub struct ErrorBox {
-    message: SherlockMessage,
-    on_dismiss: Option<Box<dyn Fn(&mut gpui::App) + 'static>>,
-}
-
-#[allow(dead_code)]
-impl ErrorBox {
+impl MessageChild {
     pub fn new(message: SherlockMessage) -> Self {
         Self {
             message,
             on_dismiss: None,
         }
     }
-    pub fn on_dismiss(mut self, f: impl Fn(&mut gpui::App) + 'static) -> Self {
-        self.on_dismiss = Some(Box::new(f));
+    pub fn on_dismiss(mut self, f: impl Fn(&mut gpui::App, usize) + Send + Sync + 'static) -> Self {
+        self.on_dismiss = Some(std::sync::Arc::new(f));
         self
     }
 }
 
-impl IntoElement for ErrorBox {
-    type Element = gpui::AnyElement;
-    fn into_element(self) -> Self::Element {
+impl<'a> RenderableChildImpl<'a> for MessageChild {
+    fn render(&self, _launcher: &Arc<Launcher>, selection: Selection) -> AnyElement {
         let (bg, border, text) = match self.message.level {
             SherlockMessageLevel::Error => (
                 hsla(0.0, 0.7, 0.08, 1.0),
@@ -52,7 +53,8 @@ impl IntoElement for ErrorBox {
             ),
         };
 
-        let dismiss_btn = self.on_dismiss.map(|f| {
+        let dismiss_btn = self.on_dismiss.as_ref().map(|f| {
+            let f = f.clone();
             div()
                 .id("dismiss")
                 .absolute()
@@ -66,7 +68,7 @@ impl IntoElement for ErrorBox {
                 .cursor_pointer()
                 .group_hover("error-box", |s| s.text_color(text))
                 .hover(|s| s.bg(border))
-                .on_mouse_down(MouseButton::Left, move |_, _, cx| f(cx))
+                .on_mouse_down(MouseButton::Left, move |_, _, cx| f(cx, selection.data_idx))
                 .child("✕")
         });
 
@@ -114,5 +116,17 @@ impl IntoElement for ErrorBox {
                     ),
             )
             .into_any_element()
+    }
+    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
+        None
+    }
+    fn priority(&self, _launcher: &Arc<Launcher>) -> f32 {
+        1.0
+    }
+    fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
+        &self.message.traceback
+    }
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+        None
     }
 }

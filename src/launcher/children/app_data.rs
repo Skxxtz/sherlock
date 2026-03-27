@@ -3,13 +3,17 @@ use std::sync::Arc;
 use gpui::{AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, div, img, px, rgb};
 
 use crate::{
-    launcher::{ExecMode, Launcher, children::RenderableChildImpl},
+    launcher::{
+        ExecMode, Launcher,
+        children::{RenderableChildImpl, Selection},
+    },
     loader::utils::AppData,
     ui::launcher::context_menu::ContextMenuAction,
 };
 
 impl<'a> RenderableChildImpl<'a> for AppData {
-    fn render(&self, launcher: &Arc<Launcher>, is_selected: bool) -> AnyElement {
+    fn render(&self, launcher: &Arc<Launcher>, selection: Selection) -> AnyElement {
+        let is_selected = selection.is_selected;
         div()
             .px_4()
             .py_2()

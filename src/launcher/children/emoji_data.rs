@@ -9,7 +9,7 @@ use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px, rgb};
 use crate::{
     launcher::{
         ExecMode, Launcher,
-        children::RenderableChildImpl,
+        children::{RenderableChildImpl, Selection},
         emoji_launcher::{EmojiData, SkinTone},
     },
     ui::launcher::context_menu::ContextMenuAction,
@@ -65,7 +65,7 @@ pub fn apply_skin_tones(template: &str, tones: &[SkinTone]) -> ArrayString<64> {
 }
 
 impl<'a> RenderableChildImpl<'a> for EmojiData {
-    fn render(&self, _launcher: &Arc<Launcher>, is_selected: bool) -> AnyElement {
+    fn render(&self, _launcher: &Arc<Launcher>, selection: Selection) -> AnyElement {
         let emoji = apply_skin_tones(self.entry.emoji, &get_selected_skin_tones());
         div()
             .size_full()
@@ -92,7 +92,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
                     .whitespace_nowrap()
                     .text_size(px(10.))
                     .text_center()
-                    .text_color(if is_selected {
+                    .text_color(if selection.is_selected {
                         rgb(0xffffff)
                     } else {
                         rgb(0xcccccc)

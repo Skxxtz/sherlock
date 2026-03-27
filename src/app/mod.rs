@@ -1,7 +1,7 @@
 use futures::{StreamExt, stream::FuturesUnordered};
 use gpui::{
-    App, AppContext, AsyncApp, Bounds, Entity, Focusable, ScrollHandle, Size,
-    WindowBackgroundAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions,
+    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Size, WindowBackgroundAppearance,
+    WindowBounds, WindowHandle, WindowKind, WindowOptions,
     layer_shell::{Layer, LayerShellOptions},
     point, px,
 };
@@ -13,10 +13,11 @@ use crate::{
     launcher::children::{LauncherValues, RenderableChild},
     loader::{LauncherLoadResult, Loader, SetupResult},
     ui::{
-        error::view::{DismissErrorEvent, ErrorView},
-        launcher::{LauncherMode, LauncherView, views::NavigationStack},
+        launcher::{
+            LauncherMode, LauncherView,
+            views::{NavigationStack, NavigationViewType},
+        },
         search_bar::{EmptyBackspace, TextInput},
-        workspace::{LauncherErrorEvent, SherlockWorkspace, WorkspaceView},
     },
     utils::{
         config::{ConfigGuard, ConfigWatcher},
@@ -75,7 +76,7 @@ fn load_modes(
 pub async fn run_async_updates(
     cx: AsyncApp,
     data: Entity<Arc<Vec<RenderableChild>>>,
-    new_win: WindowHandle<SherlockWorkspace>,
+    new_win: WindowHandle<LauncherView>,
     current_generation: u64,
     this_generation: u64,
 ) {
@@ -97,13 +98,11 @@ pub async fn run_async_updates(
             data.update(cx, |items_arc, _| {
                 Arc::make_mut(items_arc)[idx] = update;
             });
-            let _ = new_win.update(cx, |view, _, cx| {
-                view.launcher.update(cx, |launcher, cx| {
-                    launcher
-                        .navigation
-                        .with_model_mut(cx, |this, _| this.last_query = None);
-                    launcher.filter_and_sort(cx);
-                });
+            let _ = new_win.update(cx, |launcher, _, cx| {
+                launcher
+                    .navigation
+                    .with_model_mut(cx, |this, _| this.last_query = None);
+                launcher.filter_and_sort(cx);
             });
         });
     }
@@ -114,8 +113,7 @@ fn spawn_launcher(
     data: Entity<Arc<Vec<RenderableChild>>>,
     modes: Arc<[LauncherMode]>,
     initial_messages: Vec<SherlockMessage>,
-) -> WindowHandle<SherlockWorkspace> {
-    let has_errors = !initial_messages.is_empty();
+) -> WindowHandle<LauncherView> {
     let window = cx
         .open_window(get_window_options(), |_, cx| {
             // Build launcher view
@@ -129,10 +127,10 @@ fn spawn_launcher(
                 });
                 let backspace_sub =
                     cx.subscribe(&text_input, |this, _, _ev: &EmptyBackspace, cx| {
-                        if this.navigation.len() > 1 {
-                            this.navigation.pop();
-                            this.navigation.current_mut().reset_selected_index();
+                        if this.navigation.current_kind() != NavigationViewType::Home {
+                            this.navigation.set_prev_and_cleanup();
                             this.filter_and_sort(cx);
+                            cx.notify();
                         } else {
                             if this.mode != LauncherMode::Home {
                                 this.mode = LauncherMode::Home;
@@ -141,6 +139,7 @@ fn spawn_launcher(
                                 this.navigation.current_mut().reset_selected_index();
                                 this.filter_and_sort(cx);
                             }
+                            cx.notify();
                         }
                     });
                 text_input.update(cx, |this, _cx| {
@@ -156,8 +155,7 @@ fn spawn_launcher(
                     context_actions: Arc::new([]),
                     variable_input: Vec::new(),
                     active_bar: 0,
-                    navigation: NavigationStack::new(data, data_len, cx),
-                    message_count: initial_messages.len(),
+                    navigation: NavigationStack::new(data, initial_messages, data_len, cx),
                     config_initialized: ConfigGuard::is_initialized(),
                     active_update_task: None,
                 };
@@ -165,69 +163,13 @@ fn spawn_launcher(
                 view
             });
 
-            // Build error view
-            let error = cx.new(|cx| ErrorView {
-                messages: initial_messages,
-                focus_handle: cx.focus_handle(),
-                scroll_handle: ScrollHandle::new(),
-            });
-
-            // Build workspace, wire up error subscription
-            cx.new(|cx| {
-                let error_handle = error.clone();
-                let sub = cx.subscribe(
-                    &launcher,
-                    move |this: &mut SherlockWorkspace, _, ev: &LauncherErrorEvent, cx| {
-                        match ev {
-                            LauncherErrorEvent::Push(e) => {
-                                // note: updating the launcher view is done in the
-                                // `error_count_sub`
-                                error_handle.update(cx, |view, cx| {
-                                    view.push_message(e.clone(), cx);
-                                });
-                            }
-                            LauncherErrorEvent::ShowErrors => {
-                                this.transition_to(WorkspaceView::Error, 100, cx);
-                            }
-                        }
-                        cx.notify();
-                    },
-                );
-                let error_sub = cx.subscribe(&error, move |this, _, _: &DismissErrorEvent, cx| {
-                    this.transition_to(WorkspaceView::Launcher, 75, cx);
-                });
-                let error_count_sub = cx.observe(&error, move |workspace, this, cx| {
-                    let error_count = this.read(cx).counts();
-                    workspace.launcher.update(cx, |this, _cx| {
-                        this.message_count = error_count;
-                    });
-                    cx.notify();
-                });
-
-                SherlockWorkspace {
-                    launcher,
-                    error,
-                    workspace: if has_errors {
-                        WorkspaceView::Error
-                    } else {
-                        WorkspaceView::Launcher
-                    },
-                    _subs: vec![sub, error_sub, error_count_sub],
-
-                    opacity: 1.0,
-                    transition_task: None,
-                    pending_focus: false,
-                }
-            })
+            launcher
         })
         .unwrap();
 
     window
         .update(cx, |view, window, cx| {
-            let focus = match view.workspace {
-                WorkspaceView::Launcher => view.launcher.read(cx).text_input.focus_handle(cx),
-                WorkspaceView::Error => view.error.read(cx).focus_handle(cx),
-            };
+            let focus = view.text_input.focus_handle(cx);
             window.on_next_frame(move |window, cx| {
                 window.focus(&focus, cx);
             });

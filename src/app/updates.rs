@@ -5,7 +5,7 @@ use tokio::net::UnixListener;
 use crate::{
     app::{run_async_updates, spawn_launcher},
     launcher::children::RenderableChild,
-    ui::{launcher::LauncherMode, workspace::SherlockWorkspace},
+    ui::launcher::{LauncherMode, LauncherView},
     utils::{
         config::{ConfigWatcher, reload},
         errors::SherlockMessage,
@@ -20,7 +20,7 @@ pub(super) async fn run_event_loop(
     listener: UnixListener,
     mut initial_messages: Vec<SherlockMessage>,
 ) {
-    let mut win: Option<WindowHandle<SherlockWorkspace>> = None;
+    let mut win: Option<WindowHandle<LauncherView>> = None;
     let mut current_generation: u64 = 0;
     let mut active_update_task: Option<gpui::Task<()>> = None;
 
