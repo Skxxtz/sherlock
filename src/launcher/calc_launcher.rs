@@ -42,8 +42,14 @@ impl LauncherProvider for CalculatorLauncher {
             .unwrap_or(60 * 60 * 24);
 
         tokio::spawn(async move {
-            let result = Currency::get_exchange(update_interval).await.ok();
-            let _result = CURRENCIES.set(result);
+            match Currency::get_exchange(update_interval).await {
+                Ok(r) => {
+                    let _result = CURRENCIES.set(Some(r));
+                }
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                }
+            }
         });
 
         LauncherType::Calculator(CalculatorLauncher {})
@@ -88,6 +94,7 @@ pub struct Currency {
     pub hkd: f32, // Hong Kong Dollar
     pub krw: f32, // South Korean Won
     pub pln: f32, // Polish złoty
+    pub pen: f32, // Peruvian Sole
 }
 impl Currency {
     pub fn from_map(mut map: HashMap<String, f32>) -> Option<Self> {
@@ -108,6 +115,7 @@ impl Currency {
             hkd: map.remove("hkd")?,
             krw: map.remove("krw")?,
             pln: map.remove("pln")?,
+            pen: map.remove("pen")?,
         })
     }
 
@@ -167,7 +175,7 @@ impl Currency {
             ],
             "ignore_unknown_fields": true,
             "options": { "lang": "en" },
-            "range": [0,15],
+            "range": [0,16],
             "sort": {
                 "sortBy": "popularity_rank",
                 "sortOrder": "asc"
@@ -178,7 +186,7 @@ impl Currency {
                     { "expression": { "left": "type", "operation": "equal", "right": "forex" } },
                     { "expression": { "left": "exchange", "operation": "equal", "right": "FX_IDC" } },
                     { "expression": { "left": "currency_id", "operation": "equal", "right": "USD" } },
-                    { "expression": { "left": "base_currency_id", "operation": "in_range", "right": ["EUR", "JPY", "GBP", "AUD", "CAD", "CHF", "CNY", "NZD", "SEK", "NOK", "MXN", "SGD", "HKD", "KRW", "PLN"] } }
+                    { "expression": { "left": "base_currency_id", "operation": "in_range", "right": ["EUR", "JPY", "GBP", "AUD", "CAD", "CHF", "CNY", "NZD", "SEK", "NOK", "MXN", "SGD", "HKD", "KRW", "PLN", "PEN"] } }
                 ]
             }
         }"#;
