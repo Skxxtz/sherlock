@@ -481,9 +481,10 @@ impl Unit {
                     Unit::Hkd => rates.hkd,
                     Unit::Krw => rates.krw,
                     Unit::Pln => rates.pln,
+                    Unit::Pen => rates.pen,
                     _ => 1.0,
                 };
-                return 1.0 / rate as f64;
+                return rate as f64;
             }
         }
         // use hardcoded factor
@@ -556,6 +557,7 @@ define_units! {
         Hkd: ["hkd", "hong kong dollar", "hk$"] => 1.0, "HK$",
         Krw: ["krw", "south korean won", "won", "₩"] => 1.0, "₩",
         Pln: ["pln", "polish", "złoty", "zł"] => 1.0, "zł",
+        Pen: ["pen", "peruvian", "sole", "soles"] => 1.0, "S/",
     }
     Length, LENGTH {
         cap: 1 << 3,
