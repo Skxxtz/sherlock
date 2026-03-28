@@ -28,7 +28,7 @@ pub struct MusicPlayerLauncher {
     binds: Option<Arc<Vec<Bind>>>,
 }
 
-#[derive(Debug, Clone, Copy, strum::VariantNames, strum::EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, strum::VariantNames, strum::EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum MusicPlayerFunctions {
     TogglePlayback,

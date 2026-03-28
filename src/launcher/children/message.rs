@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use gpui::{
     AnyElement, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled,
-    div, hsla, px, rgb,
+    div, hsla, prelude::FluentBuilder, px, rgb,
 };
 
 use crate::{
+    app::ActiveTheme,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
     },
-    ui::launcher::context_menu::ContextMenuAction,
     utils::errors::{SherlockMessage, SherlockMessageLevel},
 };
 
@@ -34,21 +34,51 @@ impl MessageChild {
 }
 
 impl<'a> RenderableChildImpl<'a> for MessageChild {
-    fn render(&self, _launcher: &Arc<Launcher>, selection: Selection) -> AnyElement {
+    fn render(
+        &self,
+        _launcher: &Arc<Launcher>,
+        selection: Selection,
+        _theme: &ActiveTheme,
+    ) -> AnyElement {
         let (bg, border, text) = match self.message.level {
             SherlockMessageLevel::Error => (
-                hsla(0.0, 0.7, 0.08, 1.0),
-                hsla(0.0, 0.7, 0.35, 0.4),
+                hsla(
+                    0.0,
+                    0.7,
+                    0.08,
+                    if selection.is_selected { 0.15 } else { 0.08 },
+                ),
+                hsla(
+                    0.0,
+                    0.7,
+                    0.35,
+                    if selection.is_selected { 0.8 } else { 0.4 },
+                ),
                 rgb(0xcc8888),
             ),
             SherlockMessageLevel::Warning => (
-                hsla(0.11, 0.8, 0.08, 1.0),
-                hsla(0.11, 0.8, 0.4, 0.4),
+                hsla(
+                    0.11,
+                    0.8,
+                    0.08,
+                    if selection.is_selected { 0.15 } else { 0.08 },
+                ),
+                hsla(
+                    0.11,
+                    0.8,
+                    0.4,
+                    if selection.is_selected { 0.8 } else { 0.4 },
+                ),
                 rgb(0xc9943a),
             ),
             SherlockMessageLevel::Info => (
-                hsla(0.6, 0.5, 0.08, 1.0),
-                hsla(0.6, 0.5, 0.4, 0.4),
+                hsla(
+                    0.6,
+                    0.5,
+                    0.08,
+                    if selection.is_selected { 0.15 } else { 0.08 },
+                ),
+                hsla(0.6, 0.5, 0.4, if selection.is_selected { 0.8 } else { 0.4 }),
                 rgb(0x7a9ec4),
             ),
         };
@@ -82,6 +112,7 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
             .bg(bg)
             .border_1()
             .border_color(border)
+            .when(selection.is_selected, |this| this.shadow_md())
             .text_size(px(12.0))
             .text_color(text)
             .font_family("monospace")
@@ -94,39 +125,41 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
                             .justify_between()
                             .items_center()
                             .child(
-                                // Main Error Title
                                 div()
                                     .text_size(px(13.))
                                     .font_weight(FontWeight::BOLD)
-                                    .text_color(text)
+                                    .text_color(if selection.is_selected {
+                                        rgb(0xffffff)
+                                    } else {
+                                        text
+                                    })
                                     .child(self.message.error_type.to_string()),
                             )
                             .children(dismiss_btn),
                     )
                     .child(
-                        // Traceback / Content
                         div()
                             .mt_1()
                             .text_size(px(11.))
                             .line_height(px(16.))
                             .font_family("monospace")
                             .text_color(text)
-                            .opacity(0.8) // Makes it look less "busy"
+                            .opacity(if selection.is_selected { 1.0 } else { 0.8 })
                             .child(self.message.traceback.clone()),
                     ),
             )
             .into_any_element()
     }
+    #[inline(always)]
     fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         None
     }
+    #[inline(always)]
     fn priority(&self, _launcher: &Arc<Launcher>) -> f32 {
         1.0
     }
+    #[inline(always)]
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
         &self.message.traceback
-    }
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
-        None
     }
 }

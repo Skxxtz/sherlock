@@ -13,11 +13,16 @@ use crate::{
         children::{LauncherValues, RenderableChildDelegate, emoji_data::set_selected_skin_tone},
     },
     loader::utils::{CounterReader, ExecVariable},
+    sherlock_msg,
     ui::{
         launcher::{LauncherView, context_menu::ContextMenuAction, views::MoveDirection},
         search_bar::{EmptyBackspace, TextInput},
     },
-    utils::{command_launch::spawn_detached, errors::SherlockMessage, websearch::websearch},
+    utils::{
+        command_launch::spawn_detached,
+        errors::{SherlockMessage, types::SherlockErrorType},
+        websearch::websearch,
+    },
 };
 
 actions!(
@@ -87,7 +92,12 @@ impl LauncherView {
         self.active_bar = 0;
 
         // Handle context menu entries
-        self.context_actions = self.navigation.current_actions(cx).unwrap_or_default();
+        // TODO[ACTIONS]
+        // self.context_actions = self.navigation.current_actions(cx).unwrap_or_default();
+        self.has_actions = self
+            .navigation
+            .selected_item(cx)
+            .map_or(false, |i| i.has_actions());
 
         cx.notify()
     }
@@ -267,6 +277,15 @@ impl LauncherView {
                 self.filter_and_sort(cx);
                 return Ok(false);
             }
+            ExecMode::DynamicContextMenuFunc { action } => {
+                let ContextMenuAction::Fn(opts) = action.as_ref() else {
+                    return Ok(false);
+                };
+
+                if let Some(func) = opts.func.as_ref() {
+                    func(cx)
+                }
+            }
             ExecMode::SwitchView { idx } => {
                 if self.navigation.set_active_idx(idx) {
                     self.text_input.update(cx, |this, _| this.reset());
@@ -301,7 +320,7 @@ impl LauncherView {
         if let Some(idx) = self.context_idx {
             if let Some(action) = self.context_actions.get(idx) {
                 if let Some(selected) = self.navigation.selected_item(cx) {
-                    let what = selected.build_action_exec(action);
+                    let what = selected.build_action_exec(Arc::clone(action));
 
                     match self.execute_helper(what, "", &[], cx) {
                         Ok(exit) if exit => self.close_window(win, cx),
@@ -375,7 +394,30 @@ impl LauncherView {
         _win: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !self.has_actions {
+            return;
+        }
+
+        self.context_actions = self.navigation.current_actions(cx).unwrap_or_default();
+
+        // should never be called unless
         if self.context_actions.is_empty() {
+            let launcher_type = self
+                .navigation
+                .selected_item(cx)
+                .map(|i| i.launcher_type().to_owned());
+
+            self.navigation.push_message(
+                sherlock_msg!(
+                    Error,
+                    SherlockErrorType::Unreachable,
+                    format!(
+                        "Launcher {:?} configured incorrectly: context actions are empty but `has_actions` flag is set to true.",
+                        launcher_type
+                    )
+                ),
+                cx,
+            );
             return;
         }
 
@@ -440,7 +482,7 @@ impl LauncherView {
             self.variable_input.clear();
         }
     }
-    pub(self) fn update_async(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn update_async(&mut self, cx: &mut Context<Self>) {
         let data = self.navigation.with_model(cx, |mdl| mdl.data.clone());
         self.active_update_task = Some(cx.spawn(async move |this, cx: &mut AsyncApp| {
             let items = data.read_with(cx, |this, _| this.clone());
@@ -461,6 +503,12 @@ impl LauncherView {
                     cx.notify(this.entity_id());
                 });
             }
+
+            this.upgrade().map(|t| {
+                t.update(cx, |this, cx| {
+                    this.filter_and_sort(cx);
+                })
+            });
         }));
     }
 }

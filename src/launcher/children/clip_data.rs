@@ -1,10 +1,12 @@
 use std::sync::{Arc, RwLock};
 
 use gpui::{
-    Image, ImageSource, IntoElement, ParentElement, SharedString, Styled, div, img, px, rgb,
+    Image, ImageSource, IntoElement, ParentElement, SharedString, Styled, div, img,
+    prelude::FluentBuilder, px, rgb,
 };
 
 use crate::{
+    app::ActiveTheme,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -57,7 +59,7 @@ impl ClipData {
             Intent::Url { url } => {
                 self.actions = Arc::new([Arc::from(
                     ApplicationAction::new("create_bookmark")
-                        .name("Create Bookmark".into())
+                        .name("Create Bookmark")
                         .icon_name("sherlock-bookmark"),
                 )]);
                 Some(IntentResult::String(url.into()))
@@ -70,35 +72,14 @@ impl ClipData {
         }
         Some(())
     }
-
-    #[inline]
-    pub fn based_show(&self) -> bool {
-        self.result
-            .read()
-            .ok()
-            .and_then(|r| r.as_ref().map(|r| r.0.is_some()))
-            .unwrap_or(false)
-    }
 }
 
 impl<'a> RenderableChildImpl<'a> for ClipData {
-    fn search(&'a self, _launcher: &std::sync::Arc<crate::launcher::Launcher>) -> &'a str {
-        self.content.as_str()
-    }
-    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
-        let lock = self.result.read().ok()?;
-        let (_, res) = lock.as_ref()?;
-        Some(ExecMode::Copy {
-            content: res.to_string().into(),
-        })
-    }
-    fn priority(&self, launcher: &std::sync::Arc<crate::launcher::Launcher>) -> f32 {
-        launcher.priority as f32
-    }
     fn render(
         &self,
         _launcher: &std::sync::Arc<crate::launcher::Launcher>,
         selection: Selection,
+        theme: &ActiveTheme,
     ) -> gpui::AnyElement {
         let guard = self.result.read().ok();
         let Some((intent, result)) = guard
@@ -110,25 +91,55 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
         };
 
         match (&intent, &result) {
-            (Intent::Url { url }, _) => url_show(url.clone(), selection.is_selected),
+            (Intent::Url { url }, _) => url_show(url.clone(), selection, theme),
             (Intent::Conversion { .. }, IntentResult::String(s)) => {
-                calc_tile(s.clone(), selection.is_selected)
+                calc_tile(s.clone(), selection, theme)
             }
             (Intent::ColorConvert { .. }, IntentResult::String(s)) => {
-                calc_tile(s.clone(), selection.is_selected)
+                calc_tile(s.clone(), selection, theme)
             }
             (Intent::ColorDisplay { .. }, IntentResult::Color(c)) => {
-                color_show(*c, selection.is_selected)
+                color_show(*c, selection, theme)
             }
             _ => div().into_any_element(),
         }
     }
+    #[inline(always)]
+    fn search(&'a self, _launcher: &std::sync::Arc<crate::launcher::Launcher>) -> &'a str {
+        self.content.as_str()
+    }
+    #[inline(always)]
+    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
+        let lock = self.result.read().ok()?;
+        let (_, res) = lock.as_ref()?;
+        Some(ExecMode::Copy {
+            content: res.to_string().into(),
+        })
+    }
+    #[inline(always)]
+    fn priority(&self, launcher: &std::sync::Arc<crate::launcher::Launcher>) -> f32 {
+        launcher.priority as f32
+    }
+    #[inline(always)]
     fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         Some(self.actions.clone())
     }
+    #[inline(always)]
+    fn has_actions(&self) -> bool {
+        !self.actions.is_empty()
+    }
+    fn based_show(&self, _keyword: &str) -> Option<bool> {
+        Some(
+            self.result
+                .read()
+                .ok()
+                .and_then(|r| r.as_ref().map(|r| r.0.is_some()))
+                .unwrap_or(false),
+        )
+    }
 }
 
-fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {
+fn calc_tile(result: SharedString, selection: Selection, theme: &ActiveTheme) -> gpui::AnyElement {
     div()
         .px_4()
         .py_7()
@@ -140,10 +151,9 @@ fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {
         .child(
             div()
                 .text_size(px(24.0))
-                .text_color(if is_selected {
-                    rgb(0xDDD5D0)
-                } else {
-                    rgb(0x6E6E6E)
+                .text_color(theme.secondary_text)
+                .when(selection.is_selected, |this| {
+                    this.text_color(theme.primary_text)
                 })
                 .overflow_hidden()
                 .text_ellipsis()
@@ -153,7 +163,7 @@ fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {
         .into_any_element()
 }
 
-fn color_show(result: u32, is_selected: bool) -> gpui::AnyElement {
+fn color_show(result: u32, selection: Selection, theme: &ActiveTheme) -> gpui::AnyElement {
     div()
         .px_4()
         .py_2()
@@ -170,10 +180,9 @@ fn color_show(result: u32, is_selected: bool) -> gpui::AnyElement {
                 .child(
                     div()
                         .text_sm()
-                        .text_color(if is_selected {
-                            rgb(0xffffff)
-                        } else {
-                            rgb(0xcccccc)
+                        .text_color(theme.secondary_text)
+                        .when(selection.is_selected, |this| {
+                            this.text_color(theme.primary_text)
                         })
                         .overflow_hidden()
                         .text_ellipsis()
@@ -183,18 +192,14 @@ fn color_show(result: u32, is_selected: bool) -> gpui::AnyElement {
                 .child(
                     div()
                         .text_xs()
-                        .text_color(if is_selected {
-                            rgb(0x999999)
-                        } else {
-                            rgb(0x666666)
-                        })
+                        .text_color(theme.secondary_text)
                         .child("From Clipboard"),
                 ),
         )
         .into_any_element()
 }
 
-fn url_show(url: SharedString, is_selected: bool) -> gpui::AnyElement {
+fn url_show(url: SharedString, selection: Selection, theme: &ActiveTheme) -> gpui::AnyElement {
     div()
         .px_4()
         .py_2()
@@ -217,10 +222,9 @@ fn url_show(url: SharedString, is_selected: bool) -> gpui::AnyElement {
                 .child(
                     div()
                         .text_sm()
-                        .text_color(if is_selected {
-                            rgb(0xffffff)
-                        } else {
-                            rgb(0xcccccc)
+                        .text_color(theme.secondary_text)
+                        .when(selection.is_selected, |this| {
+                            this.text_color(theme.primary_text)
                         })
                         .overflow_hidden()
                         .text_ellipsis()
@@ -230,11 +234,7 @@ fn url_show(url: SharedString, is_selected: bool) -> gpui::AnyElement {
                 .child(
                     div()
                         .text_xs()
-                        .text_color(if is_selected {
-                            rgb(0x999999)
-                        } else {
-                            rgb(0x666666)
-                        })
+                        .text_color(theme.secondary_text)
                         .child("From Clipboard"),
                 ),
         )

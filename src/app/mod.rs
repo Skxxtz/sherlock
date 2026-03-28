@@ -1,7 +1,6 @@
-use futures::{StreamExt, stream::FuturesUnordered};
 use gpui::{
-    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Size, WindowBackgroundAppearance,
-    WindowBounds, WindowHandle, WindowKind, WindowOptions,
+    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Hsla, Size, WindowBackgroundAppearance,
+    WindowBounds, WindowHandle, WindowKind, WindowOptions, hsla,
     layer_shell::{Layer, LayerShellOptions},
     point, px,
 };
@@ -10,7 +9,7 @@ use tokio::net::UnixListener;
 
 use crate::{
     SOCKET_PATH,
-    launcher::children::{LauncherValues, RenderableChild},
+    launcher::children::RenderableChild,
     loader::{LauncherLoadResult, Loader, SetupResult},
     ui::{
         launcher::{
@@ -28,6 +27,38 @@ use crate::{
 mod bindings;
 mod updates;
 
+pub struct ActiveTheme {
+    pub bg_selected: Hsla,
+    pub bg_idle: Hsla,
+    pub border_selected: Hsla,
+    pub border_idle: Hsla,
+    pub primary_text: Hsla,
+    pub secondary_text: Hsla,
+
+    pub color_warn: Hsla,
+    pub color_err: Hsla,
+    pub color_succ: Hsla,
+}
+
+impl gpui::Global for ActiveTheme {}
+
+impl ActiveTheme {
+    pub fn dark() -> Self {
+        Self {
+            bg_selected: hsla(0.0, 0.0, 1.0, 0.1),
+            bg_idle: hsla(0.0, 0.0, 0.0, 0.0),
+            border_selected: hsla(0.0, 0.0, 1.0, 0.2),
+            border_idle: hsla(0.0, 0.0, 1.0, 0.05),
+            primary_text: hsla(0.0, 0.0, 0.95, 1.0),
+            secondary_text: hsla(0.0, 0.0, 0.6, 1.0),
+
+            color_warn: hsla(45.0 / 360.0, 0.85, 0.65, 1.0),
+            color_err: hsla(0.0 / 360.0, 0.85, 0.65, 1.0),
+            color_succ: hsla(145.0 / 360.0, 0.75, 0.60, 1.0),
+        }
+    }
+}
+
 pub fn run_app(cx: &mut App, result: SetupResult) {
     let SetupResult {
         config_dir,
@@ -36,6 +67,8 @@ pub fn run_app(cx: &mut App, result: SetupResult) {
     let watcher = ConfigWatcher::new(config_dir);
 
     bindings::register_bindings(cx);
+
+    cx.set_global(ActiveTheme::dark());
 
     let data: Entity<Arc<Vec<RenderableChild>>> = cx.new(|_| Arc::new(Vec::new()));
     let modes = load_modes(cx, &data, &mut messages);
@@ -73,39 +106,11 @@ fn load_modes(
     }
 }
 
-pub async fn run_async_updates(
-    cx: AsyncApp,
-    data: Entity<Arc<Vec<RenderableChild>>>,
-    new_win: WindowHandle<LauncherView>,
-    current_generation: u64,
-    this_generation: u64,
-) {
-    let items = data.read_with(&cx, |this, _| this.clone());
-
-    let mut futures: FuturesUnordered<_> = items
-        .iter()
-        .enumerate()
-        .filter(|(_, item)| item.is_async())
-        .map(|(idx, item)| async move { (idx, item.clone().update_async().await) })
-        .collect();
-
-    while let Some((idx, result)) = futures.next().await {
-        let Some(update) = result else { continue };
-        let _ = cx.update(|cx| {
-            if current_generation != this_generation {
-                return;
-            }
-            data.update(cx, |items_arc, _| {
-                Arc::make_mut(items_arc)[idx] = update;
-            });
-            let _ = new_win.update(cx, |launcher, _, cx| {
-                launcher
-                    .navigation
-                    .with_model_mut(cx, |this, _| this.last_query = None);
-                launcher.filter_and_sort(cx);
-            });
-        });
-    }
+#[inline(always)]
+pub async fn run_async_updates(mut cx: AsyncApp, win: WindowHandle<LauncherView>) {
+    let _ = win.update(&mut cx, |this, _win, cx| {
+        this.update_async(cx);
+    });
 }
 
 fn spawn_launcher(
@@ -152,6 +157,7 @@ fn spawn_launcher(
                     mode: LauncherMode::Home,
                     modes,
                     context_idx: None,
+                    has_actions: false,
                     context_actions: Arc::new([]),
                     variable_input: Vec::new(),
                     active_bar: 0,

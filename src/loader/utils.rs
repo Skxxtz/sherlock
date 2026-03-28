@@ -57,8 +57,8 @@ impl ApplicationAction {
         self.name.is_some() && self.exec.is_some() && self.icon.is_some()
     }
 
-    pub fn name(mut self, name: SharedString) -> Self {
-        self.name = Some(name);
+    pub fn name(mut self, name: impl Into<SharedString>) -> Self {
+        self.name = Some(name.into());
         self
     }
     pub fn icon(mut self, icon: Arc<Path>) -> Self {

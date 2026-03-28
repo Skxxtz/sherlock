@@ -67,6 +67,7 @@ impl LauncherProvider for CategoryLauncher {
                                 ..app_action.clone()
                             }))
                         }
+                        ContextMenuAction::Fn(_) => Arc::clone(action_arc),
                         ContextMenuAction::Emoji(_) => Arc::clone(action_arc),
                     })
                     .collect();

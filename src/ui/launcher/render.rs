@@ -6,6 +6,7 @@ use gpui::{
 
 use crate::{
     CONTEXT_MENU_BIND,
+    app::ActiveTheme,
     launcher::children::{LauncherValues, RenderableChild, RenderableChildDelegate, Selection},
     ui::{
         UIFunction,
@@ -130,7 +131,6 @@ impl LauncherView {
         else {
             return div().id("results-container");
         };
-        let context_open = self.context_idx.is_some();
 
         div()
             .id("results-container")
@@ -150,10 +150,11 @@ impl LauncherView {
                         None => return div().into_any_element(),
                     };
 
+                    let theme = cx.global::<ActiveTheme>();
                     Self::render_list_item(
                         &child,
                         Selection::new(data_idx, idx == selected_idx),
-                        context_open,
+                        theme,
                     )
                 })
                 .size_full()
@@ -179,7 +180,6 @@ impl LauncherView {
 
         let selected_idx = *selected_index;
         let col_count = *columns;
-        let context_open = self.context_idx.is_some();
 
         div()
             .id("results-container")
@@ -191,6 +191,7 @@ impl LauncherView {
                     "emoji-grid",
                     (indices.len() + col_count - 1) / col_count,
                     move |range, _win, cx| {
+                        let theme = cx.global::<ActiveTheme>();
                         range
                             .map(|row_idx| {
                                 div()
@@ -213,7 +214,7 @@ impl LauncherView {
                                                             data_idx,
                                                             item_idx == selected_idx,
                                                         ),
-                                                        context_open,
+                                                        theme,
                                                     ))
                                                     .into_any_element();
                                             }
@@ -253,6 +254,9 @@ impl LauncherView {
                         let is_selected = i == active;
                         match child.as_ref() {
                             ContextMenuAction::App(_) => {
+                                child.render_row(is_selected).into_any_element()
+                            }
+                            ContextMenuAction::Fn(_) => {
                                 child.render_row(is_selected).into_any_element()
                             }
                             ContextMenuAction::Emoji(_) => {
@@ -354,7 +358,7 @@ impl LauncherView {
     pub fn render_list_item(
         ad: &RenderableChild,
         selection: Selection,
-        context_open: bool,
+        theme: &ActiveTheme,
     ) -> AnyElement {
         div()
             .id(selection.data_idx)
@@ -368,19 +372,13 @@ impl LauncherView {
                     .mb(px(5.0))
                     .w_full()
                     .cursor_pointer()
-                    .bg(if selection.is_selected {
-                        hsla(0., 0., 0.149, 1.0)
-                    } else {
-                        hsla(0., 0., 0., 0.)
+                    .border_1()
+                    .bg(theme.bg_idle)
+                    .when(selection.is_selected, |this| {
+                        this.bg(theme.bg_selected)
+                            .border_color(theme.border_selected)
                     })
-                    .hover(|s| {
-                        if selection.is_selected || context_open {
-                            s
-                        } else {
-                            s.bg(hsla(0., 0., 0.12, 1.0))
-                        }
-                    })
-                    .child(ad.render(selection)),
+                    .child(ad.render(selection, theme)),
             )
             .into_any_element()
     }

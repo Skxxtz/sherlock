@@ -14,6 +14,7 @@ use crate::{
         children::RenderableChild,
         clipboard_launcher::ClipboardLauncher,
         emoji_launcher::EmojiPicker,
+        event_launcher::{EventLauncher, EventLauncherFunctions},
         message_launcher::MessageLauncher,
         system_cmd_launcher::CommandLauncher,
         weather_launcher::WeatherLauncher,
@@ -45,13 +46,32 @@ macro_rules! create_variants {
             Empty,
         }
 
-        #[derive(Clone, Copy, Debug)]
+        #[derive(Clone, Copy, Debug, PartialEq)]
         pub enum InnerFunction {
             $(
                 $( $variant($extra), )?
             )*
             #[allow(dead_code)]
-            __Placeholder
+            Empty
+        }
+
+        impl InnerFunction {
+            pub fn from_str(variant: &$name, func_name: &str) -> Self {
+                match variant {
+                    $(
+                        $name::$variant(_) => {
+                            $(
+                                use std::str::FromStr;
+                                if let Ok(f) = <$extra>::from_str(func_name) {
+                                    return Self::$variant(f);
+                                }
+                            )?
+                            Self::Empty
+                        }
+                    )*
+                    $name::Empty => Self::Empty,
+                }
+            }
         }
 
         impl $name {
@@ -111,9 +131,9 @@ create_variants! {
         Weather(WeatherLauncher),
         Web(WebLauncher),
         Emoji(EmojiPicker),
+        Event(EventLauncher, EventLauncherFunctions),
         Message(MessageLauncher)
         // Integrate later: TODO
-        // Event(EventLauncher),
         // Pipe(PipeLauncher),
         // Api(BulkTextLauncher),
         // File(FileLauncher),

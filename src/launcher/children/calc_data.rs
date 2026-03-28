@@ -1,13 +1,15 @@
 use std::sync::{Arc, RwLock};
 
-use gpui::{IntoElement, ParentElement, SharedString, Styled, div, px, rgb};
+use gpui::{
+    IntoElement, ParentElement, SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
+};
 
 use crate::{
+    app::ActiveTheme,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
     },
-    ui::launcher::context_menu::ContextMenuAction,
     utils::intent::{Capabilities, Intent, IntentResult},
 };
 
@@ -24,9 +26,47 @@ impl CalcData {
             result: Arc::new(RwLock::new(None)),
         }
     }
-    pub fn based_show(&self, keyword: &str) -> bool {
+}
+
+impl<'a> RenderableChildImpl<'a> for CalcData {
+    #[inline(always)]
+    fn search(&'a self, _launcher: &std::sync::Arc<crate::launcher::Launcher>) -> &'a str {
+        ""
+    }
+    #[inline(always)]
+    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
+        let lock = self.result.read().ok()?;
+        let (_, res) = lock.as_ref()?;
+        Some(ExecMode::Copy {
+            content: res.to_string().into(),
+        })
+    }
+    #[inline(always)]
+    fn priority(&self, launcher: &std::sync::Arc<crate::launcher::Launcher>) -> f32 {
+        launcher.priority as f32
+    }
+    fn render(
+        &self,
+        _launcher: &std::sync::Arc<crate::launcher::Launcher>,
+        selection: Selection,
+        theme: &ActiveTheme,
+    ) -> gpui::AnyElement {
+        let result = {
+            let guard = self.result.read().unwrap();
+            let Some((_, res)) = guard.as_ref() else {
+                return div().into_any_element();
+            };
+            res.clone()
+        };
+
+        match result {
+            IntentResult::String(s) => calc_tile(s, selection, theme),
+            IntentResult::Color(c) => color_show(c, selection, theme),
+        }
+    }
+    fn based_show(&self, keyword: &str) -> Option<bool> {
         if keyword.trim().is_empty() {
-            return false;
+            return Some(false);
         }
 
         let mut result = None;
@@ -59,48 +99,11 @@ impl CalcData {
         if let Ok(mut writer) = self.result.write() {
             *writer = result.map(|(o, r)| (SharedString::from(o), r));
         }
-        show
+        Some(show)
     }
 }
 
-impl<'a> RenderableChildImpl<'a> for CalcData {
-    fn search(&'a self, _launcher: &std::sync::Arc<crate::launcher::Launcher>) -> &'a str {
-        ""
-    }
-    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
-        let lock = self.result.read().ok()?;
-        let (_, res) = lock.as_ref()?;
-        Some(ExecMode::Copy {
-            content: res.to_string().into(),
-        })
-    }
-    fn priority(&self, launcher: &std::sync::Arc<crate::launcher::Launcher>) -> f32 {
-        launcher.priority as f32
-    }
-    fn render(
-        &self,
-        _launcher: &std::sync::Arc<crate::launcher::Launcher>,
-        selection: Selection,
-    ) -> gpui::AnyElement {
-        let result = {
-            let guard = self.result.read().unwrap();
-            let Some((_, res)) = guard.as_ref() else {
-                return div().into_any_element();
-            };
-            res.clone()
-        };
-
-        match result {
-            IntentResult::String(s) => calc_tile(s, selection.is_selected),
-            IntentResult::Color(c) => color_show(c, selection.is_selected),
-        }
-    }
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
-        None
-    }
-}
-
-fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {
+fn calc_tile(result: SharedString, selection: Selection, theme: &ActiveTheme) -> gpui::AnyElement {
     div()
         .px_4()
         .py_7()
@@ -112,10 +115,9 @@ fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {
         .child(
             div()
                 .text_size(px(24.0))
-                .text_color(if is_selected {
-                    rgb(0xDDD5D0)
-                } else {
-                    rgb(0x6E6E6E)
+                .text_color(theme.secondary_text)
+                .when(selection.is_selected, |this| {
+                    this.text_color(theme.primary_text)
                 })
                 .overflow_hidden()
                 .text_ellipsis()
@@ -125,7 +127,7 @@ fn calc_tile(result: SharedString, is_selected: bool) -> gpui::AnyElement {
         .into_any_element()
 }
 
-fn color_show(result: u32, is_selected: bool) -> gpui::AnyElement {
+fn color_show(result: u32, selection: Selection, theme: &ActiveTheme) -> gpui::AnyElement {
     div()
         .px_4()
         .py_2()
@@ -144,10 +146,9 @@ fn color_show(result: u32, is_selected: bool) -> gpui::AnyElement {
             div().flex_col().justify_between().items_center().child(
                 div()
                     .text_sm()
-                    .text_color(if is_selected {
-                        rgb(0xffffff)
-                    } else {
-                        rgb(0xcccccc)
+                    .text_color(theme.secondary_text)
+                    .when(selection.is_selected, |this| {
+                        this.text_color(theme.primary_text)
                     })
                     .overflow_hidden()
                     .text_ellipsis()

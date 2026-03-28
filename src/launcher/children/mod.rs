@@ -5,11 +5,13 @@ pub mod app_data;
 pub mod calc_data;
 pub mod clip_data;
 pub mod emoji_data;
+pub mod event_data;
 pub mod message;
 pub mod mpris_data;
 pub mod weather_data;
 
 use crate::{
+    app::ActiveTheme,
     launcher::{
         ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
         children::message::MessageChild, emoji_launcher::EmojiData, utils::MprisState,
@@ -22,6 +24,7 @@ use crate::{
 
 use calc_data::CalcData;
 use clip_data::ClipData;
+use event_data::EventData;
 
 /// Creates enum RenderableChild,
 /// ## Example:
@@ -60,13 +63,13 @@ macro_rules! renderable_enum {
         }
 
         impl<'a> RenderableChildDelegate<'a> for $name {
-            fn render(&self, selection: Selection) -> AnyElement {
+            fn render(&self, selection: Selection, theme: &ActiveTheme) -> AnyElement {
                 match self {
-                    $(Self::$variant {inner, launcher} => inner.render(launcher, selection)),*
+                    $(Self::$variant {inner, launcher} => inner.render(launcher, selection, theme)),*
                 }
             }
 
-            fn build_action_exec(&self, action: &ContextMenuAction) -> ExecMode {
+            fn build_action_exec(&self, action: Arc<ContextMenuAction>) -> ExecMode {
                 ExecMode::from_app_action(action, &self)
             }
 
@@ -93,6 +96,18 @@ macro_rules! renderable_enum {
             fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
                 match self {
                     $(Self::$variant {inner, ..} => inner.actions()),*
+                }
+            }
+
+            fn has_actions(&self) -> bool {
+                match self {
+                    $(Self::$variant {inner, ..} => inner.has_actions()),*
+                }
+            }
+
+            fn based_show(&self, keyword: &str) -> Option<bool> {
+                match self {
+                    $(Self::$variant {inner, ..} => inner.based_show(keyword)),*
                 }
             }
         }
@@ -130,7 +145,7 @@ macro_rules! renderable_enum {
                 }
             }
 
-            fn launcher_type(&'a self) -> &'a LauncherType {
+            fn launcher_type(&self) -> &LauncherType {
                 &self.launcher().launcher_type
             }
         }
@@ -147,25 +162,13 @@ macro_rules! renderable_enum {
     };
 }
 impl RenderableChild {
-    pub fn based_show(&self, query: &str) -> Option<bool> {
-        match self {
-            Self::ClipLike { inner, .. } => Some(inner.based_show()),
-            Self::CalcLike { inner, .. } => Some(inner.based_show(query)),
-            Self::MusicLike { inner, .. } => {
-                // this skips early if the music launcher is empty
-                if inner.raw.is_some() {
-                    return None;
-                } else {
-                    Some(false)
-                }
-            }
-            _ => None,
-        }
-    }
     pub async fn update_async(mut self) -> Option<Self> {
         match &mut self {
             Self::ClipLike { inner, .. } => {
                 inner.update_async();
+            }
+            Self::EventLike { inner, .. } => {
+                let _ = inner.update_async().await;
             }
             Self::MusicLike { inner, .. } => {
                 let launcher = AudioLauncherFunctions::new()?;
@@ -212,6 +215,7 @@ renderable_enum! {
         MusicLike(MprisState),
         WeatherLike(WeatherData),
         MessageLike(MessageChild),
+        EventLike(EventData)
     }
 }
 
@@ -225,12 +229,14 @@ impl RenderableChild {
 }
 
 pub trait RenderableChildDelegate<'a> {
-    fn render(&self, selection: Selection) -> AnyElement;
-    fn build_action_exec(&'a self, action: &'a ContextMenuAction) -> ExecMode;
+    fn render(&self, selection: Selection, theme: &ActiveTheme) -> AnyElement;
+    fn build_action_exec(&'a self, action: Arc<ContextMenuAction>) -> ExecMode;
     fn build_exec(&self) -> Option<ExecMode>;
     fn search(&'a self) -> &'a str;
     fn vars(&self) -> Option<&[ExecVariable]>;
     fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>>;
+    fn has_actions(&self) -> bool;
+    fn based_show(&self, keyword: &str) -> Option<bool>;
 }
 
 #[allow(dead_code)]
@@ -246,11 +252,24 @@ pub trait LauncherValues<'a> {
 }
 
 pub trait RenderableChildImpl<'a> {
-    fn render(&self, launcher: &Arc<Launcher>, selection: Selection) -> AnyElement;
+    fn render(
+        &self,
+        launcher: &Arc<Launcher>,
+        selection: Selection,
+        theme: &ActiveTheme,
+    ) -> AnyElement;
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode>;
     fn priority(&self, launcher: &Arc<Launcher>) -> f32;
     fn search(&'a self, launcher: &Arc<Launcher>) -> &'a str;
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>>;
+    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+        None
+    }
+    fn has_actions(&self) -> bool {
+        false
+    }
+    fn based_show(&self, _keyword: &str) -> Option<bool> {
+        None
+    }
 }
 
 pub trait SherlockSearch {

@@ -6,25 +6,21 @@ use gpui::{
 use std::sync::Arc;
 
 use crate::{
+    app::ActiveTheme,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
         weather_launcher::WeatherData,
     },
-    ui::launcher::context_menu::ContextMenuAction,
 };
 
 impl<'a> RenderableChildImpl<'a> for WeatherData {
-    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
-        None
-    }
-    fn priority(&self, launcher: &Arc<Launcher>) -> f32 {
-        launcher.priority as f32
-    }
-    fn search(&self, _launcher: &Arc<Launcher>) -> &'a str {
-        ""
-    }
-    fn render(&self, _launcher: &Arc<Launcher>, _selection: Selection) -> AnyElement {
+    fn render(
+        &self,
+        _launcher: &Arc<Launcher>,
+        _selection: Selection,
+        _theme: &ActiveTheme,
+    ) -> AnyElement {
         let now = Local::now().time();
         div()
             .px_4()
@@ -54,7 +50,16 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
             )
             .into_any_element()
     }
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+    #[inline(always)]
+    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         None
+    }
+    #[inline(always)]
+    fn priority(&self, launcher: &Arc<Launcher>) -> f32 {
+        launcher.priority as f32
+    }
+    #[inline(always)]
+    fn search(&self, _launcher: &Arc<Launcher>) -> &'a str {
+        ""
     }
 }

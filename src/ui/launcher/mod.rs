@@ -32,6 +32,7 @@ pub struct LauncherView {
     // context menu
     pub context_idx: Option<usize>,
     pub context_actions: Arc<[Arc<ContextMenuAction>]>,
+    pub has_actions: bool,
 
     // variable input fields
     pub variable_input: Vec<Entity<TextInput>>,
@@ -230,11 +231,11 @@ impl LauncherMode {
 }
 
 fn search_score(query: &str, match_in: &str) -> f32 {
-    if query.is_empty() {
-        return 0.8;
-    }
     if match_in.is_empty() {
         return 1.0;
+    }
+    if query.is_empty() {
+        return 0.8;
     }
 
     let mut best_score = 1.0;

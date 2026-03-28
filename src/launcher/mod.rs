@@ -24,7 +24,7 @@ pub mod web_launcher;
 use crate::{
     launcher::{
         children::{
-            RenderableChild,
+            LauncherValues, RenderableChild,
             emoji_data::{apply_skin_tones, get_selected_skin_tones},
         },
         variant_type::{InnerFunction, LauncherType},
@@ -194,6 +194,9 @@ pub enum ExecMode {
         mode: NavigationViewType,
         launcher: Arc<Launcher>,
     },
+    DynamicContextMenuFunc {
+        action: Arc<ContextMenuAction>,
+    },
     SwitchView {
         idx: usize,
     },
@@ -249,8 +252,8 @@ impl ExecMode {
             _ => Self::None,
         }
     }
-    pub fn from_app_action(action: &ContextMenuAction, _data: &RenderableChild) -> Self {
-        match action {
+    pub fn from_app_action(action: Arc<ContextMenuAction>, data: &RenderableChild) -> Self {
+        match action.as_ref() {
             ContextMenuAction::App(action) => match action.method.as_str() {
                 "app_launcher" | "command" => Self::Commmand {
                     exec: action.exec.clone().unwrap_or_default(),
@@ -267,8 +270,23 @@ impl ExecMode {
                     }
                 }
 
+                k if k.starts_with("inner.") => {
+                    let inner = InnerFunction::from_str(
+                        data.launcher_type(),
+                        k.trim_start_matches("inner."),
+                    );
+                    if inner == InnerFunction::Empty {
+                        Self::None
+                    } else {
+                        Self::Inner {
+                            func: inner,
+                            exit: action.exit,
+                        }
+                    }
+                }
                 _ => Self::None,
             },
+            ContextMenuAction::Fn(_) => Self::DynamicContextMenuFunc { action },
             ContextMenuAction::Emoji(emj) => {
                 let emoji = emj.emoji();
                 let content = apply_skin_tones(emoji, &get_selected_skin_tones())

@@ -10,6 +10,7 @@ use crate::{
         utils::{RawLauncher, deserialize_named_appdata},
     },
     sherlock_msg,
+    ui::launcher::context_menu::ContextMenuAction,
     utils::errors::types::SherlockErrorType,
 };
 
@@ -34,8 +35,7 @@ impl LauncherProvider for CommandLauncher {
                 "Command launcher does not contain any commands."
             )
         })?;
-        let app_data =
-            deserialize_named_appdata(cmds.clone().into_deserializer()).unwrap_or_default();
+        let app_data = deserialize_named_appdata(cmds.into_deserializer()).unwrap_or_default();
         let children: Vec<RenderableChild> = app_data
             .into_iter()
             .map(|mut inner| {
@@ -45,14 +45,38 @@ impl LauncherProvider for CommandLauncher {
                     .and_then(|exec| ctx.counts.get(exec))
                     .copied()
                     .unwrap_or(0u32);
-                inner.icon = inner
+
+                let parent_icon = inner
                     .icon
-                    .and_then(|i| i.to_str().and_then(resolve_icon_path));
+                    .and_then(|i| i.to_str().and_then(resolve_icon_path))
+                    .or(launcher.icon.clone());
+
+                inner.icon = parent_icon.clone();
+
+                inner.actions = inner
+                    .actions
+                    .iter()
+                    .map(|action| match action.as_ref() {
+                        ContextMenuAction::App(app_action) => {
+                            let mut resolved = app_action.clone();
+                            resolved.icon = app_action
+                                .icon
+                                .as_ref()
+                                .and_then(|i| i.to_str())
+                                .and_then(resolve_icon_path)
+                                .or_else(|| parent_icon.clone());
+                            Arc::new(ContextMenuAction::App(resolved))
+                        }
+                        _ => action.clone(),
+                    })
+                    .collect();
+
                 inner.priority = Some(parse_priority(
                     launcher.priority as f32,
                     count,
                     ctx.max_decimals,
                 ));
+
                 RenderableChild::AppLike {
                     launcher: Arc::clone(&launcher),
                     inner,

@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use std::{fmt::Debug, path::Path, sync::Arc};
 
 use gpui::{
-    ImageSource, InteractiveElement, IntoElement, ParentElement, Styled, div, hsla, img,
-    prelude::FluentBuilder, px, relative,
+    App, ImageSource, InteractiveElement, IntoElement, ParentElement, SharedString, Styled, div,
+    hsla, img, prelude::FluentBuilder, px, relative,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -11,12 +11,13 @@ use crate::{
         children::emoji_data::{EmojiAction, apply_skin_tones, get_selected_skin_tones},
         emoji_launcher::ALL_SKIN_TONES,
     },
-    loader::utils::ApplicationAction,
+    loader::{resolve_icon_path, utils::ApplicationAction},
 };
 
 #[derive(Debug, PartialEq)]
 pub enum ContextMenuAction {
     App(ApplicationAction),
+    Fn(DynamicFunctionAction),
     Emoji(EmojiAction),
 }
 impl From<ApplicationAction> for Arc<ContextMenuAction> {
@@ -155,6 +156,60 @@ impl ContextMenuAction {
                             .child(apply_skin_tones(emoji, &tones).as_str().to_string()),
                     )
             }))
+    }
+}
+
+pub struct DynamicFunctionAction {
+    pub name: SharedString,
+    pub icon: Option<Arc<Path>>,
+    pub exit: bool,
+    pub func: Option<Box<dyn Fn(&mut App) + Send + Sync + 'static>>,
+}
+impl Debug for DynamicFunctionAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name.as_str())
+    }
+}
+impl PartialEq for DynamicFunctionAction {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.icon == other.icon && self.exit == other.exit
+    }
+    fn ne(&self, other: &Self) -> bool {
+        !(self.name == other.name && self.icon == other.icon && self.exit == other.exit)
+    }
+}
+
+impl DynamicFunctionAction {
+    pub fn new(name: impl Into<SharedString>) -> Self {
+        Self {
+            name: name.into(),
+            icon: None,
+            exit: true,
+            func: None,
+        }
+    }
+
+    pub fn on_exec<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&mut App) + Send + Sync + 'static,
+    {
+        self.func = Some(Box::new(f));
+        self
+    }
+
+    pub fn icon(mut self, icon: Arc<Path>) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    pub fn icon_name(mut self, icon_name: &str) -> Self {
+        self.icon = resolve_icon_path(icon_name);
+        self
+    }
+
+    pub fn exit(mut self, should_exit: bool) -> Self {
+        self.exit = should_exit;
+        self
     }
 }
 

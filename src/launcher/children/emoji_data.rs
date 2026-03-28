@@ -7,6 +7,7 @@ use arrayvec::ArrayString;
 use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px, rgb};
 
 use crate::{
+    app::ActiveTheme,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -65,7 +66,12 @@ pub fn apply_skin_tones(template: &str, tones: &[SkinTone]) -> ArrayString<64> {
 }
 
 impl<'a> RenderableChildImpl<'a> for EmojiData {
-    fn render(&self, _launcher: &Arc<Launcher>, selection: Selection) -> AnyElement {
+    fn render(
+        &self,
+        _launcher: &Arc<Launcher>,
+        selection: Selection,
+        _theme: &ActiveTheme,
+    ) -> AnyElement {
         let emoji = apply_skin_tones(self.entry.emoji, &get_selected_skin_tones());
         div()
             .size_full()
@@ -101,17 +107,21 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
             )
             .into_any_element()
     }
+    #[inline(always)]
     fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         Some(ExecMode::Copy {
             content: self.entry.emoji.to_string(),
         })
     }
+    #[inline(always)]
     fn priority(&self, launcher: &Arc<Launcher>) -> f32 {
         launcher.priority as f32
     }
+    #[inline(always)]
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
         &self.entry.keywords
     }
+    #[inline(always)]
     fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         let num_tones = self.entry.skin_tones as usize;
         let template = &*EMOJI_CONTEXT_ACTIONS;
@@ -131,6 +141,10 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
         } else {
             Some(Arc::from(subset))
         }
+    }
+    #[inline(always)]
+    fn has_actions(&self) -> bool {
+        self.entry.skin_tones > 0
     }
 }
 

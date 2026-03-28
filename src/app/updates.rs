@@ -21,7 +21,6 @@ pub(super) async fn run_event_loop(
     mut initial_messages: Vec<SherlockMessage>,
 ) {
     let mut win: Option<WindowHandle<LauncherView>> = None;
-    let mut current_generation: u64 = 0;
     let mut active_update_task: Option<gpui::Task<()>> = None;
 
     loop {
@@ -36,9 +35,6 @@ pub(super) async fn run_event_loop(
             }
 
             drop(active_update_task.take());
-            current_generation += 1;
-            let this_generation = current_generation;
-
             let new_win_handle = cx.update(|cx| {
                 if let Some(old_win) = win.take() {
                     let _ = old_win.update(cx, |_, win, _| win.remove_window());
@@ -54,16 +50,7 @@ pub(super) async fn run_event_loop(
             });
 
             let cx_inner = cx.clone();
-            let data_clone = data.clone();
-            active_update_task = Some(cx.spawn(move |_: &mut AsyncApp| {
-                run_async_updates(
-                    cx_inner,
-                    data_clone,
-                    new_win_handle,
-                    current_generation,
-                    this_generation,
-                )
-            }));
+            let _ = run_async_updates(cx_inner, new_win_handle).await;
         } else {
             eprintln!("Broken UNIX Socket.");
         }

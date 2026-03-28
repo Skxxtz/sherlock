@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
-use gpui::{AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, div, img, px, rgb};
+use gpui::{
+    AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, div, img,
+    prelude::FluentBuilder, px,
+};
 
 use crate::{
+    app::ActiveTheme,
     launcher::{
         ExecMode, Launcher,
         audio_launcher::MusicPlayerFunctions,
@@ -10,11 +14,15 @@ use crate::{
         utils::MprisState,
         variant_type::InnerFunction,
     },
-    ui::launcher::context_menu::ContextMenuAction,
 };
 
 impl<'a> RenderableChildImpl<'a> for MprisState {
-    fn render(&self, _launcher: &Arc<Launcher>, selection: Selection) -> AnyElement {
+    fn render(
+        &self,
+        _launcher: &Arc<Launcher>,
+        selection: Selection,
+        theme: &ActiveTheme,
+    ) -> AnyElement {
         div()
             .px_4()
             .py_2()
@@ -22,6 +30,11 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
             .flex()
             .gap_5()
             .items_center()
+            .border_1()
+            .rounded_md()
+            .when(!selection.is_selected, |this| {
+                this.border_color(theme.border_idle)
+            })
             .child(if let Some(icon) = &self.image {
                 img(ImageSource::Image(Arc::clone(icon)))
                     .size(px(64.))
@@ -31,10 +44,9 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
             })
             .child(
                 div()
-                    .text_color(if selection.is_selected {
-                        rgb(0xffffff)
-                    } else {
-                        rgb(0xcccccc)
+                    .text_color(theme.secondary_text)
+                    .when(selection.is_selected, |this| {
+                        this.text_color(theme.primary_text)
                     })
                     .flex_col()
                     .justify_between()
@@ -63,19 +75,27 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
             )
             .into_any_element()
     }
+    #[inline(always)]
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode> {
         Some(ExecMode::Inner {
             func: InnerFunction::MusicPlayer(MusicPlayerFunctions::TogglePlayback),
             exit: launcher.exit,
         })
     }
+    #[inline(always)]
     fn priority(&self, launcher: &Arc<Launcher>) -> f32 {
         launcher.priority as f32
     }
+    #[inline(always)]
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
         ""
     }
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
-        None
+    #[inline(always)]
+    fn based_show(&self, _keyword: &str) -> Option<bool> {
+        if self.raw.is_some() {
+            return None;
+        } else {
+            Some(false)
+        }
     }
 }
