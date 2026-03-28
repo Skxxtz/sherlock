@@ -110,7 +110,9 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
     #[inline(always)]
     fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         Some(ExecMode::Copy {
-            content: self.entry.emoji.to_string(),
+            content: apply_skin_tones(&self.entry.emoji, &get_selected_skin_tones())
+                .as_str()
+                .to_string(),
         })
     }
     #[inline(always)]
