@@ -121,16 +121,16 @@ impl Dispatch<ZwlrDataControlDeviceV1, ()> for ClipboardState {
                     .cloned()
                     .unwrap_or_default();
 
-                let mime = mime_types
+                let mime = ["text/plain;charset=utf-8", "UTF8_STRING", "text/plain"]
                     .iter()
-                    .find(|m| {
-                        let m = m.as_str();
-                        m == "text/plain;charset=utf-8"
-                            || m == "UTF8_STRING"
-                            || m == "text/plain"
-                            || m.starts_with("text/")
-                    })
-                    .cloned();
+                    .find(|&&preferred| mime_types.iter().any(|m| m == preferred))
+                    .map(|&m| m.to_string())
+                    .or_else(|| {
+                        mime_types
+                            .iter()
+                            .find(|m| m.starts_with("text/") && !m.contains("html"))
+                            .cloned()
+                    });
 
                 if let Some(mime_type) = mime {
                     let (read_fd, write_fd) = nix::unistd::pipe().unwrap();
