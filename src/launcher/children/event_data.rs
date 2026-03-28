@@ -26,7 +26,7 @@ use crate::{
     },
     loader::utils::ApplicationAction,
     sherlock_msg,
-    ui::launcher::context_menu::{ContextMenuAction, DynamicFunctionAction},
+    ui::launcher::context_menu::ContextMenuAction,
     utils::errors::{
         SherlockMessage,
         types::{SherlockErrorType, SocketAction},
@@ -40,10 +40,24 @@ pub struct EventData {
     pub color: Option<Hsla>,
     pub actions: Arc<[Arc<ContextMenuAction>]>,
 
+    look_back: Duration,
+    look_ahead: Duration,
     last_call: Option<Instant>,
 }
 
 impl EventData {
+    pub fn new(look_back: Duration, look_ahead: Duration) -> Self {
+        Self {
+            time: None,
+            event: None,
+            color: None,
+            actions: Arc::new([]),
+
+            look_back,
+            look_ahead,
+            last_call: None,
+        }
+    }
     pub async fn update_async(&mut self) -> Result<(), SherlockMessage> {
         // debounce logic
         // causes freezes if not applied!!
@@ -69,8 +83,8 @@ impl EventData {
 
         let config = bincode::config::standard();
         let req = Request::Event(EventFilter::Nearby {
-            look_back: Duration::from_hours(6),
-            look_ahead: Duration::from_hours(4),
+            look_back: self.look_back,
+            look_ahead: self.look_ahead,
         });
         let req_obj = SizedMessageObj::from_struct(&req).map_err(|e| {
             sherlock_msg!(Warning, SherlockErrorType::SerializationError, e.message)
