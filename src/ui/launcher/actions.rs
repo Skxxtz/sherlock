@@ -92,8 +92,6 @@ impl LauncherView {
         self.active_bar = 0;
 
         // Handle context menu entries
-        // TODO[ACTIONS]
-        // self.context_actions = self.navigation.current_actions(cx).unwrap_or_default();
         self.has_actions = self
             .navigation
             .selected_item(cx)
