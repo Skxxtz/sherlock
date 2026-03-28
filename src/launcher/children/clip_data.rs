@@ -171,6 +171,11 @@ fn color_show(result: u32, selection: Selection, theme: &ActiveTheme) -> gpui::A
         .flex()
         .gap_5()
         .items_center()
+        .border_1()
+        .rounded_md()
+        .when(!selection.is_selected, |this| {
+            this.border_color(theme.border_idle)
+        })
         .child(div().size(px(24.)).rounded_full().bg(rgb(result)))
         .child(
             div()
