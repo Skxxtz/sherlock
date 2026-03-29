@@ -20,7 +20,7 @@ pub trait CommandFactory: Send + Sync {
     fn args<'a>(&self, paths: &'a [PathBuf]) -> impl Iterator<Item = Cow<'a, OsStr>>;
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct CommandBackend<F: CommandFactory> {
     factory: F,
 }
@@ -30,7 +30,7 @@ impl<F: CommandFactory> CommandBackend<F> {
     }
 }
 
-impl<F: CommandFactory> FileSearchProvider for CommandBackend<F> {
+impl<F: CommandFactory + Default> FileSearchProvider for CommandBackend<F> {
     fn name(&self) -> &'static str {
         self.factory.binary_name()
     }

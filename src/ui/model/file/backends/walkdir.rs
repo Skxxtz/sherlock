@@ -1,12 +1,14 @@
 use std::path::PathBuf;
 
 use crate::ui::model::file::{
-    FileResult, FileSearchUtility, MAX_SEARCH_DEPTH, ResultHeap, backends::FileSearchProvider,
+    FileSearchUtility, MAX_SEARCH_DEPTH,
+    backends::FileSearchProvider,
+    utils::{FileResult, ResultHeap},
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct WalkdirBackend;
 
 impl FileSearchProvider for WalkdirBackend {

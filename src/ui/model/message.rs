@@ -88,8 +88,7 @@ impl MessageView {
         let Model::Standard {
             data,
             filtered_indices,
-            last_query,
-            deferred_render_task,
+            ..
         } = &mut self.model
         else {
             return;

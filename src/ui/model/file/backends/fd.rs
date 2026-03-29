@@ -3,7 +3,7 @@ use std::{borrow::Cow, ffi::OsStr, path::PathBuf};
 
 use crate::ui::model::file::backends::command::CommandFactory;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct FdFactory;
 
 impl CommandFactory for FdFactory {
