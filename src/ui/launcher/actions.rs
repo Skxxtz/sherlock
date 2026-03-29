@@ -44,10 +44,11 @@ actions!(
 impl LauncherView {
     pub fn focus_first(&mut self, cx: &mut Context<Self>) {
         let snapshot = self.navigation.with_model(cx, |mdl| {
-            if mdl.filtered_indices.is_empty() {
+            let filtered_indices = mdl.filtered_indices();
+            if filtered_indices.is_empty() {
                 None
             } else {
-                Some((mdl.filtered_indices.clone(), mdl.data.clone()))
+                Some((filtered_indices, mdl.data()))
             }
         });
 
@@ -71,9 +72,7 @@ impl LauncherView {
     }
     #[inline(always)]
     fn valid_selection_idx(&self, n: usize, cx: &mut Context<Self>) -> bool {
-        let list_len = self
-            .navigation
-            .with_model(cx, |mdl| mdl.filtered_indices.len());
+        let list_len = self.navigation.with_model(cx, |mdl| mdl.len());
         n < list_len && list_len != 0
     }
     pub fn focus_nth(&mut self, n: usize, cx: &mut Context<Self>) {
@@ -456,7 +455,7 @@ impl LauncherView {
 
         let needed_vars: Option<Vec<ExecVariable>> = {
             self.navigation.with_model_mut(cx, |mdl, cx| {
-                let data_guard = mdl.data.read(cx);
+                let data_guard = mdl.data().read(cx);
                 data_guard
                     .get(idx)
                     .and_then(|data| data.vars().map(|slice| slice.to_vec()))
@@ -481,7 +480,7 @@ impl LauncherView {
         }
     }
     pub(crate) fn update_async(&mut self, cx: &mut Context<Self>) {
-        let data = self.navigation.with_model(cx, |mdl| mdl.data.clone());
+        let data = self.navigation.with_model(cx, |mdl| mdl.data());
         self.active_update_task = Some(cx.spawn(async move |this, cx: &mut AsyncApp| {
             let items = data.read_with(cx, |this, _| this.clone());
 

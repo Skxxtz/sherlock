@@ -1,12 +1,10 @@
 use crate::launcher::Launcher;
 use crate::launcher::children::RenderableChild;
 use crate::launcher::children::file_data::FileData;
-use crate::loader::utils::AppData;
 use crate::ui::launcher::LauncherView;
 use crate::ui::model::file::backends::FileSearchBackend;
-use crate::ui::model::file::backends::ripgrep::RipgrepBackend;
-use crate::ui::model::file::backends::walkdir::WalkdirBackend;
-use gpui::{App, AppContext, Task, WeakEntity};
+use crate::ui::model::file::backends::command::CommandBackend;
+use gpui::{App, Task, WeakEntity};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -24,6 +22,10 @@ impl FileResult {
     }
 
     pub fn get_icon_name(&self) -> &'static str {
+        if self.path.ends_with('/') {
+            return "folder";
+        }
+
         let filename = self
             .path
             .rsplit_once(['/', '\\'])
@@ -34,6 +36,7 @@ impl FileResult {
 
         // 1. High-level System Files
         match filename_lower.as_str() {
+            "license" => return "license",
             "vmlinuz" | "zimage" => return "system-run", // Kernel
             "fstab" | "mtab" => return "drive-harddisk",
             "passwd" | "shadow" => return "password-manager",
@@ -136,7 +139,7 @@ pub(super) const MAX_SEARCH_DEPTH: usize = 6;
 impl FileSearchModel {
     pub fn new(launcher: Arc<Launcher>) -> Self {
         Self {
-            backend: FileSearchBackend::Walkdir(WalkdirBackend {}),
+            backend: FileSearchBackend::Fd(CommandBackend::new(backends::fd::FdFactory {})),
             launcher,
             results: Vec::with_capacity(MAX_RESULTS),
             cancel_tx: None,
@@ -215,27 +218,20 @@ impl FileSearchModel {
                             .collect::<Vec<_>>(),
                     );
 
-                    let Some(entity) = result_entity.upgrade() else {
-                        break;
-                    };
+                    let indices: Arc<[usize]> = (0..count).collect::<Vec<_>>().into();
 
-                    let _ = cx.update_entity(&entity, |e, cx| {
-                        *e = children;
-                        cx.notify();
-
-                        if let Some(view) = launcher_weak.upgrade() {
+                    if let Some(view) = launcher_weak.upgrade() {
+                        let _ = cx.update(|cx| {
                             view.update(cx, |this, cx| {
-                                if let Some(state) = this.navigation.current().style.list_state() {
-                                    let before = state.item_count();
-                                    this.navigation.with_model_mut(cx, |mdl, _| {
-                                        mdl.filtered_indices =
-                                            Arc::from((0..count).collect::<Vec<_>>());
-                                    });
-                                    state.splice(0..before, count);
+                                // Swap the entity data directly
+                                if let Some(entity) = result_entity.upgrade() {
+                                    entity.update(cx, |e, _| *e = children);
                                 }
+                                // Reuse the exact same apply_results path as regular search
+                                this.apply_results(indices, String::new(), cx);
                             });
-                        }
-                    });
+                        });
+                    }
                 }
 
                 if !channel_open {
@@ -285,6 +281,7 @@ impl FileSearchUtility {
 
     // Comparing with already lower-cased query,
     // using a zero-alloc case-insensitive comparator
+    #[inline]
     fn score_file_ci(name_bytes: &[u8], query: &str) -> f32 {
         let q = query.as_bytes();
         let len = name_bytes.len();
@@ -310,15 +307,25 @@ impl FileSearchUtility {
     }
 
     #[inline]
-    fn score_path(full_path_lower: &str, query: &str) -> f32 {
-        if full_path_lower == query {
+    fn score_path(path_bytes: &[u8], query: &[u8]) -> f32 {
+        let plen = path_bytes.len();
+        let qlen = query.len();
+
+        if Self::bytes_eq_ci(path_bytes, query) {
             return 0.0;
         }
-        if full_path_lower.ends_with(&format!("/{query}")) || full_path_lower.ends_with(query) {
-            return 0.05;
+
+        if plen > qlen {
+            let tail = &path_bytes[plen - qlen..];
+            if Self::bytes_eq_ci(tail, query) {
+                let prev = path_bytes[plen - qlen - 1];
+                if prev == b'/' || prev == b'\\' {
+                    return 0.05;
+                }
+            }
         }
-        if full_path_lower.contains(query) {
-            return 0.3 + 0.1 * (1.0 - query.len() as f32 / full_path_lower.len() as f32);
+        if Self::bytes_contain_ci(path_bytes, query) {
+            return 0.3 + 0.1 * (1.0 - qlen as f32 / plen as f32);
         }
         0.8
     }

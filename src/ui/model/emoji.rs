@@ -26,7 +26,7 @@ impl EmojiView {
             .collect();
 
         Self {
-            model: Model::new(data, cx),
+            model: Model::standard(data, cx),
         }
     }
 }

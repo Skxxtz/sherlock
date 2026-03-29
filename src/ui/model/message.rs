@@ -58,7 +58,7 @@ impl MessageView {
         Self {
             launcher,
             count: Cell::new(messages.len()),
-            model: Model::new(messages, cx),
+            model: Model::standard(messages, cx),
         }
     }
     /// This adds a message from the Model. It requires a filter and sort afterwards
@@ -68,7 +68,7 @@ impl MessageView {
         weak: WeakEntity<MessageView>,
         cx: &mut App,
     ) {
-        self.model.data.update(cx, |this, _| {
+        self.model.data().update(cx, |this, _| {
             let data = Arc::make_mut(this);
             data.push(RenderableChild::MessageLike {
                 launcher: self.launcher.clone(),
@@ -85,7 +85,17 @@ impl MessageView {
     }
     /// This removes a message from the Model. It requires a filter and sort afterwards
     pub fn remove_message(&mut self, idx: usize, cx: &mut App) {
-        let removed = self.model.data.update(cx, |this, _| {
+        let Model::Standard {
+            data,
+            filtered_indices,
+            last_query,
+            deferred_render_task,
+        } = &mut self.model
+        else {
+            return;
+        };
+
+        let removed = data.update(cx, |this, _| {
             if idx < this.len() {
                 let data = Arc::make_mut(this);
                 data.remove(idx);
@@ -96,7 +106,7 @@ impl MessageView {
         });
 
         if removed {
-            let mut vec = self.model.filtered_indices.to_vec();
+            let mut vec = filtered_indices.to_vec();
             if let Some(pos) = vec.iter().position(|&x| x == idx) {
                 vec.remove(pos);
             }
@@ -107,7 +117,7 @@ impl MessageView {
                 }
             }
 
-            self.model.filtered_indices = Arc::from(vec);
+            *filtered_indices = Arc::from(vec);
             self.count.update(|i| i.saturating_sub(1));
         }
     }

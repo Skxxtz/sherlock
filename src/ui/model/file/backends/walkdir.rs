@@ -43,11 +43,11 @@ impl FileSearchProvider for WalkdirBackend {
                 let matched;
 
                 if query.contains('/') || query.contains(std::path::MAIN_SEPARATOR) {
-                    let full_lower = entry.path().to_string_lossy().to_lowercase();
-                    if !full_lower.contains(&query) {
+                    let path_bytes = entry.path().as_os_str().as_encoded_bytes();
+                    if !FileSearchUtility::bytes_contain_ci(path_bytes, query.as_bytes()) {
                         continue;
                     }
-                    score = FileSearchUtility::score_path(&full_lower, &query);
+                    score = FileSearchUtility::score_path(path_bytes, query.as_bytes());
                     matched = true;
                 } else {
                     let name_bytes = os_name.as_encoded_bytes();

@@ -1,13 +1,18 @@
-use crate::ui::model::file::{FileResult, ResultHeap};
+use crate::ui::model::file::{
+    FileResult, ResultHeap,
+    backends::{
+        command::CommandBackend, fd::FdFactory, ripgrep::RgFactory, walkdir::WalkdirBackend,
+    },
+};
 use std::path::PathBuf;
 use tokio::sync::mpsc::{Receiver, Sender};
 
+pub mod command;
+pub mod fd;
 pub mod ripgrep;
 pub mod walkdir;
 
-use ripgrep::RipgrepBackend;
 use serde::{Deserialize, Serialize};
-use walkdir::WalkdirBackend;
 
 macro_rules! define_backend {
     ( enum $name:ident { $( $variant:ident( $inner:ty ) ),* $(,)? }) => {
@@ -39,7 +44,8 @@ macro_rules! define_backend {
 define_backend! {
     enum FileSearchBackend {
         Walkdir(WalkdirBackend),
-        Ripgrep(RipgrepBackend),
+        Rg(CommandBackend<RgFactory>),
+        Fd(CommandBackend<FdFactory>),
     }
 }
 

@@ -123,7 +123,7 @@ impl LauncherView {
     fn render_results(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let (indices, data) = self
             .navigation
-            .with_model(cx, |mdl| (mdl.filtered_indices.clone(), mdl.data.clone()));
+            .with_model(cx, |mdl| (mdl.filtered_indices(), mdl.data()));
         let EntityStyle::Row {
             state,
             selected_index,
@@ -165,7 +165,7 @@ impl LauncherView {
     fn render_result_grid(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let (indices, data) = self
             .navigation
-            .with_model(cx, |mdl| (mdl.filtered_indices.clone(), mdl.data.clone()));
+            .with_model(cx, |mdl| (mdl.filtered_indices(), mdl.data()));
 
         let style = &self.navigation.current().style;
         let EntityStyle::Grid {
@@ -329,21 +329,12 @@ impl LauncherView {
             })
     }
 
-    fn render_context_hint(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let Some(selected_idx) = self.navigation.selected_index() else {
+    fn render_context_hint(&self, _cx: &mut Context<Self>) -> impl IntoElement {
+        if self.navigation.selected_index().is_some() {
             return div();
         };
-        let has_actions = self.navigation.with_model_mut(cx, |mdl, cx| {
-            let data = mdl.data.read(cx);
-            mdl.filtered_indices
-                .get(selected_idx)
-                .and_then(|i| data.get(*i))
-                .and_then(RenderableChild::actions)
-                .map(|a| !a.is_empty())
-                .unwrap_or(false)
-        });
 
-        if has_actions {
+        if self.has_actions {
             div()
                 .flex()
                 .items_center()

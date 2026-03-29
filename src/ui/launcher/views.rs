@@ -11,9 +11,7 @@ use crate::{
     },
     ui::{
         launcher::context_menu::ContextMenuAction,
-        model::{
-            Model, emoji::EmojiView, file::FileSearchModel, home::HomeView, message::MessageView,
-        },
+        model::{Model, emoji::EmojiView, home::HomeView, message::MessageView},
     },
     utils::errors::SherlockMessage,
 };
@@ -58,13 +56,7 @@ impl NavigationStack {
         let file_search = NavigationView {
             view: cx
                 .new(|cx| HomeView {
-                    model: Model {
-                        deferred_render_task: None,
-                        data: cx.new(|cx| Arc::new(Vec::new())),
-                        filtered_indices: Arc::from(Vec::new()),
-                        last_query: None,
-                        file_search: Some(FileSearchModel::new(Arc::new(launcher))),
-                    },
+                    model: Model::file_search(Arc::new(launcher), cx),
                 })
                 .into(),
             style: EntityStyle::Row {
@@ -234,28 +226,32 @@ impl NavigationStack {
         let current = self.current();
         let ui_idx = current.style.selected_index()?;
 
-        self.with_model(cx, |mdl| {
-            if mdl.filtered_indices.is_empty() {
+        self.with_model_mut(cx, |mdl, cx| {
+            if mdl.data().read(cx).is_empty() {
                 return None;
             }
 
-            let safe_idx = ui_idx.min(mdl.filtered_indices.len() - 1);
-            mdl.filtered_indices.get(safe_idx).copied()
+            let filtered_indices = mdl.filtered_indices();
+            let safe_idx = ui_idx.min(filtered_indices.len() - 1);
+            filtered_indices.get(safe_idx).copied()
         })
     }
     pub fn selected_item(&self, cx: &mut App) -> Option<RenderableChild> {
         let ui_idx = self.current().style.selected_index()?;
-        let (data_idx, data_entity) = self.with_model(cx, |mdl| {
-            if mdl.filtered_indices.is_empty() {
-                return (None, mdl.data.clone());
+        let (data_idx, data_entity) = self.with_model_mut(cx, |mdl, cx| {
+            let data = mdl.data();
+            if data.read(cx).is_empty() {
+                return (None, data);
             }
 
-            let safe_ui_idx = ui_idx.min(mdl.filtered_indices.len() - 1);
+            let filtered_indices = mdl.filtered_indices();
+            if filtered_indices.is_empty() {
+                return (None, mdl.data());
+            }
 
-            (
-                mdl.filtered_indices.get(safe_ui_idx).copied(),
-                mdl.data.clone(),
-            )
+            let safe_ui_idx = ui_idx.min(filtered_indices.len() - 1);
+
+            (filtered_indices.get(safe_ui_idx).copied(), mdl.data())
         });
 
         let idx = data_idx?;
@@ -263,21 +259,23 @@ impl NavigationStack {
     }
     pub fn current_actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         let ui_idx = self.current().style.selected_index()?;
-        let (data_idx, data_entity) = self.with_model(cx, |mdl| {
-            if mdl.filtered_indices.is_empty() {
-                return (None, mdl.data.clone());
+        let (data_idx, data_entity) = self.with_model_mut(cx, |mdl, cx| {
+            let data = mdl.data();
+            if data.read(cx).is_empty() {
+                return (None, data);
             }
 
-            let safe_ui_idx = ui_idx.min(mdl.filtered_indices.len() - 1);
+            let filtered_indices = mdl.filtered_indices();
+            if filtered_indices.is_empty() {
+                return (None, mdl.data());
+            }
 
-            (
-                mdl.filtered_indices.get(safe_ui_idx).copied(),
-                mdl.data.clone(),
-            )
+            let safe_ui_idx = ui_idx.min(filtered_indices.len() - 1);
+
+            (filtered_indices.get(safe_ui_idx).copied(), mdl.data())
         });
 
         let idx = data_idx?;
-
         data_entity.read(cx).get(idx).and_then(|i| i.actions())
     }
 }
