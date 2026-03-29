@@ -42,6 +42,8 @@ wayland-client = "0.31.13"
 wayland-protocols-wlr = {version = "0.3.11", features=["client"]}
 xdg = "3.0.0"
 zbus = "5.13.2"
+walkdir = "2.5.0"
+flume = "0.12.0"
 
 [features]
 default = ["wayland"]

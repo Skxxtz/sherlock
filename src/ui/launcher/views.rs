@@ -11,7 +11,9 @@ use crate::{
     },
     ui::{
         launcher::context_menu::ContextMenuAction,
-        model::{Model, emoji::EmojiView, home::HomeView, message::MessageView},
+        model::{
+            Model, emoji::EmojiView, file::FileSearchModel, home::HomeView, message::MessageView,
+        },
     },
     utils::errors::SherlockMessage,
 };
@@ -51,9 +53,29 @@ impl NavigationStack {
             },
             kind: NavigationViewType::Message,
         };
+
+        let launcher = Launcher::default();
+        let file_search = NavigationView {
+            view: cx
+                .new(|cx| HomeView {
+                    model: Model {
+                        deferred_render_task: None,
+                        data: cx.new(|cx| Arc::new(Vec::new())),
+                        filtered_indices: Arc::from(Vec::new()),
+                        last_query: None,
+                        file_search: Some(FileSearchModel::new(Arc::new(launcher))),
+                    },
+                })
+                .into(),
+            style: EntityStyle::Row {
+                state: ListState::new(message_len, gpui::ListAlignment::Top, px(100.)),
+                selected_index: 0,
+            },
+            kind: NavigationViewType::Misk,
+        };
         Self {
-            stack: vec![errors, home],
-            active_idx: None,
+            stack: vec![errors, file_search, home],
+            active_idx: Some(1),
         }
     }
 }
@@ -156,6 +178,11 @@ impl NavigationStack {
     pub fn with_model<R>(&self, cx: &mut App, f: impl FnOnce(&Model) -> R) -> R {
         let current = self.current();
         match current.kind {
+            NavigationViewType::Misk => {
+                let view = current.view.clone().downcast::<HomeView>().unwrap();
+                f(&view.read(cx).model)
+            }
+
             NavigationViewType::Home => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
                 f(&view.read(cx).model)
@@ -179,6 +206,11 @@ impl NavigationStack {
     ) -> R {
         let current = self.current();
         match current.kind {
+            NavigationViewType::Misk => {
+                let view = current.view.clone().downcast::<HomeView>().unwrap();
+                view.update(cx, |this, cx| f(&mut this.model, cx))
+            }
+
             NavigationViewType::Home => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
                 view.update(cx, |this, cx| f(&mut this.model, cx))
@@ -365,6 +397,7 @@ pub enum NavigationViewType {
     Emoji,
     Message,
     Home,
+    Misk,
 }
 
 impl NavigationViewType {
@@ -384,8 +417,7 @@ impl NavigationViewType {
                     kind: *self,
                 }
             }
-
-            Self::Message | Self::Home => {
+            Self::Message | Self::Home | Self::Misk => {
                 // This is not implemented because the initial views should be implemented
                 // manually because its not dependent on a launcher
                 unimplemented!()

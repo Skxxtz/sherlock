@@ -1,0 +1,79 @@
+use std::path::PathBuf;
+
+use crate::ui::model::file::{
+    FileResult, FileSearchUtility, MAX_SEARCH_DEPTH, ResultHeap, backends::FileSearchProvider,
+};
+use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WalkdirBackend;
+
+impl FileSearchProvider for WalkdirBackend {
+    fn name(&self) -> &'static str {
+        "walkdir"
+    }
+
+    fn search(
+        &self,
+        query: String,
+        paths: Vec<PathBuf>,
+        heap: &mut ResultHeap,
+        mut cancel_rx: mpsc::Receiver<()>,
+        tx: &mpsc::Sender<Vec<FileResult>>,
+    ) -> bool {
+        let mut files_since_send: usize = 0;
+        const BATCH: usize = 16;
+
+        'outer: for path in paths {
+            for entry in walkdir::WalkDir::new(&path)
+                .follow_links(false)
+                .max_depth(MAX_SEARCH_DEPTH)
+                .into_iter()
+                .filter_entry(|e| !FileSearchUtility::is_hidden(e))
+                .filter_map(|e| e.ok())
+                .filter(|e| e.file_type().is_file())
+            {
+                if cancel_rx.try_recv().is_ok() || cancel_rx.is_closed() {
+                    break 'outer;
+                }
+
+                let os_name = entry.file_name();
+                let score;
+                let matched;
+
+                if query.contains('/') || query.contains(std::path::MAIN_SEPARATOR) {
+                    let full = entry.path().to_string_lossy().to_lowercase();
+                    if !full_lower.contains(&query) {
+                        continue;
+                    }
+                    score = FileSearchUtility::score_path(&full_lower, &query);
+                    matched = true;
+                } else {
+                    let name_bytes = os_name.as_encoded_bytes();
+                    if !FileSearchUtility::bytes_contain_ci(name_bytes, query.as_bytes()) {
+                        continue;
+                    }
+                    score = FileSearchUtility::score_file_ci(&name_bytes, &query);
+                    matched = true;
+                }
+
+                if !matched {
+                    continue;
+                }
+
+                if heap.push(FileResult {
+                    path: entry.path().to_string_lossy().as_ref().into(),
+                    score,
+                }) {
+                    files_since_send += 1;
+                    if files_since_send >= BATCH {
+                        let _ = tx.try_send(heap.snapshot());
+                        files_since_send = 0;
+                    }
+                }
+            }
+        }
+        true
+    }
+}
