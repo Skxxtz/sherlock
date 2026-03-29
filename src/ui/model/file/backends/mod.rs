@@ -76,6 +76,12 @@ define_backend! {
     }
 }
 
+impl Default for FileSearchBackend {
+    fn default() -> Self {
+        Self::Fd(Default::default())
+    }
+}
+
 #[allow(dead_code)]
 pub trait FileSearchProvider {
     fn name(&self) -> &'static str;
@@ -88,7 +94,6 @@ pub trait FileSearchProvider {
         tx: &Sender<Vec<FileResult>>,
     ) -> bool;
 }
-
 
 #[cfg(test)]
 mod tests {

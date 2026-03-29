@@ -7,6 +7,7 @@ pub mod children;
 pub mod clipboard_launcher;
 pub mod emoji_launcher;
 pub mod event_launcher;
+pub mod file_launcher;
 pub mod message_launcher;
 pub mod system_cmd_launcher;
 pub mod utils;
@@ -16,7 +17,6 @@ pub mod web_launcher;
 // Integrate later: TODO
 // pub mod bulk_text_launcher;
 // pub mod pipe_launcher;
-// pub mod file_launcher;
 // pub mod pomodoro_launcher;
 // pub mod process_launcher;
 // pub mod theme_picker;
@@ -242,6 +242,10 @@ impl ExecMode {
             LauncherType::Emoji(_) => Self::CreateView {
                 mode: NavigationViewType::Emoji,
                 launcher: Arc::clone(launcher),
+            },
+            LauncherType::Files(_) => Self::CreateView {
+                mode: NavigationViewType::Files,
+                launcher: Arc::clone(&launcher),
             },
             LauncherType::Message(_) => Self::SwitchView { idx: 0 },
             LauncherType::Web(web) => Self::Web {

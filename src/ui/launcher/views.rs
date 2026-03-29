@@ -11,7 +11,9 @@ use crate::{
     },
     ui::{
         launcher::context_menu::ContextMenuAction,
-        model::{Model, emoji::EmojiView, home::HomeView, message::MessageView},
+        model::{
+            Model, emoji::EmojiView, file::view::FileView, home::HomeView, message::MessageView,
+        },
     },
     utils::errors::SherlockMessage,
 };
@@ -52,22 +54,9 @@ impl NavigationStack {
             kind: NavigationViewType::Message,
         };
 
-        let launcher = Launcher::default();
-        let file_search = NavigationView {
-            view: cx
-                .new(|cx| HomeView {
-                    model: Model::file_search(Arc::new(launcher), cx),
-                })
-                .into(),
-            style: EntityStyle::Row {
-                state: ListState::new(message_len, gpui::ListAlignment::Top, px(100.)),
-                selected_index: 0,
-            },
-            kind: NavigationViewType::Misk,
-        };
         Self {
-            stack: vec![errors, file_search, home],
-            active_idx: Some(1),
+            stack: vec![errors, home],
+            active_idx: None,
         }
     }
 }
@@ -170,8 +159,8 @@ impl NavigationStack {
     pub fn with_model<R>(&self, cx: &mut App, f: impl FnOnce(&Model) -> R) -> R {
         let current = self.current();
         match current.kind {
-            NavigationViewType::Misk => {
-                let view = current.view.clone().downcast::<HomeView>().unwrap();
+            NavigationViewType::Files => {
+                let view = current.view.clone().downcast::<FileView>().unwrap();
                 f(&view.read(cx).model)
             }
 
@@ -198,8 +187,8 @@ impl NavigationStack {
     ) -> R {
         let current = self.current();
         match current.kind {
-            NavigationViewType::Misk => {
-                let view = current.view.clone().downcast::<HomeView>().unwrap();
+            NavigationViewType::Files => {
+                let view = current.view.clone().downcast::<FileView>().unwrap();
                 view.update(cx, |this, cx| f(&mut this.model, cx))
             }
 
@@ -395,7 +384,7 @@ pub enum NavigationViewType {
     Emoji,
     Message,
     Home,
-    Misk,
+    Files,
 }
 
 impl NavigationViewType {
@@ -415,7 +404,18 @@ impl NavigationViewType {
                     kind: *self,
                 }
             }
-            Self::Message | Self::Home | Self::Misk => {
+            Self::Files => {
+                let view = cx.new(|cx| FileView::new(launcher, cx));
+                NavigationView {
+                    view: view.into(),
+                    style: EntityStyle::Row {
+                        state: ListState::new(0, gpui::ListAlignment::Top, px(50.)),
+                        selected_index: 0,
+                    },
+                    kind: *self,
+                }
+            }
+            Self::Message | Self::Home => {
                 // This is not implemented because the initial views should be implemented
                 // manually because its not dependent on a launcher
                 unimplemented!()

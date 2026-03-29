@@ -1,38 +1,53 @@
-use crate::launcher::Launcher;
 use crate::launcher::children::RenderableChild;
 use crate::launcher::children::file_data::FileData;
+use crate::launcher::file_launcher::FileLauncher;
+use crate::launcher::{Launcher, variant_type::LauncherType};
 use crate::ui::launcher::LauncherView;
-use crate::ui::model::file::backends::FileSearchBackend;
-use crate::ui::model::file::backends::command::CommandBackend;
-use crate::ui::model::file::utils::{FileResult, ResultHeap};
 use gpui::{App, Task, WeakEntity};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc;
+use utils::{FileResult, ResultHeap};
 
 mod backends;
 mod utils;
+pub mod view;
 
+pub use backends::FileSearchBackend;
+
+#[derive(Default)]
 pub struct FileSearchModel {
     backend: FileSearchBackend,
     launcher: Arc<Launcher>,
     results: Vec<FileResult>,
+    poll_interval: u64,
     cancel_tx: Option<mpsc::Sender<()>>,
     _poll_task: Option<Task<()>>,
 }
 
-pub(super) const MAX_RESULTS: usize = 50;
-pub(super) const POLL_INTERVAL_MS: u64 = 50;
 pub(super) const MAX_SEARCH_DEPTH: usize = 6;
 
 impl FileSearchModel {
     pub fn new(launcher: Arc<Launcher>) -> Self {
-        Self {
-            backend: FileSearchBackend::Fd(CommandBackend::new(backends::fd::FdFactory {})),
-            launcher,
-            results: Vec::with_capacity(MAX_RESULTS),
-            cancel_tx: None,
-            _poll_task: None,
+        if let LauncherType::Files(FileLauncher {
+            ref backend,
+            max_results,
+            poll_interval,
+        }) = launcher.launcher_type
+        {
+            Self {
+                backend: backend.clone(),
+                poll_interval: poll_interval,
+                launcher,
+                results: Vec::with_capacity(max_results),
+                cancel_tx: None,
+                _poll_task: None,
+            }
+        } else {
+            Self {
+                launcher,
+                ..Default::default()
+            }
         }
     }
 
@@ -49,19 +64,16 @@ impl FileSearchModel {
         self._poll_task = None;
         self.results.clear();
 
-        if query.is_empty() {
-            return;
-        }
-
         let (cancel_tx, cancel_rx) = mpsc::channel::<()>(1);
         self.cancel_tx = Some(cancel_tx);
 
         let (result_tx, mut result_rx) = mpsc::channel::<Vec<FileResult>>(32);
 
         let backend = self.backend.clone();
+        let cap = self.results.capacity();
         std::thread::spawn(move || {
             let query_lower = query.to_lowercase();
-            let mut heap = ResultHeap::new(MAX_RESULTS);
+            let mut heap = ResultHeap::new(cap);
             let completed =
                 backend.search(query_lower, search_paths, &mut heap, cancel_rx, &result_tx);
             if completed {
@@ -71,10 +83,11 @@ impl FileSearchModel {
         });
 
         let launcher = Arc::clone(&self.launcher);
+        let poll_interval = self.poll_interval;
         let poll_task = cx.spawn(async move |cx| {
             loop {
                 cx.background_executor()
-                    .timer(std::time::Duration::from_millis(POLL_INTERVAL_MS))
+                    .timer(std::time::Duration::from_millis(poll_interval))
                     .await;
 
                 let mut latest: Option<Vec<FileResult>> = None;
