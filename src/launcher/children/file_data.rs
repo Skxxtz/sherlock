@@ -24,6 +24,7 @@ pub struct FileData {
 impl FileData {
     pub fn new(loc: Arc<str>) -> Self {
         let name: Arc<str> = loc
+            .trim_end_matches('/')
             .rsplit_once('/')
             .map(|(_, name)| name)
             .unwrap_or(&loc)
@@ -45,7 +46,7 @@ impl FileData {
 impl<'a> RenderableChildImpl<'a> for FileData {
     fn render(
         &self,
-        launcher: &Arc<Launcher>,
+        _launcher: &Arc<Launcher>,
         selection: Selection,
         theme: &ActiveTheme,
     ) -> AnyElement {
@@ -57,10 +58,14 @@ impl<'a> RenderableChildImpl<'a> for FileData {
             .gap_5()
             .items_center()
             .child(if let Some(icon) = self.icon.as_ref() {
-                img(Arc::clone(&icon)).size(px(24.)).into_any_element()
+                img(Arc::clone(&icon))
+                    .size(px(24.))
+                    .flex_shrink_0()
+                    .into_any_element()
             } else {
                 img(ImageSource::Image(Arc::new(Image::empty())))
                     .size(px(24.))
+                    .flex_shrink_0()
                     .into_any_element()
             })
             .child(
@@ -68,9 +73,12 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                     .flex_col()
                     .justify_between()
                     .items_center()
+                    .min_w_0()
+                    .w_full()
                     .child(
                         div()
                             .text_sm()
+                            .w_full()
                             .text_color(theme.secondary_text)
                             .when(selection.is_selected, |this| {
                                 this.text_color(theme.primary_text)
@@ -83,6 +91,10 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                     .child(
                         div()
                             .text_xs()
+                            .w_full()
+                            .overflow_hidden()
+                            .text_ellipsis()
+                            .whitespace_nowrap()
                             .text_color(theme.secondary_text)
                             .child(self.loc.clone()),
                     ),
@@ -90,8 +102,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
             .into_any_element()
     }
     #[inline(always)]
-    fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode> {
-        // Some(ExecMode::from_appdata(self, launcher))
+    fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         None
     }
     #[inline(always)]
