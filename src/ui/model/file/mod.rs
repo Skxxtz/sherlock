@@ -1,5 +1,6 @@
 use crate::launcher::Launcher;
 use crate::launcher::children::RenderableChild;
+use crate::launcher::children::file_data::FileData;
 use crate::loader::utils::AppData;
 use crate::ui::launcher::LauncherView;
 use crate::ui::model::file::backends::FileSearchBackend;
@@ -16,6 +17,66 @@ mod backends;
 pub struct FileResult {
     pub path: Arc<str>,
     pub score: f32,
+}
+impl FileResult {
+    pub fn extension(&self) -> &str {
+        self.path.rsplit_once('.').map(|(_, ext)| ext).unwrap_or("")
+    }
+
+    pub fn get_icon_name(&self) -> &'static str {
+        let filename = self
+            .path
+            .rsplit_once(['/', '\\'])
+            .map(|(_, n)| n)
+            .unwrap_or(&self.path);
+
+        let filename_lower = filename.to_lowercase();
+
+        // 1. High-level System Files
+        match filename_lower.as_str() {
+            "vmlinuz" | "zimage" => return "system-run", // Kernel
+            "fstab" | "mtab" => return "drive-harddisk",
+            "passwd" | "shadow" => return "password-manager",
+            "bashrc" | "zshrc" | "profile" => return "utilities-terminal",
+            _ => {}
+        }
+
+        // 2. Standard Mime-Type Style Icons
+        match self.extension() {
+            // Binaries & Execution
+            "so" | "a" | "o" => "lib",
+            "bin" | "elf" => "application-x-executable",
+            "sh" | "bash" | "py" | "pl" => "application-x-executable-script",
+
+            // Packages
+            "deb" | "rpm" | "pkg" => "package-x-generic",
+            "tar" | "gz" | "xz" | "zip" | "7z" => "package-x-generic",
+
+            // Configuration & Text
+            "conf" | "cfg" | "ini" | "yaml" | "toml" => "preferences-system",
+            "json" | "xml" => "text-x-script",
+            "log" => "text-x-generic",
+            "txt" => "text-x-generic",
+            "md" | "markdown" => "text-x-preview",
+
+            // Security & Keys
+            "pem" | "crt" | "key" | "gpg" | "pub" => "security-high",
+
+            // Programming (Standard fallback names)
+            "rs" | "c" | "cpp" | "java" | "go" => "text-x-source",
+
+            // Media
+            "png" | "jpg" | "jpeg" | "svg" => "image-x-generic",
+            "mp4" | "mkv" | "avi" => "video-x-generic",
+            "mp3" | "ogg" | "wav" => "audio-x-generic",
+            "pdf" => "document-print",
+
+            // Desktop Entries
+            "desktop" => "application-x-desktop",
+
+            _ => "text-x-generic",
+        }
+    }
 }
 
 /// A min-heap slot: we keep a fixed-size sorted array.
@@ -146,9 +207,10 @@ impl FileSearchModel {
                     let children = Arc::new(
                         snapshot
                             .into_iter()
-                            .map(|r| RenderableChild::AppLike {
-                                launcher: launcher.clone(),
-                                inner: AppData::new().with_name(r.path.into()),
+                            .map(|r| RenderableChild::FileLike {
+                                launcher: Arc::clone(&launcher),
+                                inner: FileData::new(r.path.clone())
+                                    .with_icon_name(r.get_icon_name()),
                             })
                             .collect::<Vec<_>>(),
                     );
