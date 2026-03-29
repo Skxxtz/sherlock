@@ -15,6 +15,7 @@ use crate::{
         clipboard_launcher::ClipboardLauncher,
         emoji_launcher::EmojiPicker,
         event_launcher::{EventLauncher, EventLauncherFunctions},
+        file_launcher::FileLauncher,
         message_launcher::MessageLauncher,
         system_cmd_launcher::CommandLauncher,
         weather_launcher::WeatherLauncher,
@@ -127,11 +128,12 @@ create_variants! {
         Categories(CategoryLauncher),
         Clipboard(ClipboardLauncher),
         Commands(CommandLauncher),
+        Emoji(EmojiPicker),
+        Event(EventLauncher, EventLauncherFunctions),
+        Files(FileLauncher),
         MusicPlayer(MusicPlayerLauncher, MusicPlayerFunctions),
         Weather(WeatherLauncher),
         Web(WebLauncher),
-        Emoji(EmojiPicker),
-        Event(EventLauncher, EventLauncherFunctions),
         Message(MessageLauncher)
         // Integrate later: TODO
         // Pipe(PipeLauncher),

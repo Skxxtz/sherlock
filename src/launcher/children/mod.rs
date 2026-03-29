@@ -6,6 +6,7 @@ pub mod calc_data;
 pub mod clip_data;
 pub mod emoji_data;
 pub mod event_data;
+pub mod file_data;
 pub mod message;
 pub mod mpris_data;
 pub mod weather_data;
@@ -25,6 +26,7 @@ use crate::{
 use calc_data::CalcData;
 use clip_data::ClipData;
 use event_data::EventData;
+use file_data::FileData;
 
 /// Creates enum RenderableChild,
 /// ## Example:
@@ -212,6 +214,7 @@ renderable_enum! {
         CalcLike(CalcData),
         ClipLike(ClipData),
         EmojiLike(EmojiData),
+        FileLike(FileData),
         MusicLike(MprisState),
         WeatherLike(WeatherData),
         MessageLike(MessageChild),

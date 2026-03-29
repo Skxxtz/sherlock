@@ -1,11 +1,13 @@
-use crate::launcher::children::LauncherValues;
+use crate::launcher::children::{LauncherValues, RenderableChild};
 use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
 use crate::ui::launcher::context_menu::ContextMenuAction;
 use crate::ui::launcher::views::NavigationStack;
+use crate::ui::model::Model;
 use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
 use gpui::{AsyncApp, Task};
+use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
 
 use crate::ui::search_bar::TextInput;
@@ -64,10 +66,22 @@ impl LauncherView {
         self.update_vars(cx);
 
         self.active_bar = 0;
-        self.navigation.with_model_mut(cx, |mdl, _| {
-            mdl.filtered_indices = results;
-            mdl.last_query = Some(query);
-        });
+        self.navigation
+            .with_model_mut(cx, |mut mdl, _| match &mut mdl {
+                Model::Standard {
+                    filtered_indices,
+                    last_query,
+                    ..
+                } => {
+                    *filtered_indices = results;
+                    *last_query = Some(query);
+                }
+                Model::FileSearch {
+                    filtered_indices, ..
+                } => {
+                    *filtered_indices = results;
+                }
+            });
 
         self.focus_first(cx);
 
@@ -76,103 +90,152 @@ impl LauncherView {
     pub fn filter_and_sort(&mut self, cx: &mut Context<Self>) {
         let mut query = self.text_input.read(cx).content.to_lowercase();
 
-        let data_entity = self.navigation.with_model_mut(cx, |mdl, _| {
-            mdl.deferred_render_task = None;
-            mdl.data.clone()
-        });
-
-        // handle mode change
-        if self.mode.transition_for_query(&query, &self.modes) {
-            self.text_input.update(cx, |this, _cx| {
-                this.reset();
-            });
-            query = "".into();
+        enum ModelKind {
+            FileSearch {
+                weak_data: WeakEntity<Arc<Vec<RenderableChild>>>,
+            },
+            Standard {
+                data: Entity<Arc<Vec<RenderableChild>>>,
+            },
         }
 
-        let mode = self.mode.clone();
-        let data_arc = data_entity.read(cx).clone();
-        let render_task = Some(
-            cx.spawn(|this: WeakEntity<LauncherView>, cx: &mut AsyncApp| {
-                let mut cx = cx.clone();
-                async move {
-                    let mode = mode.as_str();
-                    let is_home = query.is_empty() && mode == "all";
+        let kind = self.navigation.with_model(cx, |mdl| match mdl {
+            Model::FileSearch { data, .. } => ModelKind::FileSearch {
+                weak_data: data.downgrade(),
+            },
+            Model::Standard { data, .. } => ModelKind::Standard { data: data.clone() },
+        });
 
-                    // collects Vec<(index, priority)>
-                    let mut results: Vec<(usize, f32)> = (0..data_arc.len())
-                        .map(|i| (i, &data_arc[i]))
-                        .filter(|(_, data)| {
-                            let home = data.home();
-                            // [Rule 1]
-                            // Case 1: Early return if mode applies but item is not assigned to that mode
-                            // Case 2: Early return if current mode is not required mode for item
-                            if Some(mode) != data.alias() {
-                                if mode != "all" || data.priority() < 1.0 {
-                                    return false;
-                                }
-                            }
+        match kind {
+            ModelKind::FileSearch { weak_data } => {
+                let weak_self = cx.entity().downgrade();
+                self.navigation.with_model_mut(cx, |mdl, cx| {
+                    if let Model::FileSearch { search, .. } = mdl {
+                        search.search(
+                            query,
+                            vec![PathBuf::from("/home/basti/")],
+                            weak_data,
+                            weak_self,
+                            cx,
+                        );
+                    }
+                });
+                return;
+            }
+            ModelKind::Standard { data } => {
+                // drop active tasks
+                self.navigation.with_model_mut(cx, |mdl, _| {
+                    if let Model::Standard {
+                        deferred_render_task,
+                        ..
+                    } = mdl
+                    {
+                        *deferred_render_task = None;
+                    }
+                });
 
-                            // [Rule 2]
-                            // Early return if item should always show (websearch for example)
-                            if home == HomeType::Persist {
-                                return true;
-                            }
-
-                            // [Rule 3]
-                            // Early return if not home but item is assigned to only show on home
-                            if !is_home && home == HomeType::OnlyHome {
-                                return false;
-                            }
-
-                            // [Rule 4]
-                            // Early return if based show (calc for example) applies
-                            if let Some(based) = data.based_show(&query) {
-                                return based;
-                            }
-
-                            // [Rule 5]
-                            // Early return if item should only show on search but mode is home
-                            if is_home && home == HomeType::Search {
-                                return false;
-                            }
-
-                            // [Rule 6]
-                            // Check if query matches
-                            data.search().fuzzy_match(&query)
-                        })
-                        .map(|(i, data)| {
-                            let prio = make_prio(data.priority(), &query, data.search());
-                            (i, prio)
-                        })
-                        .collect();
-
-                    // drop here to release lock faster
-                    drop(data_arc);
-
-                    // sort based on priority
-                    results.sort_unstable_by(|a, b| {
-                        a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
+                // handle mode change
+                if self.mode.transition_for_query(&query, &self.modes) {
+                    self.text_input.update(cx, |this, _cx| {
+                        this.reset();
                     });
-
-                    // strip the priority from results
-                    let results_arc: Arc<[usize]> = results
-                        .into_iter()
-                        .map(|(i, _)| i)
-                        .collect::<Vec<_>>()
-                        .into();
-
-                    this.update(&mut cx, |this, cx| {
-                        this.apply_results(results_arc, query, cx);
-                    })
-                    .ok();
-
-                    Some(())
+                    query = "".into();
                 }
-            }),
-        );
 
-        self.navigation
-            .with_model_mut(cx, |mdl, _| mdl.deferred_render_task = render_task);
+                let mode = self.mode.clone();
+                let data_arc = data.read(cx).clone();
+                let render_task = Some(cx.spawn(
+                    |this: WeakEntity<LauncherView>, cx: &mut AsyncApp| {
+                        let mut cx = cx.clone();
+                        async move {
+                            let mode = mode.as_str();
+                            let is_home = query.is_empty() && mode == "all";
+
+                            // collects Vec<(index, priority)>
+                            let mut results: Vec<(usize, f32)> = (0..data_arc.len())
+                                .map(|i| (i, &data_arc[i]))
+                                .filter(|(_, data)| {
+                                    let home = data.home();
+                                    // [Rule 1]
+                                    // Case 1: Early return if mode applies but item is not assigned to that mode
+                                    // Case 2: Early return if current mode is not required mode for item
+                                    if Some(mode) != data.alias() {
+                                        if mode != "all" || data.priority() < 1.0 {
+                                            return false;
+                                        }
+                                    }
+
+                                    // [Rule 2]
+                                    // Early return if item should always show (websearch for example)
+                                    if home == HomeType::Persist {
+                                        return true;
+                                    }
+
+                                    // [Rule 3]
+                                    // Early return if not home but item is assigned to only show on home
+                                    if !is_home && home == HomeType::OnlyHome {
+                                        return false;
+                                    }
+
+                                    // [Rule 4]
+                                    // Early return if based show (calc for example) applies
+                                    if let Some(based) = data.based_show(&query) {
+                                        return based;
+                                    }
+
+                                    // [Rule 5]
+                                    // Early return if item should only show on search but mode is home
+                                    if is_home && home == HomeType::Search {
+                                        return false;
+                                    }
+
+                                    // [Rule 6]
+                                    // Check if query matches
+                                    data.search().fuzzy_match(&query)
+                                })
+                                .map(|(i, data)| {
+                                    let prio = make_prio(data.priority(), &query, data.search());
+                                    (i, prio)
+                                })
+                                .collect();
+
+                            // drop here to release lock faster
+                            drop(data_arc);
+
+                            // sort based on priority
+                            results.sort_unstable_by(|a, b| {
+                                a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
+                            });
+
+                            // strip the priority from results
+                            let results_arc: Arc<[usize]> = results
+                                .into_iter()
+                                .map(|(i, _)| i)
+                                .collect::<Vec<_>>()
+                                .into();
+
+                            this.update(&mut cx, |this, cx| {
+                                this.apply_results(results_arc, query, cx);
+                            })
+                            .ok();
+
+                            Some(())
+                        }
+                    },
+                ));
+
+                // set active render task
+                self.navigation.with_model_mut(cx, |mdl, _| {
+                    if let Model::Standard {
+                        deferred_render_task,
+                        ..
+                    } = mdl
+                    {
+                        *deferred_render_task = render_task;
+                    }
+                })
+            }
+        }
     }
 }
 

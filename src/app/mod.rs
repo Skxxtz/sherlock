@@ -16,6 +16,7 @@ use crate::{
             LauncherMode, LauncherView,
             views::{NavigationStack, NavigationViewType},
         },
+        model::Model,
         search_bar::{EmptyBackspace, TextInput},
     },
     utils::{
@@ -139,8 +140,11 @@ fn spawn_launcher(
                         } else {
                             if this.mode != LauncherMode::Home {
                                 this.mode = LauncherMode::Home;
-                                this.navigation
-                                    .with_model_mut(cx, |this, _| this.last_query = None);
+                                this.navigation.with_model_mut(cx, |mdl, _| {
+                                    if let Model::Standard { last_query, .. } = mdl {
+                                        *last_query = None
+                                    }
+                                });
                                 this.navigation.current_mut().reset_selected_index();
                                 this.filter_and_sort(cx);
                             }

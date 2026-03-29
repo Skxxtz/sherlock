@@ -11,7 +11,9 @@ use crate::{
     },
     ui::{
         launcher::context_menu::ContextMenuAction,
-        model::{Model, emoji::EmojiView, home::HomeView, message::MessageView},
+        model::{
+            Model, emoji::EmojiView, file::view::FileView, home::HomeView, message::MessageView,
+        },
     },
     utils::errors::SherlockMessage,
 };
@@ -51,6 +53,7 @@ impl NavigationStack {
             },
             kind: NavigationViewType::Message,
         };
+
         Self {
             stack: vec![errors, home],
             active_idx: None,
@@ -156,6 +159,11 @@ impl NavigationStack {
     pub fn with_model<R>(&self, cx: &mut App, f: impl FnOnce(&Model) -> R) -> R {
         let current = self.current();
         match current.kind {
+            NavigationViewType::Files => {
+                let view = current.view.clone().downcast::<FileView>().unwrap();
+                f(&view.read(cx).model)
+            }
+
             NavigationViewType::Home => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
                 f(&view.read(cx).model)
@@ -179,6 +187,11 @@ impl NavigationStack {
     ) -> R {
         let current = self.current();
         match current.kind {
+            NavigationViewType::Files => {
+                let view = current.view.clone().downcast::<FileView>().unwrap();
+                view.update(cx, |this, cx| f(&mut this.model, cx))
+            }
+
             NavigationViewType::Home => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
                 view.update(cx, |this, cx| f(&mut this.model, cx))
@@ -202,28 +215,32 @@ impl NavigationStack {
         let current = self.current();
         let ui_idx = current.style.selected_index()?;
 
-        self.with_model(cx, |mdl| {
-            if mdl.filtered_indices.is_empty() {
+        self.with_model_mut(cx, |mdl, cx| {
+            if mdl.data().read(cx).is_empty() {
                 return None;
             }
 
-            let safe_idx = ui_idx.min(mdl.filtered_indices.len() - 1);
-            mdl.filtered_indices.get(safe_idx).copied()
+            let filtered_indices = mdl.filtered_indices();
+            let safe_idx = ui_idx.min(filtered_indices.len() - 1);
+            filtered_indices.get(safe_idx).copied()
         })
     }
     pub fn selected_item(&self, cx: &mut App) -> Option<RenderableChild> {
         let ui_idx = self.current().style.selected_index()?;
-        let (data_idx, data_entity) = self.with_model(cx, |mdl| {
-            if mdl.filtered_indices.is_empty() {
-                return (None, mdl.data.clone());
+        let (data_idx, data_entity) = self.with_model_mut(cx, |mdl, cx| {
+            let data = mdl.data();
+            if data.read(cx).is_empty() {
+                return (None, data);
             }
 
-            let safe_ui_idx = ui_idx.min(mdl.filtered_indices.len() - 1);
+            let filtered_indices = mdl.filtered_indices();
+            if filtered_indices.is_empty() {
+                return (None, mdl.data());
+            }
 
-            (
-                mdl.filtered_indices.get(safe_ui_idx).copied(),
-                mdl.data.clone(),
-            )
+            let safe_ui_idx = ui_idx.min(filtered_indices.len() - 1);
+
+            (filtered_indices.get(safe_ui_idx).copied(), mdl.data())
         });
 
         let idx = data_idx?;
@@ -231,21 +248,23 @@ impl NavigationStack {
     }
     pub fn current_actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         let ui_idx = self.current().style.selected_index()?;
-        let (data_idx, data_entity) = self.with_model(cx, |mdl| {
-            if mdl.filtered_indices.is_empty() {
-                return (None, mdl.data.clone());
+        let (data_idx, data_entity) = self.with_model_mut(cx, |mdl, cx| {
+            let data = mdl.data();
+            if data.read(cx).is_empty() {
+                return (None, data);
             }
 
-            let safe_ui_idx = ui_idx.min(mdl.filtered_indices.len() - 1);
+            let filtered_indices = mdl.filtered_indices();
+            if filtered_indices.is_empty() {
+                return (None, mdl.data());
+            }
 
-            (
-                mdl.filtered_indices.get(safe_ui_idx).copied(),
-                mdl.data.clone(),
-            )
+            let safe_ui_idx = ui_idx.min(filtered_indices.len() - 1);
+
+            (filtered_indices.get(safe_ui_idx).copied(), mdl.data())
         });
 
         let idx = data_idx?;
-
         data_entity.read(cx).get(idx).and_then(|i| i.actions())
     }
 }
@@ -365,6 +384,7 @@ pub enum NavigationViewType {
     Emoji,
     Message,
     Home,
+    Files,
 }
 
 impl NavigationViewType {
@@ -384,7 +404,17 @@ impl NavigationViewType {
                     kind: *self,
                 }
             }
-
+            Self::Files => {
+                let view = cx.new(|cx| FileView::new(launcher, cx));
+                NavigationView {
+                    view: view.into(),
+                    style: EntityStyle::Row {
+                        state: ListState::new(0, gpui::ListAlignment::Top, px(50.)),
+                        selected_index: 0,
+                    },
+                    kind: *self,
+                }
+            }
             Self::Message | Self::Home => {
                 // This is not implemented because the initial views should be implemented
                 // manually because its not dependent on a launcher

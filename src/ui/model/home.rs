@@ -11,7 +11,7 @@ pub struct HomeView {
 impl HomeView {
     pub fn new(entity: Entity<Arc<Vec<RenderableChild>>>, cx: &mut App) -> Self {
         Self {
-            model: Model::new_with_entity(entity, cx),
+            model: Model::standard_with_entity(entity, cx),
         }
     }
 }

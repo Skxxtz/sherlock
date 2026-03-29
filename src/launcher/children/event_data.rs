@@ -8,7 +8,7 @@ use gpui::{
     AnyElement, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, SharedString,
     Styled, div, hsla, prelude::FluentBuilder, px, rgb,
 };
-use simd_json::prelude::{ArrayMut, ArrayTrait};
+use simd_json::prelude::ArrayTrait;
 use suite_223b::{
     calendar::utils::{
         CalDavEvent,
