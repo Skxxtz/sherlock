@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         audio_launcher::MusicPlayerFunctions,
@@ -21,7 +21,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
         &self,
         _launcher: &Arc<Launcher>,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         div()
             .px_4()

@@ -3,7 +3,8 @@ use crate::launcher::children::file_data::FileData;
 use crate::launcher::file_launcher::FileLauncher;
 use crate::launcher::{Launcher, variant_type::LauncherType};
 use crate::ui::launcher::LauncherView;
-use gpui::{App, Task, WeakEntity};
+use gpui::{App, SharedString, Task, WeakEntity};
+use std::env::home_dir;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -21,6 +22,7 @@ pub struct FileSearchModel {
     launcher: Arc<Launcher>,
     results: Vec<FileResult>,
     poll_interval: u64,
+    paths: Arc<Vec<PathBuf>>,
     cancel_tx: Option<mpsc::Sender<()>>,
     _poll_task: Option<Task<()>>,
 }
@@ -28,16 +30,23 @@ pub struct FileSearchModel {
 pub(super) const MAX_SEARCH_DEPTH: usize = 6;
 
 impl FileSearchModel {
-    pub fn new(launcher: Arc<Launcher>) -> Self {
+    pub fn new(launcher: Arc<Launcher>, dir: Option<SharedString>) -> Self {
         if let LauncherType::Files(FileLauncher {
             ref backend,
             max_results,
             poll_interval,
         }) = launcher.launcher_type
         {
+            let paths = Arc::new(
+                dir.map(|d| vec![PathBuf::from(d.as_str())])
+                    .or(home_dir().map(|d| vec![d]))
+                    .unwrap_or_default(),
+            );
+
             Self {
                 backend: backend.clone(),
                 poll_interval: poll_interval,
+                paths,
                 launcher,
                 results: Vec::with_capacity(max_results),
                 cancel_tx: None,
@@ -46,6 +55,7 @@ impl FileSearchModel {
         } else {
             Self {
                 launcher,
+                results: Vec::with_capacity(0),
                 ..Default::default()
             }
         }
@@ -53,8 +63,7 @@ impl FileSearchModel {
 
     pub fn search(
         &mut self,
-        query: String,
-        search_paths: Vec<PathBuf>,
+        query_lower: Arc<str>,
         result_entity: WeakEntity<Arc<Vec<RenderableChild>>>,
         launcher_weak: WeakEntity<LauncherView>,
         cx: &mut App,
@@ -71,15 +80,17 @@ impl FileSearchModel {
 
         let backend = self.backend.clone();
         let cap = self.results.capacity();
-        std::thread::spawn(move || {
-            let query_lower = query.to_lowercase();
-            let mut heap = ResultHeap::new(cap);
-            let completed =
-                backend.search(query_lower, search_paths, &mut heap, cancel_rx, &result_tx);
-            if completed {
-                let _ = result_tx.try_send(heap.snapshot());
+        let paths = Arc::clone(&self.paths);
+        std::thread::spawn({
+            let query_lower = Arc::clone(&query_lower);
+            move || {
+                let mut heap = ResultHeap::new(cap);
+                let completed = backend.search(query_lower, paths, &mut heap, cancel_rx, &result_tx);
+                if completed {
+                    let _ = result_tx.try_send(heap.snapshot());
+                }
+                // result_tx drops here → result_rx.recv() returns None → poll task exits
             }
-            // result_tx drops here → result_rx.recv() returns None → poll task exits
         });
 
         let launcher = Arc::clone(&self.launcher);
@@ -123,15 +134,18 @@ impl FileSearchModel {
                     let indices: Arc<[usize]> = (0..count).collect::<Vec<_>>().into();
 
                     if let Some(view) = launcher_weak.upgrade() {
-                        let _ = cx.update(|cx| {
-                            view.update(cx, |this, cx| {
-                                // Swap the entity data directly
-                                if let Some(entity) = result_entity.upgrade() {
-                                    entity.update(cx, |e, _| *e = children);
-                                }
-                                // Reuse the exact same apply_results path as regular search
-                                this.apply_results(indices, String::new(), cx);
-                            });
+                        let _ = cx.update({
+                            let query_lower = Arc::clone(&query_lower);
+                            |cx| {
+                                view.update(cx, |this, cx| {
+                                    // Swap the entity data directly
+                                    if let Some(entity) = result_entity.upgrade() {
+                                        entity.update(cx, |e, _| *e = children);
+                                    }
+                                    // Reuse the exact same apply_results path as regular search
+                                    this.apply_results(indices, query_lower, cx);
+                                });
+                            }
                         });
                     }
                 }

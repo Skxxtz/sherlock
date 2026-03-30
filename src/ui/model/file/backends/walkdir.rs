@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::ui::model::file::{
     FileSearchUtility, MAX_SEARCH_DEPTH,
@@ -18,8 +18,8 @@ impl FileSearchProvider for WalkdirBackend {
 
     fn search(
         &self,
-        query: String,
-        paths: Vec<PathBuf>,
+        query: Arc<str>,
+        paths: Arc<Vec<PathBuf>>,
         heap: &mut ResultHeap,
         mut cancel_rx: mpsc::Receiver<()>,
         tx: &mpsc::Sender<Vec<FileResult>>,
@@ -27,7 +27,7 @@ impl FileSearchProvider for WalkdirBackend {
         let mut files_since_send: usize = 0;
         const BATCH: usize = 16;
 
-        'outer: for path in paths {
+        'outer: for path in paths.iter() {
             for entry in walkdir::WalkDir::new(&path)
                 .follow_links(false)
                 .max_depth(MAX_SEARCH_DEPTH)

@@ -7,7 +7,6 @@ use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
 use gpui::{AsyncApp, Task};
-use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
 
 use crate::ui::search_bar::TextInput;
@@ -56,7 +55,7 @@ impl Focusable for LauncherView {
 }
 
 impl LauncherView {
-    pub fn apply_results(&mut self, results: Arc<[usize]>, query: String, cx: &mut Context<Self>) {
+    pub fn apply_results(&mut self, results: Arc<[usize]>, query: impl Into<SharedString>, cx: &mut Context<Self>) {
         if let Some(state) = self.navigation.current().style.list_state() {
             state.splice(0..state.item_count(), results.len());
         } else {
@@ -74,12 +73,15 @@ impl LauncherView {
                     ..
                 } => {
                     *filtered_indices = results;
-                    *last_query = Some(query);
+                    *last_query = Some(query.into());
                 }
                 Model::FileSearch {
-                    filtered_indices, ..
+                    filtered_indices,
+                    last_query,
+                    ..
                 } => {
                     *filtered_indices = results;
+                    *last_query = Some(query.into());
                 }
             });
 
@@ -93,6 +95,7 @@ impl LauncherView {
         enum ModelKind {
             FileSearch {
                 weak_data: WeakEntity<Arc<Vec<RenderableChild>>>,
+                last_query: Option<SharedString>,
             },
             Standard {
                 data: Entity<Arc<Vec<RenderableChild>>>,
@@ -100,24 +103,28 @@ impl LauncherView {
         }
 
         let kind = self.navigation.with_model(cx, |mdl| match mdl {
-            Model::FileSearch { data, .. } => ModelKind::FileSearch {
+            Model::FileSearch {
+                data, last_query, ..
+            } => ModelKind::FileSearch {
                 weak_data: data.downgrade(),
+                last_query: last_query.clone(),
             },
             Model::Standard { data, .. } => ModelKind::Standard { data: data.clone() },
         });
 
         match kind {
-            ModelKind::FileSearch { weak_data } => {
+            ModelKind::FileSearch {
+                weak_data,
+                last_query,
+            } => {
+                if last_query.map_or(false, |s| s == query) {
+                    return;
+                }
+
                 let weak_self = cx.entity().downgrade();
                 self.navigation.with_model_mut(cx, |mdl, cx| {
                     if let Model::FileSearch { search, .. } = mdl {
-                        search.search(
-                            query,
-                            vec![PathBuf::from("/home/basti/")],
-                            weak_data,
-                            weak_self,
-                            cx,
-                        );
+                        search.search(query.into(), weak_data, weak_self, cx);
                     }
                 });
                 return;

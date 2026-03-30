@@ -244,7 +244,7 @@ impl ExecMode {
                 launcher: Arc::clone(launcher),
             },
             LauncherType::Files(_) => Self::CreateView {
-                mode: NavigationViewType::Files,
+                mode: NavigationViewType::Files { dir: None },
                 launcher: Arc::clone(&launcher),
             },
             LauncherType::Message(_) => Self::SwitchView { idx: 0 },

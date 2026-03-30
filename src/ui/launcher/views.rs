@@ -1,5 +1,6 @@
 use gpui::{
-    AnyEntity, App, AppContext, Entity, ListState, ScrollStrategy, UniformListScrollHandle, px,
+    AnyEntity, App, AppContext, Entity, ListState, ScrollStrategy, SharedString,
+    UniformListScrollHandle, px,
 };
 use simd_json::prelude::{ArrayTrait, Indexed};
 use std::sync::Arc;
@@ -116,7 +117,7 @@ impl NavigationStack {
         }
     }
     pub fn current_kind(&self) -> NavigationViewType {
-        self.current().kind
+        self.current().kind.clone()
     }
     pub fn clear(&mut self) {
         self.stack.truncate(REMAINING_VIEWS);
@@ -159,7 +160,7 @@ impl NavigationStack {
     pub fn with_model<R>(&self, cx: &mut App, f: impl FnOnce(&Model) -> R) -> R {
         let current = self.current();
         match current.kind {
-            NavigationViewType::Files => {
+            NavigationViewType::Files { .. } => {
                 let view = current.view.clone().downcast::<FileView>().unwrap();
                 f(&view.read(cx).model)
             }
@@ -187,7 +188,7 @@ impl NavigationStack {
     ) -> R {
         let current = self.current();
         match current.kind {
-            NavigationViewType::Files => {
+            NavigationViewType::Files { .. } => {
                 let view = current.view.clone().downcast::<FileView>().unwrap();
                 view.update(cx, |this, cx| f(&mut this.model, cx))
             }
@@ -226,6 +227,13 @@ impl NavigationStack {
         })
     }
     pub fn selected_item(&self, cx: &mut App) -> Option<RenderableChild> {
+        self.with_selected_item(cx, |selected| selected.cloned())
+    }
+    pub fn with_selected_item<R>(
+        &self,
+        cx: &mut App,
+        f: impl FnOnce(Option<&RenderableChild>) -> Option<R>,
+    ) -> Option<R> {
         let ui_idx = self.current().style.selected_index()?;
         let (data_idx, data_entity) = self.with_model_mut(cx, |mdl, cx| {
             let data = mdl.data();
@@ -242,9 +250,10 @@ impl NavigationStack {
 
             (filtered_indices.get(safe_ui_idx).copied(), mdl.data())
         });
-
         let idx = data_idx?;
-        data_entity.read(cx).get(idx).cloned()
+        let selected_item_ref = data_entity.read(cx).get(idx);
+
+        f(selected_item_ref)
     }
     pub fn current_actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         let ui_idx = self.current().style.selected_index()?;
@@ -356,6 +365,7 @@ impl EntityStyle {
             Self::Row {
                 state,
                 selected_index,
+                ..
             } => {
                 *selected_index = n;
                 state.scroll_to_reveal_item(n);
@@ -379,12 +389,12 @@ impl EntityStyle {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NavigationViewType {
     Emoji,
     Message,
     Home,
-    Files,
+    Files { dir: Option<SharedString> },
 }
 
 impl NavigationViewType {
@@ -401,18 +411,18 @@ impl NavigationViewType {
                         scroll_handle: UniformListScrollHandle::new(),
                         selected_index: 0,
                     },
-                    kind: *self,
+                    kind: self.clone(),
                 }
             }
-            Self::Files => {
-                let view = cx.new(|cx| FileView::new(launcher, cx));
+            Self::Files { dir } => {
+                let view = cx.new(|cx| FileView::new(launcher, dir.clone(), cx));
                 NavigationView {
                     view: view.into(),
                     style: EntityStyle::Row {
                         state: ListState::new(0, gpui::ListAlignment::Top, px(50.)),
                         selected_index: 0,
                     },
-                    kind: *self,
+                    kind: self.clone(),
                 }
             }
             Self::Message | Self::Home => {

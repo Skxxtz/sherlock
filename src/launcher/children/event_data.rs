@@ -19,7 +19,7 @@ use suite_223b::{
 };
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -163,7 +163,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
         &self,
         _launcher: &Arc<Launcher>,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         let Some(ref event) = self.event else {
             return div().into_any_element();
@@ -299,7 +299,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                             .attendees
                                             .iter()
                                             .take(8) // Safety: Don't explode the height if it's a 50-person meeting
-                                            .map(|att| render_attendee(att, theme)),
+                                            .map(|att| render_attendee(att, &theme)),
                                     ),
                             ),
                     )
@@ -364,7 +364,7 @@ fn hex_to_u32(hex: &str) -> u32 {
     u32::from_str_radix(cleaned, 16).unwrap_or(0)
 }
 
-fn render_attendee(attendee: &Attendee, theme: &ActiveTheme) -> impl IntoElement {
+fn render_attendee(attendee: &Attendee, theme: &ThemeData) -> impl IntoElement {
     let name = attendee.display_name.as_deref();
     let email = attendee.email.as_deref();
 

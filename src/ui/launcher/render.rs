@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use gpui::{
     AnyElement, Context, Element, FontWeight, InteractiveElement, IntoElement, MouseDownEvent,
     ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, div, hsla,
@@ -6,7 +8,7 @@ use gpui::{
 
 use crate::{
     CONTEXT_MENU_BIND,
-    app::ActiveTheme,
+    app::{ActiveTheme, ThemeData},
     launcher::children::{LauncherValues, RenderableChild, RenderableChildDelegate, Selection},
     ui::{
         UIFunction,
@@ -124,6 +126,10 @@ impl LauncherView {
         let (indices, data) = self
             .navigation
             .with_model(cx, |mdl| (mdl.filtered_indices(), mdl.data()));
+        let theme = cx.global::<ActiveTheme>().0.clone();
+        let sidebar = self.navigation.with_selected_item(cx, |selected_item| {
+            selected_item.and_then(|s| s.sidebar(theme.clone()))
+        });
         let EntityStyle::Row {
             state,
             selected_index,
@@ -132,11 +138,15 @@ impl LauncherView {
             return div().id("results-container");
         };
 
+        let theme = cx.global::<ActiveTheme>().0.clone();
         div()
             .id("results-container")
+            .relative()
             .flex_1()
             .min_h_0()
             .px(px(10.))
+            .gap(px(10.))
+            .flex()
             .child({
                 let selected_idx = *selected_index;
                 list(state.clone(), move |idx, _win, cx| {
@@ -150,15 +160,15 @@ impl LauncherView {
                         None => return div().into_any_element(),
                     };
 
-                    let theme = cx.global::<ActiveTheme>();
                     Self::render_list_item(
                         &child,
                         Selection::new(data_idx, idx == selected_idx),
-                        theme,
+                        theme.clone(),
                     )
                 })
                 .size_full()
             })
+            .children(sidebar)
             .child(self.render_context_menu())
     }
 
@@ -191,7 +201,7 @@ impl LauncherView {
                     "emoji-grid",
                     (indices.len() + col_count - 1) / col_count,
                     move |range, _win, cx| {
-                        let theme = cx.global::<ActiveTheme>();
+                        let theme = cx.global::<ActiveTheme>().0.clone();
                         range
                             .map(|row_idx| {
                                 div()
@@ -214,7 +224,7 @@ impl LauncherView {
                                                             data_idx,
                                                             item_idx == selected_idx,
                                                         ),
-                                                        theme,
+                                                        theme.clone(),
                                                     ))
                                                     .into_any_element();
                                             }
@@ -349,7 +359,7 @@ impl LauncherView {
     pub fn render_list_item(
         ad: &RenderableChild,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         div()
             .id(selection.data_idx)

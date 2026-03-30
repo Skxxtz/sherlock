@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ffi::OsStr, io::BufRead, path::PathBuf, process::Child};
+use std::{borrow::Cow, ffi::OsStr, io::BufRead, path::PathBuf, process::Child, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -37,8 +37,8 @@ impl<F: CommandFactory + Default> FileSearchProvider for CommandBackend<F> {
 
     fn search(
         &self,
-        query: String,
-        paths: Vec<PathBuf>,
+        query: Arc<str>,
+        paths: Arc<Vec<PathBuf>>,
         heap: &mut ResultHeap,
         mut cancel_rx: mpsc::Receiver<()>,
         tx: &mpsc::Sender<Vec<FileResult>>,

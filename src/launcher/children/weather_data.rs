@@ -6,7 +6,7 @@ use gpui::{
 use std::sync::Arc;
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -19,7 +19,7 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
         &self,
         _launcher: &Arc<Launcher>,
         _selection: Selection,
-        _theme: &ActiveTheme,
+        _theme: Arc<ThemeData>,
     ) -> AnyElement {
         let now = Local::now().time();
         div()

@@ -12,7 +12,7 @@ pub mod mpris_data;
 pub mod weather_data;
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
         children::message::MessageChild, emoji_launcher::EmojiData, utils::MprisState,
@@ -65,7 +65,7 @@ macro_rules! renderable_enum {
         }
 
         impl<'a> RenderableChildDelegate<'a> for $name {
-            fn render(&self, selection: Selection, theme: &ActiveTheme) -> AnyElement {
+            fn render(&self, selection: Selection, theme: Arc<ThemeData>) -> AnyElement {
                 match self {
                     $(Self::$variant {inner, launcher} => inner.render(launcher, selection, theme)),*
                 }
@@ -110,6 +110,12 @@ macro_rules! renderable_enum {
             fn based_show(&self, keyword: &str) -> Option<bool> {
                 match self {
                     $(Self::$variant {inner, ..} => inner.based_show(keyword)),*
+                }
+            }
+
+            fn sidebar(&self, theme: Arc<ThemeData>) -> Option<AnyElement> {
+                match self {
+                    $(Self::$variant {inner, ..} => inner.sidebar(theme)),*
                 }
             }
         }
@@ -232,7 +238,7 @@ impl RenderableChild {
 }
 
 pub trait RenderableChildDelegate<'a> {
-    fn render(&self, selection: Selection, theme: &ActiveTheme) -> AnyElement;
+    fn render(&self, selection: Selection, theme: Arc<ThemeData>) -> AnyElement;
     fn build_action_exec(&'a self, action: Arc<ContextMenuAction>) -> ExecMode;
     fn build_exec(&self) -> Option<ExecMode>;
     fn search(&'a self) -> &'a str;
@@ -240,6 +246,7 @@ pub trait RenderableChildDelegate<'a> {
     fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>>;
     fn has_actions(&self) -> bool;
     fn based_show(&self, keyword: &str) -> Option<bool>;
+    fn sidebar(&self, theme: Arc<ThemeData>) -> Option<AnyElement>;
 }
 
 #[allow(dead_code)]
@@ -259,7 +266,7 @@ pub trait RenderableChildImpl<'a> {
         &self,
         launcher: &Arc<Launcher>,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement;
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode>;
     fn priority(&self, launcher: &Arc<Launcher>) -> f32;
@@ -271,6 +278,9 @@ pub trait RenderableChildImpl<'a> {
         false
     }
     fn based_show(&self, _keyword: &str) -> Option<bool> {
+        None
+    }
+    fn sidebar(&self, _theme: Arc<ThemeData>) -> Option<AnyElement> {
         None
     }
 }

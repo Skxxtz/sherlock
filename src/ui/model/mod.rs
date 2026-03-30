@@ -2,7 +2,7 @@ use crate::{
     launcher::{Launcher, children::RenderableChild},
     ui::model::file::FileSearchModel,
 };
-use gpui::{App, AppContext, Entity, Task};
+use gpui::{App, AppContext, Entity, SharedString, Task};
 use std::sync::Arc;
 
 pub mod emoji;
@@ -14,12 +14,13 @@ pub enum Model {
     Standard {
         data: Entity<Arc<Vec<RenderableChild>>>,
         filtered_indices: Arc<[usize]>,
-        last_query: Option<String>,
+        last_query: Option<SharedString>,
         deferred_render_task: Option<Task<Option<()>>>,
     },
     FileSearch {
         data: Entity<Arc<Vec<RenderableChild>>>,
         filtered_indices: Arc<[usize]>,
+        last_query: Option<SharedString>,
         search: FileSearchModel,
     },
 }
@@ -46,11 +47,12 @@ impl Model {
         }
     }
 
-    pub fn file_search(launcher: Arc<Launcher>, cx: &mut App) -> Self {
+    pub fn file_search(launcher: Arc<Launcher>, dir: Option<SharedString>, cx: &mut App) -> Self {
         Self::FileSearch {
             data: cx.new(|_| Arc::new(Vec::new())),
             filtered_indices: Arc::from([]),
-            search: FileSearchModel::new(launcher),
+            last_query: None,
+            search: FileSearchModel::new(launcher, dir),
         }
     }
 
@@ -80,6 +82,13 @@ impl Model {
             Self::FileSearch {
                 filtered_indices, ..
             } => Arc::clone(filtered_indices),
+        }
+    }
+
+    pub fn last_query(&self) -> Option<SharedString> {
+        match self {
+            Self::Standard { last_query, .. } => last_query.clone(),
+            Self::FileSearch { last_query, .. } => last_query.clone(),
         }
     }
 }

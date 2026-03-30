@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use gpui::App;
+use gpui::{App, SharedString};
 
 use crate::{launcher::Launcher, ui::model::Model};
 
@@ -9,9 +9,9 @@ pub struct FileView {
 }
 
 impl FileView {
-    pub fn new(launcher: Arc<Launcher>, cx: &mut App) -> Self {
+    pub fn new(launcher: Arc<Launcher>, dir: Option<SharedString>, cx: &mut App) -> Self {
         Self {
-            model: Model::file_search(launcher, cx),
+            model: Model::file_search(launcher, dir, cx),
         }
     }
 }

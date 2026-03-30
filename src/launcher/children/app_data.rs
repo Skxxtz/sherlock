@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -20,7 +20,7 @@ impl<'a> RenderableChildImpl<'a> for AppData {
         &self,
         launcher: &Arc<Launcher>,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         div()
             .px_4()

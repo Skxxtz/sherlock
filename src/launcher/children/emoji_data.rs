@@ -7,7 +7,7 @@ use arrayvec::ArrayString;
 use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px, rgb};
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -70,7 +70,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
         &self,
         _launcher: &Arc<Launcher>,
         selection: Selection,
-        _theme: &ActiveTheme,
+        _theme: Arc<ThemeData>,
     ) -> AnyElement {
         let emoji = apply_skin_tones(self.entry.emoji, &get_selected_skin_tones());
         div()
