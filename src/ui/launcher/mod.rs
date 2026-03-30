@@ -7,7 +7,7 @@ use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
 use gpui::{AsyncApp, Task};
-use std::path::PathBuf;
+use std::env::home_dir;
 use std::sync::{Arc, LazyLock};
 
 use crate::ui::search_bar::TextInput;
@@ -110,10 +110,11 @@ impl LauncherView {
             ModelKind::FileSearch { weak_data } => {
                 let weak_self = cx.entity().downgrade();
                 self.navigation.with_model_mut(cx, |mdl, cx| {
+                    let target_dir = home_dir().map(|p| vec![p]).unwrap_or_default();
                     if let Model::FileSearch { search, .. } = mdl {
                         search.search(
                             query,
-                            vec![PathBuf::from("/home/basti/")],
+                            target_dir,
                             weak_data,
                             weak_self,
                             cx,
