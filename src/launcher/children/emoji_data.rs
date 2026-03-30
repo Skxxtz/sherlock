@@ -4,10 +4,10 @@ use std::sync::{
 };
 
 use arrayvec::ArrayString;
-use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px, rgb};
+use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px};
 
 use crate::{
-    app::ThemeData,
+    app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -86,7 +86,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
                 div()
                     .text_size(px(24.))
                     .line_height(px(24.))
-                    .text_color(rgb(0xffffff)) // fallback for bad fonts
+                    .text_color(theme.primary_text)
                     .child(emoji.as_str().to_string()),
             )
             .child(
@@ -100,9 +100,9 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
                     .font_family(theme.font_family.clone())
                     .text_center()
                     .text_color(if selection.is_selected {
-                        rgb(0xffffff)
+                        theme.primary_text
                     } else {
-                        rgb(0xcccccc)
+                        theme.secondary_text
                     })
                     .child(self.entry.name),
             )

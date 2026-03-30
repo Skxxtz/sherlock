@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    app::ThemeData,
+    app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher,
         audio_launcher::MusicPlayerFunctions,

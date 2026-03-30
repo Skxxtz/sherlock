@@ -1,6 +1,6 @@
 use gpui::{
-    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Hsla, SharedString, Size,
-    WindowBackgroundAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions, hsla,
+    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Size, WindowBackgroundAppearance,
+    WindowBounds, WindowHandle, WindowKind, WindowOptions,
     layer_shell::{Layer, LayerShellOptions},
     point, px,
 };
@@ -9,6 +9,7 @@ use tokio::net::UnixListener;
 
 use crate::{
     SOCKET_PATH,
+    app::theme::{ActiveTheme, ThemeData},
     launcher::children::RenderableChild,
     loader::{LauncherLoadResult, Loader, SetupResult},
     ui::{
@@ -26,48 +27,8 @@ use crate::{
 };
 
 mod bindings;
+pub mod theme;
 mod updates;
-
-#[derive(Clone)]
-pub struct ActiveTheme(pub Arc<ThemeData>);
-
-pub struct ThemeData {
-    pub font_family: SharedString,
-
-    pub bg_selected: Hsla,
-    pub bg_idle: Hsla,
-    pub mantle: Hsla,
-    pub border_selected: Hsla,
-    pub border_idle: Hsla,
-    pub primary_text: Hsla,
-    pub secondary_text: Hsla,
-
-    pub color_warn: Hsla,
-    pub color_err: Hsla,
-    pub color_succ: Hsla,
-}
-
-impl gpui::Global for ActiveTheme {}
-
-impl ThemeData {
-    pub fn dark() -> Self {
-        Self {
-            font_family: "Inter".into(),
-
-            bg_selected: hsla(0.0, 0.0, 1.0, 0.1),
-            bg_idle: hsla(0.0, 0.0, 0.0, 0.0),
-            mantle: hsla(0.0, 0.0, 1.0, 0.1),
-            border_selected: hsla(0.0, 0.0, 1.0, 0.2),
-            border_idle: hsla(0.0, 0.0, 1.0, 0.05),
-            primary_text: hsla(0.0, 0.0, 0.95, 1.0),
-            secondary_text: hsla(0.0, 0.0, 0.6, 1.0),
-
-            color_warn: hsla(45.0 / 360.0, 0.85, 0.65, 1.0),
-            color_err: hsla(0.0 / 360.0, 0.85, 0.65, 1.0),
-            color_succ: hsla(145.0 / 360.0, 0.75, 0.60, 1.0),
-        }
-    }
-}
 
 pub fn run_app(cx: &mut App, result: SetupResult) {
     let SetupResult {
@@ -78,7 +39,7 @@ pub fn run_app(cx: &mut App, result: SetupResult) {
 
     bindings::register_bindings(cx);
 
-    let theme = ActiveTheme(Arc::new(ThemeData::dark()));
+    let theme = ActiveTheme(Arc::new(ThemeData::nord()));
     cx.set_global(theme);
 
     let data: Entity<Arc<Vec<RenderableChild>>> = cx.new(|_| Arc::new(Vec::new()));

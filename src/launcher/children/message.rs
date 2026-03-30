@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use gpui::{
     AnyElement, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled,
-    div, hsla, prelude::FluentBuilder, px, rgb,
+    div, prelude::FluentBuilder, px,
 };
 
 use crate::{
-    app::ThemeData,
+    app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -42,44 +42,31 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
     ) -> AnyElement {
         let (bg, border, text) = match self.message.level {
             SherlockMessageLevel::Error => (
-                hsla(
-                    0.0,
-                    0.7,
-                    0.08,
-                    if selection.is_selected { 0.15 } else { 0.08 },
-                ),
-                hsla(
-                    0.0,
-                    0.7,
-                    0.35,
-                    if selection.is_selected { 0.8 } else { 0.4 },
-                ),
-                rgb(0xcc8888),
+                theme
+                    .color_err
+                    .alpha(if selection.is_selected { 0.15 } else { 0.08 }),
+                theme
+                    .color_err
+                    .alpha(if selection.is_selected { 0.8 } else { 0.4 }),
+                theme.color_err,
             ),
             SherlockMessageLevel::Warning => (
-                hsla(
-                    0.11,
-                    0.8,
-                    0.08,
-                    if selection.is_selected { 0.15 } else { 0.08 },
-                ),
-                hsla(
-                    0.11,
-                    0.8,
-                    0.4,
-                    if selection.is_selected { 0.8 } else { 0.4 },
-                ),
-                rgb(0xc9943a),
+                theme
+                    .color_warn
+                    .alpha(if selection.is_selected { 0.15 } else { 0.08 }),
+                theme
+                    .color_warn
+                    .alpha(if selection.is_selected { 0.8 } else { 0.4 }),
+                theme.color_warn,
             ),
             SherlockMessageLevel::Info => (
-                hsla(
-                    0.6,
-                    0.5,
-                    0.08,
-                    if selection.is_selected { 0.15 } else { 0.08 },
-                ),
-                hsla(0.6, 0.5, 0.4, if selection.is_selected { 0.8 } else { 0.4 }),
-                rgb(0x7a9ec4),
+                theme
+                    .color_succ
+                    .alpha(if selection.is_selected { 0.15 } else { 0.08 }),
+                theme
+                    .color_succ
+                    .alpha(if selection.is_selected { 0.8 } else { 0.4 }),
+                theme.color_succ,
             ),
         };
 
@@ -130,7 +117,7 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
                                     .text_size(px(13.))
                                     .font_weight(FontWeight::BOLD)
                                     .text_color(if selection.is_selected {
-                                        rgb(0xffffff)
+                                        theme.primary_text
                                     } else {
                                         text
                                     })

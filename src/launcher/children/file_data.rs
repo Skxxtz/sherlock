@@ -1,5 +1,5 @@
 use crate::{
-    app::ThemeData,
+    app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -416,7 +416,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                             div()
                                 .size(px(48.))
                                 .rounded_lg()
-                                .bg(theme.mantle)
+                                .bg(theme.bg_muted)
                                 .flex()
                                 .items_center()
                                 .justify_center()
@@ -454,7 +454,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                                                 .px(px(6.))
                                                 .py(px(1.))
                                                 .rounded(px(4.))
-                                                .bg(theme.mantle)
+                                                .bg(theme.bg_muted)
                                                 .text_xs()
                                                 .font_family(theme.font_family.clone())
                                                 .font_weight(gpui::FontWeight::MEDIUM)
@@ -467,7 +467,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                                                     .px(px(6.))
                                                     .py(px(1.))
                                                     .rounded(px(4.))
-                                                    .bg(theme.mantle)
+                                                    .bg(theme.bg_muted)
                                                     .text_xs()
                                                     .font_family(theme.font_family.clone())
                                                     .font_weight(gpui::FontWeight::MEDIUM)

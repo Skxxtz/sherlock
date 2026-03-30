@@ -2,12 +2,12 @@ use std::{fmt::Debug, path::Path, sync::Arc};
 
 use gpui::{
     App, ImageSource, InteractiveElement, IntoElement, ParentElement, SharedString, Styled, div,
-    hsla, img, prelude::FluentBuilder, px, relative,
+    img, prelude::FluentBuilder, px, relative,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    app::ThemeData,
+    app::theme::ThemeData,
     launcher::{
         children::emoji_data::{EmojiAction, apply_skin_tones, get_selected_skin_tones},
         emoji_launcher::ALL_SKIN_TONES,
@@ -69,24 +69,24 @@ impl ContextMenuAction {
             .p(px(10.))
             .cursor_pointer()
             .text_color(if is_selected {
-                hsla(0.0, 0.0, 0.8, 1.0)
+                theme.primary_text
             } else {
-                hsla(0.6, 0.0217, 0.3608, 1.0)
+                theme.secondary_text
             })
             .text_size(px(13.))
             .font_family(theme.font_family.clone())
             .line_height(relative(1.0))
             .items_center()
             .bg(if is_selected {
-                hsla(0., 0., 0.149, 1.0)
+                theme.bg_selected
             } else {
-                hsla(0., 0., 0., 0.)
+                theme.bg_idle
             })
             .hover(|s| {
                 if is_selected {
                     s
                 } else {
-                    s.bg(hsla(0., 0., 0.12, 1.0))
+                    s.bg(theme.bg_selected)
                 }
             })
             .child(if let Some(icon) = this.icon.as_ref() {
@@ -101,7 +101,7 @@ impl ContextMenuAction {
     pub fn render_emoji_col(
         &self,
         row_is_selected: bool,
-        _theme: Arc<ThemeData>,
+        theme: Arc<ThemeData>,
     ) -> impl IntoElement {
         let Self::Emoji(this) = self else {
             return div();
@@ -124,23 +124,27 @@ impl ContextMenuAction {
             .p(px(4.))
             .cursor_pointer()
             .text_color(if row_is_selected {
-                hsla(0.0, 0.0, 0.8, 1.0)
+                theme.primary_text
             } else {
-                hsla(0.6, 0.0217, 0.3608, 1.0)
+                theme.secondary_text
             })
             .text_size(px(13.))
             .line_height(relative(1.0))
             .items_center()
             .bg(if row_is_selected {
-                hsla(0., 0., 0.149, 1.0)
+                theme.bg_selected
             } else {
-                hsla(0., 0., 0., 0.)
+                theme.bg_idle
             })
             .hover(|s| {
                 if row_is_selected {
                     s
                 } else {
-                    s.bg(hsla(0., 0., 0.12, 1.0))
+                    if row_is_selected {
+                        s
+                    } else {
+                        s.bg(theme.bg_selected)
+                    }
                 }
             })
             .children(ALL_SKIN_TONES.iter().enumerate().map(|(i, tone)| {
@@ -152,7 +156,7 @@ impl ContextMenuAction {
                     .items_center()
                     .rounded_sm()
                     .p(px(8.))
-                    .when(col_idx == i, |this| this.bg(hsla(0.0, 0.0, 1.0, 0.15)))
+                    .when(col_idx == i, |this| this.bg(theme.border_selected))
                     .child(
                         div()
                             .flex()

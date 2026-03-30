@@ -5,12 +5,12 @@ use gpui::{
     Entity, EntityInputHandler, EventEmitter, FocusHandle, Focusable, GlobalElementId,
     InteractiveElement, IntoElement, LayoutId, MouseButton, PaintQuad, ParentElement, Pixels,
     Render, ShapedLine, SharedString, Style, Styled, Subscription, TextRun, UTF16Selection,
-    UnderlineStyle, Window, div, fill, hsla, point, px, rgb, rgba,
+    UnderlineStyle, Window, div, fill, point, px,
 };
 
 use crate::{
-    loader::utils::ExecVariable, ui::search_bar::builder::TextInputBuilder,
-    utils::paths::get_nth_path_completion,
+    app::theme::ActiveTheme, loader::utils::ExecVariable,
+    ui::search_bar::builder::TextInputBuilder, utils::paths::get_nth_path_completion,
 };
 
 pub mod actions;
@@ -216,9 +216,10 @@ impl Element for TextElement {
             _ => input.content.clone().into(),
         };
         let style = window.text_style();
+        let theme = cx.global::<ActiveTheme>().0.clone();
 
         let (mut display_text, text_color) = if content.is_empty() {
-            (input.placeholder.clone(), hsla(1., 1., 1., 0.2))
+            (input.placeholder.clone(), theme.text_placeholder)
         } else {
             (content.clone(), style.color)
         };
@@ -310,6 +311,8 @@ impl Element for TextElement {
         let mut selected_range = input.selected_range.clone();
         let mut cursor = input.cursor_offset();
 
+        let theme = cx.global::<ActiveTheme>().0.clone();
+
         // handle password fields
         if let Some(ExecVariable::PasswordInput(_)) = &input.variable {
             cursor = input.content[..cursor].chars().count() * "•".len();
@@ -334,7 +337,7 @@ impl Element for TextElement {
                             height: bounds.bottom() - bounds.top(),
                         },
                     ),
-                    rgb(0xcccccc),
+                    theme.cursor,
                 )),
             )
         } else {
@@ -350,7 +353,7 @@ impl Element for TextElement {
                             bounds.bottom(),
                         ),
                     ),
-                    rgba(0x3311ff30),
+                    theme.selection,
                 )),
                 None,
             )
@@ -407,6 +410,7 @@ impl Element for TextElement {
 
 impl Render for TextInput {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.global::<ActiveTheme>().0.clone();
         div()
             .flex()
             .key_context(self.scope.unwrap_or("TextInput"))
@@ -431,7 +435,7 @@ impl Render for TextInput {
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
-            .text_color(rgb(0xcccccc))
+            .text_color(theme.secondary_text)
             .w_auto()
             .child(if self.variable.is_some() {
                 div()
@@ -445,9 +449,10 @@ impl Render for TextInput {
                     .flex_none()
                     .items_center()
                     .border(px(1.))
-                    .border_color(hsla(0., 0., 0.1882, 1.0))
+                    .border_color(theme.border)
                     .rounded_md()
                     .min_w(px(20.))
+                    .font_family(theme.font_family.clone())
                     .child(TextElement { input: cx.entity() })
             } else {
                 div()
@@ -460,6 +465,7 @@ impl Render for TextInput {
                     .flex_none()
                     .items_center()
                     .min_w(px(20.))
+                    .font_family(theme.font_family.clone())
                     .child(TextElement { input: cx.entity() })
             })
     }

@@ -5,7 +5,7 @@ use gpui::{
 };
 
 use crate::{
-    app::ThemeData,
+    app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},

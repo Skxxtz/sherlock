@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use gpui::{
     AnyElement, Context, Element, FontWeight, InteractiveElement, IntoElement, MouseDownEvent,
-    ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, div, hsla,
-    list, prelude::FluentBuilder, px, relative, rgb,
+    ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, div, list,
+    prelude::FluentBuilder, px, relative,
 };
 
 use crate::{
     CONTEXT_MENU_BIND,
-    app::{ActiveTheme, ThemeData},
+    app::theme::{ActiveTheme, ThemeData},
     launcher::children::{LauncherValues, RenderableChild, RenderableChildDelegate, Selection},
     ui::{
         UIFunction,
@@ -30,9 +30,9 @@ impl Render for LauncherView {
             .flex()
             .flex_col()
             .size_full()
-            .bg(rgb(0x0F0F0F))
+            .bg(theme.bg_app)
             .border_2()
-            .border_color(hsla(0., 0., 0.1882, 1.0))
+            .border_color(theme.border)
             .rounded(px(5.))
             .shadow_xl()
             .overflow_hidden()
@@ -52,11 +52,11 @@ impl Render for LauncherView {
                     }
                 }
             }))
-            .child(self.render_search_bar())
+            .child(self.render_search_bar(theme.clone()))
             .when(!self.config_initialized, |this| {
-                this.child(self.render_config_banner())
+                this.child(self.render_config_banner(theme.clone()))
             })
-            .child(self.render_mode_label())
+            .child(self.render_mode_label(theme.clone()))
             .child(
                 div()
                     .flex_1()
@@ -75,7 +75,7 @@ impl Render for LauncherView {
 }
 
 impl LauncherView {
-    fn render_search_bar(&self) -> impl IntoElement {
+    fn render_search_bar(&self, theme: Arc<ThemeData>) -> impl IntoElement {
         div()
             .flex()
             .flex_row()
@@ -84,28 +84,28 @@ impl LauncherView {
             .px_4()
             .py(px(4.))
             .gap_3()
-            .child(div().text_color(rgb(0x888888)).child(""))
+            .child(div().text_color(theme.text_search_icon).child(""))
             .child(div().w_auto().child(self.text_input.clone()))
             .children(self.variable_input.iter().cloned())
             .border_b_2()
-            .border_color(hsla(0., 0., 0.1882, 1.0))
+            .border_color(theme.border)
     }
 
-    fn render_config_banner(&self) -> impl IntoElement {
+    fn render_config_banner(&self, theme: Arc<ThemeData>) -> impl IntoElement {
         div()
             .w_full()
             .px_4()
             .py(px(6.))
-            .bg(hsla(0.11, 0.8, 0.12, 1.0))
+            .bg(theme.banner_bg)
             .border_b_1()
-            .border_color(hsla(0.11, 0.9, 0.35, 1.0))
+            .border_color(theme.banner_border)
             .flex()
             .items_center()
             .gap_2()
             .child(
                 div()
                     .text_size(px(11.0))
-                    .text_color(hsla(0.11, 1.0, 0.65, 1.0))
+                    .text_color(theme.banner_text)
                     .child("⚠  Running with default config — run "),
             )
             .child(
@@ -113,21 +113,21 @@ impl LauncherView {
                     .px(px(4.))
                     .py(px(1.))
                     .rounded_sm()
-                    .bg(rgb(0x1e1e1e))
+                    .bg(theme.bg_code)
                     .text_size(px(11.0))
-                    .text_color(rgb(0x89d4f5))
+                    .text_color(theme.text_code)
                     .font_family("monospace")
                     .child("sherlock init"),
             )
     }
 
-    fn render_mode_label(&self) -> impl IntoElement {
+    fn render_mode_label(&self, theme: Arc<ThemeData>) -> impl IntoElement {
         div()
             .px(px(14.))
             .py(px(4.))
             .text_size(px(14.))
             .font_weight(FontWeight::BOLD)
-            .text_color(rgb(0x2e2e2e))
+            .text_color(theme.text_mode_label)
             .child(self.mode.display_str())
     }
 
@@ -237,52 +237,66 @@ impl LauncherView {
 
         div()
             .id("results-container")
-            .flex_1()
-            .min_h_0()
+            .relative()
+            .size_full()
             .px(px(10.))
             .child(
-                gpui::uniform_list("emoji-grid", (indices.len() + col_count - 1) / col_count, {
-                    let theme = theme.clone();
+                div()
+                    .flex()
+                    .gap(px(10.))
+                    .flex_1()
+                    .min_h_0()
+                    .size_full()
+                    .child(
+                        gpui::uniform_list(
+                            "emoji-grid",
+                            (indices.len() + col_count - 1) / col_count,
+                            {
+                                let theme = theme.clone();
 
-                    move |range, _win, cx| {
-                        range
-                            .map(|row_idx| {
-                                div()
-                                    .flex()
-                                    .flex_row()
-                                    .w_full()
-                                    .gap(px(2.0))
-                                    .children((0..col_count).map(|col_idx| {
-                                        let item_idx = row_idx * col_count + col_idx;
+                                move |range, _win, cx| {
+                                    range
+                                        .map(|row_idx| {
+                                            div()
+                                                .flex()
+                                                .flex_row()
+                                                .w_full()
+                                                .gap(px(2.0))
+                                                .children((0..col_count).map(|col_idx| {
+                                                    let item_idx = row_idx * col_count + col_idx;
 
-                                        if let Some(&data_idx) = indices.get(item_idx) {
-                                            let data_guard = data.read(cx);
-                                            if let Some(child) = data_guard.get(data_idx) {
-                                                return div()
-                                                    .w_0()
-                                                    .flex_1()
-                                                    .child(Self::render_list_item(
-                                                        child,
-                                                        Selection::new(
-                                                            data_idx,
-                                                            item_idx == selected_idx,
-                                                        ),
-                                                        theme.clone(),
-                                                    ))
-                                                    .into_any_element();
-                                            }
-                                        }
-                                        // Empty cell for alignment
-                                        div().flex_1().into_any_element()
-                                    }))
-                                    .into_any_element()
-                            })
-                            .collect::<Vec<_>>()
-                    }
-                })
-                .gap(px(2.0))
-                .track_scroll(scroll_handle)
-                .size_full(),
+                                                    if let Some(&data_idx) = indices.get(item_idx) {
+                                                        let data_guard = data.read(cx);
+                                                        if let Some(child) =
+                                                            data_guard.get(data_idx)
+                                                        {
+                                                            return div()
+                                                                .w_0()
+                                                                .flex_1()
+                                                                .child(Self::render_list_item(
+                                                                    child,
+                                                                    Selection::new(
+                                                                        data_idx,
+                                                                        item_idx == selected_idx,
+                                                                    ),
+                                                                    theme.clone(),
+                                                                ))
+                                                                .into_any_element();
+                                                        }
+                                                    }
+                                                    // Empty cell for alignment
+                                                    div().flex_1().into_any_element()
+                                                }))
+                                                .into_any_element()
+                                        })
+                                        .collect::<Vec<_>>()
+                                }
+                            },
+                        )
+                        .gap(px(2.0))
+                        .track_scroll(scroll_handle)
+                        .size_full(),
+                    ),
             )
             .child(self.render_context_menu(theme))
     }
@@ -292,8 +306,8 @@ impl LauncherView {
             div().inset_0().absolute().child(
                 div()
                     .p(px(7.))
-                    .bg(rgb(0x0F0F0F))
-                    .border_color(hsla(0., 0., 0.1882, 1.0))
+                    .bg(theme.bg_app)
+                    .border_color(theme.border)
                     .border(px(1.))
                     .rounded_md()
                     .absolute()
@@ -330,20 +344,20 @@ impl LauncherView {
             .line_height(px(30.))
             .w_full()
             .flex()
-            .bg(hsla(0., 0., 0.098, 1.0))
+            .bg(theme.bg_status_bar)
             .border_t_1()
-            .border_color(hsla(0., 0., 0.1882, 1.0))
+            .border_color(theme.border)
             .px_5()
             .text_size(px(13.))
             .font_family(theme.font_family.clone())
             .items_center()
-            .text_color(hsla(0.6, 0.0217, 0.3608, 1.0))
-            .child(String::from("Sherlock"))
+            .text_color(theme.text_status_bar)
+            .child("Sherlock")
             .when(message_count > 0, |this| {
-                this.child(self.render_error_indicator(message_count, theme, cx))
+                this.child(self.render_error_indicator(message_count, theme.clone(), cx))
             })
             .child(div().flex_1())
-            .child(self.render_context_hint(cx))
+            .child(self.render_context_hint(cx, theme.clone()))
     }
 
     fn render_error_indicator(
@@ -379,9 +393,9 @@ impl LauncherView {
                         .gap(px(4.))
                         .rounded_sm()
                         .border_1()
-                        .border_color(hsla(0.0, 0.7, 0.59, 0.25))
-                        .text_color(hsla(0.0, 0.7, 0.59, 0.25))
-                        .bg(hsla(0.0, 0.7, 0.1, 0.12))
+                        .border_color(theme.color_err)
+                        .text_color(theme.color_err)
+                        .bg(theme.color_err.alpha(0.4))
                         .text_xs()
                         .font_family(theme.font_family.clone())
                         .child(count.to_string()),
@@ -389,14 +403,22 @@ impl LauncherView {
             })
     }
 
-    fn render_context_hint(&self, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_context_hint(
+        &self,
+        _cx: &mut Context<Self>,
+        theme: Arc<ThemeData>,
+    ) -> impl IntoElement {
         if self.has_actions {
             div()
                 .flex()
                 .items_center()
                 .gap(px(5.))
                 .child(div().mr_1().child(SharedString::from("Additional Actions")))
-                .children(get_context_key_parts().into_iter().map(keybind_box))
+                .children(
+                    get_context_key_parts()
+                        .into_iter()
+                        .map(|p| keybind_box(p, &theme)),
+                )
         } else {
             div()
         }
@@ -457,11 +479,11 @@ fn get_context_key_parts() -> Vec<String> {
         .collect()
 }
 
-fn keybind_box(text: String) -> impl Element {
+fn keybind_box(text: String, theme: &Arc<ThemeData>) -> impl Element {
     div()
         .flex_none()
         .p(px(5.))
-        .bg(rgb(0x262626))
+        .bg(theme.bg_keybind)
         .rounded_sm()
         .text_size(px(11.))
         .line_height(relative(1.0))

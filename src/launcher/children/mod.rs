@@ -12,7 +12,7 @@ pub mod mpris_data;
 pub mod weather_data;
 
 use crate::{
-    app::ThemeData,
+    app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
         children::message::MessageChild, emoji_launcher::EmojiData, utils::MprisState,

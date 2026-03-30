@@ -6,7 +6,7 @@ use std::{
 use chrono::Local;
 use gpui::{
     AnyElement, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, SharedString,
-    Styled, div, hsla, prelude::FluentBuilder, px, rgb,
+    Styled, div, prelude::FluentBuilder, px, rgb,
 };
 use simd_json::prelude::ArrayTrait;
 use suite_223b::{
@@ -19,7 +19,7 @@ use suite_223b::{
 };
 
 use crate::{
-    app::ThemeData,
+    app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -169,7 +169,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
             return div().into_any_element();
         };
 
-        let accent_color = self.color.unwrap_or(rgb(0xff453a).into());
+        let accent_color = self.color.unwrap_or(theme.bg_idle);
         div()
             .group("event-card")
             .px_4()
@@ -249,7 +249,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                             .px_1()
                                             .py_0()
                                             .rounded_sm()
-                                            .bg(hsla(0.0, 0.0, 1.0, 0.08))
+                                            .bg(theme.bg_badge)
                                             .text_size(px(10.0))
                                             .font_family(theme.font_family.clone())
                                             .text_color(theme.secondary_text)
