@@ -85,7 +85,8 @@ impl FileSearchModel {
             let query_lower = Arc::clone(&query_lower);
             move || {
                 let mut heap = ResultHeap::new(cap);
-                let completed = backend.search(query_lower, paths, &mut heap, cancel_rx, &result_tx);
+                let completed =
+                    backend.search(query_lower, paths, &mut heap, cancel_rx, &result_tx);
                 if completed {
                     let _ = result_tx.try_send(heap.snapshot());
                 }

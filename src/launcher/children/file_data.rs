@@ -216,6 +216,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                     .w_full()
                     .child(
                         div()
+                            .font_family(theme.font_family.clone())
                             .text_sm()
                             .w_full()
                             .text_color(theme.secondary_text)
@@ -229,6 +230,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                     )
                     .child(
                         div()
+                            .font_family(theme.font_family.clone())
                             .text_xs()
                             .w_full()
                             .overflow_hidden()
@@ -255,6 +257,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                 .child(
                     div()
                         .text_xs()
+                        .font_family(theme.font_family.clone())
                         .text_color(theme.secondary_text)
                         .flex_shrink_0()
                         .child(SharedString::from(label)),
@@ -262,6 +265,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                 .child(
                     div()
                         .text_xs()
+                        .font_family(theme.font_family.clone())
                         .font_weight(gpui::FontWeight::MEDIUM)
                         .text_color(theme.primary_text)
                         .text_right()
@@ -275,7 +279,8 @@ impl<'a> RenderableChildImpl<'a> for FileData {
         let section_label = |text: &'static str| {
             div()
                 .text_xs()
-                .font_weight(gpui::FontWeight::BOLD)
+                .font_family(theme.font_family.clone())
+                .font_weight(gpui::FontWeight::SEMIBOLD)
                 .text_color(theme.secondary_text)
                 .pt_3()
                 .pb_1()
@@ -286,16 +291,15 @@ impl<'a> RenderableChildImpl<'a> for FileData {
 
         Some(
             div()
-                .h_full()
                 .w(px(400.))
                 .p(px(16.))
+                .mb(px(10.))
                 .rounded_lg()
                 .bg(theme.bg_selected)
                 .border_1()
                 .border_color(theme.border_selected)
                 .flex_col()
                 .overflow_hidden()
-                // ── HEADER ──────────────────────────────────────────────
                 .child(
                     div()
                         .flex()
@@ -326,6 +330,8 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                                 .child(
                                     div()
                                         .text_sm()
+                                        .font_family(theme.font_family.clone())
+                                        .px(px(3.))
                                         .font_weight(gpui::FontWeight::SEMIBOLD)
                                         .text_color(theme.primary_text)
                                         .overflow_hidden()
@@ -334,7 +340,6 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                                         .child(self.name.clone()),
                                 )
                                 .child(
-                                    // Extension badge
                                     div()
                                         .flex()
                                         .items_center()
@@ -346,6 +351,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                                                 .rounded(px(4.))
                                                 .bg(theme.mantle)
                                                 .text_xs()
+                                                .font_family(theme.font_family.clone())
                                                 .font_weight(gpui::FontWeight::MEDIUM)
                                                 .text_color(theme.secondary_text)
                                                 .child(SharedString::from(meta.kind.clone())),
@@ -358,6 +364,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                                                     .rounded(px(4.))
                                                     .bg(theme.mantle)
                                                     .text_xs()
+                                                    .font_family(theme.font_family.clone())
                                                     .font_weight(gpui::FontWeight::MEDIUM)
                                                     .text_color(theme.secondary_text)
                                                     .child(SharedString::from("Executable")),
@@ -378,7 +385,6 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                         .child(self.loc.clone()),
                 )
                 .child(separator())
-                // ── INFO SECTION ─────────────────────────────────────────
                 .child(
                     div()
                         .flex_col()
@@ -390,7 +396,6 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                         }),
                 )
                 .child(separator())
-                // ── DATES SECTION ────────────────────────────────────────
                 .child(
                     div()
                         .flex_col()
@@ -399,7 +404,6 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                         .child(row("Created", meta.created)),
                 )
                 .child(separator())
-                // ── PERMISSIONS SECTION ──────────────────────────────────
                 .child(
                     div()
                         .flex_col()

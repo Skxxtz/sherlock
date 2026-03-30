@@ -44,6 +44,7 @@ impl<'a> RenderableChildImpl<'a> for AppData {
                     .child(
                         div()
                             .text_sm()
+                            .font_family(theme.font_family.clone())
                             .text_color(theme.secondary_text)
                             .when(selection.is_selected, |this| {
                                 this.text_color(theme.primary_text)
@@ -61,6 +62,7 @@ impl<'a> RenderableChildImpl<'a> for AppData {
                     .child(
                         div()
                             .text_xs()
+                            .font_family(theme.font_family.clone())
                             .text_color(theme.secondary_text)
                             .children(launcher.name.as_ref().map(|name| div().child(name.clone()))),
                     ),

@@ -54,6 +54,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
                     .child(
                         div()
                             .text_sm()
+                            .font_family(theme.font_family.clone())
                             .overflow_hidden()
                             .text_ellipsis()
                             .whitespace_nowrap()
@@ -65,12 +66,15 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
                             ),
                     )
                     .child(
-                        div().text_xs().children(
-                            self.raw
-                                .as_ref()
-                                .and_then(|s| s.metadata.artists.as_ref())
-                                .map(|arts| arts.join(", ").to_string()),
-                        ),
+                        div()
+                            .text_xs()
+                            .font_family(theme.font_family.clone())
+                            .children(
+                                self.raw
+                                    .as_ref()
+                                    .and_then(|s| s.metadata.artists.as_ref())
+                                    .map(|arts| arts.join(", ").to_string()),
+                            ),
                     ),
             )
             .into_any_element()

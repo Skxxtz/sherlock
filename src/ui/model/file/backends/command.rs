@@ -16,8 +16,13 @@ impl Drop for ChildGuard {
 }
 
 pub trait CommandFactory: Send + Sync {
-    fn binary_name(&self) -> &'static str;
-    fn args<'a>(&self, paths: &'a [PathBuf]) -> impl Iterator<Item = Cow<'a, OsStr>>;
+    const HANDLES_FILTERING: bool;
+    const BINARY_NAME: &'static str;
+    fn args<'a>(
+        &self,
+        query: &'a str,
+        paths: &'a [PathBuf],
+    ) -> impl Iterator<Item = Cow<'a, OsStr>>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -28,11 +33,15 @@ impl<F: CommandFactory> CommandBackend<F> {
     pub fn new(factory: F) -> Self {
         Self { factory }
     }
+
+    fn handles_filtering(&self) -> bool {
+        F::HANDLES_FILTERING
+    }
 }
 
 impl<F: CommandFactory + Default> FileSearchProvider for CommandBackend<F> {
     fn name(&self) -> &'static str {
-        self.factory.binary_name()
+        F::BINARY_NAME
     }
 
     fn search(
@@ -43,8 +52,8 @@ impl<F: CommandFactory + Default> FileSearchProvider for CommandBackend<F> {
         mut cancel_rx: mpsc::Receiver<()>,
         tx: &mpsc::Sender<Vec<FileResult>>,
     ) -> bool {
-        let child = match std::process::Command::new(self.factory.binary_name())
-            .args(self.factory.args(&paths))
+        let child = match std::process::Command::new(F::BINARY_NAME)
+            .args(self.factory.args(query.as_ref(), &paths))
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::null())
             .spawn()
@@ -59,12 +68,10 @@ impl<F: CommandFactory + Default> FileSearchProvider for CommandBackend<F> {
             None => return false,
         };
 
-        let is_path_query = query.contains('/') || query.contains(std::path::MAIN_SEPARATOR);
-
         let mut files_since_send: usize = 0;
         const BATCH: usize = 16;
 
-        for line in std::io::BufReader::new(stdout).lines() {
+        for (i, line) in std::io::BufReader::new(stdout).lines().enumerate() {
             if cancel_rx.try_recv().is_ok() || cancel_rx.is_closed() {
                 return false;
             }
@@ -74,23 +81,27 @@ impl<F: CommandFactory + Default> FileSearchProvider for CommandBackend<F> {
                 Err(_) => continue,
             };
 
-            let score = if is_path_query {
-                // Normalize separators on Windows only — avoid alloc on Unix
-                let path_bytes = line.as_bytes();
-                if !FileSearchUtility::bytes_contain_ci(path_bytes, query.as_bytes()) {
-                    continue;
+            let score = if !self.handles_filtering() {
+                if line.ends_with('/') {
+                    // Normalize separators on Windows only — avoid alloc on Unix
+                    let path_bytes = line.as_bytes();
+                    if !FileSearchUtility::bytes_contain_ci(path_bytes, query.as_bytes()) {
+                        continue;
+                    }
+                    FileSearchUtility::score_path(path_bytes, query.as_bytes())
+                } else {
+                    let name_bytes = line.as_bytes();
+                    // Slice to filename only — don't score against the full path
+                    let name_bytes = FileSearchUtility::memrchr_slash(name_bytes)
+                        .map(|i| &name_bytes[i + 1..])
+                        .unwrap_or(name_bytes);
+                    if !FileSearchUtility::bytes_contain_ci(name_bytes, query.as_bytes()) {
+                        continue;
+                    }
+                    FileSearchUtility::score_file_ci(name_bytes, &query)
                 }
-                FileSearchUtility::score_path(path_bytes, query.as_bytes())
             } else {
-                let name_bytes = line.as_bytes();
-                // Slice to filename only — don't score against the full path
-                let name_bytes = FileSearchUtility::memrchr_slash(name_bytes)
-                    .map(|i| &name_bytes[i + 1..])
-                    .unwrap_or(name_bytes);
-                if !FileSearchUtility::bytes_contain_ci(name_bytes, query.as_bytes()) {
-                    continue;
-                }
-                FileSearchUtility::score_file_ci(name_bytes, &query)
+                i as f32
             };
 
             if heap.push(FileResult {

@@ -55,7 +55,12 @@ impl Focusable for LauncherView {
 }
 
 impl LauncherView {
-    pub fn apply_results(&mut self, results: Arc<[usize]>, query: impl Into<SharedString>, cx: &mut Context<Self>) {
+    pub fn apply_results(
+        &mut self,
+        results: Arc<[usize]>,
+        query: impl Into<SharedString>,
+        cx: &mut Context<Self>,
+    ) {
         if let Some(state) = self.navigation.current().style.list_state() {
             state.splice(0..state.item_count(), results.len());
         } else {

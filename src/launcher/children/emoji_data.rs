@@ -70,7 +70,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
         &self,
         _launcher: &Arc<Launcher>,
         selection: Selection,
-        _theme: Arc<ThemeData>,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         let emoji = apply_skin_tones(self.entry.emoji, &get_selected_skin_tones());
         div()
@@ -97,6 +97,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
                     .text_ellipsis()
                     .whitespace_nowrap()
                     .text_size(px(10.))
+                    .font_family(theme.font_family.clone())
                     .text_center()
                     .text_color(if selection.is_selected {
                         rgb(0xffffff)

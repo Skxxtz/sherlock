@@ -118,6 +118,7 @@ fn calc_tile(
         .justify_center()
         .child(
             div()
+                .font_family(theme.font_family.clone())
                 .text_size(px(24.0))
                 .text_color(theme.secondary_text)
                 .when(selection.is_selected, |this| {
@@ -149,6 +150,7 @@ fn color_show(result: u32, selection: Selection, theme: Arc<ThemeData>) -> gpui:
         .child(
             div().flex_col().justify_between().items_center().child(
                 div()
+                    .font_family(theme.font_family.clone())
                     .text_sm()
                     .text_color(theme.secondary_text)
                     .when(selection.is_selected, |this| {

@@ -7,14 +7,16 @@ use crate::ui::model::file::backends::command::CommandFactory;
 pub struct RgFactory;
 
 impl CommandFactory for RgFactory {
-    fn binary_name(&self) -> &'static str {
-        "rg"
-    }
-    fn args<'a>(&self, paths: &'a [PathBuf]) -> impl Iterator<Item = Cow<'a, OsStr>> {
-        const FLAGS: &[&str] = &["--files"];
-        FLAGS
-            .iter()
-            .map(|&s| Cow::Borrowed(OsStr::new(s)))
+    const BINARY_NAME: &'static str = "rg";
+    const HANDLES_FILTERING: bool = true;
+
+    fn args<'a>(
+        &self,
+        query: &'a str,
+        paths: &'a [PathBuf],
+    ) -> impl Iterator<Item = Cow<'a, OsStr>> {
+        std::iter::once(Cow::Borrowed(OsStr::new("-l")))
+            .chain(std::iter::once(Cow::Borrowed(OsStr::new(query))))
             .chain(paths.iter().map(|p| Cow::Borrowed(p.as_os_str())))
     }
 }
