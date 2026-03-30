@@ -441,11 +441,13 @@ impl LauncherView {
                     .mb(px(5.0))
                     .w_full()
                     .cursor_pointer()
-                    .border_1()
-                    .bg(theme.bg_idle)
-                    .when(selection.is_selected, |this| {
-                        this.bg(theme.bg_selected)
-                            .border_color(theme.border_selected)
+                    .when(!ad.handles_borders(), |this| {
+                        this.bg(theme.bg_idle)
+                            .border_1()
+                            .when(selection.is_selected, |this| {
+                                this.bg(theme.bg_selected)
+                                    .border_color(theme.border_selected)
+                            })
                     })
                     .child(ad.render(selection, theme)),
             )

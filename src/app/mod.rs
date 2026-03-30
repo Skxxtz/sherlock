@@ -39,7 +39,7 @@ pub fn run_app(cx: &mut App, result: SetupResult) {
 
     bindings::register_bindings(cx);
 
-    let theme = ActiveTheme(Arc::new(ThemeData::nord()));
+    let theme = ActiveTheme(Arc::new(ThemeData::dark()));
     cx.set_global(theme);
 
     let data: Entity<Arc<Vec<RenderableChild>>> = cx.new(|_| Arc::new(Vec::new()));

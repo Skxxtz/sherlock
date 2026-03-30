@@ -15,6 +15,7 @@ use crate::{
 };
 
 impl<'a> RenderableChildImpl<'a> for WeatherData {
+    const HANDLES_BODERS: bool = true;
     fn render(
         &self,
         _launcher: &Arc<Launcher>,

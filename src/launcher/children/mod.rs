@@ -65,6 +65,12 @@ macro_rules! renderable_enum {
         }
 
         impl<'a> RenderableChildDelegate<'a> for $name {
+            fn handles_borders(&self) -> bool {
+                match self {
+                    $(Self::$variant { .. } => <$inner>::HANDLES_BODERS),*
+                }
+            }
+
             fn render(&self, selection: Selection, theme: Arc<ThemeData>) -> AnyElement {
                 match self {
                     $(Self::$variant {inner, launcher} => inner.render(launcher, selection, theme)),*
@@ -238,6 +244,7 @@ impl RenderableChild {
 }
 
 pub trait RenderableChildDelegate<'a> {
+    fn handles_borders(&self) -> bool;
     fn render(&self, selection: Selection, theme: Arc<ThemeData>) -> AnyElement;
     fn build_action_exec(&'a self, action: Arc<ContextMenuAction>) -> ExecMode;
     fn build_exec(&self) -> Option<ExecMode>;
@@ -262,6 +269,8 @@ pub trait LauncherValues<'a> {
 }
 
 pub trait RenderableChildImpl<'a> {
+    /// If set to true, disables the inheritage of the border and background fill of the list item
+    const HANDLES_BODERS: bool = false;
     fn render(
         &self,
         launcher: &Arc<Launcher>,
@@ -271,9 +280,11 @@ pub trait RenderableChildImpl<'a> {
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode>;
     fn priority(&self, launcher: &Arc<Launcher>) -> f32;
     fn search(&'a self, launcher: &Arc<Launcher>) -> &'a str;
+    /// Will only get called once the context menu gets opened
     fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         None
     }
+    /// Whether the `additional actions` indicator should show in the status bar
     fn has_actions(&self) -> bool {
         false
     }
