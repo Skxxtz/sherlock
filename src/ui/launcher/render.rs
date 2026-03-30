@@ -57,16 +57,19 @@ impl Render for LauncherView {
                 this.child(self.render_config_banner())
             })
             .child(self.render_mode_label())
-            .child({
-                match self.navigation.current().style {
-                    EntityStyle::Grid { .. } => self
-                        .render_result_grid(cx, theme.clone())
-                        .into_any_element(),
-                    EntityStyle::Row { .. } => {
-                        self.render_results(cx, theme.clone()).into_any_element()
-                    }
-                }
-            })
+            .child(
+                div()
+                    .flex_1()
+                    .min_h_0()
+                    .child(match self.navigation.current().style {
+                        EntityStyle::Grid { .. } => self
+                            .render_result_grid(cx, theme.clone())
+                            .into_any_element(),
+                        EntityStyle::Row { .. } => {
+                            self.render_results(cx, theme.clone()).into_any_element()
+                        }
+                    }),
+            )
             .child(self.render_status_bar(theme, cx))
     }
 }
@@ -154,6 +157,7 @@ impl LauncherView {
                     .flex()
                     .gap(px(10.))
                     .flex_1()
+                    .min_h_0()
                     .size_full()
                     .child({
                         let selected_idx = *selected_index;
@@ -180,7 +184,30 @@ impl LauncherView {
                         .pb(px(5.))
                         .size_full()
                     })
-                    .children(sidebar),
+                    .when_some(sidebar, |this, sidebar| {
+                        this.child(
+                            div()
+                                .h_full()
+                                .w_full()
+                                .overflow_x_hidden()
+                                .pb(px(10.))
+                                .child(
+                                    div()
+                                        .id("sidebar")
+                                        .overflow_y_scroll()
+                                        .overflow_x_hidden()
+                                        .size_full()
+                                        .p(px(16.))
+                                        .rounded_lg()
+                                        .bg(theme.bg_selected)
+                                        .border_1()
+                                        .border_color(theme.border_selected)
+                                        .flex_col()
+                                        .child(sidebar),
+                                )
+                                .w(px(400.)),
+                        )
+                    }),
             )
             .child(self.render_context_menu(theme))
     }
@@ -363,10 +390,6 @@ impl LauncherView {
     }
 
     fn render_context_hint(&self, _cx: &mut Context<Self>) -> impl IntoElement {
-        if self.navigation.selected_index().is_some() {
-            return div();
-        };
-
         if self.has_actions {
             div()
                 .flex()

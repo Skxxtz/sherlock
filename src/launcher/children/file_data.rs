@@ -62,16 +62,7 @@ impl FileData {
                 .map(|e| e.to_owned())
         };
 
-        let kind = if is_symlink {
-            "Symlink".into()
-        } else if is_dir {
-            "Directory".into()
-        } else {
-            extension
-                .as_deref()
-                .map(|e| format!("{e} File"))
-                .unwrap_or_else(|| "File".into())
-        };
+        let kind = identify_file_type(extension.as_deref(), is_dir, is_symlink);
 
         let size = if is_dir {
             std::fs::read_dir(path)
@@ -115,7 +106,7 @@ impl FileData {
 }
 
 struct FileMeta {
-    kind: String,
+    kind: &'static str,
     size: String,
     modified: String,
     created: String,
@@ -159,10 +150,9 @@ fn format_timestamp(secs: u64) -> String {
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = if m <= 2 { y + 1 } else { y };
 
-    format!("{:04}-{:02}-{:02} {:02}:{:02}", y, m, d, hours, minutes)
+    format!("{:02}.{:02}.{:04} {:02}:{:02}", d, m, y, hours, minutes)
 }
 
-#[cfg(unix)]
 fn format_permissions(mode: u32) -> String {
     let chars = [
         (0o400, 'r'),
@@ -180,6 +170,131 @@ fn format_permissions(mode: u32) -> String {
         .map(|&(bit, ch)| if mode & bit != 0 { ch } else { '-' })
         .collect();
     format!("{s} ({:04o})", mode & 0o777)
+}
+
+fn identify_file_type(extension: Option<&str>, is_dir: bool, is_symlink: bool) -> &'static str {
+    if is_symlink {
+        return "Symbolic Link";
+    }
+    if is_dir {
+        return "Folder";
+    }
+
+    match extension.unwrap_or("") {
+        // Systems & compiled
+        "rs" => "Rust",
+        "c" => "C",
+        "h" => "C Header",
+        "cpp" | "cc" | "cxx" => "C++",
+        "hpp" | "hxx" => "C++ Header",
+        "go" => "Go",
+        "zig" => "Zig",
+        "s" | "asm" => "Assembly",
+        // JVM
+        "java" => "Java",
+        "kt" | "kts" => "Kotlin",
+        "scala" => "Scala",
+        "class" => "Java Bytecode",
+        "jar" => "Java Archive",
+        // Scripting
+        "py" => "Python",
+        "rb" => "Ruby",
+        "lua" => "Lua",
+        "pl" | "pm" => "Perl",
+        "sh" => "Shell Script",
+        "bash" => "Bash Script",
+        "zsh" => "Zsh Script",
+        "fish" => "Fish Script",
+        "ps1" => "PowerShell Script",
+        // Web
+        "js" | "mjs" | "cjs" => "JavaScript",
+        "ts" | "mts" => "TypeScript",
+        "jsx" => "React JSX",
+        "tsx" => "React TSX",
+        "html" | "htm" => "HTML",
+        "css" => "CSS",
+        "scss" | "sass" => "SCSS",
+        "vue" => "Vue Component",
+        "svelte" => "Svelte Component",
+        "wasm" => "WebAssembly",
+        // Data & config
+        "json" | "jsonc" => "JSON",
+        "yaml" | "yml" => "YAML",
+        "toml" => "TOML",
+        "ini" | "cfg" | "conf" => "Config",
+        "env" => "Environment Config",
+        "xml" => "XML",
+        "csv" => "CSV",
+        "tsv" => "TSV",
+        "sql" => "SQL",
+        "db" | "sqlite" | "sqlite3" => "SQLite Database",
+        // Documents
+        "md" | "markdown" => "Markdown",
+        "rst" => "reStructuredText",
+        "tex" => "LaTeX",
+        "pdf" => "PDF",
+        "txt" => "Plain Text",
+        "doc" | "docx" => "Word Document",
+        "xls" | "xlsx" => "Excel Spreadsheet",
+        "ppt" | "pptx" => "PowerPoint",
+        "odt" => "OpenDocument Text",
+        "ods" => "OpenDocument Spreadsheet",
+        "epub" => "eBook",
+        // Images
+        "jpg" | "jpeg" => "JPEG Image",
+        "png" => "PNG Image",
+        "gif" => "GIF Image",
+        "webp" => "WebP Image",
+        "avif" => "AVIF Image",
+        "svg" => "SVG",
+        "ico" => "Icon",
+        "bmp" => "Bitmap",
+        "tiff" | "tif" => "TIFF Image",
+        "heic" | "heif" => "HEIF Image",
+        "raw" | "cr2" | "nef" => "RAW Image",
+        // Audio
+        "mp3" => "MP3",
+        "flac" => "FLAC",
+        "wav" => "WAV",
+        "ogg" => "OGG",
+        "aac" => "AAC",
+        "m4a" => "M4A",
+        "opus" => "Opus",
+        // Video
+        "mp4" | "m4v" => "MP4",
+        "mkv" => "MKV",
+        "webm" => "WebM",
+        "avi" => "AVI",
+        "mov" => "QuickTime",
+        "wmv" => "WMV",
+        // Archives
+        "zip" => "ZIP Archive",
+        "tar" => "Tar Archive",
+        "gz" | "tgz" => "Gzip Archive",
+        "xz" => "XZ Archive",
+        "bz2" => "Bzip2 Archive",
+        "zst" => "Zstandard Archive",
+        "7z" => "7-Zip Archive",
+        "rar" => "RAR Archive",
+        "deb" => "Debian Package",
+        "rpm" => "RPM Package",
+        "appimage" => "AppImage",
+        "flatpak" => "Flatpak",
+        // Fonts
+        "ttf" => "TrueType Font",
+        "otf" => "OpenType Font",
+        "woff" | "woff2" => "Web Font",
+        // Binary / system
+        "so" => "Shared Library",
+        "a" => "Static Library",
+        "o" => "Object File",
+        "exe" => "Executable",
+        "dll" => "DLL",
+        "lock" => "Lock File",
+        "log" => "Log",
+        "pid" => "PID File",
+        _ => "File",
+    }
 }
 
 impl<'a> RenderableChildImpl<'a> for FileData {
@@ -247,7 +362,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
         let meta = self.fetch_meta()?;
 
         // Compact label/value row
-        let row = |label: &'static str, value: String| {
+        let row = |label: &'static str, value: SharedString| {
             div()
                 .flex()
                 .items_start()
@@ -260,7 +375,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                         .font_family(theme.font_family.clone())
                         .text_color(theme.secondary_text)
                         .flex_shrink_0()
-                        .child(SharedString::from(label)),
+                        .child(label),
                 )
                 .child(
                     div()
@@ -291,15 +406,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
 
         Some(
             div()
-                .w(px(400.))
-                .p(px(16.))
-                .mb(px(10.))
-                .rounded_lg()
-                .bg(theme.bg_selected)
-                .border_1()
-                .border_color(theme.border_selected)
-                .flex_col()
-                .overflow_hidden()
+                .min_h_full()
                 .child(
                     div()
                         .flex()
@@ -354,7 +461,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                                                 .font_family(theme.font_family.clone())
                                                 .font_weight(gpui::FontWeight::MEDIUM)
                                                 .text_color(theme.secondary_text)
-                                                .child(SharedString::from(meta.kind.clone())),
+                                                .child(meta.kind),
                                         )
                                         .when(meta.executable, |this| {
                                             this.child(
@@ -389,10 +496,10 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                     div()
                         .flex_col()
                         .child(section_label("Info"))
-                        .child(row("Size", meta.size))
-                        .child(row("Kind", meta.kind))
+                        .child(row("Size", meta.size.into()))
+                        .child(row("Kind", meta.kind.into()))
                         .when_some(meta.symlink_target, |this, target| {
-                            this.child(row("Points to", target))
+                            this.child(row("Points to", target.into()))
                         }),
                 )
                 .child(separator())
@@ -400,15 +507,15 @@ impl<'a> RenderableChildImpl<'a> for FileData {
                     div()
                         .flex_col()
                         .child(section_label("Dates"))
-                        .child(row("Modified", meta.modified))
-                        .child(row("Created", meta.created)),
+                        .child(row("Modified", meta.modified.into()))
+                        .child(row("Created", meta.created.into())),
                 )
                 .child(separator())
                 .child(
                     div()
                         .flex_col()
                         .child(section_label("Permissions"))
-                        .child(row("Mode", meta.permissions)),
+                        .child(row("Mode", meta.permissions.into())),
                 )
                 .into_any_element(),
         )

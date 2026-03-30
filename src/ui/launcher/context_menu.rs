@@ -98,7 +98,11 @@ impl ContextMenuAction {
             })
             .child(this.name.as_ref().unwrap().clone())
     }
-    pub fn render_emoji_col(&self, row_is_selected: bool, _theme: Arc<ThemeData>) -> impl IntoElement {
+    pub fn render_emoji_col(
+        &self,
+        row_is_selected: bool,
+        _theme: Arc<ThemeData>,
+    ) -> impl IntoElement {
         let Self::Emoji(this) = self else {
             return div();
         };
