@@ -6,7 +6,7 @@ use gpui::{
 use std::sync::Arc;
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -19,7 +19,7 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
         &self,
         _launcher: &Arc<Launcher>,
         _selection: Selection,
-        _theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         let now = Local::now().time();
         div()
@@ -35,6 +35,7 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
             .gap_5()
             .items_center()
             .text_size(px(12.0))
+            .font_family(theme.font_family.clone())
             .child(self.format_str.clone())
             .child(
                 div()
@@ -46,7 +47,12 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
                     } else {
                         img(ImageSource::Image(Arc::new(Image::empty()))).size(px(24.))
                     })
-                    .child(div().text_size(px(40.0)).child(self.temperature.clone())),
+                    .child(
+                        div()
+                            .text_size(px(40.0))
+                            .font_family(theme.font_family.clone())
+                            .child(self.temperature.clone()),
+                    ),
             )
             .into_any_element()
     }

@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -79,7 +79,7 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
         &self,
         _launcher: &std::sync::Arc<crate::launcher::Launcher>,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> gpui::AnyElement {
         let guard = self.result.read().ok();
         let Some((intent, result)) = guard
@@ -139,7 +139,11 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
     }
 }
 
-fn calc_tile(result: SharedString, selection: Selection, theme: &ActiveTheme) -> gpui::AnyElement {
+fn calc_tile(
+    result: SharedString,
+    selection: Selection,
+    theme: Arc<ThemeData>,
+) -> gpui::AnyElement {
     div()
         .px_4()
         .py_7()
@@ -163,7 +167,7 @@ fn calc_tile(result: SharedString, selection: Selection, theme: &ActiveTheme) ->
         .into_any_element()
 }
 
-fn color_show(result: u32, selection: Selection, theme: &ActiveTheme) -> gpui::AnyElement {
+fn color_show(result: u32, selection: Selection, theme: Arc<ThemeData>) -> gpui::AnyElement {
     div()
         .px_4()
         .py_2()
@@ -204,7 +208,7 @@ fn color_show(result: u32, selection: Selection, theme: &ActiveTheme) -> gpui::A
         .into_any_element()
 }
 
-fn url_show(url: SharedString, selection: Selection, theme: &ActiveTheme) -> gpui::AnyElement {
+fn url_show(url: SharedString, selection: Selection, theme: Arc<ThemeData>) -> gpui::AnyElement {
     div()
         .px_4()
         .py_2()
@@ -227,6 +231,7 @@ fn url_show(url: SharedString, selection: Selection, theme: &ActiveTheme) -> gpu
                 .child(
                     div()
                         .text_sm()
+                        .font_family(theme.font_family.clone())
                         .text_color(theme.secondary_text)
                         .when(selection.is_selected, |this| {
                             this.text_color(theme.primary_text)
@@ -239,6 +244,7 @@ fn url_show(url: SharedString, selection: Selection, theme: &ActiveTheme) -> gpu
                 .child(
                     div()
                         .text_xs()
+                        .font_family(theme.font_family.clone())
                         .text_color(theme.secondary_text)
                         .child("From Clipboard"),
                 ),

@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -38,7 +38,7 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
         &self,
         _launcher: &Arc<Launcher>,
         selection: Selection,
-        _theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         let (bg, border, text) = match self.message.level {
             SherlockMessageLevel::Error => (
@@ -94,6 +94,7 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
                 .py(px(1.))
                 .rounded_sm()
                 .text_size(px(10.))
+                .font_family(theme.font_family.clone())
                 .text_color(text)
                 .cursor_pointer()
                 .group_hover("error-box", |s| s.text_color(text))

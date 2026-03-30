@@ -7,6 +7,7 @@ use gpui::{
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
+    app::ThemeData,
     launcher::{
         children::emoji_data::{EmojiAction, apply_skin_tones, get_selected_skin_tones},
         emoji_launcher::ALL_SKIN_TONES,
@@ -55,7 +56,7 @@ impl<'de> Deserialize<'de> for ContextMenuAction {
 }
 
 impl ContextMenuAction {
-    pub fn render_row(&self, is_selected: bool) -> impl IntoElement {
+    pub fn render_row(&self, is_selected: bool, theme: Arc<ThemeData>) -> impl IntoElement {
         let Self::App(this) = self else { return div() };
 
         div()
@@ -73,6 +74,7 @@ impl ContextMenuAction {
                 hsla(0.6, 0.0217, 0.3608, 1.0)
             })
             .text_size(px(13.))
+            .font_family(theme.font_family.clone())
             .line_height(relative(1.0))
             .items_center()
             .bg(if is_selected {
@@ -96,7 +98,11 @@ impl ContextMenuAction {
             })
             .child(this.name.as_ref().unwrap().clone())
     }
-    pub fn render_col(&self, row_is_selected: bool) -> impl IntoElement {
+    pub fn render_emoji_col(
+        &self,
+        row_is_selected: bool,
+        _theme: Arc<ThemeData>,
+    ) -> impl IntoElement {
         let Self::Emoji(this) = self else {
             return div();
         };

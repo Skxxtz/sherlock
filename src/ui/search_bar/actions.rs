@@ -325,4 +325,19 @@ impl TextInput {
         self.last_bounds = None;
         self.is_selecting = false;
     }
+
+    pub fn set_text(&mut self, text: impl Into<SharedString>) {
+        let new_content: SharedString = text.into();
+        let new_len = new_content.len();
+
+        self.content = new_content;
+
+        self.selected_range = new_len..new_len;
+        self.selection_reversed = false;
+
+        self.marked_range = None;
+        self.is_selecting = false;
+
+        self.last_layout = None;
+    }
 }

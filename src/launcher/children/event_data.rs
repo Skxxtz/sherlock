@@ -19,7 +19,7 @@ use suite_223b::{
 };
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         children::{RenderableChildImpl, Selection},
@@ -163,7 +163,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
         &self,
         _launcher: &Arc<Launcher>,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         let Some(ref event) = self.event else {
             return div().into_any_element();
@@ -210,6 +210,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                     .child(
                                         div()
                                             .text_size(px(14.0))
+                                            .font_family(theme.font_family.clone())
                                             .text_color(theme.primary_text)
                                             .child(event.title.clone()),
                                     )
@@ -224,6 +225,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                             .child(
                                                 div()
                                                     .text_size(px(12.0))
+                                                    .font_family(theme.font_family.clone())
                                                     .text_color(theme.secondary_text)
                                                     .child(loc),
                                             )
@@ -237,6 +239,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                     .child(
                                         div()
                                             .text_size(px(12.0))
+                                            .font_family(theme.font_family.clone())
                                             .font_weight(FontWeight::MEDIUM)
                                             .text_color(theme.secondary_text)
                                             .children(self.time.as_ref().map(|t| t.clone())),
@@ -248,6 +251,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                             .rounded_sm()
                                             .bg(hsla(0.0, 0.0, 1.0, 0.08))
                                             .text_size(px(10.0))
+                                            .font_family(theme.font_family.clone())
                                             .text_color(theme.secondary_text)
                                             .child(event.calendar_info.name.clone()),
                                     ),
@@ -274,6 +278,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                     .child(
                                         div()
                                             .text_size(px(10.))
+                                            .font_family(theme.font_family.clone())
                                             .font_weight(FontWeight::BOLD)
                                             .text_color(theme.secondary_text)
                                             .child("ATTENDEES"),
@@ -284,6 +289,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                             .rounded_sm()
                                             .bg(theme.bg_selected)
                                             .text_size(px(9.))
+                                            .font_family(theme.font_family.clone())
                                             .text_color(theme.primary_text)
                                             .child(event.attendees.len().to_string()),
                                     ),
@@ -299,7 +305,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                             .attendees
                                             .iter()
                                             .take(8) // Safety: Don't explode the height if it's a 50-person meeting
-                                            .map(|att| render_attendee(att, theme)),
+                                            .map(|att| render_attendee(att, &theme)),
                                     ),
                             ),
                     )
@@ -364,7 +370,7 @@ fn hex_to_u32(hex: &str) -> u32 {
     u32::from_str_radix(cleaned, 16).unwrap_or(0)
 }
 
-fn render_attendee(attendee: &Attendee, theme: &ActiveTheme) -> impl IntoElement {
+fn render_attendee(attendee: &Attendee, theme: &ThemeData) -> impl IntoElement {
     let name = attendee.display_name.as_deref();
     let email = attendee.email.as_deref();
 
@@ -391,6 +397,7 @@ fn render_attendee(attendee: &Attendee, theme: &ActiveTheme) -> impl IntoElement
                 .child(
                     div()
                         .text_size(px(12.0))
+                        .font_family(theme.font_family.clone())
                         .text_color(theme.primary_text)
                         .child(name.unwrap_or(email.unwrap_or("Unknown")).to_string()),
                 )
@@ -398,6 +405,7 @@ fn render_attendee(attendee: &Attendee, theme: &ActiveTheme) -> impl IntoElement
                     this.child(
                         div()
                             .text_size(px(12.0))
+                            .font_family(theme.font_family.clone())
                             .text_color(theme.secondary_text.opacity(0.7))
                             .child(format!("({})", email.unwrap())),
                     )

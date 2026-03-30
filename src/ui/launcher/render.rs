@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use gpui::{
     AnyElement, Context, Element, FontWeight, InteractiveElement, IntoElement, MouseDownEvent,
     ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, div, hsla,
@@ -6,7 +8,7 @@ use gpui::{
 
 use crate::{
     CONTEXT_MENU_BIND,
-    app::ActiveTheme,
+    app::{ActiveTheme, ThemeData},
     launcher::children::{LauncherValues, RenderableChild, RenderableChildDelegate, Selection},
     ui::{
         UIFunction,
@@ -21,6 +23,8 @@ impl Render for LauncherView {
             .navigation
             .selected_item(cx)
             .and_then(|i| i.launcher_type().binds());
+        let theme = cx.global::<ActiveTheme>().0.clone();
+
         div()
             .id("sherlock")
             .flex()
@@ -53,13 +57,20 @@ impl Render for LauncherView {
                 this.child(self.render_config_banner())
             })
             .child(self.render_mode_label())
-            .child({
-                match self.navigation.current().style {
-                    EntityStyle::Grid { .. } => self.render_result_grid(cx).into_any_element(),
-                    EntityStyle::Row { .. } => self.render_results(cx).into_any_element(),
-                }
-            })
-            .child(self.render_status_bar(cx))
+            .child(
+                div()
+                    .flex_1()
+                    .min_h_0()
+                    .child(match self.navigation.current().style {
+                        EntityStyle::Grid { .. } => self
+                            .render_result_grid(cx, theme.clone())
+                            .into_any_element(),
+                        EntityStyle::Row { .. } => {
+                            self.render_results(cx, theme.clone()).into_any_element()
+                        }
+                    }),
+            )
+            .child(self.render_status_bar(theme, cx))
     }
 }
 
@@ -120,10 +131,13 @@ impl LauncherView {
             .child(self.mode.display_str())
     }
 
-    fn render_results(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_results(&self, cx: &mut Context<Self>, theme: Arc<ThemeData>) -> impl IntoElement {
         let (indices, data) = self
             .navigation
             .with_model(cx, |mdl| (mdl.filtered_indices(), mdl.data()));
+        let sidebar = self.navigation.with_selected_item(cx, |selected_item| {
+            selected_item.and_then(|s| s.sidebar(theme.clone()))
+        });
         let EntityStyle::Row {
             state,
             selected_index,
@@ -132,37 +146,77 @@ impl LauncherView {
             return div().id("results-container");
         };
 
+        let theme = cx.global::<ActiveTheme>().0.clone();
         div()
             .id("results-container")
-            .flex_1()
-            .min_h_0()
+            .relative()
+            .size_full()
             .px(px(10.))
-            .child({
-                let selected_idx = *selected_index;
-                list(state.clone(), move |idx, _win, cx| {
-                    let data_idx = match indices.get(idx) {
-                        Some(&i) => i,
-                        None => return div().into_any_element(),
-                    };
-                    let data_guard = data.read(cx);
-                    let child = match data_guard.get(data_idx) {
-                        Some(c) => c,
-                        None => return div().into_any_element(),
-                    };
+            .child(
+                div()
+                    .flex()
+                    .gap(px(10.))
+                    .flex_1()
+                    .min_h_0()
+                    .size_full()
+                    .child({
+                        let selected_idx = *selected_index;
+                        list(state.clone(), {
+                            let theme = theme.clone();
+                            move |idx, _win, cx| {
+                                let data_idx = match indices.get(idx) {
+                                    Some(&i) => i,
+                                    None => return div().into_any_element(),
+                                };
+                                let data_guard = data.read(cx);
+                                let child = match data_guard.get(data_idx) {
+                                    Some(c) => c,
+                                    None => return div().into_any_element(),
+                                };
 
-                    let theme = cx.global::<ActiveTheme>();
-                    Self::render_list_item(
-                        &child,
-                        Selection::new(data_idx, idx == selected_idx),
-                        theme,
-                    )
-                })
-                .size_full()
-            })
-            .child(self.render_context_menu())
+                                Self::render_list_item(
+                                    &child,
+                                    Selection::new(data_idx, idx == selected_idx),
+                                    theme.clone(),
+                                )
+                            }
+                        })
+                        .pb(px(5.))
+                        .size_full()
+                    })
+                    .when_some(sidebar, |this, sidebar| {
+                        this.child(
+                            div()
+                                .h_full()
+                                .w_full()
+                                .overflow_x_hidden()
+                                .pb(px(10.))
+                                .child(
+                                    div()
+                                        .id("sidebar")
+                                        .overflow_y_scroll()
+                                        .overflow_x_hidden()
+                                        .size_full()
+                                        .p(px(16.))
+                                        .rounded_lg()
+                                        .bg(theme.bg_selected)
+                                        .border_1()
+                                        .border_color(theme.border_selected)
+                                        .flex_col()
+                                        .child(sidebar),
+                                )
+                                .w(px(400.)),
+                        )
+                    }),
+            )
+            .child(self.render_context_menu(theme))
     }
 
-    fn render_result_grid(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_result_grid(
+        &self,
+        cx: &mut Context<Self>,
+        theme: Arc<ThemeData>,
+    ) -> impl IntoElement {
         let (indices, data) = self
             .navigation
             .with_model(cx, |mdl| (mdl.filtered_indices(), mdl.data()));
@@ -187,11 +241,10 @@ impl LauncherView {
             .min_h_0()
             .px(px(10.))
             .child(
-                gpui::uniform_list(
-                    "emoji-grid",
-                    (indices.len() + col_count - 1) / col_count,
+                gpui::uniform_list("emoji-grid", (indices.len() + col_count - 1) / col_count, {
+                    let theme = theme.clone();
+
                     move |range, _win, cx| {
-                        let theme = cx.global::<ActiveTheme>();
                         range
                             .map(|row_idx| {
                                 div()
@@ -214,7 +267,7 @@ impl LauncherView {
                                                             data_idx,
                                                             item_idx == selected_idx,
                                                         ),
-                                                        theme,
+                                                        theme.clone(),
                                                     ))
                                                     .into_any_element();
                                             }
@@ -225,16 +278,16 @@ impl LauncherView {
                                     .into_any_element()
                             })
                             .collect::<Vec<_>>()
-                    },
-                )
+                    }
+                })
                 .gap(px(2.0))
                 .track_scroll(scroll_handle)
                 .size_full(),
             )
-            .child(self.render_context_menu())
+            .child(self.render_context_menu(theme))
     }
 
-    fn render_context_menu(&self) -> impl IntoElement {
+    fn render_context_menu(&self, theme: Arc<ThemeData>) -> impl IntoElement {
         if let Some(active) = self.context_idx {
             div().inset_0().absolute().child(
                 div()
@@ -253,15 +306,15 @@ impl LauncherView {
                     .children(self.context_actions.iter().enumerate().map(|(i, child)| {
                         let is_selected = i == active;
                         match child.as_ref() {
-                            ContextMenuAction::App(_) => {
-                                child.render_row(is_selected).into_any_element()
-                            }
-                            ContextMenuAction::Fn(_) => {
-                                child.render_row(is_selected).into_any_element()
-                            }
-                            ContextMenuAction::Emoji(_) => {
-                                child.render_col(is_selected).into_any_element()
-                            }
+                            ContextMenuAction::App(_) => child
+                                .render_row(is_selected, theme.clone())
+                                .into_any_element(),
+                            ContextMenuAction::Fn(_) => child
+                                .render_row(is_selected, theme.clone())
+                                .into_any_element(),
+                            ContextMenuAction::Emoji(_) => child
+                                .render_emoji_col(is_selected, theme.clone())
+                                .into_any_element(),
                         }
                     })),
             )
@@ -270,7 +323,7 @@ impl LauncherView {
         }
     }
 
-    fn render_status_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_status_bar(&self, theme: Arc<ThemeData>, cx: &mut Context<Self>) -> impl IntoElement {
         let message_count = self.navigation.message_count(cx);
         div()
             .h(px(30.))
@@ -282,17 +335,23 @@ impl LauncherView {
             .border_color(hsla(0., 0., 0.1882, 1.0))
             .px_5()
             .text_size(px(13.))
+            .font_family(theme.font_family.clone())
             .items_center()
             .text_color(hsla(0.6, 0.0217, 0.3608, 1.0))
             .child(String::from("Sherlock"))
             .when(message_count > 0, |this| {
-                this.child(self.render_error_indicator(message_count, cx))
+                this.child(self.render_error_indicator(message_count, theme, cx))
             })
             .child(div().flex_1())
             .child(self.render_context_hint(cx))
     }
 
-    fn render_error_indicator(&self, count: usize, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_error_indicator(
+        &self,
+        count: usize,
+        theme: Arc<ThemeData>,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         div()
             .ml(px(10.))
             .h_full()
@@ -324,16 +383,13 @@ impl LauncherView {
                         .text_color(hsla(0.0, 0.7, 0.59, 0.25))
                         .bg(hsla(0.0, 0.7, 0.1, 0.12))
                         .text_xs()
+                        .font_family(theme.font_family.clone())
                         .child(count.to_string()),
                 )
             })
     }
 
     fn render_context_hint(&self, _cx: &mut Context<Self>) -> impl IntoElement {
-        if self.navigation.selected_index().is_some() {
-            return div();
-        };
-
         if self.has_actions {
             div()
                 .flex()
@@ -349,7 +405,7 @@ impl LauncherView {
     pub fn render_list_item(
         ad: &RenderableChild,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         div()
             .id(selection.data_idx)

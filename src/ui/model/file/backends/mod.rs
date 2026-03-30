@@ -4,7 +4,7 @@ use crate::ui::model::file::{
     },
     utils::{FileResult, ResultHeap},
 };
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 pub mod command;
@@ -22,8 +22,8 @@ macro_rules! define_backend {
         impl FileSearchBackend {
             pub fn search(
                 &self,
-                query: String,
-                paths: Vec<PathBuf>,
+                query: Arc<str>,
+                paths: Arc<Vec<PathBuf>>,
                 heap: &mut ResultHeap,
                 cancel_rx: Receiver<()>,
                 result_tx: &Sender<Vec<FileResult>>,
@@ -87,8 +87,8 @@ pub trait FileSearchProvider {
     fn name(&self) -> &'static str;
     fn search(
         &self,
-        query: String,
-        paths: Vec<PathBuf>,
+        query: Arc<str>,
+        paths: Arc<Vec<PathBuf>>,
         heap: &mut ResultHeap,
         cancel_rx: Receiver<()>,
         tx: &Sender<Vec<FileResult>>,

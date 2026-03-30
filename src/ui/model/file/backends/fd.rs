@@ -7,11 +7,14 @@ use crate::ui::model::file::backends::command::CommandFactory;
 pub struct FdFactory;
 
 impl CommandFactory for FdFactory {
-    fn binary_name(&self) -> &'static str {
-        "fd"
-    }
+    const BINARY_NAME: &'static str = "fd";
+    const HANDLES_FILTERING: bool = false;
 
-    fn args<'a>(&self, paths: &'a [PathBuf]) -> impl Iterator<Item = Cow<'a, OsStr>> {
+    fn args<'a>(
+        &self,
+        _query: &'a str,
+        paths: &'a [PathBuf],
+    ) -> impl Iterator<Item = Cow<'a, OsStr>> {
         const FLAGS: &[&str] = &[".", "--color", "never", "--type", "f", "--type", "d"];
         FLAGS
             .iter()

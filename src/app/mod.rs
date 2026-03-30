@@ -1,6 +1,6 @@
 use gpui::{
-    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Hsla, Size, WindowBackgroundAppearance,
-    WindowBounds, WindowHandle, WindowKind, WindowOptions, hsla,
+    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Hsla, SharedString, Size,
+    WindowBackgroundAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions, hsla,
     layer_shell::{Layer, LayerShellOptions},
     point, px,
 };
@@ -28,9 +28,15 @@ use crate::{
 mod bindings;
 mod updates;
 
-pub struct ActiveTheme {
+#[derive(Clone)]
+pub struct ActiveTheme(pub Arc<ThemeData>);
+
+pub struct ThemeData {
+    pub font_family: SharedString,
+
     pub bg_selected: Hsla,
     pub bg_idle: Hsla,
+    pub mantle: Hsla,
     pub border_selected: Hsla,
     pub border_idle: Hsla,
     pub primary_text: Hsla,
@@ -43,11 +49,14 @@ pub struct ActiveTheme {
 
 impl gpui::Global for ActiveTheme {}
 
-impl ActiveTheme {
+impl ThemeData {
     pub fn dark() -> Self {
         Self {
+            font_family: "Inter".into(),
+
             bg_selected: hsla(0.0, 0.0, 1.0, 0.1),
             bg_idle: hsla(0.0, 0.0, 0.0, 0.0),
+            mantle: hsla(0.0, 0.0, 1.0, 0.1),
             border_selected: hsla(0.0, 0.0, 1.0, 0.2),
             border_idle: hsla(0.0, 0.0, 1.0, 0.05),
             primary_text: hsla(0.0, 0.0, 0.95, 1.0),
@@ -69,7 +78,8 @@ pub fn run_app(cx: &mut App, result: SetupResult) {
 
     bindings::register_bindings(cx);
 
-    cx.set_global(ActiveTheme::dark());
+    let theme = ActiveTheme(Arc::new(ThemeData::dark()));
+    cx.set_global(theme);
 
     let data: Entity<Arc<Vec<RenderableChild>>> = cx.new(|_| Arc::new(Vec::new()));
     let modes = load_modes(cx, &data, &mut messages);
@@ -135,6 +145,12 @@ fn spawn_launcher(
                     cx.subscribe(&text_input, |this, _, _ev: &EmptyBackspace, cx| {
                         if this.navigation.current_kind() != NavigationViewType::Home {
                             this.navigation.set_prev_and_cleanup();
+                            let content = this.navigation.with_model(cx, |mdl| mdl.last_query());
+
+                            if let Some(c) = content {
+                                this.text_input.update(cx, |ipt, _| ipt.set_text(c));
+                            }
+
                             this.filter_and_sort(cx);
                             cx.notify();
                         } else {

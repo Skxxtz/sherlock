@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    app::ActiveTheme,
+    app::ThemeData,
     launcher::{
         ExecMode, Launcher,
         audio_launcher::MusicPlayerFunctions,
@@ -21,7 +21,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
         &self,
         _launcher: &Arc<Launcher>,
         selection: Selection,
-        theme: &ActiveTheme,
+        theme: Arc<ThemeData>,
     ) -> AnyElement {
         div()
             .px_4()
@@ -54,6 +54,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
                     .child(
                         div()
                             .text_sm()
+                            .font_family(theme.font_family.clone())
                             .overflow_hidden()
                             .text_ellipsis()
                             .whitespace_nowrap()
@@ -65,12 +66,15 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
                             ),
                     )
                     .child(
-                        div().text_xs().children(
-                            self.raw
-                                .as_ref()
-                                .and_then(|s| s.metadata.artists.as_ref())
-                                .map(|arts| arts.join(", ").to_string()),
-                        ),
+                        div()
+                            .text_xs()
+                            .font_family(theme.font_family.clone())
+                            .children(
+                                self.raw
+                                    .as_ref()
+                                    .and_then(|s| s.metadata.artists.as_ref())
+                                    .map(|arts| arts.join(", ").to_string()),
+                            ),
                     ),
             )
             .into_any_element()
