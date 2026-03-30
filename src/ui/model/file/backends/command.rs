@@ -30,10 +30,6 @@ pub struct CommandBackend<F: CommandFactory> {
     factory: F,
 }
 impl<F: CommandFactory> CommandBackend<F> {
-    pub fn new(factory: F) -> Self {
-        Self { factory }
-    }
-
     fn handles_filtering(&self) -> bool {
         F::HANDLES_FILTERING
     }

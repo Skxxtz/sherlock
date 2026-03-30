@@ -245,13 +245,6 @@ impl MprisData {
         })?;
         Ok(())
     }
-    pub fn update(&self) -> Option<(Self, bool)> {
-        let audio_launcher = AudioLauncherFunctions::new()?;
-        let player = audio_launcher.get_current_player()?;
-        let mpris = audio_launcher.get_metadata(&player)?;
-        let changed = self.metadata.title != self.metadata.title;
-        Some((mpris, changed))
-    }
 }
 
 pub struct AudioLauncherFunctions {

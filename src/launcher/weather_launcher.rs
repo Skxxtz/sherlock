@@ -31,7 +31,7 @@ pub struct WeatherLauncher {
     pub location: String,
     pub update_interval: u64,
     pub icon_theme: WeatherIconTheme,
-    pub show_datetime: bool,
+    // pub show_datetime: bool,
 }
 
 impl LauncherProvider for WeatherLauncher {

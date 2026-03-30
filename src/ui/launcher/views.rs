@@ -122,9 +122,6 @@ impl NavigationStack {
     pub fn clear(&mut self) {
         self.stack.truncate(REMAINING_VIEWS);
     }
-    pub fn len(&self) -> usize {
-        self.stack.len()
-    }
     pub fn push(&mut self, view: NavigationView) {
         self.stack.push(view);
     }
@@ -208,9 +205,6 @@ impl NavigationStack {
                 view.update(cx, |this, cx| f(&mut this.model, cx))
             }
         }
-    }
-    pub fn selected_index(&self) -> Option<usize> {
-        self.current().style.selected_index()
     }
     pub fn selected_item_index(&self, cx: &mut App) -> Option<usize> {
         let current = self.current();

@@ -100,7 +100,6 @@ impl FileData {
             permissions,
             executable,
             symlink_target,
-            extension,
         })
     }
 }
@@ -113,7 +112,6 @@ struct FileMeta {
     permissions: String,
     executable: bool,
     symlink_target: Option<String>,
-    extension: Option<String>,
 }
 
 fn format_size(bytes: u64) -> String {
