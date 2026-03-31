@@ -1,4 +1,4 @@
-use gpui::{AnyElement, SharedString};
+use gpui::{AnyElement, App, SharedString};
 use std::sync::Arc;
 
 pub mod app_data;
@@ -119,9 +119,9 @@ macro_rules! renderable_enum {
                 }
             }
 
-            fn sidebar(&self, theme: Arc<ThemeData>) -> Option<AnyElement> {
+            fn sidebar(&self, cx: &mut App) -> Option<AnyElement> {
                 match self {
-                    $(Self::$variant {inner, ..} => inner.sidebar(theme)),*
+                    $(Self::$variant {inner, ..} => inner.sidebar(cx)),*
                 }
             }
         }
@@ -253,7 +253,7 @@ pub trait RenderableChildDelegate<'a> {
     fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>>;
     fn has_actions(&self) -> bool;
     fn based_show(&self, keyword: &str) -> Option<bool>;
-    fn sidebar(&self, theme: Arc<ThemeData>) -> Option<AnyElement>;
+    fn sidebar(&self, cx: &mut App) -> Option<AnyElement>;
 }
 
 #[allow(dead_code)]
@@ -291,7 +291,7 @@ pub trait RenderableChildImpl<'a> {
     fn based_show(&self, _keyword: &str) -> Option<bool> {
         None
     }
-    fn sidebar(&self, _theme: Arc<ThemeData>) -> Option<AnyElement> {
+    fn sidebar(&self, _cx: &mut App) -> Option<AnyElement> {
         None
     }
 }

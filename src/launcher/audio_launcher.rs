@@ -294,7 +294,7 @@ impl AudioLauncherFunctions {
 }
 
 /// This function reads the "magic bytes" of images files to identify its mimetype
-fn identify_image_type(bytes: &[u8]) -> &'static str {
+pub fn identify_image_type(bytes: &[u8]) -> &'static str {
     if bytes.len() < 4 {
         return "image/png";
     }

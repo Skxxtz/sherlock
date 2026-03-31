@@ -131,12 +131,12 @@ impl LauncherView {
             .child(self.mode.display_str())
     }
 
-    fn render_results(&self, cx: &mut Context<Self>, theme: Arc<ThemeData>) -> impl IntoElement {
+    fn render_results(&self, cx: &mut Context<Self>, _theme: Arc<ThemeData>) -> impl IntoElement {
         let (indices, data) = self
             .navigation
             .with_model(cx, |mdl| (mdl.filtered_indices(), mdl.data()));
-        let sidebar = self.navigation.with_selected_item(cx, |selected_item| {
-            selected_item.and_then(|s| s.sidebar(theme.clone()))
+        let sidebar = self.navigation.with_selected_item(cx, |selected_item, cx| {
+            selected_item.and_then(|s| s.sidebar(cx))
         });
         let EntityStyle::Row {
             state,

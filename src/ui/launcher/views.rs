@@ -221,12 +221,12 @@ impl NavigationStack {
         })
     }
     pub fn selected_item(&self, cx: &mut App) -> Option<RenderableChild> {
-        self.with_selected_item(cx, |selected| selected.cloned())
+        self.with_selected_item(cx, |selected, _| selected.cloned())
     }
     pub fn with_selected_item<R>(
         &self,
         cx: &mut App,
-        f: impl FnOnce(Option<&RenderableChild>) -> Option<R>,
+        f: impl FnOnce(Option<&RenderableChild>, &mut App) -> Option<R>,
     ) -> Option<R> {
         let ui_idx = self.current().style.selected_index()?;
         let (data_idx, data_entity) = self.with_model_mut(cx, |mdl, cx| {
@@ -245,9 +245,7 @@ impl NavigationStack {
             (filtered_indices.get(safe_ui_idx).copied(), mdl.data())
         });
         let idx = data_idx?;
-        let selected_item_ref = data_entity.read(cx).get(idx);
-
-        f(selected_item_ref)
+        data_entity.update(cx, |data, cx| f(data.get(idx), cx))
     }
     pub fn current_actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         let ui_idx = self.current().style.selected_index()?;
