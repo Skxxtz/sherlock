@@ -287,9 +287,9 @@ pub struct RawLauncher {
     #[serde(default)]
     pub args: Arc<serde_json::Value>,
     #[serde(default)]
-    pub actions: Option<Vec<ApplicationAction>>,
+    pub actions: Option<Arc<Vec<Arc<ContextMenuAction>>>>,
     #[serde(default)]
-    pub add_actions: Option<Vec<ApplicationAction>>,
+    pub add_actions: Option<Vec<Arc<ContextMenuAction>>>,
     #[serde(default)]
     pub variables: Option<Vec<ExecVariable>>,
 }

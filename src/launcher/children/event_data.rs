@@ -5,8 +5,8 @@ use std::{
 
 use chrono::Local;
 use gpui::{
-    AnyElement, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, SharedString,
-    Styled, div, prelude::FluentBuilder, px, rgb,
+    AnyElement, App, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement,
+    SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
 };
 use simd_json::prelude::ArrayTrait;
 use suite_223b::{
@@ -164,6 +164,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
         _launcher: &Arc<Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
+        _cx: &mut App,
     ) -> AnyElement {
         let Some(ref event) = self.event else {
             return div().into_any_element();

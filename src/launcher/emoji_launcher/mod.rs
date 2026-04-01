@@ -38,6 +38,7 @@ impl LauncherProvider for EmojiPicker {
         launcher: Arc<Launcher>,
         _ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
+        _cx: &mut gpui::App,
     ) -> Result<Vec<RenderableChild>, SherlockMessage> {
         let mut inner = AppData::new();
         inner.name = launcher.name.as_ref().map(SharedString::from);

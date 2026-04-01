@@ -7,6 +7,7 @@ pub struct ActiveTheme(pub Arc<ThemeData>);
 
 pub struct ThemeData {
     pub font_family: SharedString,
+    pub monospace: SharedString,
     // Cursor and Selection
     pub cursor: Hsla,
     pub selection: Hsla,
@@ -46,6 +47,7 @@ impl ThemeData {
     pub fn dark() -> Self {
         Self {
             font_family: "Inter".into(),
+            monospace: "Noto Sans Mono".into(),
             // Cursor and Selection
             cursor: hsla(0.0, 0.0, 0.8, 1.0),
             selection: hsla(0.639, 1.0, 0.53, 0.19),
@@ -84,6 +86,7 @@ impl ThemeData {
     pub fn libre() -> Self {
         Self {
             font_family: "Inter".into(),
+            monospace: "Noto Sans Mono".into(),
             // Cursor and Selection - Sophisticated Indigo/Slate
             cursor: hsla(220.0 / 360.0, 0.20, 0.30, 1.0),
             selection: hsla(220.0 / 360.0, 0.40, 0.50, 0.12),
@@ -127,6 +130,7 @@ impl ThemeData {
     pub fn catppuccin_mocha() -> Self {
         Self {
             font_family: "Inter".into(),
+            monospace: "Noto Sans Mono".into(),
             cursor: hsla(267.0 / 360.0, 0.84, 0.81, 1.0),
             selection: hsla(267.0 / 360.0, 0.84, 0.81, 0.2),
             bg_app: hsla(240.0 / 360.0, 0.21, 0.12, 1.0),
@@ -159,6 +163,7 @@ impl ThemeData {
     pub fn nord() -> Self {
         Self {
             font_family: "Inter".into(),
+            monospace: "Noto Sans Mono".into(),
             cursor: hsla(213.0 / 360.0, 0.32, 0.52, 1.0),
             selection: hsla(213.0 / 360.0, 0.32, 0.52, 0.25),
             bg_app: hsla(220.0 / 360.0, 0.17, 0.14, 1.0),

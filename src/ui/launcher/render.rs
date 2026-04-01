@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use gpui::{
-    AnyElement, Context, Element, FontWeight, InteractiveElement, IntoElement, MouseDownEvent,
+    AnyElement, App, Context, Element, FontWeight, InteractiveElement, IntoElement, MouseDownEvent,
     ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, div, list,
     prelude::FluentBuilder, px, relative,
 };
@@ -168,8 +168,8 @@ impl LauncherView {
                                     Some(&i) => i,
                                     None => return div().into_any_element(),
                                 };
-                                let data_guard = data.read(cx);
-                                let child = match data_guard.get(data_idx) {
+                                let data_snapshot = data.read(cx).clone();
+                                let child = match data_snapshot.get(data_idx) {
                                     Some(c) => c,
                                     None => return div().into_any_element(),
                                 };
@@ -178,6 +178,7 @@ impl LauncherView {
                                     &child,
                                     Selection::new(data_idx, idx == selected_idx),
                                     theme.clone(),
+                                    cx,
                                 )
                             }
                         })
@@ -266,9 +267,9 @@ impl LauncherView {
                                                     let item_idx = row_idx * col_count + col_idx;
 
                                                     if let Some(&data_idx) = indices.get(item_idx) {
-                                                        let data_guard = data.read(cx);
+                                                        let data_snapshot = data.read(cx).clone();
                                                         if let Some(child) =
-                                                            data_guard.get(data_idx)
+                                                            data_snapshot.get(data_idx)
                                                         {
                                                             return div()
                                                                 .w_0()
@@ -280,6 +281,7 @@ impl LauncherView {
                                                                         item_idx == selected_idx,
                                                                     ),
                                                                     theme.clone(),
+                                                                    cx,
                                                                 ))
                                                                 .into_any_element();
                                                         }
@@ -428,6 +430,7 @@ impl LauncherView {
         ad: &RenderableChild,
         selection: Selection,
         theme: Arc<ThemeData>,
+        cx: &mut App,
     ) -> AnyElement {
         div()
             .id(selection.data_idx)
@@ -449,7 +452,7 @@ impl LauncherView {
                                     .border_color(theme.border_selected)
                             })
                     })
-                    .child(ad.render(selection, theme)),
+                    .child(ad.render(selection, theme, cx)),
             )
             .into_any_element()
     }

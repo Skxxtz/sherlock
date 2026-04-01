@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use gpui::{
-    Image, ImageSource, IntoElement, ParentElement, SharedString, Styled, div, img,
+    App, Image, ImageSource, IntoElement, ParentElement, SharedString, Styled, div, img,
     prelude::FluentBuilder, px, rgb,
 };
 
@@ -80,6 +80,7 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
         _launcher: &std::sync::Arc<crate::launcher::Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
+        _cx: &mut App,
     ) -> gpui::AnyElement {
         let guard = self.result.read().ok();
         let Some((intent, result)) = guard

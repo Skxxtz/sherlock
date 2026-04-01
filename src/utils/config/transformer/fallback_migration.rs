@@ -5,7 +5,8 @@ use serde_json::{Value, json};
 
 use crate::{
     launcher::{BindSerde, variant_type::LauncherVariant},
-    loader::utils::{ApplicationAction, ExecVariable, RawLauncher},
+    loader::utils::{ExecVariable, RawLauncher},
+    ui::launcher::context_menu::ContextMenuAction,
     utils::config::HomeType,
 };
 
@@ -45,9 +46,9 @@ pub struct LegacyRawLauncher {
     #[serde(default)]
     pub binds: Option<Vec<BindSerde>>,
     #[serde(default)]
-    pub actions: Option<Vec<ApplicationAction>>,
+    pub actions: Option<Arc<Vec<Arc<ContextMenuAction>>>>,
     #[serde(default)]
-    pub add_actions: Option<Vec<ApplicationAction>>,
+    pub add_actions: Option<Vec<Arc<ContextMenuAction>>>,
     #[serde(default)]
     pub variables: Option<Vec<LegacyExecVariable>>,
 }
@@ -69,11 +70,18 @@ impl From<LegacyExecVariable> for ExecVariable {
 }
 
 impl LegacyRawLauncher {
-    pub fn migrate_args(&mut self, logs: &mut Vec<String>, name: &str) {
+    pub fn migrate_args(
+        &mut self,
+        variant: Option<LauncherVariant>,
+        logs: &mut Vec<String>,
+        name: &str,
+    ) {
+        let Some(var) = variant else { return };
+
         // --- TYPE-SPECIFIC ARGS MIGRATION ---
         let args = &mut self.args;
-        match self.r#type.as_str() {
-            "calculation" | "clipboard-execution" => {
+        match var {
+            LauncherVariant::Calculator | LauncherVariant::Clipboard => {
                 if let Some(obj) = args.as_object_mut() {
                     if let Some(caps) = obj.get_mut("capabilities").and_then(|c| c.as_array_mut()) {
                         let old_val = json!("colors.all");
@@ -97,7 +105,7 @@ impl LegacyRawLauncher {
                     }
                 }
             }
-            "command" => {
+            LauncherVariant::Commands => {
                 if let Some(exec) = args.get_mut("exec").and_then(|e| e.as_str()) {
                     if exec.ends_with('&') {
                         let cleaned = exec.trim_end_matches('&').trim().to_string();
@@ -109,7 +117,7 @@ impl LegacyRawLauncher {
                     }
                 }
             }
-            "emoji_picker" => {
+            LauncherVariant::Emoji => {
                 if let Some(obj) = args.as_object_mut() {
                     if let Some(value) = obj.remove("default_skin_color") {
                         obj.insert("default_skin_tone".to_string(), value);
@@ -140,11 +148,11 @@ impl LegacyRawLauncher {
             "emoji_picker" | "emoji" => Some(LauncherVariant::Emoji),
             "weather" => Some(LauncherVariant::Weather),
             "web_launcher" => Some(LauncherVariant::Web),
+            "calculation" | "calculator" => Some(LauncherVariant::Calculator),
+            "bulk_text" => Some(LauncherVariant::Script),
+            "files" => Some(LauncherVariant::Files),
+            "teams_event" | "event" => Some(LauncherVariant::Event),
             "debug" => None,
-            "calculation" | "calculator" => None,
-            "bulk_text" => None,
-            "files" => None,
-            "teams_event" | "event" => None,
             "theme_picker" | "theme" => None,
             "process" => None,
             "pomodoro" => None,
@@ -155,8 +163,6 @@ impl LegacyRawLauncher {
     pub fn migrate(mut self) -> MigrationResult {
         let mut logs = Vec::new();
         let name = self.name.clone().unwrap_or_else(|| "Unknown".to_string());
-
-        self.migrate_args(&mut logs, &name);
 
         // 1. Check for removed tags
         if self.tag_start.is_some() || self.tag_end.is_some() {
@@ -181,6 +187,9 @@ impl LegacyRawLauncher {
         }
 
         let new_type = self.migrate_type();
+
+        self.migrate_args(new_type, &mut logs, &name);
+
         let launcher = RawLauncher {
             name: self.name,
             alias: self.alias,

@@ -4,7 +4,7 @@ use futures::{StreamExt, stream::FuturesUnordered};
 use gpui::{
     AppContext, AsyncApp, ClipboardItem, Context, Focusable, SharedString, Window, actions,
 };
-use simd_json::prelude::Indexed;
+use simd_json::prelude::{ArrayTrait, Indexed};
 use smallvec::SmallVec;
 
 use crate::{
@@ -507,6 +507,16 @@ impl LauncherView {
                 })
             });
         }));
+    }
+    pub(crate) fn update_sync(&mut self, query: SharedString, cx: &mut Context<Self>) {
+        let data_entity = self.navigation.with_model(cx, |mdl| mdl.data().clone());
+
+        let data_snapshot_arc = data_entity.read(cx).clone();
+        let filtered_indices_arc = self.navigation.with_model(cx, |mdl| mdl.filtered_indices());
+        filtered_indices_arc
+            .iter()
+            .filter_map(|i| data_snapshot_arc.get(*i))
+            .for_each(|render_child| render_child.update_sync(query.clone(), cx));
     }
 }
 

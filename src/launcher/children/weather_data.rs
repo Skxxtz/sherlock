@@ -1,7 +1,7 @@
 use chrono::Local;
 use gpui::{
-    AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, div, img, linear_gradient,
-    px,
+    AnyElement, App, Image, ImageSource, IntoElement, ParentElement, Styled, div, img,
+    linear_gradient, px,
 };
 use std::sync::Arc;
 
@@ -21,6 +21,7 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
         _launcher: &Arc<Launcher>,
         _selection: Selection,
         theme: Arc<ThemeData>,
+        _cx: &mut App,
     ) -> AnyElement {
         let now = Local::now().time();
         div()

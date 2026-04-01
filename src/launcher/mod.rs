@@ -1,6 +1,7 @@
 pub mod app_launcher;
 pub mod audio_launcher;
 pub mod bookmark_launcher;
+pub mod bulk_text_launcher;
 pub mod calc_launcher;
 pub mod category_launcher;
 pub mod children;
@@ -15,7 +16,6 @@ pub mod variant_type;
 pub mod weather_launcher;
 pub mod web_launcher;
 // Integrate later: TODO
-// pub mod bulk_text_launcher;
 // pub mod pipe_launcher;
 // pub mod pomodoro_launcher;
 // pub mod process_launcher;
@@ -31,7 +31,7 @@ use crate::{
     },
     loader::{
         LoadContext, resolve_icon_path,
-        utils::{AppData, ApplicationAction, RawLauncher},
+        utils::{AppData, RawLauncher},
     },
     sherlock_msg,
     ui::launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
@@ -40,13 +40,11 @@ use crate::{
         errors::{SherlockMessage, types::SherlockErrorType},
     },
 };
-use gpui::{Keystroke, SharedString};
+use gpui::{App, Keystroke, SharedString};
 use serde::{Deserialize, Serialize};
-use std::{path::Path, sync::Arc};
+use std::{fmt::Display, path::Path, sync::Arc};
 
 // Integrate later: TODO
-// use bulk_text_launcher::BulkTextLauncher;
-// use file_launcher::FileLauncher;
 // use pomodoro_launcher::Pomodoro;
 // use process_launcher::ProcessLauncher;
 // use theme_picker::ThemePicker;
@@ -58,6 +56,7 @@ pub trait LauncherProvider {
         launcher: Arc<Launcher>,
         ctx: &LoadContext,
         opts: Arc<serde_json::Value>,
+        cx: &mut App,
     ) -> Result<Vec<RenderableChild>, SherlockMessage>;
     fn binds(&self) -> Option<Arc<Vec<Bind>>> {
         None
@@ -132,7 +131,7 @@ impl BindSerde {
 /// - **shortcut:** Specifies whether the child tile should show `modekey + number` shortcuts
 /// - **spawn_focus:** Specifies whether the tile should have focus whenever Sherlock launches
 /// search entry & mode == `all`)
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Launcher {
     pub name: Option<String>,
     pub display_name: Option<SharedString>,
@@ -144,10 +143,10 @@ pub struct Launcher {
     pub r#async: bool,
     pub home: HomeType,
     pub launcher_type: LauncherType,
-    pub shortcut: bool,                              // nu
-    pub spawn_focus: bool,                           // nu
-    pub actions: Option<Vec<ApplicationAction>>,     // nu
-    pub add_actions: Option<Vec<ApplicationAction>>, // nu
+    pub shortcut: bool,                                    // nu
+    pub spawn_focus: bool,                                 // nu
+    pub actions: Option<Arc<Vec<Arc<ContextMenuAction>>>>, // nu
+    pub add_actions: Option<Vec<Arc<ContextMenuAction>>>,  // nu
 }
 impl Launcher {
     pub fn from_raw(
@@ -172,6 +171,19 @@ impl Launcher {
             actions: raw.actions,
             add_actions: raw.add_actions,
         }
+    }
+}
+impl Display for Launcher {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(name) = self.display_name.as_ref() {
+            return f.write_str(name);
+        }
+
+        if let Some(name) = self.name.as_ref() {
+            return f.write_str(name);
+        }
+
+        f.write_str(&format!("{:?}", self.launcher_type))
     }
 }
 

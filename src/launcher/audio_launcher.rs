@@ -55,6 +55,7 @@ impl LauncherProvider for MusicPlayerLauncher {
         launcher: Arc<super::Launcher>,
         _: &crate::loader::LoadContext,
         _opts: Arc<Value>,
+        _cx: &mut gpui::App,
     ) -> Result<Vec<super::children::RenderableChild>, SherlockMessage> {
         let inner = MprisState::default();
         Ok(vec![RenderableChild::MusicLike { launcher, inner }])

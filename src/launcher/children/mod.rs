@@ -9,13 +9,18 @@ pub mod event_data;
 pub mod file_data;
 pub mod message;
 pub mod mpris_data;
+pub mod script_data;
+mod utils;
 pub mod weather_data;
 
 use crate::{
     app::theme::ThemeData,
     launcher::{
-        ExecMode, Launcher, LauncherType, audio_launcher::AudioLauncherFunctions,
-        children::message::MessageChild, emoji_launcher::EmojiData, utils::MprisState,
+        ExecMode, Launcher, LauncherType,
+        audio_launcher::AudioLauncherFunctions,
+        children::{message::MessageChild, script_data::ScriptData},
+        emoji_launcher::EmojiData,
+        utils::MprisState,
         weather_launcher::WeatherData,
     },
     loader::utils::{AppData, ExecVariable},
@@ -71,9 +76,9 @@ macro_rules! renderable_enum {
                 }
             }
 
-            fn render(&self, selection: Selection, theme: Arc<ThemeData>) -> AnyElement {
+            fn render(&self, selection: Selection, theme: Arc<ThemeData>, cx: &mut App) -> AnyElement {
                 match self {
-                    $(Self::$variant {inner, launcher} => inner.render(launcher, selection, theme)),*
+                    $(Self::$variant {inner, launcher} => inner.render(launcher, selection, theme, cx)),*
                 }
             }
 
@@ -92,7 +97,6 @@ macro_rules! renderable_enum {
                     $(Self::$variant {inner, launcher} => inner.search(launcher)),*
                 }
             }
-
 
             fn vars(&self) -> Option<&[ExecVariable]> {
                 match self {
@@ -122,6 +126,12 @@ macro_rules! renderable_enum {
             fn sidebar(&self, cx: &mut App) -> Option<AnyElement> {
                 match self {
                     $(Self::$variant {inner, ..} => inner.sidebar(cx)),*
+                }
+            }
+
+            fn update_sync(&self, query: SharedString, cx: &mut App) {
+                match self {
+                    $(Self::$variant {inner, ..} => inner.update_sync(query, cx)),*
                 }
             }
         }
@@ -226,11 +236,12 @@ renderable_enum! {
         CalcLike(CalcData),
         ClipLike(ClipData),
         EmojiLike(EmojiData),
+        EventLike(EventData),
         FileLike(FileData),
-        MusicLike(MprisState),
-        WeatherLike(WeatherData),
         MessageLike(MessageChild),
-        EventLike(EventData)
+        MusicLike(MprisState),
+        TextLike(ScriptData),
+        WeatherLike(WeatherData),
     }
 }
 
@@ -245,7 +256,7 @@ impl RenderableChild {
 
 pub trait RenderableChildDelegate<'a> {
     fn handles_borders(&self) -> bool;
-    fn render(&self, selection: Selection, theme: Arc<ThemeData>) -> AnyElement;
+    fn render(&self, selection: Selection, theme: Arc<ThemeData>, cx: &mut App) -> AnyElement;
     fn build_action_exec(&'a self, action: Arc<ContextMenuAction>) -> ExecMode;
     fn build_exec(&self) -> Option<ExecMode>;
     fn search(&'a self) -> &'a str;
@@ -254,6 +265,7 @@ pub trait RenderableChildDelegate<'a> {
     fn has_actions(&self) -> bool;
     fn based_show(&self, keyword: &str) -> Option<bool>;
     fn sidebar(&self, cx: &mut App) -> Option<AnyElement>;
+    fn update_sync(&self, query: SharedString, cx: &mut App);
 }
 
 #[allow(dead_code)]
@@ -276,6 +288,7 @@ pub trait RenderableChildImpl<'a> {
         launcher: &Arc<Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
+        cx: &mut App,
     ) -> AnyElement;
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode>;
     fn priority(&self, launcher: &Arc<Launcher>) -> f32;
@@ -294,6 +307,7 @@ pub trait RenderableChildImpl<'a> {
     fn sidebar(&self, _cx: &mut App) -> Option<AnyElement> {
         None
     }
+    fn update_sync(&self, _query: SharedString, _cx: &mut App) {}
 }
 
 pub trait SherlockSearch {

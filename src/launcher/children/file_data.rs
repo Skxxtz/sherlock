@@ -325,6 +325,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
         _launcher: &Arc<Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
+        _cx: &mut App,
     ) -> AnyElement {
         div()
             .px_4()

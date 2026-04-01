@@ -4,7 +4,7 @@ use std::sync::{
 };
 
 use arrayvec::ArrayString;
-use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px};
+use gpui::{AnyElement, App, IntoElement, ParentElement, Styled, div, px};
 
 use crate::{
     app::theme::ThemeData,
@@ -71,6 +71,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
         _launcher: &Arc<Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
+        _cx: &mut App,
     ) -> AnyElement {
         let emoji = apply_skin_tones(self.entry.emoji, &get_selected_skin_tones());
         div()

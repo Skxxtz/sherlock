@@ -61,6 +61,8 @@ impl LauncherView {
         query: impl Into<SharedString>,
         cx: &mut Context<Self>,
     ) {
+        let query: SharedString = query.into();
+
         if let Some(state) = self.navigation.current().style.list_state() {
             state.splice(0..state.item_count(), results.len());
         } else {
@@ -78,7 +80,7 @@ impl LauncherView {
                     ..
                 } => {
                     *filtered_indices = results;
-                    *last_query = Some(query.into());
+                    *last_query = Some(query.clone());
                 }
                 Model::FileSearch {
                     filtered_indices,
@@ -86,16 +88,17 @@ impl LauncherView {
                     ..
                 } => {
                     *filtered_indices = results;
-                    *last_query = Some(query.into());
+                    *last_query = Some(query.clone());
                 }
             });
 
+        self.update_sync(query, cx);
         self.focus_first(cx);
 
         cx.notify();
     }
     pub fn filter_and_sort(&mut self, cx: &mut Context<Self>) {
-        let mut query = self.text_input.read(cx).content.to_lowercase();
+        let mut query: SharedString = self.text_input.read(cx).content.to_lowercase().into();
 
         enum ModelKind {
             FileSearch {

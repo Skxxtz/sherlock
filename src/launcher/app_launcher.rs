@@ -26,6 +26,7 @@ impl LauncherProvider for AppLauncher {
         launcher: Arc<super::Launcher>,
         ctx: &LoadContext,
         _opts: Arc<Value>,
+        _cx: &mut gpui::App,
     ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
         Loader::load_applications(
             Arc::clone(&launcher),

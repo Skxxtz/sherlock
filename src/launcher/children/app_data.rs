@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use gpui::{
-    AnyElement, Image, ImageSource, IntoElement, ParentElement, Styled, div, img,
+    AnyElement, App, Image, ImageSource, IntoElement, ParentElement, Styled, div, img,
     prelude::FluentBuilder, px,
 };
 
@@ -21,6 +21,7 @@ impl<'a> RenderableChildImpl<'a> for AppData {
         launcher: &Arc<Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
+        _cx: &mut App,
     ) -> AnyElement {
         div()
             .px_4()

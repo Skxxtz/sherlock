@@ -27,6 +27,7 @@ impl LauncherProvider for CommandLauncher {
         launcher: std::sync::Arc<super::Launcher>,
         ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
+        _cx: &mut gpui::App,
     ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
         let cmds = opts.get("commands").ok_or_else(|| {
             sherlock_msg!(

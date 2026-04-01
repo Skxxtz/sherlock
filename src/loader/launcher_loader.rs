@@ -104,7 +104,7 @@ impl Loader {
             .filter_map(|(launcher, opts)| {
                 match launcher
                     .launcher_type
-                    .get_render_obj(Arc::clone(&launcher), &ctx, opts)
+                    .get_render_obj(Arc::clone(&launcher), &ctx, opts, cx)
                 {
                     Ok(vec) => (!vec.is_empty()).then_some(vec),
                     Err(e) => {

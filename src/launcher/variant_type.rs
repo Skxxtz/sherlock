@@ -1,3 +1,4 @@
+use gpui::App;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,7 @@ use crate::{
         app_launcher::AppLauncher,
         audio_launcher::{MusicPlayerFunctions, MusicPlayerLauncher},
         bookmark_launcher::BookmarkLauncher,
+        bulk_text_launcher::ScriptLauncher,
         calc_launcher::CalculatorLauncher,
         category_launcher::CategoryLauncher,
         children::RenderableChild,
@@ -81,10 +83,11 @@ macro_rules! create_variants {
                 launcher: std::sync::Arc<crate::launcher::Launcher>,
                 ctx: &crate::loader::LoadContext,
                 opts: std::sync::Arc<serde_json::Value>,
+                cx: &mut App
             ) -> Result<Vec<RenderableChild>, SherlockMessage> {
                 match self {
                     $(
-                        Self::$variant(inner) => <$inner as LauncherProvider>::objects(inner, launcher, ctx, opts),
+                        Self::$variant(inner) => <$inner as LauncherProvider>::objects(inner, launcher, ctx, opts, cx),
                     )*
                     Self::Empty => Ok(vec![]),
                 }
@@ -131,13 +134,13 @@ create_variants! {
         Emoji(EmojiPicker),
         Event(EventLauncher, EventLauncherFunctions),
         Files(FileLauncher),
+        Message(MessageLauncher),
         MusicPlayer(MusicPlayerLauncher, MusicPlayerFunctions),
+        Script(ScriptLauncher),
         Weather(WeatherLauncher),
         Web(WebLauncher),
-        Message(MessageLauncher)
         // Integrate later: TODO
         // Pipe(PipeLauncher),
-        // Api(BulkTextLauncher),
         // File(FileLauncher),
         // Pomodoro(Pomodoro),
         // Process(ProcessLauncher),

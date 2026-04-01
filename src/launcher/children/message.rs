@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use gpui::{
-    AnyElement, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled,
-    div, prelude::FluentBuilder, px,
+    AnyElement, App, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement,
+    Styled, div, prelude::FluentBuilder, px,
 };
 
 use crate::{
@@ -40,6 +40,7 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
         _launcher: &Arc<Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
+        _cx: &mut App,
     ) -> AnyElement {
         let (bg, border, text) = match self.message.level {
             SherlockMessageLevel::Error => (
@@ -104,7 +105,7 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
             .when(selection.is_selected, |this| this.shadow_md())
             .text_size(px(12.0))
             .text_color(text)
-            .font_family("monospace")
+            .font_family(theme.font_family.clone())
             .relative()
             .child(
                 div()
@@ -131,7 +132,7 @@ impl<'a> RenderableChildImpl<'a> for MessageChild {
                             .mt_1()
                             .text_size(px(11.))
                             .line_height(px(16.))
-                            .font_family("monospace")
+                            .font_family(theme.monospace.clone())
                             .text_color(text)
                             .opacity(if selection.is_selected { 1.0 } else { 0.8 })
                             .child(self.message.traceback.clone()),

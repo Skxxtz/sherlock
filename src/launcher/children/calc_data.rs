@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use gpui::{
-    IntoElement, ParentElement, SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
+    App, IntoElement, ParentElement, SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
 };
 
 use crate::{
@@ -50,6 +50,7 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
         _launcher: &std::sync::Arc<crate::launcher::Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
+        _cx: &mut App,
     ) -> gpui::AnyElement {
         let result = {
             let guard = self.result.read().unwrap();
