@@ -327,36 +327,49 @@ impl<'a> RenderableChildImpl<'a> for EventData {
         ""
     }
     #[inline(always)]
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
-        let event = self.event.as_ref()?; // Guard: if no event, no actions.
-
-        // Check if we actually need to build a dynamic list.
-        // If there's no meeting, we can just return our existing base actions Arc.
+    fn actions(
+        &self,
+        launcher: &Arc<Launcher>,
+        _cx: &mut App,
+    ) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+        let event = self.event.as_ref()?;
         let meeting = event.meeting.as_ref();
+        let extra = launcher.add_actions.as_ref();
 
-        if meeting.is_none() {
+        // early return if only actions apply
+        if meeting.is_none() && extra.map_or(true, |e| e.is_empty()) {
             return Some(Arc::clone(&self.actions));
         }
 
-        // We have a meeting, so we must allocate a new Vec to merge lists.
-        let meeting = meeting.unwrap();
-        let mut actions = Vec::with_capacity(self.actions.len() + 1);
+        let mut cap = self.actions.len();
+        if meeting.is_some() {
+            cap += 1;
+        }
+        if let Some(e) = extra {
+            cap += e.len();
+        }
 
-        // 1. Push the Priority Dynamic Action
-        let url = meeting.url.clone();
-        actions.push(Arc::new(ContextMenuAction::App(
-            ApplicationAction::new("inner.join_meeting")
-                .name("Join Meeting")
-                .icon_name("call-start")
-                .exec(url),
-        )));
+        let mut actions = Vec::with_capacity(cap);
+
+        if let Some(m) = meeting {
+            let url = m.url.clone();
+            actions.push(Arc::new(ContextMenuAction::App(
+                ApplicationAction::new("inner.join_meeting")
+                    .name("Join Meeting")
+                    .icon_name("call-start")
+                    .exec(url),
+            )));
+        }
 
         actions.extend(self.actions.iter().cloned());
+        if let Some(extra_actions) = extra {
+            actions.extend(extra_actions.iter().cloned());
+        }
 
         Some(Arc::from(actions))
     }
     #[inline(always)]
-    fn has_actions(&self) -> bool {
+    fn has_actions(&self, _cx: &mut App) -> bool {
         self.event.is_some()
     }
     #[inline(always)]

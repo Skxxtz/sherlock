@@ -72,7 +72,7 @@ macro_rules! renderable_enum {
         impl<'a> RenderableChildDelegate<'a> for $name {
             fn handles_borders(&self) -> bool {
                 match self {
-                    $(Self::$variant { .. } => <$inner>::HANDLES_BODERS),*
+                    $(Self::$variant { .. } => <$inner>::HANDLES_BORDERS),*
                 }
             }
 
@@ -88,7 +88,9 @@ macro_rules! renderable_enum {
 
             fn build_exec(&self) -> Option<ExecMode> {
                 match self {
-                    $(Self::$variant {launcher, inner} => inner.build_exec(launcher)),*
+                    $(Self::$variant {launcher, inner} => {
+                        inner.build_exec(launcher)
+                    }),*
                 }
             }
 
@@ -105,15 +107,23 @@ macro_rules! renderable_enum {
                 }
             }
 
-            fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+            fn actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>> {
                 match self {
-                    $(Self::$variant {inner, ..} => inner.actions()),*
+                    $(Self::$variant {inner, launcher} => inner.actions(launcher, cx)),*
                 }
             }
 
-            fn has_actions(&self) -> bool {
+            fn has_actions(&self, cx: &mut App) -> bool {
                 match self {
-                    $(Self::$variant {inner, ..} => inner.has_actions()),*
+                    $(Self::$variant {inner, launcher} => {
+                        if launcher.actions.as_ref().map_or(false, |actions| !actions.is_empty()) {
+                            return true
+                        }
+                        if launcher.add_actions.as_ref().map_or(false, |actions| !actions.is_empty()) {
+                            return true
+                        }
+                        inner.has_actions(cx)
+                    }),*
                 }
             }
 
@@ -172,6 +182,12 @@ macro_rules! renderable_enum {
             fn launcher_type(&self) -> &LauncherType {
                 &self.launcher().launcher_type
             }
+
+            fn shortcut(&self) -> bool {
+                match self {
+                    $(Self::$variant {launcher, ..} => launcher.shortcut),*
+                }
+            }
         }
 
         impl <'a> $name {
@@ -179,6 +195,15 @@ macro_rules! renderable_enum {
             fn launcher(&'a self) -> &'a Launcher {
                 match self {
                     $(Self::$variant {launcher, ..} => &launcher),*
+                }
+            }
+
+            pub fn with_launcher<F, R>(&self, f: F) -> R
+            where
+                F: FnOnce(&Arc<Launcher>) -> R
+            {
+                match self {
+                    $(Self::$variant { launcher, .. } => f(launcher)),*
                 }
             }
         }
@@ -261,8 +286,8 @@ pub trait RenderableChildDelegate<'a> {
     fn build_exec(&self) -> Option<ExecMode>;
     fn search(&'a self) -> &'a str;
     fn vars(&self) -> Option<&[ExecVariable]>;
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>>;
-    fn has_actions(&self) -> bool;
+    fn actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>>;
+    fn has_actions(&self, cx: &mut App) -> bool;
     fn based_show(&self, keyword: &str) -> Option<bool>;
     fn sidebar(&self, cx: &mut App) -> Option<AnyElement>;
     fn update_sync(&self, query: SharedString, cx: &mut App);
@@ -278,11 +303,12 @@ pub trait LauncherValues<'a> {
     fn home(&self) -> HomeType;
     fn spawn_focus(&self) -> bool;
     fn launcher_type(&'a self) -> &'a LauncherType;
+    fn shortcut(&self) -> bool;
 }
 
 pub trait RenderableChildImpl<'a> {
     /// If set to true, disables the inheritage of the border and background fill of the list item
-    const HANDLES_BODERS: bool = false;
+    const HANDLES_BORDERS: bool = false;
     fn render(
         &self,
         launcher: &Arc<Launcher>,
@@ -294,11 +320,18 @@ pub trait RenderableChildImpl<'a> {
     fn priority(&self, launcher: &Arc<Launcher>) -> f32;
     fn search(&'a self, launcher: &Arc<Launcher>) -> &'a str;
     /// Will only get called once the context menu gets opened
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+    fn actions(
+        &self,
+        launcher: &Arc<Launcher>,
+        _cx: &mut App,
+    ) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+        if let Some(actions) = launcher.actions.as_ref().cloned() {
+            return Some(actions.into());
+        }
         None
     }
     /// Whether the `additional actions` indicator should show in the status bar
-    fn has_actions(&self) -> bool {
+    fn has_actions(&self, _cx: &mut App) -> bool {
         false
     }
     fn based_show(&self, _keyword: &str) -> Option<bool> {

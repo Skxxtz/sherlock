@@ -46,9 +46,9 @@ pub struct LegacyRawLauncher {
     #[serde(default)]
     pub binds: Option<Vec<BindSerde>>,
     #[serde(default)]
-    pub actions: Option<Arc<Vec<Arc<ContextMenuAction>>>>,
+    pub actions: Option<Arc<[Arc<ContextMenuAction>]>>,
     #[serde(default)]
-    pub add_actions: Option<Vec<Arc<ContextMenuAction>>>,
+    pub add_actions: Option<Arc<[Arc<ContextMenuAction>]>>,
     #[serde(default)]
     pub variables: Option<Vec<LegacyExecVariable>>,
 }

@@ -61,39 +61,45 @@ impl LauncherView {
         query: impl Into<SharedString>,
         cx: &mut Context<Self>,
     ) {
+        let Some(state) = self.navigation.current().style.list_state() else {
+            return;
+        };
+
+        let mut changed = false;
         let query: SharedString = query.into();
 
-        if let Some(state) = self.navigation.current().style.list_state() {
-            state.splice(0..state.item_count(), results.len());
-        } else {
-            return;
+        let old_count = state.item_count();
+        let new_count = results.len();
+        if old_count != new_count {
+            state.splice(0..old_count, new_count);
         }
 
-        self.update_vars(cx);
-
         self.active_bar = 0;
-        self.navigation
-            .with_model_mut(cx, |mut mdl, _| match &mut mdl {
-                Model::Standard {
-                    filtered_indices,
-                    last_query,
-                    ..
-                } => {
-                    *filtered_indices = results;
-                    *last_query = Some(query.clone());
+        self.navigation.with_model_mut(cx, |mdl, _| match mdl {
+            Model::Standard {
+                filtered_indices: idx,
+                last_query: q,
+                ..
+            }
+            | Model::FileSearch {
+                filtered_indices: idx,
+                last_query: q,
+                ..
+            } => {
+                if idx != &results {
+                    changed = true;
+                    *idx = results;
                 }
-                Model::FileSearch {
-                    filtered_indices,
-                    last_query,
-                    ..
-                } => {
-                    *filtered_indices = results;
-                    *last_query = Some(query.clone());
-                }
-            });
+                *q = Some(query.clone());
+            }
+        });
 
         self.update_sync(query, cx);
-        self.focus_first(cx);
+
+        if changed {
+            self.update_vars(cx);
+            self.focus_first(cx);
+        }
 
         cx.notify();
     }

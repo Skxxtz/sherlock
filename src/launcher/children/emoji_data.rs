@@ -126,7 +126,11 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
         &self.entry.keywords
     }
     #[inline(always)]
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+    fn actions(
+        &self,
+        _launcher: &Arc<Launcher>,
+        _cx: &mut App,
+    ) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         let num_tones = self.entry.skin_tones as usize;
         let template = &*EMOJI_CONTEXT_ACTIONS;
 
@@ -147,7 +151,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
         }
     }
     #[inline(always)]
-    fn has_actions(&self) -> bool {
+    fn has_actions(&self, _cx: &mut App) -> bool {
         self.entry.skin_tones > 0
     }
 }

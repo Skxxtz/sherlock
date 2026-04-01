@@ -1,11 +1,10 @@
-use std::{env::home_dir, process::Stdio, time::Duration};
+use std::{env::home_dir, process::Stdio, sync::Arc, time::Duration};
 
 use gpui::{
     App, AsyncApp, Entity, IntoElement, ParentElement, SharedString, Styled, Task, WeakEntity, div,
     prelude::FluentBuilder,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tokio::{
     io::{AsyncReadExt, BufReader},
     process::Command,
@@ -17,6 +16,7 @@ use crate::{
         Launcher,
         children::{RenderableChildImpl, utils::pango::render_pango},
     },
+    ui::launcher::context_menu::ContextMenuAction,
     utils::command_launch::split_as_command,
 };
 
@@ -41,7 +41,7 @@ pub struct AsyncCommandResponse {
     pub content: Option<SharedString>,
     pub next_content: Option<SharedString>,
     pub result: Option<SharedString>,
-    pub actions: Option<Vec<Value>>,
+    pub actions: Option<Arc<[Arc<ContextMenuAction>]>>,
 }
 impl AsyncCommandResponse {
     fn new() -> Self {
@@ -146,6 +146,47 @@ impl<'a> RenderableChildImpl<'a> for ScriptData {
     }
     fn based_show(&self, _keyword: &str) -> Option<bool> {
         Some(true)
+    }
+    fn has_actions(&self, cx: &mut App) -> bool {
+        self.update_entity
+            .read(cx)
+            .result
+            .as_ref()
+            .and_then(|res| res.actions.as_ref())
+            .map_or(false, |actions| !actions.is_empty())
+    }
+    fn actions(
+        &self,
+        launcher: &Arc<Launcher>,
+        cx: &mut App,
+    ) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+        let actions = self
+            .update_entity
+            .read(cx)
+            .result
+            .as_ref()
+            .and_then(|r| r.actions.as_ref());
+        let extra = launcher.add_actions.as_ref();
+
+        let mut cap = actions.map_or(0, |a| a.len());
+        if let Some(adds) = extra {
+            cap += adds.len();
+        }
+
+        if cap == 0 {
+            return None;
+        }
+        let mut combined = Vec::with_capacity(cap);
+
+        if let Some(actions) = actions {
+            combined.extend(actions.iter().cloned());
+        }
+
+        if let Some(extra) = extra {
+            combined.extend(extra.iter().cloned());
+        }
+
+        Some(combined.into())
     }
     fn update_sync(&self, query: SharedString, cx: &mut App) {
         self.update_entity.update(cx, |this, cx| {

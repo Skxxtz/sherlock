@@ -122,11 +122,28 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
         launcher.priority as f32
     }
     #[inline(always)]
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+    fn actions(
+        &self,
+        launcher: &Arc<Launcher>,
+        _cx: &mut App,
+    ) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+        if let Some(extra_actions) = launcher.add_actions.as_ref() {
+            if extra_actions.is_empty() {
+                return Some(self.actions.clone());
+            }
+
+            let mut combined = Vec::with_capacity(self.actions.len() + extra_actions.len());
+
+            combined.extend(self.actions.iter().cloned());
+            combined.extend(extra_actions.iter().cloned());
+
+            return Some(combined.into());
+        }
+
         Some(self.actions.clone())
     }
     #[inline(always)]
-    fn has_actions(&self) -> bool {
+    fn has_actions(&self, _cx: &mut App) -> bool {
         !self.actions.is_empty()
     }
     fn based_show(&self, _keyword: &str) -> Option<bool> {

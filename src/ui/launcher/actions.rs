@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use futures::{StreamExt, stream::FuturesUnordered};
+use futures::{FutureExt, StreamExt, stream::FuturesUnordered};
 use gpui::{
     AppContext, AsyncApp, ClipboardItem, Context, Focusable, SharedString, Window, actions,
 };
@@ -94,7 +94,7 @@ impl LauncherView {
         self.has_actions = self
             .navigation
             .selected_item(cx)
-            .map_or(false, |i| i.has_actions());
+            .map_or(false, |i| i.has_actions(cx));
 
         cx.notify()
     }
@@ -260,7 +260,7 @@ impl LauncherView {
                 cx.notify();
                 return Ok(false);
             }
-            ExecMode::Commmand { exec } => {
+            ExecMode::Command { exec } => {
                 spawn_detached(&exec, keyword, variables)?;
                 increment(&exec);
             }
@@ -350,7 +350,7 @@ impl LauncherView {
             }
 
             if let Some(selected) = self.navigation.selected_item(cx) {
-                if let Some(what) = selected.build_exec() {
+                if let Some(what) = ExecMode::from_child(&selected) {
                     match self.execute_helper(what, keyword.as_ref(), &variables, cx) {
                         Ok(exit) if exit => {
                             self.close_window(win, cx);
@@ -493,19 +493,30 @@ impl LauncherView {
 
             while let Some((idx, result)) = futures.next().await {
                 let Some(update) = result else { continue };
-                let _ = cx.update(|cx| {
-                    data.update(cx, |items_arc, _| {
-                        Arc::make_mut(items_arc)[idx] = update;
-                    });
-                    cx.notify(this.entity_id());
-                });
-            }
 
-            this.upgrade().map(|t| {
-                t.update(cx, |this, cx| {
-                    this.filter_and_sort(cx);
-                })
-            });
+                let mut batch = vec![(idx, update)];
+                while let Some(Some((next_idx, next_res))) = futures.next().now_or_never() {
+                    if let Some(update) = next_res {
+                        batch.push((next_idx, update));
+                    }
+                }
+
+                if let Some(launcher) = this.upgrade() {
+                    launcher.update(cx, |this, cx| {
+                        data.update(cx, |items_arc, _| {
+                            let items = Arc::make_mut(items_arc);
+                            for (b_idx, b_update) in batch {
+                                items[b_idx] = b_update;
+                            }
+                        });
+
+                        this.filter_and_sort(cx);
+                        cx.notify();
+                    });
+                } else {
+                    break;
+                }
+            }
         }));
     }
     pub(crate) fn update_sync(&mut self, query: SharedString, cx: &mut Context<Self>) {

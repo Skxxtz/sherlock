@@ -65,11 +65,6 @@ impl Loader {
         let mut launchers: Vec<(Arc<Launcher>, Arc<serde_json::Value>)> = raw_launchers
             .into_iter()
             .map(|raw| {
-                let method = raw
-                    .on_return
-                    .clone()
-                    .unwrap_or_else(|| raw.r#type.to_string());
-
                 let launcher_type: LauncherType = raw.r#type.into_launcher_type(&raw);
 
                 let icon = raw
@@ -80,10 +75,7 @@ impl Loader {
 
                 let opts = Arc::clone(&raw.args);
 
-                (
-                    Arc::new(Launcher::from_raw(raw, method, launcher_type, icon)),
-                    opts,
-                )
+                (Arc::new(Launcher::from_raw(raw, launcher_type, icon)), opts)
             })
             .collect();
 

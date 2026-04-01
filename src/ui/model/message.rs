@@ -26,7 +26,7 @@ impl MessageView {
             display_name: Some("Errors".into()),
             icon: None,
             alias: None,
-            method: "errors".into(),
+            on_return: None,
             exit: false,
             priority: 1,
             r#async: false,

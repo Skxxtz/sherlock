@@ -34,7 +34,7 @@ impl MessageChild {
 }
 
 impl<'a> RenderableChildImpl<'a> for MessageChild {
-    const HANDLES_BODERS: bool = true;
+    const HANDLES_BORDERS: bool = true;
     fn render(
         &self,
         _launcher: &Arc<Launcher>,

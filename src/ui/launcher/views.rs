@@ -248,25 +248,7 @@ impl NavigationStack {
         data_entity.update(cx, |data, cx| f(data.get(idx), cx))
     }
     pub fn current_actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>> {
-        let ui_idx = self.current().style.selected_index()?;
-        let (data_idx, data_entity) = self.with_model_mut(cx, |mdl, cx| {
-            let data = mdl.data();
-            if data.read(cx).is_empty() {
-                return (None, data);
-            }
-
-            let filtered_indices = mdl.filtered_indices();
-            if filtered_indices.is_empty() {
-                return (None, mdl.data());
-            }
-
-            let safe_ui_idx = ui_idx.min(filtered_indices.len() - 1);
-
-            (filtered_indices.get(safe_ui_idx).copied(), mdl.data())
-        });
-
-        let idx = data_idx?;
-        data_entity.read(cx).get(idx).and_then(|i| i.actions())
+        self.with_selected_item(cx, |item, cx| item.and_then(|i| i.actions(cx)))
     }
 }
 

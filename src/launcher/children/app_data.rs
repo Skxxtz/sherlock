@@ -83,11 +83,15 @@ impl<'a> RenderableChildImpl<'a> for AppData {
         &self.search_string
     }
     #[inline(always)]
-    fn actions(&self) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+    fn actions(
+        &self,
+        _launcher: &Arc<Launcher>,
+        _cx: &mut App,
+    ) -> Option<Arc<[Arc<ContextMenuAction>]>> {
         Some(self.actions.clone())
     }
     #[inline(always)]
-    fn has_actions(&self) -> bool {
+    fn has_actions(&self, _cx: &mut App) -> bool {
         !self.actions.is_empty()
     }
 }

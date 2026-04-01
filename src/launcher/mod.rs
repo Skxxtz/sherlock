@@ -24,7 +24,7 @@ pub mod web_launcher;
 use crate::{
     launcher::{
         children::{
-            LauncherValues, RenderableChild,
+            LauncherValues, RenderableChild, RenderableChildDelegate,
             emoji_data::{apply_skin_tones, get_selected_skin_tones},
         },
         variant_type::{InnerFunction, LauncherType},
@@ -135,32 +135,27 @@ impl BindSerde {
 pub struct Launcher {
     pub name: Option<String>,
     pub display_name: Option<SharedString>,
-    pub icon: Option<Arc<Path>>, // nu
+    pub icon: Option<Arc<Path>>,
     pub alias: Option<String>,
-    pub method: String, // nu
-    pub exit: bool,     // nu
+    pub on_return: Option<String>, // nu
+    pub exit: bool,
     pub priority: u32,
     pub r#async: bool,
     pub home: HomeType,
     pub launcher_type: LauncherType,
-    pub shortcut: bool,                                    // nu
-    pub spawn_focus: bool,                                 // nu
-    pub actions: Option<Arc<Vec<Arc<ContextMenuAction>>>>, // nu
-    pub add_actions: Option<Vec<Arc<ContextMenuAction>>>,  // nu
+    pub shortcut: bool,
+    pub spawn_focus: bool,
+    pub actions: Option<Arc<[Arc<ContextMenuAction>]>>,
+    pub add_actions: Option<Arc<[Arc<ContextMenuAction>]>>,
 }
 impl Launcher {
-    pub fn from_raw(
-        raw: RawLauncher,
-        method: String,
-        launcher_type: LauncherType,
-        icon: Option<String>,
-    ) -> Self {
+    pub fn from_raw(raw: RawLauncher, launcher_type: LauncherType, icon: Option<String>) -> Self {
         Self {
             name: raw.name,
             display_name: raw.display_name.map(|n| SharedString::from(n)),
             icon: icon.as_deref().and_then(resolve_icon_path),
             alias: raw.alias,
-            method,
+            on_return: raw.on_return,
             exit: raw.exit,
             priority: raw.priority as u32,
             r#async: raw.r#async,
@@ -196,7 +191,7 @@ pub enum ExecMode {
         exec: String,
         terminal: bool,
     },
-    Commmand {
+    Command {
         exec: String,
     },
     Category {
@@ -248,7 +243,7 @@ impl ExecMode {
                     name: app_data.name.clone().unwrap_or_default(),
                 },
             },
-            LauncherType::Commands(_) => Self::Commmand {
+            LauncherType::Commands(_) => Self::Command {
                 exec: app_data.exec.clone().unwrap_or_default(),
             },
             LauncherType::Emoji(_) => Self::CreateView {
@@ -268,10 +263,53 @@ impl ExecMode {
             _ => Self::None,
         }
     }
+    pub fn from_child(data: &RenderableChild) -> Option<Self> {
+        let launcher_snapshot = data.with_launcher(|l| l.clone());
+
+        if let Some(on_return) = launcher_snapshot.on_return.as_ref() {
+            match on_return.as_str() {
+                "app_launcher" | "command" => {
+                    if let Some(exec) = data.get_exec() {
+                        return Some(Self::Command {
+                            exec: exec.to_string(),
+                        });
+                    }
+                }
+                "create_bookmark" => {
+                    if let RenderableChild::AppLike { launcher, inner } = data {
+                        if matches!(launcher.launcher_type, LauncherType::Clipboard(_)) {
+                            if let (Some(exec), Some(name)) = (&inner.exec, &inner.name) {
+                                return Some(Self::CreateBookmark {
+                                    url: exec.to_string(),
+                                    name: name.to_string(),
+                                });
+                            }
+                        }
+                    }
+                }
+
+                k if k.starts_with("inner.") => {
+                    let inner = InnerFunction::from_str(
+                        data.launcher_type(),
+                        k.trim_start_matches("inner."),
+                    );
+                    if inner != InnerFunction::Empty {
+                        return Some(Self::Inner {
+                            func: inner,
+                            exit: launcher_snapshot.exit,
+                        });
+                    }
+                }
+                _ => {}
+            };
+        }
+
+        data.build_exec()
+    }
     pub fn from_app_action(action: Arc<ContextMenuAction>, data: &RenderableChild) -> Self {
         match action.as_ref() {
             ContextMenuAction::App(action) => match action.method.as_str() {
-                "app_launcher" | "command" => Self::Commmand {
+                "app_launcher" | "command" => Self::Command {
                     exec: action.exec.clone().unwrap_or_default(),
                 },
 
