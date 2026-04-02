@@ -141,7 +141,6 @@ create_variants! {
         Web(WebLauncher),
         // Integrate later: TODO
         // Pipe(PipeLauncher),
-        // File(FileLauncher),
         // Pomodoro(Pomodoro),
         // Process(ProcessLauncher),
         // Theme(ThemePicker),

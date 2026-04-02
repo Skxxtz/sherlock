@@ -209,6 +209,15 @@ macro_rules! renderable_enum {
     };
 }
 impl RenderableChild {
+    /// Updates a dynamic renderable child that requires re-evaluation.
+    ///
+    /// This is used for items whose state depends on internal logic (e.g., a timer)
+    /// or external factors (e.g., a weather API or file system change).
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Self)` - If the state was updated and a re-render is required.
+    /// * `None` - If no changes were detected, allowing the UI to skip an update cycle.
     pub async fn update_async(mut self) -> Option<Self> {
         match &mut self {
             Self::ClipLike { inner, .. } => {
@@ -220,6 +229,14 @@ impl RenderableChild {
             Self::MusicLike { inner, .. } => {
                 let launcher = AudioLauncherFunctions::new()?;
                 inner.player = launcher.get_current_player();
+
+                // id player is none, nothing is playing...
+                if inner.player.is_none() {
+                    inner.raw = None;
+                    inner.image = None;
+                    return Some(self);
+                }
+
                 let new_inner = launcher.get_metadata(inner.player.as_ref()?);
 
                 // early return if nothing has changed
@@ -278,16 +295,39 @@ impl RenderableChild {
 }
 
 pub trait RenderableChildDelegate<'a> {
+    /// Whether the child internally applies style for borders
     fn handles_borders(&self) -> bool;
+
+    /// The logic to render the widget
     fn render(&self, selection: Selection, theme: Arc<ThemeData>, cx: &mut App) -> AnyElement;
+
+    /// Generates an execution path based on the child and the context menu action
     fn build_action_exec(&'a self, action: Arc<ContextMenuAction>) -> ExecMode;
+
+    /// Generates an execution path when pressing return on this widget
     fn build_exec(&self) -> Option<ExecMode>;
+
+    /// The string that contains or otherwise matces the user-provided search query
     fn search(&'a self) -> &'a str;
+
+    /// The variable fields that should be shown next to the search input
     fn vars(&self) -> Option<&[ExecVariable]>;
+
+    /// The context menu actions for this widget. (Gets called on the selected item only if:
+    /// self.has_actions == true and the context menu gets opened)
     fn actions(&self, cx: &mut App) -> Option<Arc<[Arc<ContextMenuAction>]>>;
+
+    /// Whether this widget owns any context menu actions. (This gets called only on the selected
+    /// item)
     fn has_actions(&self, cx: &mut App) -> bool;
+
+    /// Boolean logic for conditional display (e.g., calculator)
     fn based_show(&self, keyword: &str) -> Option<bool>;
+
+    /// Sidebar rendering
     fn sidebar(&self, cx: &mut App) -> Option<AnyElement>;
+
+    /// Sync update on every keypress
     fn update_sync(&self, query: SharedString, cx: &mut App);
 }
 
@@ -376,7 +416,10 @@ impl<T: AsRef<str>> SherlockSearch for T {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Selection {
+    /// The unique index of the item
     pub data_idx: usize,
+
+    /// Whether the current item is selected by the user
     pub is_selected: bool,
 }
 
