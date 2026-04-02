@@ -324,6 +324,12 @@ impl ExecMode {
                     }
                 }
 
+                "web_launcher" => Self::Web {
+                    engine: None,
+                    browser: None,
+                    exec: action.exec.clone(),
+                },
+
                 k if k.starts_with("inner.") => {
                     let inner = InnerFunction::from_str(
                         data.launcher_type(),
