@@ -5,10 +5,9 @@ use gpui::App;
 use crate::{
     launcher::{
         Launcher,
-        children::RenderableChild,
         emoji_launcher::{EmojiData, data::EMOJIS},
     },
-    ui::model::Model,
+    ui::{model::Model, widgets::RenderableChild},
 };
 
 pub struct EmojiView {

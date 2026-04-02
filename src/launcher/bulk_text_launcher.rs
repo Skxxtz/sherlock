@@ -4,15 +4,13 @@ use serde_json::Value;
 use std::sync::Arc;
 
 use crate::{
-    launcher::{
-        LauncherProvider, LauncherType, LoadContext,
-        children::{
-            RenderableChild,
-            script_data::{ScriptData, ScriptDataUpdateEntity},
-        },
-    },
+    launcher::{LauncherProvider, LauncherType, LoadContext},
     loader::utils::RawLauncher,
     sherlock_msg,
+    ui::widgets::{
+        RenderableChild,
+        script::{ScriptData, ScriptDataUpdateEntity},
+    },
     utils::errors::types::SherlockErrorType,
 };
 
@@ -32,7 +30,7 @@ impl LauncherProvider for ScriptLauncher {
         _ctx: &LoadContext,
         opts: Arc<Value>,
         cx: &mut App,
-    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
+    ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockMessage> {
         let exec_command: Option<SharedString> = opts
             .get("exec")
             .and_then(|v| v.as_str())

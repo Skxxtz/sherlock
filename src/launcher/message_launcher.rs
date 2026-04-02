@@ -3,11 +3,12 @@ use std::sync::Arc;
 use serde::Deserialize;
 
 use crate::{
-    launcher::{LauncherProvider, children::RenderableChild, variant_type::LauncherType},
+    launcher::{LauncherProvider, variant_type::LauncherType},
     loader::{
         resolve_icon_path,
         utils::{AppData, RawLauncher},
     },
+    ui::widgets::RenderableChild,
 };
 
 #[derive(Clone, Debug, Deserialize)]

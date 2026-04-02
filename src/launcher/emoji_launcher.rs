@@ -5,12 +5,9 @@ use serde::{Deserialize, Serialize};
 use strum::FromRepr;
 
 use crate::{
-    launcher::{
-        Launcher, LauncherProvider, LauncherType,
-        children::{RenderableChild, emoji_data::set_selected_skin_tone},
-        emoji_launcher::data::EmojiEntry,
-    },
+    launcher::{Launcher, LauncherProvider, LauncherType, emoji_launcher::data::EmojiEntry},
     loader::{resolve_icon_path, utils::AppData},
+    ui::widgets::{RenderableChild, emoji::set_selected_skin_tone},
     utils::errors::SherlockMessage,
 };
 

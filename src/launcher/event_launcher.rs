@@ -7,11 +7,11 @@ use crate::{
     ensure_func,
     launcher::{
         LauncherProvider,
-        children::{RenderableChild, event_data::EventData},
         variant_type::{InnerFunction, LauncherType},
     },
     loader::utils::RawLauncher,
     sherlock_msg,
+    ui::widgets::{RenderableChild, event::EventData},
     utils::{
         command_launch,
         config::ConfigGuard,

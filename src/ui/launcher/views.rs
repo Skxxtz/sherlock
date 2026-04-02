@@ -6,15 +6,13 @@ use simd_json::prelude::{ArrayTrait, Indexed};
 use std::sync::Arc;
 
 use crate::{
-    launcher::{
-        Launcher,
-        children::{RenderableChild, RenderableChildDelegate},
-    },
+    launcher::Launcher,
     ui::{
         launcher::context_menu::ContextMenuAction,
         model::{
             Model, emoji::EmojiView, file::view::FileView, home::HomeView, message::MessageView,
         },
+        widgets::{RenderableChild, RenderableChildDelegate},
     },
     utils::errors::SherlockMessage,
 };

@@ -2,10 +2,10 @@ use gpui::{App, Entity};
 use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc};
 
 use crate::{
-    launcher::{Launcher, children::RenderableChild, variant_type::LauncherType},
+    launcher::{Launcher, variant_type::LauncherType},
     loader::utils::RawLauncher,
     sherlock_msg,
-    ui::launcher::LauncherMode,
+    ui::{launcher::LauncherMode, widgets::RenderableChild},
     utils::{
         cache::BinaryCache,
         config::ConfigGuard,

@@ -1,6 +1,6 @@
 use crate::{
-    launcher::{Launcher, children::RenderableChild},
-    ui::model::file::FileSearchModel,
+    launcher::Launcher,
+    ui::{model::file::FileSearchModel, widgets::RenderableChild},
 };
 use gpui::{App, AppContext, Entity, SharedString, Task};
 use std::sync::Arc;

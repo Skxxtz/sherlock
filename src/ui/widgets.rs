@@ -1,37 +1,35 @@
 use gpui::{AnyElement, App, SharedString};
 use std::sync::Arc;
 
-pub mod app_data;
-pub mod calc_data;
-pub mod clip_data;
-pub mod emoji_data;
-pub mod event_data;
-pub mod file_data;
+pub mod app;
+pub mod calculator;
+pub mod clipboard;
+pub mod emoji;
+pub mod event;
+pub mod file;
 pub mod message;
-pub mod mpris_data;
-pub mod script_data;
-mod utils;
-pub mod weather_data;
+pub mod mpris;
+pub mod script;
+pub mod weather;
 
 use crate::{
     app::theme::ThemeData,
     launcher::{
-        ExecMode, Launcher, LauncherType,
-        audio_launcher::AudioLauncherFunctions,
-        children::{message::MessageChild, script_data::ScriptData},
-        emoji_launcher::EmojiData,
-        utils::MprisState,
-        weather_launcher::WeatherData,
+        ExecMode, Launcher, audio_launcher::AudioLauncherFunctions, emoji_launcher::EmojiData,
+        utils::MprisState, variant_type::LauncherType, weather_launcher::WeatherData,
     },
     loader::utils::{AppData, ExecVariable},
-    ui::launcher::context_menu::ContextMenuAction,
+    ui::{
+        launcher::context_menu::ContextMenuAction,
+        widgets::{message::MessageChild, script::ScriptData},
+    },
     utils::config::HomeType,
 };
 
-use calc_data::CalcData;
-use clip_data::ClipData;
-use event_data::EventData;
-use file_data::FileData;
+use calculator::CalcData;
+use clipboard::ClipData;
+use event::EventData;
+use file::FileData;
 
 /// Creates enum RenderableChild,
 /// ## Example:

@@ -9,10 +9,10 @@ use gpui::{
 use crate::{
     CONTEXT_MENU_BIND,
     app::theme::{ActiveTheme, ThemeData},
-    launcher::children::{LauncherValues, RenderableChild, RenderableChildDelegate, Selection},
     ui::{
         UIFunction,
         launcher::{LauncherView, context_menu::ContextMenuAction, views::EntityStyle},
+        widgets::{LauncherValues, RenderableChild, RenderableChildDelegate, Selection},
     },
     utils::config::ConfigGuard,
 };

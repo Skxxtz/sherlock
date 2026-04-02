@@ -4,8 +4,9 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::{
-    launcher::{LauncherProvider, LauncherType, LoadContext, children::RenderableChild},
+    launcher::{LauncherProvider, LauncherType, LoadContext},
     loader::{Loader, utils::RawLauncher},
+    ui::widgets::RenderableChild,
 };
 
 #[derive(Clone, Debug, Deserialize)]
@@ -27,7 +28,7 @@ impl LauncherProvider for AppLauncher {
         ctx: &LoadContext,
         _opts: Arc<Value>,
         _cx: &mut gpui::App,
-    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
+    ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockMessage> {
         Loader::load_applications(
             Arc::clone(&launcher),
             &ctx.counts,

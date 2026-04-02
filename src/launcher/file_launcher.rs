@@ -4,12 +4,12 @@ use gpui::SharedString;
 use serde::Deserialize;
 
 use crate::{
-    launcher::{Launcher, LauncherProvider, children::RenderableChild, variant_type::LauncherType},
+    launcher::{Launcher, LauncherProvider, variant_type::LauncherType},
     loader::{
         resolve_icon_path,
         utils::{AppData, RawLauncher},
     },
-    ui::model::file::FileSearchBackend,
+    ui::{model::file::FileSearchBackend, widgets::RenderableChild},
     utils::errors::SherlockMessage,
 };
 

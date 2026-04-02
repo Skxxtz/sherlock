@@ -10,9 +10,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use zbus::blocking::{Connection, Proxy};
 
-use crate::launcher::children::RenderableChild;
 use crate::launcher::utils::MprisState;
 use crate::launcher::variant_type::InnerFunction;
+use crate::ui::widgets::RenderableChild;
 use crate::utils::config::ConfigGuard;
 use crate::utils::errors::SherlockMessage;
 use crate::utils::errors::types::{DBusAction, DirAction, FileAction, SherlockErrorType};
@@ -56,7 +56,7 @@ impl LauncherProvider for MusicPlayerLauncher {
         _: &crate::loader::LoadContext,
         _opts: Arc<Value>,
         _cx: &mut gpui::App,
-    ) -> Result<Vec<super::children::RenderableChild>, SherlockMessage> {
+    ) -> Result<Vec<RenderableChild>, SherlockMessage> {
         let inner = MprisState::default();
         Ok(vec![RenderableChild::MusicLike { launcher, inner }])
     }

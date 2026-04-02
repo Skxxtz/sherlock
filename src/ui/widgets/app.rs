@@ -7,19 +7,18 @@ use gpui::{
 
 use crate::{
     app::theme::ThemeData,
-    launcher::{
-        ExecMode, Launcher,
-        audio_launcher::MusicPlayerFunctions,
-        children::{RenderableChildImpl, Selection},
-        utils::MprisState,
-        variant_type::InnerFunction,
+    launcher::{ExecMode, Launcher},
+    loader::utils::AppData,
+    ui::{
+        launcher::context_menu::ContextMenuAction,
+        widgets::{RenderableChildImpl, Selection},
     },
 };
 
-impl<'a> RenderableChildImpl<'a> for MprisState {
+impl<'a> RenderableChildImpl<'a> for AppData {
     fn render(
         &self,
-        _launcher: &Arc<Launcher>,
+        launcher: &Arc<Launcher>,
         selection: Selection,
         theme: Arc<ThemeData>,
         _cx: &mut App,
@@ -31,24 +30,15 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
             .flex()
             .gap_5()
             .items_center()
-            .border_1()
-            .rounded_md()
-            .when(!selection.is_selected, |this| {
-                this.border_color(theme.border_idle)
-            })
-            .child(if let Some(icon) = &self.image {
-                img(ImageSource::Image(Arc::clone(icon)))
-                    .size(px(64.))
-                    .rounded_md()
+            .child(if let Some(icon) = self.icon.as_ref() {
+                img(Arc::clone(&icon)).size(px(24.)).into_any_element()
             } else {
-                img(ImageSource::Image(Arc::new(Image::empty()))).size(px(24.))
+                img(ImageSource::Image(Arc::new(Image::empty())))
+                    .size(px(24.))
+                    .into_any_element()
             })
             .child(
                 div()
-                    .text_color(theme.secondary_text)
-                    .when(selection.is_selected, |this| {
-                        this.text_color(theme.primary_text)
-                    })
                     .flex_col()
                     .justify_between()
                     .items_center()
@@ -56,13 +46,17 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
                         div()
                             .text_sm()
                             .font_family(theme.font_family.clone())
+                            .text_color(theme.secondary_text)
+                            .when(selection.is_selected, |this| {
+                                this.text_color(theme.primary_text)
+                            })
                             .overflow_hidden()
                             .text_ellipsis()
                             .whitespace_nowrap()
                             .children(
-                                self.raw
+                                self.name
                                     .as_ref()
-                                    .and_then(|s| s.metadata.title.as_ref())
+                                    .or(launcher.display_name.as_ref())
                                     .map(|name| div().child(name.clone())),
                             ),
                     )
@@ -70,37 +64,34 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
                         div()
                             .text_xs()
                             .font_family(theme.font_family.clone())
-                            .children(
-                                self.raw
-                                    .as_ref()
-                                    .and_then(|s| s.metadata.artists.as_ref())
-                                    .map(|arts| arts.join(", ").to_string()),
-                            ),
+                            .text_color(theme.secondary_text)
+                            .children(launcher.name.as_ref().map(|name| div().child(name.clone()))),
                     ),
             )
             .into_any_element()
     }
     #[inline(always)]
     fn build_exec(&self, launcher: &Arc<Launcher>) -> Option<ExecMode> {
-        Some(ExecMode::Inner {
-            func: InnerFunction::MusicPlayer(MusicPlayerFunctions::TogglePlayback),
-            exit: launcher.exit,
-        })
+        Some(ExecMode::from_appdata(self, launcher))
     }
     #[inline(always)]
     fn priority(&self, launcher: &Arc<Launcher>) -> f32 {
-        launcher.priority as f32
+        self.priority.unwrap_or(launcher.priority as f32)
     }
     #[inline(always)]
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
-        ""
+        &self.search_string
     }
     #[inline(always)]
-    fn based_show(&self, _keyword: &str) -> Option<bool> {
-        if self.raw.is_some() {
-            return None;
-        } else {
-            Some(false)
-        }
+    fn actions(
+        &self,
+        _launcher: &Arc<Launcher>,
+        _cx: &mut App,
+    ) -> Option<Arc<[Arc<ContextMenuAction>]>> {
+        Some(self.actions.clone())
+    }
+    #[inline(always)]
+    fn has_actions(&self, _cx: &mut App) -> bool {
+        !self.actions.is_empty()
     }
 }

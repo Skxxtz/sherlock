@@ -3,14 +3,14 @@ use std::sync::Arc;
 use serde::de::IntoDeserializer;
 
 use crate::{
-    launcher::{LauncherProvider, LauncherType, children::RenderableChild},
+    launcher::{LauncherProvider, LauncherType},
     loader::{
         application_loader::parse_priority,
         resolve_icon_path,
         utils::{RawLauncher, deserialize_named_appdata},
     },
     sherlock_msg,
-    ui::launcher::context_menu::ContextMenuAction,
+    ui::{launcher::context_menu::ContextMenuAction, widgets::RenderableChild},
     utils::errors::types::SherlockErrorType,
 };
 
@@ -28,7 +28,7 @@ impl LauncherProvider for CommandLauncher {
         ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
         _cx: &mut gpui::App,
-    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
+    ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockMessage> {
         let cmds = opts.get("commands").ok_or_else(|| {
             sherlock_msg!(
                 Warning,

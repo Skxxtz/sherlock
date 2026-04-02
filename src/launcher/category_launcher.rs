@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use serde::de::IntoDeserializer;
 
-use crate::launcher::children::RenderableChild;
 use crate::launcher::{LauncherProvider, LauncherType};
 use crate::loader::application_loader::parse_priority;
 use crate::loader::resolve_icon_path;
 use crate::loader::utils::{ApplicationAction, RawLauncher, deserialize_named_appdata};
 use crate::sherlock_msg;
 use crate::ui::launcher::context_menu::ContextMenuAction;
+use crate::ui::widgets::RenderableChild;
 use crate::utils::errors::types::SherlockErrorType;
 
 #[derive(Clone, Debug)]
@@ -24,7 +24,7 @@ impl LauncherProvider for CategoryLauncher {
         ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
         _cx: &mut gpui::App,
-    ) -> Result<Vec<super::children::RenderableChild>, crate::utils::errors::SherlockMessage> {
+    ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockMessage> {
         let cmds = opts.get("categories").ok_or_else(|| {
             sherlock_msg!(
                 Warning,

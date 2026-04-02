@@ -1,6 +1,8 @@
 pub mod launcher;
 pub mod model;
 pub mod search_bar;
+mod utils;
+pub mod widgets;
 
 use gpui::KeyBinding;
 use serde::{Deserialize, Serialize};

@@ -12,11 +12,11 @@ use tokio::{
 };
 
 use crate::{
-    launcher::{
-        Launcher,
-        children::{RenderableChildImpl, utils::pango::render_pango},
+    launcher::Launcher,
+    ui::{
+        launcher::context_menu::ContextMenuAction, utils::pango::render_pango,
+        widgets::RenderableChildImpl,
     },
-    ui::launcher::context_menu::ContextMenuAction,
     utils::command_launch::split_as_command,
 };
 

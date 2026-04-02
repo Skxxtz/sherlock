@@ -20,13 +20,13 @@ use suite_223b::{
 
 use crate::{
     app::theme::ThemeData,
-    launcher::{
-        ExecMode, Launcher,
-        children::{RenderableChildImpl, Selection},
-    },
+    launcher::{ExecMode, Launcher},
     loader::utils::ApplicationAction,
     sherlock_msg,
-    ui::launcher::context_menu::ContextMenuAction,
+    ui::{
+        launcher::context_menu::ContextMenuAction,
+        widgets::{RenderableChildImpl, Selection},
+    },
     utils::errors::{
         SherlockMessage,
         types::{SherlockErrorType, SocketAction},

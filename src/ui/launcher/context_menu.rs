@@ -8,11 +8,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     app::theme::ThemeData,
-    launcher::{
-        children::emoji_data::{EmojiAction, apply_skin_tones, get_selected_skin_tones},
-        emoji_launcher::ALL_SKIN_TONES,
-    },
+    launcher::emoji_launcher::ALL_SKIN_TONES,
     loader::{resolve_icon_path, utils::ApplicationAction},
+    ui::widgets::emoji::{EmojiAction, apply_skin_tones, get_selected_skin_tones},
 };
 
 #[derive(Debug, PartialEq)]

@@ -1,11 +1,11 @@
 use crate::{
     app::theme::{ActiveTheme, ThemeData},
-    launcher::{
-        ExecMode, Launcher,
-        children::{RenderableChildImpl, Selection},
-    },
+    launcher::{ExecMode, Launcher},
     loader::resolve_icon_path,
-    ui::launcher::views::NavigationViewType,
+    ui::{
+        launcher::views::NavigationViewType,
+        widgets::{RenderableChildImpl, Selection},
+    },
 };
 use gpui::{
     AnyElement, App, Image, ImageSource, IntoElement, ParentElement, RenderOnce, SharedString,

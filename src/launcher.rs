@@ -4,7 +4,6 @@ pub mod bookmark_launcher;
 pub mod bulk_text_launcher;
 pub mod calc_launcher;
 pub mod category_launcher;
-pub mod children;
 pub mod clipboard_launcher;
 pub mod emoji_launcher;
 pub mod event_launcher;
@@ -22,19 +21,19 @@ pub mod web_launcher;
 // pub mod theme_picker;
 
 use crate::{
-    launcher::{
-        children::{
-            LauncherValues, RenderableChild, RenderableChildDelegate,
-            emoji_data::{apply_skin_tones, get_selected_skin_tones},
-        },
-        variant_type::{InnerFunction, LauncherType},
-    },
+    launcher::variant_type::{InnerFunction, LauncherType},
     loader::{
         LoadContext, resolve_icon_path,
         utils::{AppData, RawLauncher},
     },
     sherlock_msg,
-    ui::launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
+    ui::{
+        launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
+        widgets::{
+            LauncherValues, RenderableChild, RenderableChildDelegate,
+            emoji::{apply_skin_tones, get_selected_skin_tones},
+        },
+    },
     utils::{
         config::HomeType,
         errors::{SherlockMessage, types::SherlockErrorType},

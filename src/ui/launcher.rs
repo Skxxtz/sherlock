@@ -1,8 +1,9 @@
-use crate::launcher::children::{LauncherValues, RenderableChild};
-use crate::launcher::children::{RenderableChildDelegate, SherlockSearch};
 use crate::ui::launcher::context_menu::ContextMenuAction;
 use crate::ui::launcher::views::NavigationStack;
 use crate::ui::model::Model;
+use crate::ui::widgets::{
+    LauncherValues, RenderableChild, RenderableChildDelegate, SherlockSearch,
+};
 use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};

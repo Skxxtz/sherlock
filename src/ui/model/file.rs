@@ -1,8 +1,8 @@
-use crate::launcher::children::RenderableChild;
-use crate::launcher::children::file_data::FileData;
 use crate::launcher::file_launcher::FileLauncher;
 use crate::launcher::{Launcher, variant_type::LauncherType};
 use crate::ui::launcher::LauncherView;
+use crate::ui::widgets::RenderableChild;
+use crate::ui::widgets::file::FileData;
 use gpui::{App, SharedString, Task, WeakEntity};
 use std::env::home_dir;
 use std::path::PathBuf;

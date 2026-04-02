@@ -3,13 +3,11 @@ use std::{cell::Cell, sync::Arc};
 use gpui::{App, Context, WeakEntity};
 
 use crate::{
-    launcher::{
-        Launcher,
-        children::{RenderableChild, message::MessageChild},
-        message_launcher::MessageLauncher,
-        variant_type::LauncherType,
+    launcher::{Launcher, message_launcher::MessageLauncher, variant_type::LauncherType},
+    ui::{
+        model::Model,
+        widgets::{RenderableChild, message::MessageChild},
     },
-    ui::model::Model,
     utils::{config::HomeType, errors::SherlockMessage},
 };
 

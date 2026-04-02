@@ -7,10 +7,8 @@ use gpui::{
 
 use crate::{
     app::theme::ThemeData,
-    launcher::{
-        ExecMode, Launcher,
-        children::{RenderableChildImpl, Selection},
-    },
+    launcher::{ExecMode, Launcher},
+    ui::widgets::{RenderableChildImpl, Selection},
     utils::errors::{SherlockMessage, SherlockMessageLevel},
 };
 

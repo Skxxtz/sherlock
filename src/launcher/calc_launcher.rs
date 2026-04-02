@@ -1,10 +1,8 @@
 use crate::{
-    launcher::{
-        LauncherProvider, LauncherType,
-        children::{RenderableChild, calc_data::CalcData},
-    },
+    launcher::{LauncherProvider, LauncherType},
     loader::utils::RawLauncher,
     sherlock_msg,
+    ui::widgets::{RenderableChild, calculator::CalcData},
     utils::{
         errors::{
             SherlockMessage,
@@ -60,7 +58,7 @@ impl LauncherProvider for CalculatorLauncher {
         _ctx: &crate::loader::LoadContext,
         opts: std::sync::Arc<serde_json::Value>,
         _cx: &mut gpui::App,
-    ) -> Result<Vec<super::children::RenderableChild>, SherlockMessage> {
+    ) -> Result<Vec<RenderableChild>, SherlockMessage> {
         let capabilities: Vec<String> = match opts.get("capabilities") {
             Some(Value::Array(arr)) => arr
                 .iter()

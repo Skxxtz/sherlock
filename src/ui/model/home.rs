@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use gpui::{App, Entity};
 
-use crate::{launcher::children::RenderableChild, ui::model::Model};
+use crate::ui::{model::Model, widgets::RenderableChild};
 
 pub struct HomeView {
     pub model: Model,

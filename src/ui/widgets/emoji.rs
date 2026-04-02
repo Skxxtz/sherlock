@@ -10,10 +10,12 @@ use crate::{
     app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher,
-        children::{RenderableChildImpl, Selection},
         emoji_launcher::{EmojiData, SkinTone},
     },
-    ui::launcher::context_menu::ContextMenuAction,
+    ui::{
+        launcher::context_menu::ContextMenuAction,
+        widgets::{RenderableChildImpl, Selection},
+    },
 };
 
 static SELECTED_SKIN_TONE: OnceLock<RwLock<[SkinTone; 2]>> = OnceLock::new();

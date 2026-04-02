@@ -11,8 +11,8 @@ use std::time::{Duration, SystemTime};
 use strum::Display;
 
 use super::utils::to_title_case;
-use crate::launcher::children::RenderableChild;
 use crate::loader::resolve_icon_path;
+use crate::ui::widgets::RenderableChild;
 use crate::utils::config::ConfigGuard;
 use crate::utils::files::home_dir;
 use crate::{

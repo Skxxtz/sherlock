@@ -8,15 +8,13 @@ use simd_json::prelude::{ArrayTrait, Indexed};
 use smallvec::SmallVec;
 
 use crate::{
-    launcher::{
-        ExecMode,
-        children::{LauncherValues, RenderableChildDelegate, emoji_data::set_selected_skin_tone},
-    },
+    launcher::ExecMode,
     loader::utils::{CounterReader, ExecVariable},
     sherlock_msg,
     ui::{
         launcher::{LauncherView, context_menu::ContextMenuAction, views::MoveDirection},
         search_bar::{EmptyBackspace, TextInput},
+        widgets::{LauncherValues, RenderableChildDelegate, emoji::set_selected_skin_tone},
     },
     utils::{
         command_launch::spawn_detached,

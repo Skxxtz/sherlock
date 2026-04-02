@@ -13,7 +13,6 @@ use crate::{
         bulk_text_launcher::ScriptLauncher,
         calc_launcher::CalculatorLauncher,
         category_launcher::CategoryLauncher,
-        children::RenderableChild,
         clipboard_launcher::ClipboardLauncher,
         emoji_launcher::EmojiPicker,
         event_launcher::{EventLauncher, EventLauncherFunctions},
@@ -24,6 +23,7 @@ use crate::{
         web_launcher::WebLauncher,
     },
     loader::utils::RawLauncher,
+    ui::widgets::RenderableChild,
     utils::errors::SherlockMessage,
 };
 

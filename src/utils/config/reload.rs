@@ -4,7 +4,9 @@ use gpui::{AsyncApp, Entity};
 
 use super::{SherlockConfig, watcher::ConfigFileChange};
 use crate::{
-    CONFIG, launcher::children::RenderableChild, loader::Loader, ui::launcher::LauncherMode,
+    CONFIG,
+    loader::Loader,
+    ui::{launcher::LauncherMode, widgets::RenderableChild},
     utils::errors::SherlockMessage,
 };
 

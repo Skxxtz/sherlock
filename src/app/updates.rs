@@ -4,8 +4,10 @@ use tokio::net::UnixListener;
 
 use crate::{
     app::{run_async_updates, spawn_launcher},
-    launcher::children::RenderableChild,
-    ui::launcher::{LauncherMode, LauncherView},
+    ui::{
+        launcher::{LauncherMode, LauncherView},
+        widgets::RenderableChild,
+    },
     utils::{
         config::{ConfigWatcher, reload},
         errors::SherlockMessage,

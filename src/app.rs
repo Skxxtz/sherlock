@@ -10,7 +10,6 @@ use tokio::net::UnixListener;
 use crate::{
     SOCKET_PATH,
     app::theme::{ActiveTheme, ThemeData},
-    launcher::children::RenderableChild,
     loader::{LauncherLoadResult, Loader, SetupResult},
     ui::{
         launcher::{
@@ -19,6 +18,7 @@ use crate::{
         },
         model::Model,
         search_bar::{EmptyBackspace, TextInput},
+        widgets::RenderableChild,
     },
     utils::{
         config::{ConfigGuard, ConfigWatcher},

@@ -5,10 +5,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::launcher::Launcher;
-use crate::launcher::children::RenderableChild;
 use crate::loader::application_loader::file_has_changed;
 use crate::loader::resolve_icon_path;
 use crate::loader::utils::{AppData, construct_search};
+use crate::ui::widgets::RenderableChild;
 use crate::utils::cache::BinaryCache;
 use crate::utils::config::{ConfigGuard, ConstantDefaults};
 use crate::utils::errors::SherlockMessage;
@@ -49,7 +49,7 @@ impl LauncherProvider for BookmarkLauncher {
         _ctx: &crate::loader::LoadContext,
         _opts: Arc<serde_json::Value>,
         _cx: &mut gpui::App,
-    ) -> Result<Vec<super::children::RenderableChild>, SherlockMessage> {
+    ) -> Result<Vec<RenderableChild>, SherlockMessage> {
         BookmarkLauncher::find_bookmarks(&self.target_browser, Arc::clone(&launcher)).map(|ad| {
             ad.into_iter()
                 .map(|inner| RenderableChild::AppLike {

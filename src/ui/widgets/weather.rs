@@ -7,11 +7,8 @@ use std::sync::Arc;
 
 use crate::{
     app::theme::ThemeData,
-    launcher::{
-        ExecMode, Launcher,
-        children::{RenderableChildImpl, Selection},
-        weather_launcher::WeatherData,
-    },
+    launcher::{ExecMode, Launcher, weather_launcher::WeatherData},
+    ui::widgets::{RenderableChildImpl, Selection},
 };
 
 impl<'a> RenderableChildImpl<'a> for WeatherData {
