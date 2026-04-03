@@ -8,7 +8,7 @@ use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
 use gpui::{AsyncApp, Task};
-use std::sync::{Arc};
+use std::sync::Arc;
 
 use crate::ui::search_bar::TextInput;
 

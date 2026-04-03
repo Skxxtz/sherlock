@@ -381,7 +381,6 @@ pub trait RenderableChildImpl<'a> {
     fn update_sync(&self, _query: SharedString, _cx: &mut App) {}
 }
 
-
 #[derive(Clone, Copy, Debug)]
 pub struct Selection {
     /// The unique index of the item
@@ -400,4 +399,3 @@ impl Selection {
         }
     }
 }
-

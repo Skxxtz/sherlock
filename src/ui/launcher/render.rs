@@ -1,9 +1,12 @@
-use std::sync::Arc;
+use std::{
+    sync::{Arc, atomic::AtomicBool},
+    time::Duration,
+};
 
 use gpui::{
-    AnyElement, App, Context, Element, FontWeight, InteractiveElement, IntoElement, MouseDownEvent,
-    ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, div, list,
-    prelude::FluentBuilder, px, relative,
+    Animation, AnimationExt, AnyElement, App, Context, Element, FontWeight, InteractiveElement,
+    IntoElement, MouseDownEvent, ParentElement, Render, SharedString, StatefulInteractiveElement,
+    Styled, Window, div, list, prelude::FluentBuilder, px, relative,
 };
 
 use crate::{
@@ -16,6 +19,8 @@ use crate::{
     },
     utils::config::ConfigGuard,
 };
+
+pub static FIRST_RUN: AtomicBool = AtomicBool::new(true);
 
 impl Render for LauncherView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -332,7 +337,12 @@ impl LauncherView {
                                 .render_emoji_col(is_selected, theme.clone())
                                 .into_any_element(),
                         }
-                    })),
+                    }))
+                    .with_animation(
+                        "context-reveal",
+                        Animation::new(Duration::from_millis(120)).with_easing(gpui::ease_in_out),
+                        |this, delta| this.opacity(delta).occlude(),
+                    ),
             )
         } else {
             div()

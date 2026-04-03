@@ -1,12 +1,14 @@
 use std::{
-    sync::Arc,
+    cell::Cell,
+    rc::Rc,
+    sync::{Arc, atomic::Ordering},
     time::{Duration, Instant},
 };
 
 use chrono::Local;
 use gpui::{
-    AnyElement, App, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement,
-    SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
+    Animation, AnimationExt, AnyElement, App, FontWeight, Hsla, InteractiveElement, IntoElement,
+    ParentElement, SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
 };
 use simd_json::prelude::ArrayTrait;
 use suite_223b::{
@@ -24,7 +26,7 @@ use crate::{
     loader::utils::ApplicationAction,
     sherlock_msg,
     ui::{
-        launcher::context_menu::ContextMenuAction,
+        launcher::{context_menu::ContextMenuAction, render::FIRST_RUN},
         widgets::{RenderableChildImpl, Selection},
     },
     utils::errors::{
@@ -43,6 +45,15 @@ pub struct EventData {
     look_back: Duration,
     look_ahead: Duration,
     last_call: Option<Instant>,
+    animation: Rc<Cell<AnimState>>,
+}
+
+#[derive(Clone, Copy, Default, Debug)]
+enum AnimState {
+    #[default]
+    Inactive,
+    Done,
+    InProgress,
 }
 
 impl EventData {
@@ -56,6 +67,7 @@ impl EventData {
             look_back,
             look_ahead,
             last_call: None,
+            ..Default::default()
         }
     }
     pub async fn update_async(&mut self) -> Result<(), SherlockMessage> {
@@ -186,15 +198,19 @@ impl<'a> RenderableChildImpl<'a> for EventData {
             return div().into_any_element();
         };
 
+        if FIRST_RUN.load(Ordering::Relaxed) {
+            self.animation.set(AnimState::Inactive);
+        }
+
         let accent_color = self.color.unwrap_or(theme.bg_idle);
         div()
+            .relative()
             .group("event-card")
             .px_4()
             .py_2()
             .w_full()
             .flex()
             .flex_col()
-            .gap_5()
             .items_center()
             .justify_start()
             .border_1()
@@ -276,16 +292,21 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                     ),
             )
             .when(
-                selection.is_selected && !event.attendees.is_empty(),
+                !event.attendees.is_empty()
+                    && (matches!(
+                        self.animation.get(),
+                        AnimState::InProgress | AnimState::Done
+                    ) || selection.is_selected),
                 |this| {
                     this.child(
                         div()
                             .px_2()
-                            .mb_3() // Add space between the main row and details
                             .w_full()
                             .flex()
                             .flex_col()
                             .gap_2()
+                            .border_t_1()
+                            .border_color(theme.border_idle)
                             .child(
                                 // A "Section Header" that looks like a tag
                                 div()
@@ -312,18 +333,43 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                     ),
                             )
                             .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .gap_1_5()
-                                    .pl_1() // Slight offset for hierarchy
-                                    .children(
-                                        event
-                                            .attendees
-                                            .iter()
-                                            .take(8) // Safety: Don't explode the height if it's a 50-person meeting
-                                            .map(|att| render_attendee(att, &theme)),
-                                    ),
+                                div().flex().flex_col().gap_1_5().children(
+                                    event
+                                        .attendees
+                                        .iter()
+                                        .take(8)
+                                        .map(|att| render_attendee(att, &theme)),
+                                ),
+                            )
+                            .with_animation(
+                                if selection.is_selected {
+                                    "attendee-reveal"
+                                } else {
+                                    "attendee-veal"
+                                },
+                                Animation::new(Duration::from_millis(200)).with_easing(SMOOTH_EASE),
+                                {
+                                    let anim_state = Rc::clone(&self.animation);
+                                    let selection = selection.is_selected;
+                                    move |this, delta| {
+                                        let is_done = delta == 1.0;
+                                        if is_done {
+                                            if selection {
+                                                anim_state.set(AnimState::Done);
+                                            } else {
+                                                anim_state.set(AnimState::Inactive);
+                                            }
+                                        } else {
+                                            anim_state.set(AnimState::InProgress);
+                                        }
+                                        let delta = if selection { delta } else { 1.0 - delta };
+                                        this.py(px(12. * delta))
+                                            .mt(px(20. * delta))
+                                            .opacity(delta)
+                                            .max_h(px(delta * 200.))
+                                            .occlude()
+                                    }
+                                },
                             ),
                     )
                 },
@@ -441,3 +487,12 @@ fn render_attendee(attendee: &Attendee, theme: &ThemeData) -> impl IntoElement {
                 }),
         )
 }
+
+const SMOOTH_EASE: fn(f32) -> f32 = |t| {
+    // This is a common "Ease-In-Out-Cubic" curve
+    if t < 0.5 {
+        4.0 * t * t * t
+    } else {
+        1.0 - ((-2.0 * t + 2.0).powi(3)) / 2.0
+    }
+};

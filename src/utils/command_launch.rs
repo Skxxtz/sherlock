@@ -1,15 +1,22 @@
 use std::{
-    fs::File, io::{BufRead, BufReader, Write}, os::unix::process::CommandExt, path::PathBuf, process::{Child, Command, Stdio}, sync::LazyLock
+    fs::File,
+    io::{BufRead, BufReader, Write},
+    os::unix::process::CommandExt,
+    path::PathBuf,
+    process::{Child, Command, Stdio},
+    sync::LazyLock,
 };
 
 use gpui::SharedString;
 use regex::{Captures, Regex};
 
 use crate::{
-    loader::application_loader::get_applications_dir, sherlock_msg, utils::{
+    loader::application_loader::get_applications_dir,
+    sherlock_msg,
+    utils::{
         config::{ConfigGuard, SherlockConfig},
         errors::{SherlockMessage, types::SherlockErrorType},
-    }
+    },
 };
 
 /// Spawnes a command completely detatched from the current process.
@@ -323,7 +330,7 @@ pub fn mime_lookup(mime: &str) -> Option<String> {
         for dir in app_dirs {
             let full_path = dir.join(name);
             if full_path.exists() {
-                return Some(full_path)
+                return Some(full_path);
             }
         }
         None
@@ -350,7 +357,7 @@ pub fn mime_lookup(mime: &str) -> Option<String> {
     // get desktop file name from output
     let desktop_file_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if desktop_file_name.is_empty() {
-        return None
+        return None;
     }
 
     // find full path of desktop file
