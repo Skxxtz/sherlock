@@ -1,19 +1,15 @@
 use std::{
-    io::Write,
-    os::unix::process::CommandExt,
-    process::{Child, Command, Stdio},
-    sync::LazyLock,
+    fs::File, io::{BufRead, BufReader, Write}, os::unix::process::CommandExt, path::PathBuf, process::{Child, Command, Stdio}, sync::LazyLock
 };
 
 use gpui::SharedString;
 use regex::{Captures, Regex};
 
 use crate::{
-    sherlock_msg,
-    utils::{
+    loader::application_loader::get_applications_dir, sherlock_msg, utils::{
         config::{ConfigGuard, SherlockConfig},
         errors::{SherlockMessage, types::SherlockErrorType},
-    },
+    }
 };
 
 /// Spawnes a command completely detatched from the current process.
@@ -318,4 +314,48 @@ mod tests {
             vec!["browser", "https://www.google.com"]
         );
     }
+}
+
+pub fn mime_lookup(mime: &str) -> Option<String> {
+    fn find_desktop_file(name: &str) -> Option<PathBuf> {
+        let app_dirs = get_applications_dir();
+
+        for dir in app_dirs {
+            let full_path = dir.join(name);
+            if full_path.exists() {
+                return Some(full_path)
+            }
+        }
+        None
+    }
+
+    fn parse_exec_line(path: &std::path::Path) -> Option<String> {
+        let file = File::open(path).ok()?;
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            let line = line.ok()?;
+            if line.starts_with("Exec=") {
+                return Some(line.trim_start_matches("Exec=").to_string());
+            }
+        }
+        None
+    }
+
+    // query mime handler
+    let output = Command::new("xdg-settings")
+        .args(["get", "default-url-scheme-handler", mime])
+        .output()
+        .ok()?;
+
+    // get desktop file name from output
+    let desktop_file_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if desktop_file_name.is_empty() {
+        return None
+    }
+
+    // find full path of desktop file
+    let path = find_desktop_file(&desktop_file_name)?;
+
+    // parse exec command
+    parse_exec_line(&path)
 }

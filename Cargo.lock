@@ -5888,7 +5888,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "suite-223b"
 version = "0.1.0"
-source = "git+https://github.com/Skxxtz/watson?rev=042a0ded4f8ef0d923e0caf072c42217d6668974#042a0ded4f8ef0d923e0caf072c42217d6668974"
+source = "git+https://github.com/Skxxtz/watson?rev=2fbf0bb9ffcf813a713129e3e823da2e1473d142#2fbf0bb9ffcf813a713129e3e823da2e1473d142"
 dependencies = [
  "async-trait",
  "base64",

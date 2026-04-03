@@ -123,18 +123,34 @@ impl EventData {
                 let a_end = a.end_utc().map(|t| t.with_timezone(&Local)).unwrap_or(now);
                 let b_end = b.end_utc().map(|t| t.with_timezone(&Local)).unwrap_or(now);
 
-                let a_is_active = now >= a_start && now <= a_end;
-                let b_is_active = now >= b_start && now <= b_end;
+                let a_is_active = now >= a_start && now < a_end;
+                let b_is_active = now >= b_start && now < b_end;
+                let a_is_upcoming = a_start > now;
+                let b_is_upcoming = b_start > now;
 
                 match (a_is_active, b_is_active) {
-                    (true, true) => b_start.cmp(&a_start),
+                    // both active: prefer the one ending soonest (most immediately relevant)
+                    (true, true) => a_end.cmp(&b_end),
+
+                    // one active, one not: active always wins
                     (true, false) => std::cmp::Ordering::Less,
                     (false, true) => std::cmp::Ordering::Greater,
-                    (false, false) => a_start.cmp(&b_start),
+
+                    // neither one is active: upcoming beats past
+                    (false, false) => match (a_is_upcoming, b_is_upcoming) {
+                        // both upcoming: soonest first
+                        (true, true) => a_start.cmp(&b_start),
+
+                        // one upcoming, one past: upcoming wins
+                        (true, false) => std::cmp::Ordering::Less,
+                        (false, true) => std::cmp::Ordering::Greater,
+
+                        // both past: most recently ended first (least stale)
+                        (false, false) => b_end.cmp(&a_end),
+                    },
                 }
             });
 
-            // Now the "Best" event is at index 0
             self.event = events.into_iter().next();
             self.time = self
                 .event
@@ -351,13 +367,12 @@ impl<'a> RenderableChildImpl<'a> for EventData {
 
         let mut actions = Vec::with_capacity(cap);
 
-        if let Some(m) = meeting {
-            let url = m.url.clone();
+        if let Some(url) = meeting.map(|m| m.url()) {
             actions.push(Arc::new(ContextMenuAction::App(
                 ApplicationAction::new("inner.join_meeting")
                     .name("Join Meeting")
                     .icon_name("call-start")
-                    .exec(url),
+                    .exec(url.to_string()),
             )));
         }
 

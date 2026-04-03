@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use serde::Deserialize;
-use suite_223b::calendar::utils::MeetingProvider;
 
 use crate::{
     ensure_func,
@@ -13,9 +12,9 @@ use crate::{
     sherlock_msg,
     ui::widgets::{RenderableChild, event::EventData},
     utils::{
-        command_launch,
-        config::ConfigGuard,
+        command_launch::{mime_lookup, spawn_detached},
         errors::{SherlockMessage, types::SherlockErrorType},
+        websearch::websearch,
     },
 };
 
@@ -76,11 +75,14 @@ impl LauncherProvider for EventLauncher {
         match func {
             EventLauncherFunctions::JoinMeeting => {
                 if let Some(meeting) = inner.event.as_ref().and_then(|e| e.meeting.as_ref()) {
-                    match meeting.provider {
-                        MeetingProvider::MicrosoftTeams => {
-                            return teamslaunch(&meeting.url).map(|_| true);
-                        }
+                    if let Some(command) = mime_lookup(meeting.protocol_prefix()) {
+                        let url = meeting.mime_url();
+                        spawn_detached(&command.replace("%u", &url), "", &[])?;
+                    } else {
+                        let url = meeting.https_url();
+                        websearch("plain", &url, None, &[])?;
                     }
+                    return Ok(true);
                 }
             }
             EventLauncherFunctions::HardRefresh => {
@@ -90,12 +92,6 @@ impl LauncherProvider for EventLauncher {
 
         Ok(false)
     }
-}
-
-fn teamslaunch(meeting_url: &str) -> Result<(), SherlockMessage> {
-    let command =
-        ConfigGuard::read().map(|c| c.default_apps.teams.replace("{meeting_url}", meeting_url))?;
-    command_launch::spawn_detached(&command, "", &[])
 }
 
 pub fn parse_dynamic_time(input: &str) -> Option<Duration> {
