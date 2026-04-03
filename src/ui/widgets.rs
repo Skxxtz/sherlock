@@ -381,38 +381,6 @@ pub trait RenderableChildImpl<'a> {
     fn update_sync(&self, _query: SharedString, _cx: &mut App) {}
 }
 
-pub trait SherlockSearch {
-    /// Both self and substring should already be lowercased to increase performance
-    fn fuzzy_match<'a>(&'a self, substring: &'a str) -> bool;
-}
-
-impl<T: AsRef<str>> SherlockSearch for T {
-    fn fuzzy_match(&self, pattern: &str) -> bool {
-        let t_bytes = self.as_ref().as_bytes();
-        let p_bytes = pattern.as_bytes();
-
-        if p_bytes.is_empty() {
-            return true;
-        }
-        if t_bytes.len() < p_bytes.len() {
-            return false;
-        }
-
-        let mut p_idx = 0;
-        let p_len = p_bytes.len();
-
-        for &byte in t_bytes {
-            if byte.eq_ignore_ascii_case(&p_bytes[p_idx]) {
-                p_idx += 1;
-                if p_idx == p_len {
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-}
 
 #[derive(Clone, Copy, Debug)]
 pub struct Selection {
@@ -432,3 +400,4 @@ impl Selection {
         }
     }
 }
+

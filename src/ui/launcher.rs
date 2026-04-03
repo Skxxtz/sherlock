@@ -1,14 +1,14 @@
 use crate::ui::launcher::context_menu::ContextMenuAction;
 use crate::ui::launcher::views::NavigationStack;
 use crate::ui::model::Model;
-use crate::ui::widgets::{
-    LauncherValues, RenderableChild, RenderableChildDelegate, SherlockSearch,
-};
+use crate::ui::utils::scoring::make_prio;
+use crate::ui::utils::search::SherlockSearch;
+use crate::ui::widgets::{LauncherValues, RenderableChild, RenderableChildDelegate};
 use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
 use gpui::{AsyncApp, Task};
-use std::sync::{Arc, LazyLock};
+use std::sync::{Arc};
 
 use crate::ui::search_bar::TextInput;
 
@@ -313,71 +313,4 @@ impl LauncherMode {
         // only minor change
         false
     }
-}
-
-fn search_score(query: &str, match_in: &str) -> f32 {
-    if match_in.is_empty() {
-        return 1.0;
-    }
-    if query.is_empty() {
-        return 0.8;
-    }
-
-    let mut best_score = 1.0;
-
-    for element in match_in.split(';') {
-        // skip emtpy elements
-        if element.is_empty() {
-            continue;
-        }
-
-        // early return on perfect match
-        if element == query {
-            return 0.0;
-        }
-
-        // prefix match
-        if element.len() >= query.len()
-            && element.is_char_boundary(query.len())
-            && element[..query.len()].eq_ignore_ascii_case(query)
-        {
-            // bonus for coverage, e.g. 4 out of 5 chars match
-            let coverage = query.len() as f32 / element.len() as f32;
-            let score = 0.1 + (0.1 * (1.0 - coverage));
-            if score < best_score {
-                best_score = score
-            }
-            continue;
-        }
-
-        // levenshtein matching
-        if (element.len() as isize - query.len() as isize).abs() < 4 {
-            let dist = levenshtein::levenshtein(query, element);
-            let normed = (dist as f32 / element.len() as f32).clamp(0.2, 1.0);
-            if normed < best_score {
-                best_score = normed
-            }
-        }
-    }
-    best_score
-}
-
-static DEBUG_SEARCH: LazyLock<bool> =
-    LazyLock::new(|| std::env::var("DEBUG_SEARCH").map_or(false, |v| v == "true"));
-
-fn make_prio(prio: f32, query: &str, match_in: &str) -> f32 {
-    let score = search_score(query, match_in);
-    let counters = prio.fract() / 100.0;
-    let result = prio.trunc() + (counters + score).min(0.99);
-
-    if cfg!(debug_assertions) && *DEBUG_SEARCH {
-        let m = match_in.chars().take(30).collect::<String>();
-        let q = query.chars().take(20).collect::<String>();
-        println!(
-            "[search] {:<30} | query: {:<20} | score: {:.3} | prio: {:.4} → {:.4}",
-            m, q, score, prio, result
-        );
-    }
-
-    result
 }
