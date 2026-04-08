@@ -26,7 +26,7 @@ use crate::{
     loader::utils::ApplicationAction,
     sherlock_msg,
     ui::{
-        launcher::{context_menu::ContextMenuAction},
+        launcher::context_menu::ContextMenuAction,
         widgets::{RenderableChildImpl, Selection},
     },
     utils::errors::{
@@ -210,7 +210,6 @@ impl<'a> RenderableChildImpl<'a> for EventData {
 
         let accent_color = self.color.unwrap_or(theme.bg_idle);
         div()
-            .relative()
             .group("event-card")
             .px_4()
             .py_2()
@@ -229,9 +228,15 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                     .size_full()
                     .flex()
                     .gap_5()
-                    .px_2()
                     .items_center()
-                    .child(div().size(px(8.0)).rounded_full().bg(accent_color))
+                    .child(
+                        div()
+                            .size(px(24.))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(div().size(px(8.0)).rounded_full().bg(accent_color)),
+                    )
                     .child(
                         div()
                             .flex()
@@ -306,12 +311,11 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                 |this| {
                     this.child(
                         div()
-                            .px_2()
+                            .px(px(44.))
                             .w_full()
                             .flex()
                             .flex_col()
                             .gap_2()
-                            .border_t_1()
                             .border_color(theme.border_idle)
                             .child(
                                 // A "Section Header" that looks like a tag
@@ -370,9 +374,10 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                         }
                                         let delta = if selection { delta } else { 1.0 - delta };
                                         this.py(px(12. * delta))
-                                            .mt(px(20. * delta))
+                                            .mt(px(15. * delta))
                                             .opacity(delta)
                                             .max_h(px(delta * 200.))
+                                            .border_t(px(delta))
                                             .occlude()
                                     }
                                 },

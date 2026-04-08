@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
 use gpui::{
     Animation, AnimationExt, AnyElement, App, Context, Element, FontWeight, InteractiveElement,
@@ -37,7 +34,6 @@ impl Render for LauncherView {
             .border_2()
             .border_color(theme.border)
             .rounded(px(5.))
-            .shadow_xl()
             .overflow_hidden()
             .on_action(cx.listener(Self::selection_up))
             .on_action(cx.listener(Self::selection_down))
@@ -131,6 +127,7 @@ impl LauncherView {
             .text_size(px(14.))
             .font_weight(FontWeight::BOLD)
             .text_color(theme.text_mode_label)
+            .font_family(theme.font_family.clone())
             .child(self.mode.display_str())
     }
 
@@ -152,7 +149,6 @@ impl LauncherView {
         let theme = cx.global::<ActiveTheme>().0.clone();
         div()
             .id("results-container")
-            .relative()
             .size_full()
             .px(px(10.))
             .child(

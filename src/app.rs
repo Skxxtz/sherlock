@@ -4,7 +4,10 @@ use gpui::{
     layer_shell::{Layer, LayerShellOptions},
     point, px,
 };
-use std::sync::{Arc, atomic::{AtomicU32, Ordering}};
+use std::sync::{
+    Arc,
+    atomic::{AtomicU32, Ordering},
+};
 use tokio::net::UnixListener;
 
 use crate::{

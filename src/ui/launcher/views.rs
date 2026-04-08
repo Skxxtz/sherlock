@@ -3,16 +3,18 @@ use gpui::{
     UniformListScrollHandle, px,
 };
 use simd_json::prelude::{ArrayTrait, Indexed};
-use std::sync::{Arc};
+use std::sync::Arc;
 
 use crate::{
-    launcher::Launcher, ui::{
+    launcher::Launcher,
+    ui::{
         launcher::context_menu::ContextMenuAction,
         model::{
             Model, emoji::EmojiView, file::view::FileView, home::HomeView, message::MessageView,
         },
         widgets::{RenderableChild, RenderableChildDelegate},
-    }, utils::errors::SherlockMessage
+    },
+    utils::errors::SherlockMessage,
 };
 
 /// The number of views that have to remain in the NavigationStack.
