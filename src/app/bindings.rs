@@ -69,5 +69,8 @@ pub(super) fn register_bindings(cx: &mut App) {
         }
     }
 
-    cx.bind_keys(bindings.into_values().collect::<Vec<_>>());
+    // ORDER MATTERS: MORE SPECIFIC ONES HAVE TO COME LAST
+    let mut bindings: Vec<KeyBinding> = bindings.into_values().collect();
+    bindings.sort_by_key(|b| b.predicate().is_some());
+    cx.bind_keys(bindings);
 }
