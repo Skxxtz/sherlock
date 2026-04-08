@@ -8,19 +8,15 @@ use simd_json::prelude::{ArrayTrait, Indexed};
 use smallvec::SmallVec;
 
 use crate::{
-    launcher::ExecMode,
-    loader::utils::{CounterReader, ExecVariable},
-    sherlock_msg,
-    ui::{
+    app::reset_generation, launcher::ExecMode, loader::utils::{CounterReader, ExecVariable}, sherlock_msg, ui::{
         launcher::{LauncherView, context_menu::ContextMenuAction, views::MoveDirection},
         search_bar::{EmptyBackspace, TextInput},
         widgets::{LauncherValues, RenderableChildDelegate, emoji::set_selected_skin_tone},
-    },
-    utils::{
+    }, utils::{
         command_launch::spawn_detached,
         errors::{SherlockMessage, types::SherlockErrorType},
         websearch::websearch,
-    },
+    }
 };
 
 actions!(
@@ -444,6 +440,7 @@ impl LauncherView {
         win.remove_window();
 
         // Propagate state change
+        reset_generation();
         cx.notify();
     }
     pub(super) fn update_vars(&mut self, cx: &mut Context<Self>) {

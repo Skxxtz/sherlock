@@ -1,5 +1,5 @@
 use std::{
-    sync::{Arc, atomic::AtomicBool},
+    sync::Arc,
     time::Duration,
 };
 
@@ -19,8 +19,6 @@ use crate::{
     },
     utils::config::ConfigGuard,
 };
-
-pub static FIRST_RUN: AtomicBool = AtomicBool::new(true);
 
 impl Render for LauncherView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {

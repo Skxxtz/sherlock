@@ -3,18 +3,16 @@ use gpui::{
     UniformListScrollHandle, px,
 };
 use simd_json::prelude::{ArrayTrait, Indexed};
-use std::sync::{Arc, atomic::Ordering};
+use std::sync::{Arc};
 
 use crate::{
-    launcher::Launcher,
-    ui::{
-        launcher::{context_menu::ContextMenuAction, render::FIRST_RUN},
+    launcher::Launcher, ui::{
+        launcher::context_menu::ContextMenuAction,
         model::{
             Model, emoji::EmojiView, file::view::FileView, home::HomeView, message::MessageView,
         },
         widgets::{RenderableChild, RenderableChildDelegate},
-    },
-    utils::errors::SherlockMessage,
+    }, utils::errors::SherlockMessage
 };
 
 /// The number of views that have to remain in the NavigationStack.
@@ -98,7 +96,6 @@ impl NavigationStack {
     }
 
     pub fn set_prev_and_cleanup(&mut self) {
-        FIRST_RUN.store(true, Ordering::Relaxed);
         if self.active_idx.take().is_none() {
             self.pop();
         }

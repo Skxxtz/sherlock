@@ -4,7 +4,7 @@ use gpui::{
     layer_shell::{Layer, LayerShellOptions},
     point, px,
 };
-use std::sync::Arc;
+use std::sync::{Arc, atomic::{AtomicU32, Ordering}};
 use tokio::net::UnixListener;
 
 use crate::{
@@ -29,6 +29,11 @@ use crate::{
 mod bindings;
 pub mod theme;
 mod updates;
+
+pub static LAUNCH_GENERATION: AtomicU32 = AtomicU32::new(0);
+pub fn reset_generation() {
+    LAUNCH_GENERATION.fetch_add(1, Ordering::Relaxed);
+}
 
 pub fn run_app(cx: &mut App, result: SetupResult) {
     let SetupResult {

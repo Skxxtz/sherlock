@@ -21,12 +21,12 @@ use suite_223b::{
 };
 
 use crate::{
-    app::theme::ThemeData,
+    app::{LAUNCH_GENERATION, theme::ThemeData},
     launcher::{ExecMode, Launcher},
     loader::utils::ApplicationAction,
     sherlock_msg,
     ui::{
-        launcher::{context_menu::ContextMenuAction, render::FIRST_RUN},
+        launcher::{context_menu::ContextMenuAction},
         widgets::{RenderableChildImpl, Selection},
     },
     utils::errors::{
@@ -45,7 +45,9 @@ pub struct EventData {
     look_back: Duration,
     look_ahead: Duration,
     last_call: Option<Instant>,
+
     animation: Rc<Cell<AnimState>>,
+    generation: Rc<Cell<u32>>,
 }
 
 #[derive(Clone, Copy, Default, Debug)]
@@ -198,8 +200,12 @@ impl<'a> RenderableChildImpl<'a> for EventData {
             return div().into_any_element();
         };
 
-        if FIRST_RUN.load(Ordering::Relaxed) {
+        // Fix: fixed animation starting on new launcher generation
+        let current_gen = LAUNCH_GENERATION.load(Ordering::Relaxed);
+        let last_gen = self.generation.get();
+        if current_gen != last_gen {
             self.animation.set(AnimState::Inactive);
+            self.generation.set(current_gen);
         }
 
         let accent_color = self.color.unwrap_or(theme.bg_idle);
