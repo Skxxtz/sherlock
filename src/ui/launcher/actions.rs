@@ -235,7 +235,7 @@ impl LauncherView {
         match what {
             ExecMode::Inner { func, exit } => {
                 if let Some(item) = self.navigation.selected_item(cx) {
-                    let _was_executed = item.launcher_type().execute_function(func, &item)?;
+                    let _was_executed = item.launcher_type().execute_function(func, &item, cx)?;
                     self.update_async(cx);
                     return Ok(exit);
                 }
@@ -488,7 +488,11 @@ impl LauncherView {
                 .iter()
                 .enumerate()
                 .filter(|(_, item)| item.is_async())
-                .map(|(idx, item)| async move { (idx, item.clone().update_async().await) })
+                .map(|(idx, item)| {
+                    let item_owned = item.clone();
+                    let mut cx_clone = cx.clone();
+                    async move { (idx, item_owned.update_async(&mut cx_clone).await) }
+                })
                 .collect();
 
             while let Some((idx, result)) = futures.next().await {

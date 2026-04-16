@@ -1,8 +1,8 @@
 use std::{env::home_dir, sync::Arc, time::Duration};
 
 use gpui::{
-    App, AsyncApp, Entity, IntoElement, ParentElement, SharedString, Styled, Task, WeakEntity, div,
-    prelude::FluentBuilder,
+    App, AppContext, AsyncApp, Entity, IntoElement, ParentElement, SharedString, Styled, Task,
+    WeakEntity, div, prelude::FluentBuilder,
 };
 use serde::{Deserialize, Serialize};
 use std::process::{Command, Stdio};
@@ -184,7 +184,7 @@ impl<'a> RenderableChildImpl<'a> for ScriptData {
 
         Some(combined.into())
     }
-    fn update_sync(&self, query: SharedString, cx: &mut App) {
+    fn update_sync(&self, query: SharedString, launcher: &Arc<Launcher>, cx: &mut App) {
         self.update_entity.update(cx, |this, cx| {
             if query.is_empty() {
                 this.task = None;
@@ -199,52 +199,12 @@ impl<'a> RenderableChildImpl<'a> for ScriptData {
                 return;
             }
 
-            this.task = None;
             this.last_query = query.clone();
+        });
 
-            let command = self.command.clone();
-            let args = self.args.clone();
-
-            this.task = Some(cx.spawn(
-                |weak_self: WeakEntity<ScriptDataUpdateEntity>, cx: &mut AsyncApp| {
-                    let mut cx = cx.clone();
-                    async move {
-                        let result =
-                            ScriptData::get_result(command.clone(), args.clone(), query.as_str());
-                        let timer = cx.background_executor().timer(Duration::from_millis(75));
-
-                        futures::pin_mut!(result);
-                        futures::pin_mut!(timer);
-
-                        match futures::future::select(result, timer).await {
-                            futures::future::Either::Left((res, _)) => {
-                                // Done before timer
-                                let _ = weak_self.update(&mut cx, |this, cx| {
-                                    this.task = None;
-                                    this.show_loading = false;
-                                    this.result = res;
-                                    cx.notify();
-                                });
-                            }
-                            futures::future::Either::Right((_, result_fut)) => {
-                                // wait for result
-                                let _ = weak_self.update(&mut cx, |this, cx| {
-                                    this.show_loading = true;
-                                    cx.notify();
-                                });
-                                let res = result_fut.await;
-                                let _ = weak_self.update(&mut cx, |this, cx| {
-                                    this.task = None;
-                                    this.show_loading = false;
-                                    this.result = res;
-                                    cx.notify();
-                                });
-                            }
-                        }
-                    }
-                },
-            ));
-        })
+        if launcher.r#async {
+            self.update_async(cx);
+        }
     }
 }
 
@@ -338,5 +298,57 @@ impl ScriptData {
         .await;
 
         result
+    }
+}
+
+impl ScriptData {
+    pub fn update_async<C: AppContext>(&self, cx: &mut C) {
+        self.update_entity.update(cx, |this, cx| {
+            this.task = None;
+
+            let command = self.command.clone();
+            let args = self.args.clone();
+            let query = this.last_query.clone();
+
+            this.task = Some(cx.spawn(
+                |weak_self: WeakEntity<ScriptDataUpdateEntity>, cx: &mut AsyncApp| {
+                    let mut cx = cx.clone();
+                    async move {
+                        let result =
+                            ScriptData::get_result(command.clone(), args.clone(), query.as_str());
+                        let timer = cx.background_executor().timer(Duration::from_millis(75));
+
+                        futures::pin_mut!(result);
+                        futures::pin_mut!(timer);
+
+                        match futures::future::select(result, timer).await {
+                            futures::future::Either::Left((res, _)) => {
+                                // Done before timer
+                                let _ = weak_self.update(&mut cx, |this, cx| {
+                                    this.task = None;
+                                    this.show_loading = false;
+                                    this.result = res;
+                                    cx.notify();
+                                });
+                            }
+                            futures::future::Either::Right((_, result_fut)) => {
+                                // wait for result
+                                let _ = weak_self.update(&mut cx, |this, cx| {
+                                    this.show_loading = true;
+                                    cx.notify();
+                                });
+                                let res = result_fut.await;
+                                let _ = weak_self.update(&mut cx, |this, cx| {
+                                    this.task = None;
+                                    this.show_loading = false;
+                                    this.result = res;
+                                    cx.notify();
+                                });
+                            }
+                        }
+                    }
+                },
+            ));
+        });
     }
 }

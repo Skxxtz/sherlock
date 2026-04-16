@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, SharedString};
+use gpui::{AnyElement, App, AsyncApp, SharedString};
 use std::sync::Arc;
 
 pub mod app;
@@ -139,7 +139,7 @@ macro_rules! renderable_enum {
 
             fn update_sync(&self, query: SharedString, cx: &mut App) {
                 match self {
-                    $(Self::$variant {inner, ..} => inner.update_sync(query, cx)),*
+                    $(Self::$variant {inner, launcher} => inner.update_sync(query, launcher, cx)),*
                 }
             }
         }
@@ -218,7 +218,7 @@ impl RenderableChild {
     ///
     /// * `Some(Self)` - If the state was updated and a re-render is required.
     /// * `None` - If no changes were detected, allowing the UI to skip an update cycle.
-    pub async fn update_async(mut self) -> Option<Self> {
+    pub async fn update_async(mut self, _cx: &mut AsyncApp) -> Option<Self> {
         match &mut self {
             Self::ClipLike { inner, .. } => {
                 inner.update_async();
@@ -280,7 +280,7 @@ renderable_enum! {
         FileLike(FileData),
         MessageLike(MessageChild),
         MusicLike(MprisState),
-        TextLike(ScriptData),
+        ScriptLike(ScriptData),
         WeatherLike(WeatherData),
     }
 }
@@ -378,7 +378,7 @@ pub trait RenderableChildImpl<'a> {
     fn sidebar(&self, _cx: &mut App) -> Option<AnyElement> {
         None
     }
-    fn update_sync(&self, _query: SharedString, _cx: &mut App) {}
+    fn update_sync(&self, _query: SharedString, _launcher: &Arc<Launcher>, _cx: &mut App) {}
 }
 
 #[derive(Clone, Copy, Debug)]

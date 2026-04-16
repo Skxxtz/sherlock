@@ -1,4 +1,4 @@
-use gpui::App;
+use gpui::{App, AppContext};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use crate::{
         app_launcher::AppLauncher,
         audio_launcher::{MusicPlayerFunctions, MusicPlayerLauncher},
         bookmark_launcher::BookmarkLauncher,
-        bulk_text_launcher::ScriptLauncher,
+        bulk_text_launcher::{ScriptFunctions, ScriptLauncher},
         calc_launcher::CalculatorLauncher,
         category_launcher::CategoryLauncher,
         clipboard_launcher::ClipboardLauncher,
@@ -100,10 +100,10 @@ macro_rules! create_variants {
                     Self::Empty => None
                 }
             }
-            pub fn execute_function(&self, func: InnerFunction, child: &RenderableChild) -> Result<bool, SherlockMessage> {
+            pub fn execute_function<C: AppContext>(&self, func: InnerFunction, child: &RenderableChild, cx: &mut C) -> Result<bool, SherlockMessage> {
                 match self {
                     $(
-                        Self::$variant(inner) => <$inner as LauncherProvider>::execute_function(inner, func, child),
+                        Self::$variant(inner) => <$inner as LauncherProvider>::execute_function(inner, func, child, cx),
                     )*
                     Self::Empty => unimplemented!(),
                 }
@@ -136,7 +136,7 @@ create_variants! {
         Files(FileLauncher),
         Message(MessageLauncher),
         MusicPlayer(MusicPlayerLauncher, MusicPlayerFunctions),
-        Script(ScriptLauncher),
+        Script(ScriptLauncher, ScriptFunctions),
         Weather(WeatherLauncher),
         Web(WebLauncher),
         // Integrate later: TODO

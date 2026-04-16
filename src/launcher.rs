@@ -39,7 +39,7 @@ use crate::{
         errors::{SherlockMessage, types::SherlockErrorType},
     },
 };
-use gpui::{App, Keystroke, SharedString};
+use gpui::{App, AppContext, Keystroke, SharedString};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, path::Path, sync::Arc};
 
@@ -60,10 +60,11 @@ pub trait LauncherProvider {
     fn binds(&self) -> Option<Arc<Vec<Bind>>> {
         None
     }
-    fn execute_function(
+    fn execute_function<C: AppContext>(
         &self,
         func: InnerFunction,
         _child: &RenderableChild,
+        _cx: &mut C,
     ) -> Result<bool, SherlockMessage> {
         Err(sherlock_msg!(
             Warning,

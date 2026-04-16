@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use gpui::AppContext;
 use serde::Deserialize;
 
 use crate::{
@@ -57,10 +58,11 @@ impl LauncherProvider for EventLauncher {
             inner: EventData::new(look_back, look_ahead),
         }])
     }
-    fn execute_function(
+    fn execute_function<C: AppContext>(
         &self,
         func: super::variant_type::InnerFunction,
         child: &RenderableChild,
+        _cx: &mut C,
     ) -> Result<bool, SherlockMessage> {
         let func = ensure_func!(func, InnerFunction::Event);
 
