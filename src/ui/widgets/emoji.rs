@@ -1,6 +1,6 @@
 use std::sync::{
     Arc, LazyLock, OnceLock, RwLock,
-    atomic::{AtomicU8, Ordering},
+    atomic::{AtomicU8, AtomicUsize, Ordering},
 };
 
 use arrayvec::ArrayString;
@@ -10,7 +10,10 @@ use crate::{
     app::theme::ThemeData,
     launcher::{
         ExecMode, Launcher,
-        emoji_launcher::{EmojiData, SkinTone},
+        emoji_launcher::{
+            EmojiData, SkinTone,
+            data::{EMOJIS, EmojiEntry},
+        },
     },
     ui::{
         launcher::context_menu::ContextMenuAction,
@@ -20,17 +23,17 @@ use crate::{
 
 static SELECTED_SKIN_TONE: OnceLock<RwLock<[SkinTone; 2]>> = OnceLock::new();
 static EMOJI_CONTEXT_ACTIONS: LazyLock<Arc<[Arc<ContextMenuAction>]>> = LazyLock::new(|| {
-    let default = get_selected_skin_tones()[0] as u8;
+    let default_tone = get_selected_skin_tones()[0];
     Arc::from([
         Arc::new(ContextMenuAction::Emoji(EmojiAction {
-            emoji: RwLock::new("😀"),
+            selected_index: AtomicU8::new(default_tone as u8),
             for_tone: 0,
-            selected_index: AtomicU8::new(default),
+            ..Default::default()
         })),
         Arc::new(ContextMenuAction::Emoji(EmojiAction {
-            emoji: RwLock::new("👍"),
+            selected_index: AtomicU8::new(default_tone as u8),
             for_tone: 1,
-            selected_index: AtomicU8::new(default),
+            ..Default::default()
         })),
     ])
 });
@@ -49,6 +52,19 @@ pub fn get_selected_skin_tones() -> [SkinTone; 2] {
         SELECTED_SKIN_TONE.get_or_init(|| RwLock::new([SkinTone::Simpsons, SkinTone::Simpsons]));
 
     *lock.read().unwrap_or_else(|e| e.into_inner())
+}
+
+pub fn get_emoji(entry: &EmojiEntry, tones: &[SkinTone]) -> ArrayString<64> {
+    let all_same = tones.windows(2).all(|w| w[0] == w[1]);
+    if all_same {
+        if let Some(fallback) = entry.same_tone_emoji {
+            apply_skin_tones(fallback, &tones[..1])
+        } else {
+            apply_skin_tones(entry.emoji, tones)
+        }
+    } else {
+        apply_skin_tones(entry.emoji, tones)
+    }
 }
 
 pub fn apply_skin_tones(template: &str, tones: &[SkinTone]) -> ArrayString<64> {
@@ -75,7 +91,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
         theme: Arc<ThemeData>,
         _cx: &mut App,
     ) -> AnyElement {
-        let emoji = apply_skin_tones(self.entry.emoji, &get_selected_skin_tones());
+        let emoji = get_emoji(&self.entry, &get_selected_skin_tones());
         div()
             .size_full()
             .flex()
@@ -114,7 +130,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
     #[inline(always)]
     fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         Some(ExecMode::Copy {
-            content: apply_skin_tones(&self.entry.emoji, &get_selected_skin_tones())
+            content: get_emoji(&self.entry, &get_selected_skin_tones())
                 .as_str()
                 .to_string(),
         })
@@ -138,8 +154,11 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
 
         for action_arc in template.iter().take(num_tones) {
             if let ContextMenuAction::Emoji(act) = action_arc.as_ref() {
-                let mut writer = act.emoji.write().unwrap();
-                *writer = self.entry.emoji;
+                let idx = EMOJIS
+                    .iter()
+                    .position(|e| std::ptr::eq(e, self.entry))
+                    .unwrap();
+                act.emoji.store(idx, Ordering::Relaxed);
             }
         }
 
@@ -158,16 +177,15 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EmojiAction {
     pub for_tone: u8,
-    emoji: RwLock<&'static str>,
+    emoji: AtomicUsize,
     selected_index: AtomicU8,
 }
 impl EmojiAction {
-    pub fn emoji(&self) -> &'static str {
-        let emj = self.emoji.read().unwrap();
-        *emj
+    pub fn entry(&self) -> Option<&EmojiEntry> {
+        EMOJIS.get(self.emoji.load(Ordering::Relaxed))
     }
     pub fn update_index<F>(&self, f: F)
     where
@@ -184,12 +202,7 @@ impl EmojiAction {
 
 impl PartialEq for EmojiAction {
     fn eq(&self, other: &Self) -> bool {
-        let self_emoji = self.emoji.read().unwrap();
-        let other_emoji = other.emoji.read().unwrap();
-
-        *self_emoji == *other_emoji
+        self.emoji.load(Ordering::Relaxed) == other.emoji.load(Ordering::Relaxed)
             && self.for_tone == other.for_tone
-            && self.selected_index.load(Ordering::SeqCst)
-                == other.selected_index.load(Ordering::SeqCst)
     }
 }

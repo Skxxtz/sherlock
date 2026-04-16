@@ -10,7 +10,7 @@ use crate::{
     app::theme::ThemeData,
     launcher::emoji_launcher::ALL_SKIN_TONES,
     loader::{resolve_icon_path, utils::ApplicationAction},
-    ui::widgets::emoji::{EmojiAction, apply_skin_tones, get_selected_skin_tones},
+    ui::widgets::emoji::{EmojiAction, get_emoji, get_selected_skin_tones},
 };
 
 #[derive(Debug, PartialEq)]
@@ -105,7 +105,9 @@ impl ContextMenuAction {
             return div();
         };
 
-        let emoji = this.emoji();
+        let Some(emoji_entry) = this.entry() else {
+            return div().into();
+        };
         let mut tones = get_selected_skin_tones();
         let col_idx = this.get_index() as usize;
 
@@ -161,7 +163,7 @@ impl ContextMenuAction {
                             .justify_center()
                             .items_center()
                             .w(px(24.))
-                            .child(apply_skin_tones(emoji, &tones).as_str().to_string()),
+                            .child(get_emoji(emoji_entry, &tones).as_str().to_string()),
                     )
             }))
     }

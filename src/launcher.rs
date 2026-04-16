@@ -31,7 +31,7 @@ use crate::{
         launcher::{LauncherMode, context_menu::ContextMenuAction, views::NavigationViewType},
         widgets::{
             LauncherValues, RenderableChild, RenderableChildDelegate,
-            emoji::{apply_skin_tones, get_selected_skin_tones},
+            emoji::{get_emoji, get_selected_skin_tones},
         },
     },
     utils::{
@@ -347,12 +347,14 @@ impl ExecMode {
             },
             ContextMenuAction::Fn(_) => Self::DynamicContextMenuFunc { action },
             ContextMenuAction::Emoji(emj) => {
-                let emoji = emj.emoji();
-                let content = apply_skin_tones(emoji, &get_selected_skin_tones())
-                    .as_str()
-                    .to_string();
-
-                Self::Copy { content }
+                if let Some(entry) = emj.entry() {
+                    let content = get_emoji(entry, &get_selected_skin_tones())
+                        .as_str()
+                        .to_string();
+                    Self::Copy { content }
+                } else {
+                    Self::None
+                }
             }
         }
     }
