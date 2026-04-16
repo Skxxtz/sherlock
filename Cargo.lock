@@ -5610,6 +5610,7 @@ dependencies = [
  "serde_json",
  "simd-json",
  "smallvec",
+ "smol",
  "strum",
  "suite-223b",
  "tiny-skia",

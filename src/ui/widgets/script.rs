@@ -1,15 +1,11 @@
-use std::{env::home_dir, process::Stdio, sync::Arc, time::Duration};
+use std::{env::home_dir, sync::Arc, time::Duration};
 
 use gpui::{
     App, AsyncApp, Entity, IntoElement, ParentElement, SharedString, Styled, Task, WeakEntity, div,
     prelude::FluentBuilder,
 };
 use serde::{Deserialize, Serialize};
-use tokio::{
-    io::{AsyncReadExt, BufReader},
-    process::Command,
-    time::timeout,
-};
+use std::process::{Command, Stdio};
 
 use crate::{
     launcher::Launcher,
@@ -211,33 +207,36 @@ impl<'a> RenderableChildImpl<'a> for ScriptData {
 
             this.task = Some(cx.spawn(
                 |weak_self: WeakEntity<ScriptDataUpdateEntity>, cx: &mut AsyncApp| {
-                    let mut cx_inner = cx.clone();
+                    let mut cx = cx.clone();
                     async move {
-                        let script_fut = ScriptData::get_result(command.clone(), args.clone(), query.as_str());
-                        let timer_fut = cx_inner.background_executor().timer(Duration::from_millis(75));
-                        tokio::select! {
-                            result = script_fut => {
-                                // Script finished fast
-                                let _ = weak_self.update(&mut cx_inner, |this, cx| {
+                        let result =
+                            ScriptData::get_result(command.clone(), args.clone(), query.as_str());
+                        let timer = cx.background_executor().timer(Duration::from_millis(75));
+
+                        futures::pin_mut!(result);
+                        futures::pin_mut!(timer);
+
+                        match futures::future::select(result, timer).await {
+                            futures::future::Either::Left((res, _)) => {
+                                // Done before timer
+                                let _ = weak_self.update(&mut cx, |this, cx| {
                                     this.task = None;
                                     this.show_loading = false;
-                                    this.result = result;
+                                    this.result = res;
                                     cx.notify();
                                 });
                             }
-                            _ = timer_fut => {
-                                // Script is taking a while
-                                let _ = weak_self.update(&mut cx_inner, |this, cx| {
+                            futures::future::Either::Right((_, result_fut)) => {
+                                // wait for result
+                                let _ = weak_self.update(&mut cx, |this, cx| {
                                     this.show_loading = true;
                                     cx.notify();
                                 });
-
-                                // wait for the actual script result
-                                let result = ScriptData::get_result(command, args, query.as_str()).await;
-                                let _ = weak_self.update(&mut cx_inner, |this, cx| {
+                                let res = result_fut.await;
+                                let _ = weak_self.update(&mut cx, |this, cx| {
                                     this.task = None;
                                     this.show_loading = false;
-                                    this.result = result;
+                                    this.result = res;
                                     cx.notify();
                                 });
                             }
@@ -266,78 +265,78 @@ impl ScriptData {
         };
 
         let processed_args = args_template.replace("{keyword}", keyword);
-        let args_iter = split_as_command(&processed_args);
+        let args_iter: Vec<String> = split_as_command(&processed_args);
 
-        let mut cmd = Command::new(absolute_exec);
-        cmd.args(args_iter)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .kill_on_drop(true);
-
-        let mut child = match cmd.spawn() {
-            Ok(child) => child,
-            Err(e) => {
-                let mut response = AsyncCommandResponse::new();
-                response.title = Some("Failed to execute script.".into());
-                response.content = Some(format!("Execution Error: {}", e).into());
-                return Some(response);
-            }
-        };
-
-        let result = timeout(Duration::from_secs(10), async {
-            let mut stdout_content = String::new();
-            let mut stderr_content = String::new();
-
-            if let Some(stdout) = child.stdout.take() {
-                let mut reader = BufReader::new(stdout);
-                let _ = reader.read_to_string(&mut stdout_content).await;
-            }
-
-            if let Some(stderr) = child.stderr.take() {
-                let mut reader = BufReader::new(stderr);
-                let _ = reader.read_to_string(&mut stderr_content).await;
-            }
-
-            let status = child.wait().await;
-            (status, stdout_content, stderr_content)
-        })
-        .await;
-
-        match result {
-            Ok((Ok(status), stdout, stderr)) => {
-                if status.success() {
-                    let mut input = stdout.into_bytes();
-                    match simd_json::from_slice::<AsyncCommandResponse>(&mut input) {
-                        Ok(res) => Some(res),
-                        Err(e) => {
-                            let mut response = AsyncCommandResponse::new();
-                            response.title = Some("Invalid JSON Output".into());
-                            response.content = Some(format!("Parse error: {}", e).into());
-                            Some(response)
-                        }
-                    }
-                } else {
+        // Run the blocking process on a thread
+        let result = smol::unblock(move || {
+            let child = match Command::new(&absolute_exec)
+                .args(&args_iter)
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+            {
+                Ok(c) => c,
+                Err(e) => {
                     let mut response = AsyncCommandResponse::new();
-                    response.title = Some("Script Error".into());
-                    response.content =
-                        Some(format!("Exit Status: {}\nStderr: {}", status, stderr).into());
+                    response.title = Some("Failed to execute script.".into());
+                    response.content = Some(format!("Execution Error: {}", e).into());
+                    return Some(response);
+                }
+            };
+
+            let timeout_result = {
+                use std::sync::mpsc;
+                let (tx, rx) = mpsc::channel();
+                let _ = std::thread::spawn(move || {
+                    let out = child.wait_with_output();
+                    let _ = tx.send(out);
+                });
+                rx.recv_timeout(std::time::Duration::from_secs(10))
+            };
+
+            match timeout_result {
+                Ok(Ok(output)) => {
+                    if output.status.success() {
+                        let mut input = output.stdout;
+                        match simd_json::from_slice::<AsyncCommandResponse>(&mut input) {
+                            Ok(res) => Some(res),
+                            Err(_) => {
+                                let mut response = AsyncCommandResponse::new();
+                                response.title = None;
+                                response.content = match String::from_utf8(input) {
+                                    Ok(s) => Some(s.into()),
+                                    Err(_) => Some("Invalid stdout.".into()),
+                                };
+                                Some(response)
+                            }
+                        }
+                    } else {
+                        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                        let mut response = AsyncCommandResponse::new();
+                        response.title = Some("Script Error".into());
+                        response.content = Some(
+                            format!("Exit Status: {}\nStderr: {}", output.status, stderr).into(),
+                        );
+                        Some(response)
+                    }
+                }
+                Ok(Err(e)) => {
+                    let mut response = AsyncCommandResponse::new();
+                    response.title = Some("Runtime Error".into());
+                    response.content = Some(e.to_string().into());
+                    Some(response)
+                }
+                Err(_) => {
+                    let mut response = AsyncCommandResponse::new();
+                    response.title = Some("Timeout".into());
+                    response.content = Some("The script took too long to respond (10s).".into());
                     Some(response)
                 }
             }
-            Ok((Err(e), _, _)) => {
-                let mut response = AsyncCommandResponse::new();
-                response.title = Some("Runtime Error".into());
-                response.content = Some(e.to_string().into());
-                Some(response)
-            }
-            Err(_) => {
-                let _ = child.kill().await;
-                let mut response = AsyncCommandResponse::new();
-                response.title = Some("Timeout".into());
-                response.content = Some("The script took too long to respond (10s).".into());
-                Some(response)
-            }
-        }
+        })
+        .await;
+
+        result
     }
 }
