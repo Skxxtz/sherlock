@@ -108,7 +108,7 @@ impl<'a> RenderableChildImpl<'a> for ScriptData {
                                         .mt_0p5()
                                         .text_xs()
                                         .text_color(theme.secondary_text)
-                                        .line_height(gpui::relative(1.4))
+                                        .line_height(gpui::relative(1.15))
                                         .child(render_pango(content.as_str(), &theme)),
                                 )
                             },
