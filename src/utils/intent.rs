@@ -1,9 +1,13 @@
 use gpui::SharedString;
 use smallvec::{SmallVec, smallvec};
 
-use crate::{launcher::calc_launcher::CURRENCIES, utils::intent::colors::ColorConverter};
+use crate::{
+    launcher::calc_launcher::CURRENCIES,
+    utils::intent::{colors::ColorConverter, translation::Language},
+};
 
 mod colors;
+pub mod translation;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Intent {
@@ -23,6 +27,10 @@ pub enum Intent {
     },
     Url {
         url: SharedString,
+    },
+    Translation {
+        text: SharedString,
+        target_lang: Language,
     },
     None,
 }
@@ -111,22 +119,17 @@ impl Intent {
 }
 
 impl Intent {
-    pub fn parse(input: &str, caps: &Capabilities) -> Intent {
-        let raw = input.trim();
-        if raw.is_empty() {
-            return Intent::None;
-        }
-
+    pub fn tokenize(input: &str) -> SmallVec<[&str; 8]> {
         // Tokenization
         let mut tokens: SmallVec<[&str; 8]> = SmallVec::new();
-        let bytes = raw.as_bytes();
+        let bytes = input.as_bytes();
         let mut last = 0;
 
         for i in 0..bytes.len() {
             let b = bytes[i];
             if matches!(b, b' ' | b'(' | b')' | b'%' | b',') {
                 if last < i {
-                    let word = raw[last..i].trim_matches(',');
+                    let word = input[last..i].trim_matches(',');
                     Self::push_cleaned_token(&mut tokens, word);
                 }
                 last = i + 1;
@@ -134,12 +137,22 @@ impl Intent {
         }
 
         // last chunk
-        if last < raw.len() {
-            let word = &raw[last..].trim_matches(',');
+        if last < input.len() {
+            let word = &input[last..].trim_matches(',');
             if !word.is_empty() {
                 Self::push_cleaned_token(&mut tokens, word);
             }
         }
+
+        tokens
+    }
+    pub fn parse(input: &str, caps: &Capabilities) -> Intent {
+        let raw = input.trim();
+        if raw.is_empty() {
+            return Intent::None;
+        }
+
+        let tokens = Self::tokenize(raw);
 
         // match intent
         if let Some(intent) = Intent::try_parse_color_conversion(&tokens, caps) {
@@ -147,6 +160,10 @@ impl Intent {
         }
 
         if let Some(intent) = Intent::try_parse_unit_conversion(&tokens, caps) {
+            return intent;
+        }
+
+        if let Some(intent) = Intent::try_parse_translation(&tokens) {
             return intent;
         }
 
@@ -285,6 +302,22 @@ impl Intent {
         let to = Unit::parse_in_category(to_token, from.category())?;
 
         Some(Intent::Conversion { value, from, to })
+    }
+
+    pub fn try_parse_translation(tokens: &[&str]) -> Option<Intent> {
+        let connector_idx = tokens.iter().rposition(|t| matches!(*t, "to" | "in"))?;
+
+        if connector_idx > 0 && tokens.len() > connector_idx + 1 {
+            let text = tokens[0..connector_idx].join(" ");
+            let target_lang = Language::from_str(&tokens[connector_idx + 1])?;
+
+            return Some(Intent::Translation {
+                text: text.into(),
+                target_lang: target_lang,
+            });
+        }
+
+        None
     }
 
     fn try_parse_url(input: &str) -> Option<Intent> {

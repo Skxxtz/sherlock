@@ -140,7 +140,7 @@ impl<'a> RenderableChildImpl<'a> for ScriptData {
     ) -> Option<crate::launcher::ExecMode> {
         None
     }
-    fn based_show(&self, _keyword: &str) -> Option<bool> {
+    fn based_show<C: AppContext>(&self, _keyword: &str, _cx: &mut C) -> Option<bool> {
         Some(true)
     }
     fn has_actions(&self, cx: &mut App) -> bool {

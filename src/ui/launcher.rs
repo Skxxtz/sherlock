@@ -201,7 +201,7 @@ impl LauncherView {
 
                                     // [Rule 4]
                                     // Early return if based show (calc for example) applies
-                                    if let Some(based) = data.based_show(&query) {
+                                    if let Some(based) = data.based_show(&query, &mut cx) {
                                         return based;
                                     }
 

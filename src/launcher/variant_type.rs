@@ -19,6 +19,7 @@ use crate::{
         file_launcher::FileLauncher,
         message_launcher::MessageLauncher,
         system_cmd_launcher::CommandLauncher,
+        translator_launcher::Translator,
         weather_launcher::WeatherLauncher,
         web_launcher::WebLauncher,
     },
@@ -137,6 +138,7 @@ create_variants! {
         Message(MessageLauncher),
         MusicPlayer(MusicPlayerLauncher, MusicPlayerFunctions),
         Script(ScriptLauncher, ScriptFunctions),
+        Translator(Translator),
         Weather(WeatherLauncher),
         Web(WebLauncher),
         // Integrate later: TODO

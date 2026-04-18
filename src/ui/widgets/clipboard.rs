@@ -1,8 +1,8 @@
 use std::sync::{Arc, RwLock};
 
 use gpui::{
-    App, Image, ImageSource, IntoElement, ParentElement, SharedString, Styled, div, img,
-    prelude::FluentBuilder, px, rgb,
+    App, AppContext, Image, ImageSource, IntoElement, ParentElement, SharedString, Styled, div,
+    img, prelude::FluentBuilder, px, rgb,
 };
 
 use crate::{
@@ -146,7 +146,7 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
     fn has_actions(&self, _cx: &mut App) -> bool {
         !self.actions.is_empty()
     }
-    fn based_show(&self, _keyword: &str) -> Option<bool> {
+    fn based_show<C: AppContext>(&self, _keyword: &str, _cx: &mut C) -> Option<bool> {
         Some(
             self.result
                 .read()

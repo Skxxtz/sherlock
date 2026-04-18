@@ -7,8 +7,8 @@ use std::{
 
 use chrono::Local;
 use gpui::{
-    Animation, AnimationExt, AnyElement, App, FontWeight, Hsla, InteractiveElement, IntoElement,
-    ParentElement, SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
+    Animation, AnimationExt, AnyElement, App, AppContext, FontWeight, Hsla, InteractiveElement,
+    IntoElement, ParentElement, SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
 };
 use simd_json::prelude::ArrayTrait;
 use suite_223b::{
@@ -445,7 +445,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
         self.event.is_some()
     }
     #[inline(always)]
-    fn based_show(&self, _keyword: &str) -> Option<bool> {
+    fn based_show<C: AppContext>(&self, _keyword: &str, _cx: &mut C) -> Option<bool> {
         Some(self.event.is_some())
     }
 }

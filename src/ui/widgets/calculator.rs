@@ -1,7 +1,8 @@
 use std::sync::{Arc, RwLock};
 
 use gpui::{
-    App, IntoElement, ParentElement, SharedString, Styled, div, prelude::FluentBuilder, px, rgb,
+    App, AppContext, IntoElement, ParentElement, SharedString, Styled, div, prelude::FluentBuilder,
+    px, rgb,
 };
 
 use crate::{
@@ -63,7 +64,7 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
             IntentResult::Color(c) => color_show(c, selection, theme),
         }
     }
-    fn based_show(&self, keyword: &str) -> Option<bool> {
+    fn based_show<C: AppContext>(&self, keyword: &str, _cx: &mut C) -> Option<bool> {
         if keyword.trim().is_empty() {
             return Some(false);
         }

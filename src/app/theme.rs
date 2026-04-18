@@ -27,6 +27,7 @@ pub struct ThemeData {
     // Text
     pub primary_text: Hsla,
     pub secondary_text: Hsla,
+    pub tertiary_text: Hsla,
     pub text_status_bar: Hsla,
     pub text_mode_label: Hsla,
     pub text_search_icon: Hsla,
@@ -67,6 +68,7 @@ impl ThemeData {
             // Text
             primary_text: hsla(0.0, 0.0, 0.95, 1.0),
             secondary_text: hsla(0.0, 0.0, 0.6, 1.0),
+            tertiary_text: hsla(0.0, 0.0, 0.35, 1.0),
             text_status_bar: hsla(0.6, 0.0217, 0.3608, 1.0),
             text_mode_label: hsla(0.0, 0.0, 0.18, 1.0), // 0x2e2e2e
             text_search_icon: hsla(0.0, 0.0, 0.533, 1.0), // 0x888888
@@ -109,6 +111,7 @@ impl ThemeData {
             // Text - Deep Ink and Slate
             primary_text: hsla(220.0 / 360.0, 0.25, 0.15, 1.0), // Deep "Ink" Blue-Black
             secondary_text: hsla(220.0 / 360.0, 0.10, 0.45, 1.0), // Muted Slate
+            tertiary_text: hsla(220.0 / 360.0, 0.08, 0.60, 1.0),
             text_status_bar: hsla(220.0 / 360.0, 0.15, 0.40, 1.0),
             text_mode_label: hsla(0.0, 0.0, 0.20, 1.0),
             text_search_icon: hsla(0.0, 0.0, 0.50, 1.0),
@@ -146,6 +149,7 @@ impl ThemeData {
             border_idle: hsla(240.0 / 360.0, 0.21, 0.22, 1.0),
             primary_text: hsla(226.0 / 360.0, 0.64, 0.88, 1.0),
             secondary_text: hsla(228.0 / 360.0, 0.24, 0.57, 1.0),
+            tertiary_text: hsla(228.0 / 360.0, 0.15, 0.40, 1.0),
             text_status_bar: hsla(228.0 / 360.0, 0.24, 0.40, 1.0),
             text_mode_label: hsla(228.0 / 360.0, 0.24, 0.30, 1.0),
             text_search_icon: hsla(228.0 / 360.0, 0.24, 0.45, 1.0),
@@ -179,6 +183,7 @@ impl ThemeData {
             border_idle: hsla(220.0 / 360.0, 0.17, 0.28, 1.0),
             primary_text: hsla(218.0 / 360.0, 0.27, 0.92, 1.0),
             secondary_text: hsla(219.0 / 360.0, 0.14, 0.65, 1.0),
+            tertiary_text: hsla(219.0 / 360.0, 0.10, 0.45, 1.0),
             text_status_bar: hsla(219.0 / 360.0, 0.14, 0.40, 1.0),
             text_mode_label: hsla(219.0 / 360.0, 0.14, 0.30, 1.0),
             text_search_icon: hsla(219.0 / 360.0, 0.14, 0.50, 1.0),

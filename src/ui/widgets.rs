@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, AsyncApp, SharedString};
+use gpui::{AnyElement, App, AppContext, AsyncApp, SharedString};
 use std::sync::Arc;
 
 pub mod app;
@@ -10,6 +10,7 @@ pub mod file;
 pub mod message;
 pub mod mpris;
 pub mod script;
+pub mod translator;
 pub mod weather;
 
 use crate::{
@@ -21,7 +22,7 @@ use crate::{
     loader::utils::{AppData, ExecVariable},
     ui::{
         launcher::context_menu::ContextMenuAction,
-        widgets::{message::MessageChild, script::ScriptData},
+        widgets::{message::MessageChild, script::ScriptData, translator::TranslationData},
     },
     utils::config::HomeType,
 };
@@ -125,9 +126,9 @@ macro_rules! renderable_enum {
                 }
             }
 
-            fn based_show(&self, keyword: &str) -> Option<bool> {
+            fn based_show<C: AppContext>(&self, keyword: &str, cx: &mut C) -> Option<bool> {
                 match self {
-                    $(Self::$variant {inner, ..} => inner.based_show(keyword)),*
+                    $(Self::$variant {inner, ..} => inner.based_show(keyword, cx)),*
                 }
             }
 
@@ -146,7 +147,7 @@ macro_rules! renderable_enum {
 
         impl<'a> LauncherValues<'a> for $name {
             fn name(&'a self) -> Option<&'a str> {
-                self.launcher().name.as_deref()
+                self.launcher().name.as_ref().map(|s| s.as_str())
             }
 
             fn display_name(&self) -> Option<SharedString> {
@@ -281,6 +282,7 @@ renderable_enum! {
         MessageLike(MessageChild),
         MusicLike(MprisState),
         ScriptLike(ScriptData),
+        TranslatorLike(TranslationData),
         WeatherLike(WeatherData),
     }
 }
@@ -322,7 +324,7 @@ pub trait RenderableChildDelegate<'a> {
     fn has_actions(&self, cx: &mut App) -> bool;
 
     /// Boolean logic for conditional display (e.g., calculator)
-    fn based_show(&self, keyword: &str) -> Option<bool>;
+    fn based_show<C: AppContext>(&self, keyword: &str, cx: &mut C) -> Option<bool>;
 
     /// Sidebar rendering
     fn sidebar(&self, cx: &mut App) -> Option<AnyElement>;
@@ -372,7 +374,7 @@ pub trait RenderableChildImpl<'a> {
     fn has_actions(&self, _cx: &mut App) -> bool {
         false
     }
-    fn based_show(&self, _keyword: &str) -> Option<bool> {
+    fn based_show<C: AppContext>(&self, _keyword: &str, _cx: &mut C) -> Option<bool> {
         None
     }
     fn sidebar(&self, _cx: &mut App) -> Option<AnyElement> {

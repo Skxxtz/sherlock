@@ -10,6 +10,7 @@ pub mod event_launcher;
 pub mod file_launcher;
 pub mod message_launcher;
 pub mod system_cmd_launcher;
+pub mod translator_launcher;
 pub mod utils;
 pub mod variant_type;
 pub mod weather_launcher;
@@ -133,7 +134,7 @@ impl BindSerde {
 /// search entry & mode == `all`)
 #[derive(Debug, Default)]
 pub struct Launcher {
-    pub name: Option<String>,
+    pub name: Option<SharedString>,
     pub display_name: Option<SharedString>,
     pub icon: Option<Arc<Path>>,
     pub alias: Option<String>,
@@ -151,7 +152,7 @@ pub struct Launcher {
 impl Launcher {
     pub fn from_raw(raw: RawLauncher, launcher_type: LauncherType, icon: Option<String>) -> Self {
         Self {
-            name: raw.name,
+            name: raw.name.map(|n| n.into()),
             display_name: raw.display_name.map(|n| SharedString::from(n)),
             icon: icon.as_deref().and_then(resolve_icon_path),
             alias: raw.alias,

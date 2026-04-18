@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use gpui::{
-    AnyElement, App, Image, ImageSource, IntoElement, ParentElement, Styled, div, img,
+    AnyElement, App, AppContext, Image, ImageSource, IntoElement, ParentElement, Styled, div, img,
     prelude::FluentBuilder, px,
 };
 
@@ -94,7 +94,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
         ""
     }
     #[inline(always)]
-    fn based_show(&self, _keyword: &str) -> Option<bool> {
+    fn based_show<C: AppContext>(&self, _keyword: &str, _cx: &mut C) -> Option<bool> {
         if self.raw.is_some() {
             return None;
         } else {
