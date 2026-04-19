@@ -14,7 +14,7 @@ use crate::{
     sherlock_msg,
     ui::{
         launcher::{LauncherView, context_menu::ContextMenuAction, views::MoveDirection},
-        search_bar::{EmptyBackspace, TextInput},
+        search_bar::{EmptyBackspace, TextInput, actions::ShortcutAction},
         widgets::{LauncherValues, RenderableChildDelegate, emoji::set_selected_skin_tone},
     },
     utils::{
@@ -263,7 +263,9 @@ impl LauncherView {
                 spawn_detached(&exec, keyword, variables)?;
                 increment(&exec);
             }
-            ExecMode::CreateBookmark { url, name } => {}
+            ExecMode::CreateBookmark { url, name } => {
+                println!("TODO: {url} {name}");
+            }
             ExecMode::Copy { content } => {
                 cx.write_to_clipboard(ClipboardItem::new_string(content.to_string()));
             }
@@ -306,6 +308,32 @@ impl LauncherView {
         };
 
         Ok(true)
+    }
+    pub(super) fn shortcut_listener(
+        &mut self,
+        action: &ShortcutAction,
+        win: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(selected) =
+            self.navigation
+                .with_nth_shortcut_item(action.index, cx, |item, _| item.cloned())
+        {
+            let keyword = self.text_input.read(cx).content.clone();
+            if let Some(what) = ExecMode::from_child(&selected) {
+                match self.execute_helper(what, keyword.as_ref(), &[], cx) {
+                    Ok(exit) if exit => {
+                        self.close_window(win, cx);
+                        return;
+                    }
+                    Err(e) => {
+                        self.navigation.push_message(e, cx);
+                        return;
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
     pub(super) fn execute_listener(
         &mut self,

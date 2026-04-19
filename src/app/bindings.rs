@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use gpui::{App, KeyBinding};
+use gpui::{App, KeyBinding, Modifiers};
+use smallvec::SmallVec;
 
 use crate::{
+    SHORTCUT_MOD,
     ui::{
         UIFunction,
         launcher::{
@@ -56,7 +58,14 @@ pub(super) fn register_bindings(cx: &mut App) {
     if let Ok(config) = ConfigGuard::read() {
         for (key, action_type) in &config.keybinds {
             if *action_type == UIFunction::Shortcut && key.contains("<digit>") {
-                for i in 0..=9 {
+                // First one to capture modifier key
+                let actual_key = key.replace("<digit>", "1");
+                let binding = KeyBinding::new(&actual_key, ShortcutAction { index: 1 }, None);
+                let mods = binding.keystrokes().first().map(|k| k.modifiers());
+                mods.map(ShortcutKeyMod::from);
+                add(&actual_key, binding);
+
+                for i in 2..=9 {
                     let actual_key = key.replace("<digit>", &i.to_string());
                     add(
                         &actual_key,
@@ -73,4 +82,32 @@ pub(super) fn register_bindings(cx: &mut App) {
     let mut bindings: Vec<KeyBinding> = bindings.into_values().collect();
     bindings.sort_by_key(|b| b.predicate().is_some());
     cx.bind_keys(bindings);
+}
+
+pub struct ShortcutKeyMod {
+    buf: SmallVec<[char; 4]>,
+}
+impl ShortcutKeyMod {
+    pub fn from(mods: &Modifiers) {
+        let mut buf: SmallVec<[char; 4]> = SmallVec::new();
+
+        if mods.platform {
+            buf.push('⌘');
+        }
+        if mods.control {
+            buf.push('^');
+        }
+        if mods.alt {
+            buf.push('⌥');
+        }
+        if mods.shift {
+            buf.push('⇧');
+        }
+
+        let _ = SHORTCUT_MOD.set(Self { buf });
+    }
+
+    pub fn get() -> Option<&'static SmallVec<[char; 4]>> {
+        SHORTCUT_MOD.get().map(|m| &m.buf)
+    }
 }

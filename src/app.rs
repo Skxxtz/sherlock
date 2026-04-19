@@ -29,7 +29,7 @@ use crate::{
     },
 };
 
-mod bindings;
+pub mod bindings;
 pub mod theme;
 mod updates;
 

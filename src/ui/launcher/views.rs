@@ -12,7 +12,7 @@ use crate::{
         model::{
             Model, emoji::EmojiView, file::view::FileView, home::HomeView, message::MessageView,
         },
-        widgets::{RenderableChild, RenderableChildDelegate},
+        widgets::{LauncherValues, RenderableChild, RenderableChildDelegate},
     },
     utils::errors::SherlockMessage,
 };
@@ -242,6 +242,36 @@ impl NavigationStack {
 
             (filtered_indices.get(safe_ui_idx).copied(), mdl.data())
         });
+        let idx = data_idx?;
+        data_entity.update(cx, |data, cx| f(data.get(idx), cx))
+    }
+    pub fn with_nth_shortcut_item<R>(
+        &self,
+        idx: usize,
+        cx: &mut App,
+        f: impl FnOnce(Option<&RenderableChild>, &mut App) -> Option<R>,
+    ) -> Option<R> {
+        let (data_idx, data_entity) = self.with_model_mut(cx, |mdl, cx| {
+            let data_entity = mdl.data();
+            let data = data_entity.read(cx);
+            if data.is_empty() || data.len() < idx {
+                return (None, data_entity);
+            }
+
+            let filtered_indices = mdl.filtered_indices();
+            if filtered_indices.is_empty() || filtered_indices.len() < idx {
+                return (None, data_entity);
+            }
+
+            let item_idx = filtered_indices
+                .iter()
+                .copied()
+                .filter(|i| data.get(*i).map_or(false, |item| item.shortcut()))
+                .nth(idx - 1);
+
+            (item_idx, data_entity)
+        });
+
         let idx = data_idx?;
         data_entity.update(cx, |data, cx| f(data.get(idx), cx))
     }

@@ -8,7 +8,10 @@ use gpui::{
 
 use crate::{
     CONTEXT_MENU_BIND,
-    app::theme::{ActiveTheme, ThemeData},
+    app::{
+        bindings::ShortcutKeyMod,
+        theme::{ActiveTheme, ThemeData},
+    },
     ui::{
         UIFunction,
         launcher::{LauncherView, context_menu::ContextMenuAction, views::EntityStyle},
@@ -42,6 +45,7 @@ impl Render for LauncherView {
             .on_action(cx.listener(Self::next_var))
             .on_action(cx.listener(Self::prev_var))
             .on_action(cx.listener(Self::execute_listener))
+            .on_action(cx.listener(Self::shortcut_listener))
             .on_action(cx.listener(Self::quit))
             .on_action(cx.listener(Self::open_context))
             .on_key_up(cx.listener(move |this, ev: &gpui::KeyUpEvent, win, cx| {
@@ -147,6 +151,7 @@ impl LauncherView {
         };
 
         let theme = cx.global::<ActiveTheme>().0.clone();
+        let max_shortcuts = ConfigGuard::read().map_or(5, |c| c.appearance.num_shortcuts) as usize;
         div()
             .id("results-container")
             .size_full()
@@ -173,8 +178,27 @@ impl LauncherView {
                                     None => return div().into_any_element(),
                                 };
 
+                                let shortcut_idx = child
+                                    .shortcut()
+                                    .then(|| {
+                                        let count = indices[..idx.min(indices.len())]
+                                            .iter()
+                                            .filter(|&&i| {
+                                                data_snapshot.get(i).map_or(false, |c| c.shortcut())
+                                            })
+                                            .take(max_shortcuts)
+                                            .count();
+                                        if count > max_shortcuts - 1 {
+                                            None
+                                        } else {
+                                            Some(count + 1)
+                                        }
+                                    })
+                                    .flatten();
+
                                 Self::render_list_item(
                                     &child,
+                                    shortcut_idx,
                                     Selection::new(data_idx, idx == selected_idx),
                                     theme.clone(),
                                     cx,
@@ -275,6 +299,7 @@ impl LauncherView {
                                                                 .flex_1()
                                                                 .child(Self::render_list_item(
                                                                     child,
+                                                                    None,
                                                                     Selection::new(
                                                                         data_idx,
                                                                         item_idx == selected_idx,
@@ -432,11 +457,13 @@ impl LauncherView {
 
     pub fn render_list_item(
         ad: &RenderableChild,
+        shortcut_idx: Option<usize>,
         selection: Selection,
         theme: Arc<ThemeData>,
         cx: &mut App,
     ) -> AnyElement {
         div()
+            .relative()
             .id(selection.data_idx)
             .w_full()
             .on_click(move |_, _, _| {})
@@ -456,7 +483,40 @@ impl LauncherView {
                                     .border_color(theme.border_selected)
                             })
                     })
-                    .child(ad.render(selection, theme, cx)),
+                    .child(ad.render(selection, theme.clone(), cx))
+                    .when_some(shortcut_idx, |this, shortcut_idx| {
+                        this.child(
+                            div()
+                                .absolute()
+                                .inset_0()
+                                .flex()
+                                .items_center()
+                                .justify_end()
+                                .pr_8()
+                                .child(
+                                    div()
+                                        .px(px(8.))
+                                        .py(px(4.))
+                                        .flex()
+                                        .gap(px(8.))
+                                        .border_1()
+                                        .rounded_md()
+                                        .bg(theme.bg_code)
+                                        .border_color(theme.border_selected)
+                                        .text_size(px(10.))
+                                        .text_color(theme.secondary_text)
+                                        .children(
+                                            ShortcutKeyMod::get()
+                                                .map(|mods| {
+                                                    mods.iter().map(|c| div().child(c.to_string()))
+                                                })
+                                                .into_iter()
+                                                .flatten(),
+                                        )
+                                        .child(div().child(shortcut_idx.to_string())),
+                                ),
+                        )
+                    }),
             )
             .into_any_element()
     }

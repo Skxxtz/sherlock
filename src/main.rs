@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    app::run_app,
+    app::{bindings::ShortcutKeyMod, run_app},
     loader::{CustomIconTheme, Loader, assets::Assets},
     utils::{clipboard::spawn_clipboard_watcher, config::SherlockConfig},
 };
@@ -24,6 +24,8 @@ static ICONS: OnceCell<RwLock<CustomIconTheme>> = OnceCell::new();
 static CONFIG: OnceCell<RwLock<SherlockConfig>> = OnceCell::new();
 /// Holds the string used to show and hide the context menu.
 static CONTEXT_MENU_BIND: OnceLock<String> = OnceLock::new();
+/// Holds the modifier key char
+static SHORTCUT_MOD: OnceLock<ShortcutKeyMod> = OnceLock::new();
 /// Holds the socket location for the sherlock socket
 static SOCKET_PATH: &'static str = "/tmp/sherlock.sock";
 
