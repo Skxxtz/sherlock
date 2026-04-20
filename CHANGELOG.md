@@ -12,34 +12,49 @@ Additional labels for pre-release and build metadata are available as extensions
 
 ---
 
-## [0.2.0-dev] - 2026-03-26
+## [0.2.0-dev] - 20.04.26
 
-### 🚀 Added
+### Added
 
-- **Emoji Picker System**: A complete emoji subsystem featuring skin tone support (`default_skin_tone`), Title Case formatting, and a dedicated navigation stack for category switching.
-- **Clipboard Lanucher**: Integrated a new `ClipboardLauncher` with intent-based color coding and background system polling.
-- **Inner Functions & Keybinds**: Added the ability for launcher variants (like Audio/MPRIS) to define internal functions that can be triggered via direct keybindings.
-- **Config Watcher**: Implemented a hot-reload system that monitors configuration files and updates the application state in real-time without a restart.
-- **Deployment Tooling**: Added `PKGBUILD` for Arch Linux support, a `packager.sh` script, and GitHub Workflows for automated releases and issue labeling.
+- **Translator:** Added new translation functionality.
+- **Launchers:**
+  - Implemented **Script Launcher** with "wait for return" support.
+  - Implemented **Events Launcher** with `look_ahead` and `look_back` parameter parsing.
+  - Added **Web Launcher** application action type.
+- **Emoji Picker:** Added foundational picker, including context menus and default skin tone support.
+- **File Search:** Implemented basic file search supporting `ripgrep` and `walkdir` backends.
+- **Clipboard:** Added clipboard listener and functionality.
+- **Integration:** Added support for Zoom meetings and XDG-settings mimetype handling.
 
-### 🔧 Changed
+### Improvements
 
-- **Modular Architecture**: Executed a major refactor of `src/launcher/mod.rs`, splitting monolithic logic into specialized files: `app_launcher`, `calc_launcher`, `bookmark_launcher`, and others.
-- **App Module Migration**: Refactored `main.rs` into a structured `app` module, isolating `bindings`, `updates`, and core state management for better testability.
-- **Icon Rendering Pipeline**: Moved icon loading into a dedicated module with improved SVG rendering and a theme-aware caching layer.
-- **Enhanced Error Views**: Overhauled the error reporting UI to be scrollable and interactive, allowing users to dismiss individual errors.
-- **Async Data Flow**: Decoupled async updates for launcher tiles; metadata (like Weather and MPRIS) now populates the UI reactively as soon as it is available.
+- **UI/UX:**
+  - Added visual shortcuts.
+  - Improved design for script, event, and file tiles.
+  - Added animations and improved transition handling.
+  - Improved error views (made scrollable, cleaner design).
+  - Improved icon theme loading and SVG rendering.
+- **Performance & Async:**
+  - Decoupled async updates; tiles update as soon as they are ready.
+  - Refactored search scoring and improved fuzzy matching.
+- **Configuration:**
+  - Added configuration hot-reloading (reloads when files change).
+  - Improved error handling for currency exchange rate updates and empty configs.
+- **Documentation:** General code documentation improvements.
 
-### 🐞 Fixed
+### Refactoring
 
-- **Emoji Loading**: Optimized the initial state and deserialization of the emoji picker to prevent UI stutters during large data loads.
-- **Context Menu Alignment**: Resolved several rendering issues regarding context menu widths and icon positioning on the command launcher.
-- **App Deserialization**: Fixed a crash caused by incorrect `ContextMenuAction` serialization in `app_data.rs`.
+- **Architecture:** - Major refactor of launcher-specific widgets; moved away from `mod.rs` into module-specific files.
+  - Refactored `main.rs` into a dedicated `app` module.
+  - Refactored `SherlockError` into `SherlockMessage` for better maintainability.
+- **File Search:** Moved file search helpers to `utils.rs` and added model variants.
+- **ContextMenu:** Moved `ContextMenuAction` to `context_menu.rs`.
 
-### 🗑️ Removed
+### Fixed
 
-- **Debug Noise**: Stripped out numerous `println!` statements and "debug-only" migration paths across the codebase.
-- **Dead Code**: Removed the deprecated `roadmap-tasks.md` and pruned unused imports using `cargo fix`.
-- **Monolithic Main**: Removed 400+ lines from `main.rs` in favor of the new modular `app` and `loader` structures.
-
----
+- **Core:** Resolved `tokio-gpui` incompatibility by migrating to `smol`.
+- **Deserialization:** Fixed incorrect deserialization/serialization of `ContextMenuActions` which caused application loading failures.
+- **Emoji:** Fixed skin tone application issues and incorrect loading state.
+- **Files:** Removed hardcoded home directory references.
+- **Launchers:** Fixed launcher type migration and arg bar completion.
+- **UI:** Fixed double borders, backgrounds, and incorrect icon/context menu rendering.
