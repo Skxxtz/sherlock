@@ -70,7 +70,7 @@ jobs:
           sed -i "s/^sha256sums=.*/sha256sums=('$SHA')/" PKGBUILD
 
       - name: Publish to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@v2
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
         with:
           pkgname: sherlock-launcher-gpui-bin
           pkgbuild: ./PKGBUILD
