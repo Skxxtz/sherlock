@@ -51,7 +51,7 @@ jobs:
       - name: Create release archive
         run: |
           cp target/release/sherlock-gpui sherlock
-          tar -czf sherlock-${{ github.ref_name }}-x86_64.tar.gz sherlock resources/ LICENSE
+          tar -czf sherlock-${{ github.ref_name }}-x86_64.tar.gz sherlock LICENSE
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
