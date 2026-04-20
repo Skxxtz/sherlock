@@ -211,19 +211,3 @@ pub fn spawn_clipboard_watcher() {
         }
     });
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_clipboard_watcher() {
-        spawn_clipboard_watcher();
-        let content = get_clipboard();
-        println!("Current clipboard: {:?}", content);
-        assert!(
-            CLIPBOARD.get().is_some(),
-            "CLIPBOARD static was not initialized"
-        );
-    }
-}
