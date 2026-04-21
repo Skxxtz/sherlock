@@ -146,20 +146,6 @@ impl WeatherData {
 
         // Get from wttr.in
         let url = format!("https://de.wttr.in/{}?format=j2", launcher.location);
-        let text = reqwest::get(&url)
-            .await
-            .map_err(|e| {
-                sherlock_msg!(
-                    Warning,
-                    SherlockErrorType::NetworkError(NetworkAction::Get, "wttr.in".into()),
-                    e
-                )
-            })?
-            .text()
-            .await
-            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
-        println!("{text}");
-
         let bytes = reqwest::get(url)
             .await
             .map_err(|e| {
