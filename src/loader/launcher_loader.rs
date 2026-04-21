@@ -1,5 +1,5 @@
 use gpui::{App, Entity};
-use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, io::ErrorKind, path::PathBuf, sync::Arc};
 
 use crate::{
     launcher::{Launcher, variant_type::LauncherType},
@@ -9,7 +9,10 @@ use crate::{
     utils::{
         cache::BinaryCache,
         config::ConfigGuard,
-        errors::{SherlockMessage, types::SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{FileAction, SherlockErrorType},
+        },
     },
 };
 
@@ -153,11 +156,23 @@ fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockMess
     let mut warnings = Vec::new();
     let mut launchers = Vec::new();
 
-    let Ok(mut file) = File::open(path) else {
-        return (launchers, warnings);
+    let raw_bytes: Vec<u8> = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            include_bytes!("../../assets/fallback.json").to_vec()
+        }
+        Err(e) => {
+            warnings.push(sherlock_msg!(
+                Error,
+                SherlockErrorType::FileError(FileAction::Read, path.clone()),
+                e
+            ));
+            return (launchers, warnings);
+        }
     };
 
-    let raw_values: Vec<serde_json::Value> = match simd_json::from_reader(&mut file) {
+    let mut buffer = raw_bytes;
+    let raw_values: Vec<serde_json::Value> = match simd_json::from_slice(&mut buffer) {
         Ok(v) => v,
         Err(e) => {
             warnings.push(sherlock_msg!(
