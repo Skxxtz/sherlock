@@ -2,7 +2,6 @@ use glob::Pattern;
 use gpui::SharedString;
 use rayon::prelude::*;
 use simd_json;
-use simd_json::prelude::ArrayTrait;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::{self, File};
@@ -93,13 +92,15 @@ impl Loader {
                                 current_action = ApplicationAction::new("app_launcher");
                                 continue;
                             }
-                            if current_section.is_none() {
+
+                            let Some(ref section) = current_section else {
                                 continue;
-                            }
+                            };
+
                             if let Some((key, value)) = line.split_once('=') {
                                 let key = key.trim().to_ascii_lowercase();
                                 let value = value.trim();
-                                if current_section.as_deref().unwrap() == "Desktop Entry" {
+                                if section == "Desktop Entry" {
                                     match key.as_ref() {
                                         "name" => {
                                             data.name = {
@@ -203,22 +204,20 @@ impl Loader {
         });
 
         // get files that are not yet cached
-        desktop_files.retain(|v| {
-            return !cached_paths.contains(v);
-        });
+        desktop_files.retain(|v| !cached_paths.contains(v));
 
         // get information for uncached applications
-        match Loader::load_applications_from_disk(
+        if let Ok(new_apps) = Loader::load_applications_from_disk(
             launcher,
             Some(desktop_files),
             counts,
             decimals,
             use_keywords,
         ) {
-            Ok(new_apps) => apps.extend(new_apps),
-            _ => {}
-        };
-        return Ok(apps);
+            apps.extend(new_apps);
+        }
+
+        Ok(apps)
     }
 
     pub fn load_applications(
@@ -290,16 +289,12 @@ impl Loader {
     }
 }
 
-fn should_ignore(ignore_apps: &Vec<Pattern>, app: &str) -> bool {
+fn should_ignore(ignore_apps: &[Pattern], app: &str) -> bool {
     let app_name = app.to_lowercase();
     ignore_apps.iter().any(|pattern| pattern.matches(&app_name))
 }
 pub fn parse_priority(priority: f32, count: u32, decimals: i32) -> f32 {
-    if count == 0 {
-        priority + 0.99
-    } else {
-        priority + 0.99 - count as f32 * 10f32.powi(-decimals)
-    }
+    priority + 0.99 - count as f32 * 10f32.powi(-decimals)
 }
 
 pub fn get_applications_dir() -> HashSet<PathBuf> {
@@ -313,20 +308,16 @@ pub fn get_applications_dir() -> HashSet<PathBuf> {
         }
         _ => HashSet::new(),
     };
-    let home = env::var("HOME").ok().unwrap_or("~".to_string());
-    let mut default_paths = vec![
-        String::from("/usr/share/applications/"),
-        String::from("~/.local/share/applications/"),
-    ];
-    if let Ok(c) = ConfigGuard::read() {
-        default_paths.extend(c.debug.app_paths.clone());
-    };
 
-    let mut paths: HashSet<PathBuf> = default_paths
+    let home = env::var("HOME").ok().unwrap_or("~".to_string());
+    let mut paths: HashSet<PathBuf> = ["/usr/share/applications/", "~/.local/share/applications/"]
         .iter()
-        .map(|path| path.replace("~", &home))
-        .map(|path| PathBuf::from(path))
+        .map(|p| PathBuf::from(p.replace("~", &home)))
         .collect();
+
+    if let Ok(c) = ConfigGuard::read() {
+        paths.extend(c.debug.app_paths.iter().map(PathBuf::from));
+    }
     paths.extend(xdg_paths);
     paths
 }
@@ -350,16 +341,9 @@ pub fn get_desktop_files(mut dirs: HashSet<PathBuf>) -> Vec<PathBuf> {
                 .collect::<HashMap<String, PathBuf>>()
         })
     }
-    let local_dir = dirs
-        .iter()
-        .find(|p| {
-            p.ends_with(".local/share/applications") || p.ends_with(".local/share/applications/")
-        })
-        .cloned();
-
-    if let Some(local_dir) = &local_dir {
-        dirs.remove(local_dir);
-    }
+    let local_app_dir = PathBuf::from(env::var("HOME").unwrap_or_else(|_| "~".into()))
+        .join(".local/share/applications");
+    let local_dir = dirs.take(&local_app_dir);
 
     let mut dirs: HashMap<String, PathBuf> = dirs
         .into_par_iter()
