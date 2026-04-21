@@ -1,24 +1,27 @@
 use chrono::NaiveTime;
 use gpui::{Hsla, LinearColorStop, linear_color_stop, rgb};
 use serde::{Deserialize, Serialize};
-use simd_json::base::{ValueAsArray, ValueAsScalar};
-use simd_json::derived::ValueObjectAccess;
-use std::collections::HashSet;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use strum::Display;
 
-use super::utils::to_title_case;
+use crate::launcher::weather_launcher::utils::transform_weather;
+use crate::launcher::weather_launcher::wttr_serde::WttrResponse;
 use crate::loader::resolve_icon_path;
+use crate::sherlock_msg;
 use crate::ui::widgets::RenderableChild;
-use crate::utils::config::ConfigGuard;
+use crate::utils::errors::SherlockMessage;
+use crate::utils::errors::types::{NetworkAction, SherlockErrorType};
 use crate::utils::files::home_dir;
 use crate::{
     launcher::{LauncherProvider, LauncherType},
     loader::utils::RawLauncher,
 };
+
+mod utils;
+mod wttr_serde;
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum WeatherIconTheme {
@@ -115,6 +118,7 @@ impl WeatherData {
             return None;
         }
     }
+
     fn cache(&self) -> Option<()> {
         let mut path = home_dir().ok()?;
         path.push(format!(".cache/sherlock/weather/{}.json", self.location));
@@ -131,116 +135,53 @@ impl WeatherData {
         }
         None
     }
-    pub async fn fetch_async(launcher: &WeatherLauncher) -> Option<(WeatherData, bool)> {
-        let config = ConfigGuard::read().ok()?;
-        // try read cache
+
+    pub async fn fetch_async(
+        launcher: &WeatherLauncher,
+    ) -> Result<(WeatherData, bool), SherlockMessage> {
+        // Check for cache hit
         if let Some(data) = WeatherData::from_cache(launcher) {
-            return Some((data, false));
-        };
+            return Ok((data, false));
+        }
 
+        // Get from wttr.in
         let url = format!("https://de.wttr.in/{}?format=j2", launcher.location);
+        let text = reqwest::get(&url)
+            .await
+            .map_err(|e| {
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::NetworkError(NetworkAction::Get, "wttr.in".into()),
+                    e
+                )
+            })?
+            .text()
+            .await
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
+        println!("{text}");
 
-        let response = reqwest::get(url).await.ok()?.text().await.ok()?;
-        let mut response_bytes = response.into_bytes();
-        let json: simd_json::OwnedValue = simd_json::to_owned_value(&mut response_bytes).ok()?;
-        let current_condition = json
-            .get("data")?
-            .get("current_condition")?
-            .as_array()?
-            .get(0)?;
+        let bytes = reqwest::get(url)
+            .await
+            .map_err(|e| {
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::NetworkError(NetworkAction::Get, "wttr.in".into()),
+                    e
+                )
+            })?
+            .bytes()
+            .await
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
 
-        // Get sunset time
-        let astronomy = json
-            .get("data")?
-            .get("weather")?
-            .as_array()?
-            .get(0)?
-            .get("astronomy")?
-            .as_array()?
-            .get(0)?;
-        let sunset_raw = astronomy.get("sunset")?.as_str()?;
-        let sunset = chrono::NaiveTime::parse_from_str(sunset_raw, "%I:%M %p").ok()?;
+        // 3. Deserialize (Using Serde + simd-json)
+        let raw: WttrResponse = simd_json::from_slice(&mut bytes.to_vec())
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
 
-        let sunrise_raw = astronomy.get("sunrise")?.as_str()?;
-        let sunrise = chrono::NaiveTime::parse_from_str(sunrise_raw, "%I:%M %p").ok()?;
-
-        // Parse Temperature
-        let temperature = match config.units.temperatures.as_str() {
-            "f" | "F" => format!("{}°F", current_condition.get("temp_F")?.as_str()?),
-            _ => format!("{}°C", current_condition.get("temp_C")?.as_str()?),
-        };
-
-        // Parse Icon
-        let code = current_condition.get("weatherCode")?.as_str()?;
-        let icon = if matches!(launcher.icon_theme, WeatherIconTheme::Sherlock) {
-            resolve_icon_path(&format!(
-                "weather-icons/sherlock-weather-{}",
-                Self::match_weather_code(code)
-            ))
-        } else {
-            resolve_icon_path(&format!("weather-{}", Self::match_weather_code(code)))
-        };
-
-        // Parse wind dir
-        let wind_deg = current_condition
-            .get("winddirDegree")?
-            .as_str()?
-            .parse::<f32>()
-            .ok()?;
-        let sector_size: f32 = 45.0;
-        let index = ((wind_deg + sector_size / 2.0) / sector_size).floor() as usize % 8;
-        let win_dirs = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"];
-        let wind_dir = win_dirs.get(index)?;
-
-        // Parse wind speed
-        let imperials: HashSet<&str> = HashSet::from([
-            "inches", "inch", "in", "feet", "foot", "ft", "yards", "yard", "yd", "miles", "mile",
-            "mi",
-        ]);
-        let wind = if imperials.contains(config.units.lengths.to_lowercase().as_str()) {
-            let speed = current_condition.get("windspeedMiles")?.as_str()?;
-            format!("{} {}mph", wind_dir, speed)
-        } else {
-            let speed = current_condition.get("windspeedKmph")?.as_str()?;
-            format!("{} {}km/h", wind_dir, speed)
-        };
-
-        let loc = to_title_case(&launcher.location);
-        let format_str = format!("{}  {}", loc, wind);
-        let data = WeatherData {
-            temperature,
-            icon,
-            format_str,
-            location: launcher.location.clone(),
-            css: Self::match_weather_code(code),
-            sunset,
-            sunrise,
-            init: true,
-        };
+        // 4. Transform
+        let data = transform_weather(raw, launcher)?;
         data.cache();
 
-        Some((data, true))
-    }
-    fn match_weather_code(code: &str) -> WeatherClass {
-        match code {
-            "113" => WeatherClass::Clear,
-            "116" => WeatherClass::FewClouds,
-            "119" | "122" => WeatherClass::ManyClouds,
-            "143" | "248" | "260" => WeatherClass::Mist,
-            "176" | "263" | "299" | "305" | "353" | "356" => WeatherClass::Showers,
-            "179" | "362" | "365" | "374" => WeatherClass::FreezingScatteredRainStorm,
-            "182" | "185" | "281" | "284" | "311" | "314" | "317" | "350" | "377" => {
-                WeatherClass::FreezingScatteredRain
-            }
-            "200" | "302" | "308" | "359" | "386" | "389" => WeatherClass::Storm,
-            "227" | "320" => WeatherClass::SnowScatteredDay,
-            "230" | "329" | "332" | "338" => WeatherClass::SnowStorm,
-            "323" | "326" | "335" | "368" | "371" | "392" | "395" => {
-                WeatherClass::SnowScatteredStorm
-            }
-            "266" | "293" | "296" => WeatherClass::ShowersScattered,
-            _ => WeatherClass::None,
-        }
+        Ok((data, true))
     }
 }
 

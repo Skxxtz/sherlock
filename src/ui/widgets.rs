@@ -257,7 +257,13 @@ impl RenderableChild {
                     unreachable!("WeatherLike variant must have LauncherType::Weather");
                 };
 
-                let (new_weather_data, changed) = WeatherData::fetch_async(wtr).await?;
+                let (new_weather_data, changed) = match WeatherData::fetch_async(wtr).await {
+                    Ok((w, c)) => (w, c),
+                    Err(e) => {
+                        println!("{:?}", e);
+                        return None;
+                    }
+                };
 
                 if changed {
                     *inner = new_weather_data;
