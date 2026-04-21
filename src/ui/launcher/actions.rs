@@ -509,9 +509,8 @@ impl LauncherView {
     }
     pub(crate) fn update_async(&mut self, cx: &mut Context<Self>) {
         let data = self.navigation.with_model(cx, |mdl| mdl.data());
+        let items = data.read_with(cx, |this, _| this.clone());
         self.active_update_task = Some(cx.spawn(async move |this, cx: &mut AsyncApp| {
-            let items = data.read_with(cx, |this, _| this.clone());
-
             let mut futures: FuturesUnordered<_> = items
                 .iter()
                 .enumerate()
