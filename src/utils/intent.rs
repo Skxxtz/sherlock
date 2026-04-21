@@ -1,3 +1,5 @@
+use std::iter::Peekable;
+
 use gpui::SharedString;
 use smallvec::{SmallVec, smallvec};
 
@@ -119,32 +121,23 @@ impl Intent {
 }
 
 impl Intent {
-    pub fn tokenize(input: &str) -> SmallVec<[&str; 8]> {
-        // Tokenization
-        let mut tokens: SmallVec<[&str; 8]> = SmallVec::new();
-        let bytes = input.as_bytes();
-        let mut last = 0;
-
-        for i in 0..bytes.len() {
-            let b = bytes[i];
-            if matches!(b, b' ' | b'(' | b')' | b'%' | b',') {
-                if last < i {
-                    let word = input[last..i].trim_matches(',');
-                    Self::push_cleaned_token(&mut tokens, word);
-                }
-                last = i + 1;
-            }
-        }
-
-        // last chunk
-        if last < input.len() {
-            let word = &input[last..].trim_matches(',');
-            if !word.is_empty() {
-                Self::push_cleaned_token(&mut tokens, word);
-            }
-        }
-
-        tokens
+    pub fn tokenize(input: &str) -> impl Iterator<Item = &str> {
+        input
+            .split(|c| matches!(c, ' ' | '(' | ')' | '%' | ','))
+            .map(|s| s.trim_matches(','))
+            .filter(|s| !s.is_empty())
+    }
+    pub fn tokenize_kill_noise(input: &str) -> impl Iterator<Item = &str> {
+        Self::tokenize(input).filter(|word| {
+            !matches!(word, w if
+            w.eq_ignore_ascii_case("how") ||
+            w.eq_ignore_ascii_case("much") ||
+            w.eq_ignore_ascii_case("is") ||
+            w.eq_ignore_ascii_case("are") ||
+            w.eq_ignore_ascii_case("convert") ||
+            w.eq_ignore_ascii_case("what")
+            )
+        })
     }
     pub fn parse(input: &str, caps: &Capabilities) -> Intent {
         let raw = input.trim();
@@ -152,18 +145,18 @@ impl Intent {
             return Intent::None;
         }
 
-        let tokens = Self::tokenize(raw);
-
         // match intent
-        if let Some(intent) = Intent::try_parse_color_conversion(&tokens, caps) {
+        let mut tokens = Self::tokenize_kill_noise(raw).peekable();
+        if let Some(intent) = Intent::try_parse_color_conversion(&mut tokens, caps) {
             return intent;
         }
 
-        if let Some(intent) = Intent::try_parse_unit_conversion(&tokens, caps) {
+        let mut tokens = Self::tokenize_kill_noise(raw).peekable();
+        if let Some(intent) = Intent::try_parse_unit_conversion(&mut tokens, caps) {
             return intent;
         }
 
-        if let Some(intent) = Intent::try_parse_translation(&tokens) {
+        if let Some(intent) = Intent::try_parse_translation(raw) {
             return intent;
         }
 
@@ -174,23 +167,10 @@ impl Intent {
         Intent::None
     }
 
-    #[inline]
-    fn push_cleaned_token<'a>(tokens: &mut SmallVec<[&'a str; 8]>, word: &'a str) {
-        let is_noise = matches!(word, w if
-            w.eq_ignore_ascii_case("how") ||
-            w.eq_ignore_ascii_case("much") ||
-            w.eq_ignore_ascii_case("is") ||
-            w.eq_ignore_ascii_case("are") ||
-            w.eq_ignore_ascii_case("convert") ||
-            w.eq_ignore_ascii_case("what")
-        );
-
-        if !is_noise {
-            tokens.push(word);
-        }
-    }
-
-    fn try_parse_color_conversion(tokens: &[&str], caps: &Capabilities) -> Option<Intent> {
+    fn try_parse_color_conversion<'a>(
+        tokens: &mut Peekable<impl Iterator<Item = &'a str>>,
+        caps: &Capabilities,
+    ) -> Option<Intent> {
         fn to_static_space(s: &str) -> Option<&'static str> {
             match s {
                 "rgb" => Some("rgb"),
@@ -202,41 +182,33 @@ impl Intent {
                 _ => None,
             }
         }
+
         if !caps.allows(Capabilities::COLORS) {
             return None;
         }
 
-        let spaces = ["rgb", "rgba", "hex", "hsl", "hsv", "lab"];
-
-        let explicit_space_idx = tokens.iter().position(|t| spaces.contains(t));
-        let (from_space, from_idx) = if tokens.first().map_or(false, |t| t.starts_with('#')) {
-            ("hex", 0)
-        } else if let Some(idx) = explicit_space_idx {
-            (to_static_space(tokens[idx])?, idx)
+        let first = *tokens.peek()?;
+        let (from_space, values) = if first.starts_with('#') {
+            let hex = tokens.next()?;
+            let (r, g, b) = ColorConverter::hex_to_rgb(hex)?;
+            ("hex", smallvec![r, g, b])
+        } else if let Some(space) = to_static_space(first) {
+            tokens.next();
+            let mut vals = SmallVec::with_capacity(4);
+            while let Some(&t) = tokens.peek() {
+                if matches!(t, "to" | "in" | "as") {
+                    break;
+                }
+                if let Ok(v) = t.parse::<f32>() {
+                    vals.push(v);
+                    tokens.next();
+                } else {
+                    tokens.next();
+                }
+            }
+            (space, vals)
         } else {
             return None;
-        };
-
-        // collect values — everything after the space name that isn't a connector
-        let connector_idx = tokens.iter().position(|t| matches!(*t, "to" | "in" | "as"));
-
-        let values_end = connector_idx.unwrap_or(tokens.len());
-
-        let values: SmallVec<[f32; 4]> = if from_idx >= values_end {
-            smallvec![]
-        } else if from_space == "hex" || tokens.get(from_idx).map_or(false, |t| t.starts_with('#'))
-        {
-            let token = tokens.get(from_idx)?;
-            if let Some((r, g, b)) = ColorConverter::hex_to_rgb(token) {
-                smallvec![r, g, b]
-            } else {
-                return None;
-            }
-        } else {
-            tokens[from_idx + 1..values_end]
-                .iter()
-                .filter_map(|t| t.parse::<f32>().ok())
-                .collect()
         };
 
         if values.is_empty() {
@@ -244,80 +216,103 @@ impl Intent {
         }
 
         // no connector → ColorShow
-        let Some(connector_idx) = connector_idx else {
-            return Some(Intent::ColorDisplay { from_space, values });
-        };
-
-        // connector must be after space name
-        if connector_idx <= from_idx {
-            return None;
+        if let Some(&connector) = tokens.peek() {
+            if matches!(connector, "to" | "in" | "as") {
+                tokens.next();
+                if let Some(to_space_str) = tokens.next() {
+                    if let Some(to_space) = to_static_space(to_space_str) {
+                        return Some(Intent::ColorConvert {
+                            from_space,
+                            values,
+                            to_space,
+                        });
+                    }
+                }
+            }
         }
 
-        let to_space = to_static_space(tokens.get(connector_idx + 1)?)?;
-        if spaces.contains(&to_space) {
-            return Some(Intent::ColorConvert {
-                from_space,
-                values,
-                to_space,
-            });
-        }
-
-        None
+        Some(Intent::ColorDisplay { from_space, values })
     }
 
-    fn try_parse_unit_conversion(tokens: &[&str], caps: &Capabilities) -> Option<Intent> {
-        let connector_idx = tokens
-            .iter()
-            .position(|t| matches!(*t, "to" | "in" | "as"))?;
+    fn try_parse_unit_conversion<'a>(
+        tokens: &mut Peekable<impl Iterator<Item = &'a str>>,
+        caps: &Capabilities,
+    ) -> Option<Intent> {
+        fn parse_from_tokens(tokens: &[&str], caps: &Capabilities) -> Option<(f64, Unit)> {
+            match tokens {
+                // Case: ["100", "kg"]
+                [v_str, u_str] => {
+                    let v = v_str.replace(',', "").parse::<f64>().ok()?;
+                    let f = Unit::parse_with_capabilities(u_str, caps)?;
+                    Some((v, f))
+                }
+                // Case: ["100kg"] or ["$100"]
+                [combined] => {
+                    let split_at = combined.find(|c: char| !c.is_numeric() && c != '.' && c != ',');
 
-        let to_token = tokens.get(connector_idx + 1)?;
-
-        let (value, from) = if connector_idx >= 2 {
-            // Case: ["100", "kg", "to", "lbs"]
-            let v = tokens[0].parse::<f64>().ok()?;
-            let f = Unit::parse_with_capabilities(tokens[1], caps)?;
-            (v, f)
-        } else if connector_idx == 1 {
-            let first = &tokens[0];
-            let split_at = first.find(|c: char| !c.is_numeric() && c != '.' && c != ',');
-
-            if let Some(idx) = split_at {
-                // Case: ["100kg", "to", "lbs"]
-                let (v_str, u_str) = first.split_at(idx);
-                let v = v_str.replace(',', "").parse::<f64>().ok()?;
-                let f = Unit::parse_with_capabilities(u_str, caps)?;
-                (v, f)
-            } else {
-                // Case: ["$100", "to", "eur"]
-                let first_char_len = first.chars().next()?.len_utf8();
-                let (u_str, v_str) = first.split_at(first_char_len);
-                let f = Unit::parse_with_capabilities(u_str, caps)?;
-                let v = v_str.replace(',', "").parse::<f64>().ok()?;
-                (v, f)
+                    if let Some(idx) = split_at {
+                        // If number comes first (e.g., "100kg")
+                        if idx > 0 {
+                            let (v_str, u_str) = combined.split_at(idx);
+                            let v = v_str.replace(',', "").parse::<f64>().ok()?;
+                            let f = Unit::parse_with_capabilities(u_str, caps)?;
+                            Some((v, f))
+                        } else {
+                            // If unit/symbol comes first (e.g., "$100")
+                            let first_char_len = combined.chars().next()?.len_utf8();
+                            let (u_str, v_str) = combined.split_at(first_char_len);
+                            let f = Unit::parse_with_capabilities(u_str, caps)?;
+                            let v = v_str.replace(',', "").parse::<f64>().ok()?;
+                            Some((v, f))
+                        }
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
             }
-        } else {
-            return None;
-        };
+        }
+
+        // get tokens until connector
+        let mut pre_connector = Vec::new();
+        while let Some(&t) = tokens.peek() {
+            if matches!(t, "to" | "in" | "as") {
+                break;
+            }
+            pre_connector.push(tokens.next().unwrap())
+        }
+
+        let _ = tokens.next()?; // skip connector
+        let to_token = tokens.next()?;
+
+        let (value, from) = parse_from_tokens(&pre_connector, caps)?;
 
         let to = Unit::parse_in_category(to_token, from.category())?;
 
         Some(Intent::Conversion { value, from, to })
     }
 
-    pub fn try_parse_translation(tokens: &[&str]) -> Option<Intent> {
-        let connector_idx = tokens.iter().rposition(|t| matches!(*t, "to" | "in"))?;
+    pub fn try_parse_translation(input: &str) -> Option<Intent> {
+        let search_terms = [" to ", " in "];
 
-        if connector_idx > 0 && tokens.len() > connector_idx + 1 {
-            let text = tokens[0..connector_idx].join(" ");
-            let target_lang = Language::from_str(&tokens[connector_idx + 1])?;
+        let (idx, connector) = search_terms
+            .iter()
+            .filter_map(|&term| input.rfind(term).map(|i| (i, term)))
+            .max_by_key(|&(i, _)| i)?;
 
-            return Some(Intent::Translation {
-                text: text.into(),
-                target_lang: target_lang,
-            });
+        let text = input[..idx].trim();
+        let lang_str = input[idx + connector.len()..].trim();
+
+        if text.is_empty() || lang_str.is_empty() {
+            return None;
         }
 
-        None
+        let target_lang = Language::from_str(lang_str)?;
+
+        Some(Intent::Translation {
+            text: text.to_string().into(),
+            target_lang,
+        })
     }
 
     fn try_parse_url(input: &str) -> Option<Intent> {
@@ -829,6 +824,21 @@ mod tests {
                 },
             ),
             ("show me the weather", Intent::None),
+            // --- Translations ---
+            (
+                "something to german",
+                Intent::Translation {
+                    text: "something".into(),
+                    target_lang: Language::German,
+                },
+            ),
+            (
+                "what is something to german",
+                Intent::Translation {
+                    text: "what is something".into(),
+                    target_lang: Language::German,
+                },
+            ),
         ];
 
         for (input, expected) in cases {
