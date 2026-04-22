@@ -53,11 +53,16 @@ jobs:
           cp target/release/sherlock-gpui sherlock
           tar -czf sherlock-${{ github.ref_name }}-x86_64.tar.gz sherlock resources/ LICENSE
 
+      - name: Extract release notes
+        run: |
+          # Extract text between the first and second '## [' header
+          awk '/^## \[/ {if (++n>1) exit} {print}' CHANGELOG.md > release_notes.md
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: sherlock-${{ github.ref_name }}-x86_64.tar.gz
-          body_path: CHANGELOG.md
+          body_path: release_notes.md
           generate_release_notes: true
 
       - name: Update PKGBUILD
