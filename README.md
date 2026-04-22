@@ -64,11 +64,16 @@ yay -S sherlock-launcher-git
 To build Sherlock Launcher from source, follow these steps.<br>
 Make sure you have the necessary dependencies installed:
 
+<details>
+<summary><strong>Dependencies</strong></summary>
+
 - `rust` - [How to install rust](https://www.rust-lang.org/tools/install)
 - `git` - [How to install git](https://github.com/git-guides/install-git)
 - `gtk-4-layer-shell` - [Gtk4 Layer Shell](https://github.com/wmww/gtk4-layer-shell)
 - `dbus` - (Used to get currently playing song)
 - `libsqlite3-dev`
+
+</details>
 
 1. **Clone the repository**:
 
@@ -106,9 +111,14 @@ Make sure you have the necessary dependencies installed:
 To build a `.deb` package directly from the source, follow these steps:<br>
 Make sure you have the following dependencies installed:
 
+<details>
+<summary><strong>Dependencies</strong></summary>
+
 - `rust` - [How to install rust](https://www.rust-lang.org/tools/install)
 - `git` - [How to install git](https://github.com/git-guides/install-git)
 - `gtk-4-layer-shell` - [Gtk4 Layer Shell](https://github.com/wmww/gtk4-layer-shell)
+
+</details>
 
 1. **Install the `cargo-deb` tool**:
 
@@ -137,8 +147,6 @@ Make sure you have the following dependencies installed:
     ```
 
     > You can use tab-completion to auto complete the exact file name.
-
-<br><br>
 
 ### <ins>Nix</ins>
 
