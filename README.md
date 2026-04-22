@@ -291,4 +291,4 @@ git push origin v0.x.0
 
 # License
 
-GNU GENERAL PUBLIC LICENSE –  see [LICENSE]() for details
+GNU GENERAL PUBLIC LICENSE –  see [LICENSE](https://github.com/Skxxtz/sherlock/blob/main/LICENSE) for details
