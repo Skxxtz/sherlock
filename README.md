@@ -75,6 +75,10 @@ Make sure you have the necessary dependencies installed:
 
 </details>
 
+
+<details>
+<summary><strong>Build Steps:</strong></summary>
+
 1. **Clone the repository**:
 
     ```bash
@@ -106,6 +110,8 @@ Make sure you have the necessary dependencies installed:
     rm -rf /path/to/sherlock
     ```
 
+</details>
+
 ### <ins>Build Debian Package</ins>
 
 To build a `.deb` package directly from the source, follow these steps:<br>
@@ -119,6 +125,9 @@ Make sure you have the following dependencies installed:
 - `gtk-4-layer-shell` - [Gtk4 Layer Shell](https://github.com/wmww/gtk4-layer-shell)
 
 </details>
+
+<details>
+<summary><strong>Build Steps:</strong></summary>
 
 1. **Install the `cargo-deb` tool**:
 
@@ -147,6 +156,8 @@ Make sure you have the following dependencies installed:
     ```
 
     > You can use tab-completion to auto complete the exact file name.
+
+</details>
 
 ### <ins>Nix</ins>
 
