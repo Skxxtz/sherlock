@@ -225,10 +225,12 @@ pub struct SherlockAlias {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum ExecVariable {
+    #[serde(rename = "string_input")]
     String(SharedString),
+    #[serde(rename = "password_input")]
     Password(SharedString),
+    #[serde(rename = "path_input")]
     Path(PathData), // Use a helper struct
 }
 

@@ -95,10 +95,6 @@ impl<'g> IconThemeGuard {
         })
     }
 
-    pub fn _read() -> Result<RwLockReadGuard<'g, CustomIconTheme>, SherlockMessage> {
-        Self::get_read()
-    }
-
     pub fn add_path<T: AsRef<Path>>(path: T) -> Result<(), SherlockMessage> {
         let mut inner = Self::get_write()?;
         inner.add_path(path);
@@ -108,14 +104,5 @@ impl<'g> IconThemeGuard {
     pub fn lookup_icon(name: &str) -> Result<Option<Option<Arc<Path>>>, SherlockMessage> {
         let inner = Self::get_read()?;
         Ok(inner.lookup_icon(name))
-    }
-
-    pub fn _write_key<F>(key_fn: F) -> Result<(), SherlockMessage>
-    where
-        F: FnOnce(&mut CustomIconTheme),
-    {
-        let mut config = Self::get_write()?;
-        key_fn(&mut config);
-        Ok(())
     }
 }

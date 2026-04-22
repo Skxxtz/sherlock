@@ -228,7 +228,7 @@ impl Currency {
         let currencies: HashMap<String, f32> =
             if let Some(array) = parsed.get("data").and_then(OwnedValue::as_array) {
                 array
-                    .iter()
+                    .into_iter()
                     .filter_map(|item| {
                         let symbol = item.get("s")?.as_str()?;
                         let (_, pair) = symbol.split_once(":")?;

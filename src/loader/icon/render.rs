@@ -23,7 +23,6 @@ pub fn render_to_png_cache(key: &str, svg_data: &[u8]) -> Option<Arc<Path>> {
     }
 
     let opt = usvg::Options {
-        shape_rendering: usvg::ShapeRendering::CrispEdges,
         text_rendering: usvg::TextRendering::OptimizeLegibility,
         image_rendering: usvg::ImageRendering::OptimizeQuality,
         ..Default::default()
