@@ -3,5 +3,5 @@ title = "Sherlock"
 src = "src"
 
 [output.html]
-git-repository-url = "https://github.com/yourname/sherlock"
-edit-url-template = "https://github.com/yourname/sherlock/edit/main/docs/src/{path}"
+git-repository-url = "https://github.com/skxxtz/sherlock"
+edit-url-template = "https://github.com/skxxtz/sherlock/edit/main/docs/src/{path}"
