@@ -14,13 +14,12 @@ run `git log main..dev` for all changes
 
 ---
 
-## [0.2.1-dev] - 22.04.26
+## [Unreleased]
 
 ### Added
 
 - Implemented default `fallback.json` file if none is provided by the user
 - Added functionality to the clipboard launcher to open URLs based on intent
-
 
 ### Improvements
 
@@ -86,4 +85,3 @@ run `git log main..dev` for all changes
 - **Files:** Removed hardcoded home directory references.
 - **Launchers:** Fixed launcher type migration and arg bar completion.
 - **UI:** Fixed double borders, backgrounds, and incorrect icon/context menu rendering.
-
