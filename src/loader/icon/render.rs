@@ -22,10 +22,12 @@ pub fn render_to_png_cache(key: &str, svg_data: &[u8]) -> Option<Arc<Path>> {
         return Some(Arc::from(out.into_boxed_path()));
     }
 
-    let mut opt = usvg::Options::default();
-    opt.shape_rendering = usvg::ShapeRendering::GeometricPrecision;
-    opt.text_rendering = usvg::TextRendering::OptimizeLegibility;
-    opt.image_rendering = usvg::ImageRendering::OptimizeQuality;
+    let opt = usvg::Options {
+        shape_rendering: usvg::ShapeRendering::CrispEdges,
+        text_rendering: usvg::TextRendering::OptimizeLegibility,
+        image_rendering: usvg::ImageRendering::OptimizeQuality,
+        ..Default::default()
+    };
 
     let tree = usvg::Tree::from_data(svg_data, &opt)
         .map_err(|e| eprintln!("Failed to parse SVG {key}: {e}"))

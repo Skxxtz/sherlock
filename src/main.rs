@@ -27,7 +27,7 @@ static CONTEXT_MENU_BIND: OnceLock<String> = OnceLock::new();
 /// Holds the modifier key char
 static SHORTCUT_MOD: OnceLock<ShortcutKeyMod> = OnceLock::new();
 /// Holds the socket location for the sherlock socket
-static SOCKET_PATH: &'static str = "/tmp/sherlock.sock";
+static SOCKET_PATH: &str = "/tmp/sherlock.sock";
 
 #[tokio::main]
 async fn main() {

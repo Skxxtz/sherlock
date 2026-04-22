@@ -48,7 +48,7 @@ impl LauncherProvider for EmojiPicker {
             .unwrap_or(SkinTone::Simpsons);
         set_selected_skin_tone(default_skin_tone, 0);
 
-        let child = RenderableChild::AppLike { launcher, inner };
+        let child = RenderableChild::App { launcher, inner };
 
         Ok(vec![child])
     }

@@ -98,14 +98,15 @@ impl ResultHeap {
             return true;
         }
         // Only evict the worst (last, highest score) if new result is better
-        if let Some(worst) = self.buf.last() {
-            if result.score < worst.score {
-                *self.buf.last_mut().unwrap() = result;
-                self.buf
-                    .sort_unstable_by(|a, b| a.score.partial_cmp(&b.score).unwrap());
-                return true;
-            }
+        if let Some(worst) = self.buf.last()
+            && result.score < worst.score
+        {
+            *self.buf.last_mut().unwrap() = result;
+            self.buf
+                .sort_unstable_by(|a, b| a.score.partial_cmp(&b.score).unwrap());
+            return true;
         }
+
         false
     }
 

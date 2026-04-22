@@ -34,7 +34,9 @@ pub struct SherlockFlags {
 }
 
 impl SherlockFlags {
-    pub fn to_config(&mut self) -> Result<(SherlockConfig, Vec<SherlockMessage>), SherlockMessage> {
+    pub fn get_config(
+        &mut self,
+    ) -> Result<(SherlockConfig, Vec<SherlockMessage>), SherlockMessage> {
         // Get location of config file
         let config_dir = self.config_dir.take().unwrap_or(paths::get_config_dir()?);
         let home = home_dir()?;
@@ -85,25 +87,25 @@ impl SherlockFlags {
                     }
                     "toml" => {
                         // Setup to parse nested configs
-                        if let Ok(sources) = toml::de::from_str::<ConfigSourceFiles>(&config_str) {
-                            if !sources.source.is_empty() {
-                                sources
-                                    .source
-                                    .into_iter()
-                                    .map(|s| {
-                                        if s.file.starts_with("~/") {
-                                            expand_path(s.file, &home)
-                                        } else {
-                                            s.file
-                                        }
-                                    })
-                                    .filter(|f| f.is_file())
-                                    .filter_map(|f| read_to_string(&f).ok())
-                                    .for_each(|content| {
-                                        config_str.push('\n');
-                                        config_str.push_str(&content);
-                                    });
-                            }
+                        if let Ok(sources) = toml::de::from_str::<ConfigSourceFiles>(&config_str)
+                            && !sources.source.is_empty()
+                        {
+                            sources
+                                .source
+                                .into_iter()
+                                .map(|s| {
+                                    if s.file.starts_with("~/") {
+                                        expand_path(s.file, &home)
+                                    } else {
+                                        s.file
+                                    }
+                                })
+                                .filter(|f| f.is_file())
+                                .filter_map(|f| read_to_string(&f).ok())
+                                .for_each(|content| {
+                                    config_str.push('\n');
+                                    config_str.push_str(&content);
+                                });
                         }
                         toml::de::from_str(&config_str).map_err(|e| {
                             sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e)

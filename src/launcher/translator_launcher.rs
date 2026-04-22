@@ -23,7 +23,7 @@ impl LauncherProvider for Translator {
         _opts: Arc<Value>,
         cx: &mut gpui::App,
     ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockMessage> {
-        Ok(vec![RenderableChild::TranslatorLike {
+        Ok(vec![RenderableChild::Translator {
             launcher,
             inner: TranslationData::new(cx),
         }])

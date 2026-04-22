@@ -74,7 +74,7 @@ pub fn spawn_detached(
         command.pre_exec(|| {
             // Fork again inside the child
             match libc::fork() {
-                -1 => return Err(std::io::Error::last_os_error()),
+                -1 => Err(std::io::Error::last_os_error()),
                 0 => {
                     // detatch grandchild
                     libc::setsid();
@@ -94,15 +94,13 @@ pub fn spawn_detached(
         .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::CommandError(cmd.clone()), e))?;
 
     // pass sudo password
-    if sudo_used {
-        if let Some((_, password)) = variables
+    if sudo_used
+        && let Some((_, password)) = variables
             .iter()
             .find(|(k, _)| k.eq_ignore_ascii_case("sudo"))
-        {
-            send_sudo(&mut child, password.as_str()).map_err(|e| {
-                sherlock_msg!(Warning, SherlockErrorType::CommandError(cmd.clone()), e)
-            })?;
-        }
+    {
+        send_sudo(&mut child, password.as_str())
+            .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::CommandError(cmd.clone()), e))?;
     }
 
     let _ = child.wait();

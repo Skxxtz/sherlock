@@ -96,7 +96,7 @@ impl<'a> RenderableChildImpl<'a> for MprisState {
     #[inline(always)]
     fn based_show<C: AppContext>(&self, _keyword: &str, _cx: &mut C) -> Option<bool> {
         if self.raw.is_some() {
-            return None;
+            None
         } else {
             Some(false)
         }

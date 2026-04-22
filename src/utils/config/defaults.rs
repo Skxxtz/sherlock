@@ -22,10 +22,10 @@ impl ConstantDefaults {
         let mut terminal = None;
 
         //Check if $TERMAINAL is set
-        if let Ok(term) = std::env::var("TERMINAL") {
-            if Self::is_terminal_installed(&term) {
-                terminal = Some(term);
-            }
+        if let Ok(term) = std::env::var("TERMINAL")
+            && Self::is_terminal_installed(&term)
+        {
+            terminal = Some(term);
         }
         // Try other terminals
         if terminal.is_none() {
@@ -115,7 +115,7 @@ impl ConstantDefaults {
                     e
                 )
             })?
-            .filter_map(Result::ok)
+            .map_while(Result::ok)
             .find(|line| line.starts_with("Exec="))
             .and_then(|line| line.strip_prefix("Exec=").map(|l| l.to_string()))
             .ok_or_else(|| {

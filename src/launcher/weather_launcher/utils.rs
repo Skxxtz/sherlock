@@ -62,9 +62,9 @@ pub(super) fn transform_weather(
     let astro = &raw.weather[0].astronomy[0];
     let config = ConfigGuard::read()?;
 
-    let temperature = format_temp(&current, &config.units.temperatures);
+    let temperature = format_temp(current, &config.units.temperatures);
     let icon = resolve_icon(&launcher.icon_theme, &current.weather_code);
-    let wind = format_wind(&current, &config.units.lengths);
+    let wind = format_wind(current, &config.units.lengths);
 
     let sunset = parse_time(&astro.sunset).ok_or_else(|| {
         sherlock_msg!(

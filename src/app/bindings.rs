@@ -48,7 +48,7 @@ pub(super) fn register_bindings(cx: &mut App) {
     add("right", KeyBinding::new("right", SelectionRight, None));
     add(
         "variable.tab",
-        UIFunction::Complete.into_bind("variable.tab").unwrap(),
+        UIFunction::Complete.get_binding("variable.tab").unwrap(),
     );
     add("enter", KeyBinding::new("enter", Execute, None));
     add("tab", KeyBinding::new("tab", NextVar, None));
@@ -72,7 +72,7 @@ pub(super) fn register_bindings(cx: &mut App) {
                         KeyBinding::new(&actual_key, ShortcutAction { index: i }, None),
                     );
                 }
-            } else if let Some(binding) = action_type.into_bind(key) {
+            } else if let Some(binding) = action_type.get_binding(key) {
                 add(key, binding);
             }
         }

@@ -1,9 +1,10 @@
 use crate::{
+    app::RenderableChildEntity,
     launcher::Launcher,
     ui::{model::file::FileSearchModel, widgets::RenderableChild},
 };
-use gpui::{App, AppContext, Entity, SharedString, Task};
-use std::sync::Arc;
+use gpui::{App, AppContext, SharedString, Task};
+use std::{rc::Rc, sync::Arc};
 
 pub mod emoji;
 pub mod file;
@@ -12,13 +13,13 @@ pub mod message;
 
 pub enum Model {
     Standard {
-        data: Entity<Arc<Vec<RenderableChild>>>,
+        data: RenderableChildEntity,
         filtered_indices: Arc<[usize]>,
         last_query: Option<SharedString>,
         deferred_render_task: Option<Task<Option<()>>>,
     },
     FileSearch {
-        data: Entity<Arc<Vec<RenderableChild>>>,
+        data: RenderableChildEntity,
         filtered_indices: Arc<[usize]>,
         last_query: Option<SharedString>,
         search: FileSearchModel,
@@ -30,13 +31,13 @@ impl Model {
         let range: Arc<[usize]> = (0..data.len()).collect::<Vec<_>>().into();
 
         Self::Standard {
-            data: cx.new(|_| Arc::new(data)),
+            data: cx.new(|_| Rc::new(data)),
             filtered_indices: range,
             last_query: None,
             deferred_render_task: None,
         }
     }
-    pub fn standard_with_entity(entity: Entity<Arc<Vec<RenderableChild>>>, cx: &mut App) -> Self {
+    pub fn standard_with_entity(entity: RenderableChildEntity, cx: &mut App) -> Self {
         let range: Arc<[usize]> = (0..entity.read(cx).len()).collect::<Vec<_>>().into();
 
         Self::Standard {
@@ -49,7 +50,7 @@ impl Model {
 
     pub fn file_search(launcher: Arc<Launcher>, dir: Option<SharedString>, cx: &mut App) -> Self {
         Self::FileSearch {
-            data: cx.new(|_| Arc::new(Vec::new())),
+            data: cx.new(|_| Rc::new(Vec::new())),
             filtered_indices: Arc::from([]),
             last_query: None,
             search: FileSearchModel::new(launcher, dir),
@@ -67,7 +68,7 @@ impl Model {
         }
     }
 
-    pub fn data(&self) -> Entity<Arc<Vec<RenderableChild>>> {
+    pub fn data(&self) -> RenderableChildEntity {
         match self {
             Self::Standard { data, .. } => data.clone(),
             Self::FileSearch { data, .. } => data.clone(),

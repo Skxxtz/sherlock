@@ -78,7 +78,7 @@ impl LauncherProvider for CommandLauncher {
                     ctx.max_decimals,
                 ));
 
-                RenderableChild::AppLike {
+                RenderableChild::App {
                     launcher: Arc::clone(&launcher),
                     inner,
                 }

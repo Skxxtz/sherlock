@@ -19,10 +19,10 @@ where
 pub fn expand_path<T: AsRef<Path>>(path: T, home: &Path) -> PathBuf {
     let path = path.as_ref();
     let mut components = path.components();
-    if let Some(std::path::Component::Normal(first)) = components.next() {
-        if first == "~" {
-            return home.join(components.as_path());
-        }
+    if let Some(std::path::Component::Normal(first)) = components.next()
+        && first == "~"
+    {
+        return home.join(components.as_path());
     }
     path.to_path_buf()
 }

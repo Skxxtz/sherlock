@@ -21,10 +21,10 @@ impl BinaryCache {
 
         // Encode to binary
         let cfg = bincode::config::standard().with_fixed_int_encoding();
-        let encoded = bincode::serde::encode_to_vec(&data, cfg)
+        let encoded = bincode::serde::encode_to_vec(data, cfg)
             .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::SerializationError, e))?;
 
-        std::fs::write(&cache, encoded).map_err(|e| {
+        std::fs::write(cache, encoded).map_err(|e| {
             sherlock_msg!(
                 Warning,
                 SherlockErrorType::FileError(FileAction::Write, cache.to_path_buf()),
@@ -39,7 +39,7 @@ impl BinaryCache {
     ) -> Result<T, SherlockMessage> {
         let cache = path.as_ref();
 
-        let bytes = std::fs::read(&cache).map_err(|e| {
+        let bytes = std::fs::read(cache).map_err(|e| {
             sherlock_msg!(
                 Warning,
                 SherlockErrorType::FileError(FileAction::Read, cache.to_path_buf()),

@@ -59,7 +59,7 @@ impl LauncherProvider for ScriptLauncher {
             ));
         };
 
-        Ok(vec![RenderableChild::ScriptLike {
+        Ok(vec![RenderableChild::Script {
             launcher,
             inner: ScriptData {
                 command,
@@ -77,7 +77,7 @@ impl LauncherProvider for ScriptLauncher {
         let func = ensure_func!(func, InnerFunction::Script);
         match func {
             ScriptFunctions::Run => {
-                if let RenderableChild::ScriptLike { inner, .. } = child {
+                if let RenderableChild::Script { inner, .. } = child {
                     inner.update_async(cx);
                 }
             }

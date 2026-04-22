@@ -1,9 +1,10 @@
+use crate::app::{RenderableChildEntity, RenderableChildWeak};
 use crate::ui::launcher::context_menu::ContextMenuAction;
 use crate::ui::launcher::views::NavigationStack;
 use crate::ui::model::Model;
 use crate::ui::utils::scoring::make_prio;
 use crate::ui::utils::search::SherlockSearch;
-use crate::ui::widgets::{LauncherValues, RenderableChild, RenderableChildDelegate};
+use crate::ui::widgets::{LauncherValues, RenderableChildDelegate};
 use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
@@ -109,11 +110,11 @@ impl LauncherView {
 
         enum ModelKind {
             FileSearch {
-                weak_data: WeakEntity<Arc<Vec<RenderableChild>>>,
+                weak_data: RenderableChildWeak,
                 last_query: Option<SharedString>,
             },
             Standard {
-                data: Entity<Arc<Vec<RenderableChild>>>,
+                data: RenderableChildEntity,
             },
         }
 
@@ -132,7 +133,7 @@ impl LauncherView {
                 weak_data,
                 last_query,
             } => {
-                if last_query.map_or(false, |s| s == query) {
+                if last_query.is_some_and(|s| s == query) {
                     return;
                 }
 
@@ -142,7 +143,6 @@ impl LauncherView {
                         search.search(query.into(), weak_data, weak_self, cx);
                     }
                 });
-                return;
             }
             ModelKind::Standard { data } => {
                 // drop active tasks
@@ -181,10 +181,10 @@ impl LauncherView {
                                     // [Rule 1]
                                     // Case 1: Early return if mode applies but item is not assigned to that mode
                                     // Case 2: Early return if current mode is not required mode for item
-                                    if Some(mode) != data.alias() {
-                                        if mode != "all" || data.priority() < 1.0 {
-                                            return false;
-                                        }
+                                    if Some(mode) != data.alias()
+                                        && (mode != "all" || data.priority() < 1.0)
+                                    {
+                                        return false;
                                     }
 
                                     // [Rule 2]

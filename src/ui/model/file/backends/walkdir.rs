@@ -28,7 +28,7 @@ impl FileSearchProvider for WalkdirBackend {
         const BATCH: usize = 16;
 
         'outer: for path in paths.iter() {
-            for entry in walkdir::WalkDir::new(&path)
+            for entry in walkdir::WalkDir::new(path)
                 .follow_links(false)
                 .max_depth(MAX_SEARCH_DEPTH)
                 .into_iter()
@@ -56,7 +56,7 @@ impl FileSearchProvider for WalkdirBackend {
                     if !FileSearchUtility::bytes_contain_ci(name_bytes, query.as_bytes()) {
                         continue;
                     }
-                    score = FileSearchUtility::score_file_ci(&name_bytes, &query);
+                    score = FileSearchUtility::score_file_ci(name_bytes, &query);
                     matched = true;
                 }
 

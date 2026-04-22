@@ -1,3 +1,4 @@
+use crate::app::RenderableChildWeak;
 use crate::launcher::file_launcher::FileLauncher;
 use crate::launcher::{Launcher, variant_type::LauncherType};
 use crate::ui::launcher::LauncherView;
@@ -6,6 +7,7 @@ use crate::ui::widgets::file::FileData;
 use gpui::{App, SharedString, Task, WeakEntity};
 use std::env::home_dir;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use utils::{FileResult, ResultHeap};
@@ -45,7 +47,7 @@ impl FileSearchModel {
 
             Self {
                 backend: backend.clone(),
-                poll_interval: poll_interval,
+                poll_interval,
                 paths,
                 launcher,
                 results: Vec::with_capacity(max_results),
@@ -64,7 +66,7 @@ impl FileSearchModel {
     pub fn search(
         &mut self,
         query_lower: Arc<str>,
-        result_entity: WeakEntity<Arc<Vec<RenderableChild>>>,
+        result_entity: RenderableChildWeak,
         launcher_weak: WeakEntity<LauncherView>,
         cx: &mut App,
     ) {
@@ -121,10 +123,10 @@ impl FileSearchModel {
 
                 if let Some(snapshot) = latest {
                     let count = snapshot.len();
-                    let children = Arc::new(
+                    let children = Rc::new(
                         snapshot
                             .into_iter()
-                            .map(|r| RenderableChild::FileLike {
+                            .map(|r| RenderableChild::File {
                                 launcher: Arc::clone(&launcher),
                                 inner: FileData::new(r.path.clone())
                                     .with_icon_name(r.get_icon_name()),
@@ -135,7 +137,7 @@ impl FileSearchModel {
                     let indices: Arc<[usize]> = (0..count).collect::<Vec<_>>().into();
 
                     if let Some(view) = launcher_weak.upgrade() {
-                        let _ = cx.update({
+                        cx.update({
                             let query_lower = Arc::clone(&query_lower);
                             |cx| {
                                 view.update(cx, |this, cx| {

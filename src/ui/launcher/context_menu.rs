@@ -106,7 +106,7 @@ impl ContextMenuAction {
         };
 
         let Some(emoji_entry) = this.entry() else {
-            return div().into();
+            return div();
         };
         let mut tones = get_selected_skin_tones();
         let col_idx = this.get_index() as usize;
@@ -169,11 +169,12 @@ impl ContextMenuAction {
     }
 }
 
+type ContextFunction = Box<dyn Fn(&mut App) + Send + Sync + 'static>;
 pub struct DynamicFunctionAction {
     pub name: SharedString,
     pub icon: Option<Arc<Path>>,
     pub exit: bool,
-    pub func: Option<Box<dyn Fn(&mut App) + Send + Sync + 'static>>,
+    pub func: Option<ContextFunction>,
 }
 impl Debug for DynamicFunctionAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -183,9 +184,6 @@ impl Debug for DynamicFunctionAction {
 impl PartialEq for DynamicFunctionAction {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.icon == other.icon && self.exit == other.exit
-    }
-    fn ne(&self, other: &Self) -> bool {
-        !(self.name == other.name && self.icon == other.icon && self.exit == other.exit)
     }
 }
 

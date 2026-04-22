@@ -235,7 +235,7 @@ impl<'a> RenderableChildImpl<'a> for TranslationData {
                 ent.task = None;
                 ent.intent = Some(Intent::Translation {
                     text: text.clone(),
-                    target_lang: target_lang.clone(),
+                    target_lang,
                 });
                 ent.api = ApiStatus::Pending;
 

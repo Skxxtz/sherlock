@@ -1,11 +1,8 @@
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use crate::utils::{
     config::{
-        ConfigAppearance, ConfigBackdrop, ConfigBehavior, ConfigBinds, ConfigCaching, ConfigDebug,
+        ConfigAppearance, ConfigBackdrop, ConfigBehavior, ConfigBinds, ConfigCaching,
         ConfigDefaultApps, ConfigExpand, ConfigFiles, ConfigUnits, SearchBarIcon, StatusBar,
         defaults::{BindDefaults, ConstantDefaults, FileDefaults, OtherDefaults},
     },
@@ -32,16 +29,6 @@ impl Default for ConfigUnits {
             volumes: ConstantDefaults::volumes(),
             temperatures: ConstantDefaults::temperatures(),
             currency: ConstantDefaults::currency(),
-        }
-    }
-}
-
-impl Default for ConfigDebug {
-    fn default() -> Self {
-        Self {
-            try_suppress_errors: false,
-            try_suppress_warnings: false,
-            app_paths: HashSet::new(),
         }
     }
 }
@@ -156,11 +143,11 @@ impl Default for StatusBar {
 
 // With Root Implementations
 pub trait WithRoot {
-    fn with_root(root: &PathBuf) -> Self;
+    fn with_root(root: &Path) -> Self;
 }
 impl WithRoot for ConfigAppearance {
-    fn with_root(root: &PathBuf) -> Self {
-        let mut root = root.clone();
+    fn with_root(root: &Path) -> Self {
+        let mut root = root.to_path_buf();
         if root.ends_with("/") {
             root.pop();
         }
@@ -180,19 +167,21 @@ impl WithRoot for ConfigAppearance {
             .into_iter()
             .filter_map(|s| use_root(root, s))
             .collect();
-        let mut default = Self::default();
-        default.icon_paths = icon_paths;
-        default
+
+        Self {
+            icon_paths,
+            ..Default::default()
+        }
     }
 }
 
 impl WithRoot for ConfigFiles {
-    fn with_root(root: &PathBuf) -> Self {
-        let mut root = root.clone();
+    fn with_root(root: &Path) -> Self {
+        let mut root = root.to_path_buf();
         if root.ends_with("/") {
             root.pop();
         }
-        fn use_root(root: &PathBuf, path: PathBuf) -> PathBuf {
+        fn use_root(root: &Path, path: PathBuf) -> PathBuf {
             if let Ok(stripped) = path.strip_prefix("~/.config/sherlock") {
                 root.join(stripped)
             } else {

@@ -69,7 +69,7 @@ impl LauncherProvider for CalculatorLauncher {
         let caps = Capabilities::from_strings(&capabilities);
         let inner = CalcData::new(caps);
 
-        Ok(vec![RenderableChild::CalcLike { launcher, inner }])
+        Ok(vec![RenderableChild::Calc { launcher, inner }])
     }
 }
 
@@ -125,7 +125,7 @@ impl Currency {
             let time_since = SystemTime::now().duration_since(mtime).ok()?;
             // then was cached
             if time_since < Duration::from_secs(60 * update_interval) {
-                File::open(&absolute)
+                File::open(absolute)
                     .ok()
                     .and_then(|file| simd_json::from_reader(file).ok())?
             }
@@ -134,16 +134,16 @@ impl Currency {
     }
     fn cache<P: AsRef<Path>>(&self, loc: P) -> Result<(), SherlockMessage> {
         let absolute = loc.as_ref();
-        if !absolute.is_file() {
-            if let Some(parents) = absolute.parent() {
-                create_dir_all(parents).map_err(|e| {
-                    sherlock_msg!(
-                        Warning,
-                        SherlockErrorType::DirError(DirAction::Create, parents.to_path_buf()),
-                        e
-                    )
-                })?;
-            }
+        if !absolute.is_file()
+            && let Some(parents) = absolute.parent()
+        {
+            create_dir_all(parents).map_err(|e| {
+                sherlock_msg!(
+                    Warning,
+                    SherlockErrorType::DirError(DirAction::Create, parents.to_path_buf()),
+                    e
+                )
+            })?;
         }
         let content = simd_json::to_string(self)
             .map_err(|e| sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e))?;
@@ -159,10 +159,10 @@ impl Currency {
     pub async fn get_exchange(update_interval: u64) -> Result<Currency, SherlockMessage> {
         let home = home_dir()?;
         let absolute = home.join(".cache/sherlock/currency/currency.json");
-        match Currency::load_cached(&absolute, update_interval) {
-            Some(curr) => return Ok(curr),
-            _ => {}
-        };
+
+        if let Some(curr) = Currency::load_cached(&absolute, update_interval) {
+            return Ok(curr);
+        }
 
         let url = "https://scanner.tradingview.com/forex/scan?label-product=related-symbols";
 
@@ -234,7 +234,7 @@ impl Currency {
                         let (_, pair) = symbol.split_once(":")?;
                         let (to, _from) = pair.split_at(3);
                         let price = item.get("d")?.as_array()?.get(2)?.as_f32()?;
-                        Some((to.to_lowercase(), price as f32))
+                        Some((to.to_lowercase(), price))
                     })
                     .collect()
             } else {

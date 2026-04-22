@@ -41,7 +41,7 @@ impl Loader {
             .map_err(|e| messages.push(e))
             .unwrap_or_default();
 
-        let config = match flags.to_config() {
+        let config = match flags.get_config() {
             Err(e) => {
                 messages.push(e);
                 let defaults = SherlockConfig::default();

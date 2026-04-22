@@ -52,7 +52,7 @@ impl LauncherProvider for BookmarkLauncher {
     ) -> Result<Vec<RenderableChild>, SherlockMessage> {
         BookmarkLauncher::find_bookmarks(&self.target_browser, Arc::clone(&launcher)).map(|ad| {
             ad.into_iter()
-                .map(|inner| RenderableChild::AppLike {
+                .map(|inner| RenderableChild::App {
                     launcher: Arc::clone(&launcher),
                     inner,
                 })
@@ -206,10 +206,10 @@ impl MozillaSqliteParser {
         let cache_dir = get_cache_dir()?;
         let cache = cache_dir.join(format!("bookmarks/{}-cache.bin", prefix));
 
-        if !file_has_changed(&cache, &self.path) {
-            if let Ok(app_data) = BinaryCache::read::<Vec<AppData>, _>(&cache) {
-                return Ok(app_data);
-            }
+        if !file_has_changed(&cache, &self.path)
+            && let Ok(app_data) = BinaryCache::read::<Vec<AppData>, _>(&cache)
+        {
+            return Ok(app_data);
         }
 
         let bookmarks = self.read_new(launcher)?;

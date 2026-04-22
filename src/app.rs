@@ -1,12 +1,15 @@
 use gpui::{
-    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Size, WindowBackgroundAppearance,
-    WindowBounds, WindowHandle, WindowKind, WindowOptions,
+    App, AppContext, AsyncApp, Bounds, Entity, Focusable, Size, WeakEntity,
+    WindowBackgroundAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions,
     layer_shell::{Layer, LayerShellOptions},
     point, px,
 };
-use std::sync::{
-    Arc,
-    atomic::{AtomicU32, Ordering},
+use std::{
+    rc::Rc,
+    sync::{
+        Arc,
+        atomic::{AtomicU32, Ordering},
+    },
 };
 use tokio::net::UnixListener;
 
@@ -38,6 +41,9 @@ pub fn reset_generation() {
     LAUNCH_GENERATION.fetch_add(1, Ordering::Relaxed);
 }
 
+pub type RenderableChildEntity = Entity<Rc<Vec<RenderableChild>>>;
+pub type RenderableChildWeak = WeakEntity<Rc<Vec<RenderableChild>>>;
+
 pub fn run_app(cx: &mut App, result: SetupResult) {
     let SetupResult {
         config_dir,
@@ -50,7 +56,7 @@ pub fn run_app(cx: &mut App, result: SetupResult) {
     let theme = ActiveTheme(Arc::new(ThemeData::dark()));
     cx.set_global(theme);
 
-    let data: Entity<Arc<Vec<RenderableChild>>> = cx.new(|_| Arc::new(Vec::new()));
+    let data: RenderableChildEntity = cx.new(|_| Rc::new(Vec::new()));
     let modes = load_modes(cx, &data, &mut messages);
 
     let _ = std::fs::remove_file(SOCKET_PATH);
@@ -68,7 +74,7 @@ pub fn run_app(cx: &mut App, result: SetupResult) {
 
 fn load_modes(
     cx: &mut App,
-    data: &Entity<Arc<Vec<RenderableChild>>>,
+    data: &RenderableChildEntity,
     messages: &mut Vec<SherlockMessage>,
 ) -> Arc<[LauncherMode]> {
     match Loader::load_launchers(cx, data.clone()) {
@@ -95,7 +101,7 @@ pub async fn run_async_updates(mut cx: AsyncApp, win: WindowHandle<LauncherView>
 
 fn spawn_launcher(
     cx: &mut App,
-    data: Entity<Arc<Vec<RenderableChild>>>,
+    data: RenderableChildEntity,
     modes: Arc<[LauncherMode]>,
     initial_messages: Vec<SherlockMessage>,
 ) -> WindowHandle<LauncherView> {
@@ -103,7 +109,7 @@ fn spawn_launcher(
         .open_window(get_window_options(), |_, cx| {
             // Build launcher view
             let text_input = cx.new(|cx| TextInput::builder().placeholder("Search").build(cx));
-            let launcher = cx.new(|cx| {
+            cx.new(|cx| {
                 let data_len = data.read(cx).len();
                 let sub = cx.observe(&text_input, move |this: &mut LauncherView, _ev, cx| {
                     this.context_idx = None;
@@ -156,9 +162,7 @@ fn spawn_launcher(
                 };
                 view.filter_and_sort(cx);
                 view
-            });
-
-            launcher
+            })
         })
         .unwrap();
 

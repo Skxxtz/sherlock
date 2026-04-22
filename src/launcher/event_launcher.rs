@@ -53,9 +53,9 @@ impl LauncherProvider for EventLauncher {
         let look_back = parse_dynamic_time(look_back_raw).unwrap_or(Duration::from_hours(6));
         let look_ahead = parse_dynamic_time(look_ahead_raw).unwrap_or(Duration::from_hours(4));
 
-        Ok(vec![RenderableChild::EventLike {
+        Ok(vec![RenderableChild::Event {
             launcher,
-            inner: EventData::new(look_back, look_ahead),
+            inner: Box::new(EventData::new(look_back, look_ahead)),
         }])
     }
     fn execute_function<C: AppContext>(
@@ -66,7 +66,7 @@ impl LauncherProvider for EventLauncher {
     ) -> Result<bool, SherlockMessage> {
         let func = ensure_func!(func, InnerFunction::Event);
 
-        let RenderableChild::EventLike { inner, .. } = child else {
+        let RenderableChild::Event { inner, .. } = child else {
             return Err(sherlock_msg!(
                 Warning,
                 SherlockErrorType::Unreachable,

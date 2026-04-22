@@ -35,7 +35,7 @@ impl CustomIconTheme {
         Self::scan_path(&path, &mut self.buf);
     }
     pub fn lookup_icon(&self, name: &str) -> Option<Option<Arc<Path>>> {
-        self.buf.get(name).map(|p| p.clone())
+        self.buf.get(name).cloned()
     }
     fn scan_path(path: &Path, buf: &mut HashMap<String, Option<Arc<Path>>>) {
         // Early return if its not a scannable directory
@@ -52,12 +52,10 @@ impl CustomIconTheme {
                 Self::scan_path(&entry_path, buf);
             } else if let Some(ext) = entry_path.extension().and_then(|e| e.to_str()) {
                 let is_icon = matches!(ext.to_ascii_lowercase().as_str(), "png" | "svg");
-                if is_icon {
-                    if let Some(stem) = entry_path.file_stem().and_then(|s| s.to_str()) {
-                        let stem = stem.to_string();
-                        if let Some(arc_path) = render_svg_to_cache(&stem, entry_path) {
-                            buf.entry(stem).or_insert(Some(arc_path));
-                        }
+                if is_icon && let Some(stem) = entry_path.file_stem().and_then(|s| s.to_str()) {
+                    let stem = stem.to_string();
+                    if let Some(arc_path) = render_svg_to_cache(&stem, entry_path) {
+                        buf.entry(stem).or_insert(Some(arc_path));
                     }
                 }
             }

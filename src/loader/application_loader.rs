@@ -78,7 +78,7 @@ impl Loader {
                         let mut current_section = None;
                         let mut current_action = ApplicationAction::new("app_launcher");
                         data.desktop_file = Some(entry);
-                        for line in content.flatten() {
+                        for line in content.map_while(Result::ok) {
                             let line = line.trim();
                             // Skip useless lines
                             if line.is_empty() || line.starts_with('#') {
@@ -186,19 +186,19 @@ impl Loader {
         // remove if cached entry doesnt exist on device anympre
         let mut cached_paths = HashSet::with_capacity(apps.capacity());
         apps.retain(|v| {
-            if let Some(path) = &v.desktop_file {
-                if desktop_files.contains(path) {
-                    // Do not flag files as cached that have been modified after the cache has last been
-                    // modified
-                    if let (Some(modtime), Some(last_changed)) = (path.modtime(), last_changed) {
-                        if modtime < last_changed {
-                            cached_paths.insert(path.clone());
-                        } else {
-                            return false;
-                        }
+            if let Some(path) = &v.desktop_file
+                && desktop_files.contains(path)
+            {
+                // Do not flag files as cached that have been modified after the cache has last been
+                // modified
+                if let (Some(modtime), Some(last_changed)) = (path.modtime(), last_changed) {
+                    if modtime < last_changed {
+                        cached_paths.insert(path.clone());
+                    } else {
+                        return false;
                     }
-                    return true;
                 }
+                return true;
             }
             false
         });
@@ -264,10 +264,9 @@ impl Loader {
                         decimals,
                         last_changed,
                         use_keywords,
-                    ) {
-                        if let Err(e) = BinaryCache::write(cache, &new_apps) {
-                            eprintln!("{}", e.error_type);
-                        }
+                    ) && let Err(e) = BinaryCache::write(cache, &new_apps)
+                    {
+                        eprintln!("{}", e.error_type);
                     }
                 }
             });
@@ -348,11 +347,11 @@ pub fn get_desktop_files(mut dirs: HashSet<PathBuf>) -> Vec<PathBuf> {
     let mut dirs: HashMap<String, PathBuf> = dirs
         .into_par_iter()
         .filter(|dir| dir.is_dir())
-        .filter_map(|dir| read_desktop_dir(dir))
+        .filter_map(read_desktop_dir)
         .flatten()
         .collect();
 
-    if let Some(local_dir) = local_dir.and_then(|d| read_desktop_dir(d)) {
+    if let Some(local_dir) = local_dir.and_then(read_desktop_dir) {
         for (name, path) in local_dir {
             dirs.insert(name, path);
         }

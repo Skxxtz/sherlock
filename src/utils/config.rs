@@ -113,7 +113,7 @@ pub struct ConfigUnits {
     pub currency: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct ConfigDebug {
     #[serde(default)]
     pub try_suppress_errors: bool,

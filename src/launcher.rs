@@ -118,20 +118,20 @@ impl BindSerde {
 /// ### Fields:
 /// - **name:** Specifies the name of the launcher – such as a category e.g. `App Launcher`
 /// - **alias:** Also referred to as `mode` – specifies the mode in which the launcher children should
-/// be active in
+///   be active in
 /// - **tag_start:** Specifies the text displayed in a custom UI Label
 /// - **tag_end:** Specifies the text displayed in a custom UI Label
 /// - **method:** Specifies the action that should be executed on `row-should-activate` action
 /// - **next_content:** Specifies the content to be displayed whenever method is `next`
 /// - **priority:** Base priority all children inherit from. Children priority will be a combination
-/// of this together with their execution counts and levenshtein similarity
+///   of this together with their execution counts and levenshtein similarity
 /// - **r#async:** Specifies whether the tile should be loaded/executed asynchronously
 /// - **home:** Specifies whether the children should show on the `home` mode (empty
-/// search entry & mode == `all`)
+///   search entry & mode == `all`)
 /// - **launcher_type:** Used to specify the kind of launcher and subsequently its children
 /// - **shortcut:** Specifies whether the child tile should show `modekey + number` shortcuts
 /// - **spawn_focus:** Specifies whether the tile should have focus whenever Sherlock launches
-/// search entry & mode == `all`)
+///   search entry & mode == `all`)
 #[derive(Debug, Default)]
 pub struct Launcher {
     pub name: Option<SharedString>,
@@ -153,7 +153,7 @@ impl Launcher {
     pub fn from_raw(raw: RawLauncher, launcher_type: LauncherType, icon: Option<String>) -> Self {
         Self {
             name: raw.name.map(|n| n.into()),
-            display_name: raw.display_name.map(|n| SharedString::from(n)),
+            display_name: raw.display_name.map(SharedString::from),
             icon: icon.as_deref().and_then(resolve_icon_path),
             alias: raw.alias,
             on_return: raw.on_return,
@@ -253,7 +253,7 @@ impl ExecMode {
             },
             LauncherType::Files(_) => Self::CreateView {
                 mode: NavigationViewType::Files { dir: None },
-                launcher: Arc::clone(&launcher),
+                launcher: Arc::clone(launcher),
             },
             LauncherType::Message(_) => Self::SwitchView { idx: 0 },
             LauncherType::Web(web) => Self::Web {
@@ -277,15 +277,14 @@ impl ExecMode {
                     }
                 }
                 "create_bookmark" => {
-                    if let RenderableChild::AppLike { launcher, inner } = data {
-                        if matches!(launcher.launcher_type, LauncherType::Clipboard(_)) {
-                            if let (Some(exec), Some(name)) = (&inner.exec, &inner.name) {
-                                return Some(Self::CreateBookmark {
-                                    url: exec.to_string(),
-                                    name: name.to_string(),
-                                });
-                            }
-                        }
+                    if let RenderableChild::App { launcher, inner } = data
+                        && matches!(launcher.launcher_type, LauncherType::Clipboard(_))
+                        && let (Some(exec), Some(name)) = (&inner.exec, &inner.name)
+                    {
+                        return Some(Self::CreateBookmark {
+                            url: exec.to_string(),
+                            name: name.to_string(),
+                        });
                     }
                 }
 

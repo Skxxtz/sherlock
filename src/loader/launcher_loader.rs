@@ -1,7 +1,8 @@
-use gpui::{App, Entity};
-use std::{collections::HashMap, io::ErrorKind, path::PathBuf, sync::Arc};
+use gpui::App;
+use std::{collections::HashMap, io::ErrorKind, path::PathBuf, rc::Rc, sync::Arc};
 
 use crate::{
+    app::RenderableChildEntity,
     launcher::{Launcher, variant_type::LauncherType},
     loader::utils::RawLauncher,
     sherlock_msg,
@@ -53,7 +54,7 @@ pub struct LauncherLoadResult {
 impl Loader {
     pub fn load_launchers(
         cx: &mut App,
-        data_handle: Entity<Arc<Vec<RenderableChild>>>,
+        data_handle: RenderableChildEntity,
     ) -> Result<LauncherLoadResult, SherlockMessage> {
         // read config
         let config = ConfigGuard::read()?;
@@ -114,7 +115,7 @@ impl Loader {
         Self::sync_cache_if_empty(&ctx, &renders, &mut messages);
 
         data_handle.update(cx, |items, cx| {
-            *items = Arc::new(renders);
+            *items = Rc::new(renders);
             cx.notify();
         });
 

@@ -45,7 +45,7 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
                             .items_center()
                             .gap_5()
                             .child(if let Some(icon) = self.icon.as_ref() {
-                                img(Arc::clone(&icon)).size(px(48.))
+                                img(Arc::clone(icon)).size(px(48.))
                             } else {
                                 img(ImageSource::Image(Arc::new(Image::empty()))).size(px(24.))
                             })

@@ -28,12 +28,11 @@ fn parse_ini_value(content: &str, section: &str, key: &str) -> Option<String> {
             in_section = line == section;
             continue;
         }
-        if in_section {
-            if let Some(value) = line.strip_prefix(key) {
-                if let Some(value) = value.strip_prefix('=') {
-                    return Some(value.trim().to_string());
-                }
-            }
+        if in_section
+            && let Some(value) = line.strip_prefix(key)
+            && let Some(value) = value.strip_prefix('=')
+        {
+            return Some(value.trim().to_string());
         }
     }
     None

@@ -52,10 +52,10 @@ impl LauncherProvider for WeatherLauncher {
         _cx: &mut gpui::App,
     ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockMessage> {
         match WeatherData::from_cache(self) {
-            Some(inner) => Ok(vec![RenderableChild::WeatherLike { launcher, inner }]),
+            Some(inner) => Ok(vec![RenderableChild::Weather { launcher, inner }]),
             None => {
                 // Return None or a "Loading" placeholder for now
-                Ok(vec![RenderableChild::WeatherLike {
+                Ok(vec![RenderableChild::Weather {
                     launcher: Arc::clone(&launcher),
                     inner: WeatherData::uninitialized(),
                 }])
@@ -113,9 +113,9 @@ impl WeatherData {
                 resolve_icon_path(&format!("weather-{}", cached_data.css))
             };
 
-            return Some(cached_data);
+            Some(cached_data)
         } else {
-            return None;
+            None
         }
     }
 
@@ -127,7 +127,7 @@ impl WeatherData {
         }
         let tmp_path = path.with_extension(".tmp");
         if let Ok(f) = File::create(&tmp_path) {
-            if let Ok(_) = simd_json::to_writer(f, &self) {
+            if simd_json::to_writer(f, &self).is_ok() {
                 let _ = fs::rename(&tmp_path, &path);
             } else {
                 let _ = fs::remove_file(&tmp_path);

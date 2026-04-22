@@ -1,13 +1,10 @@
-use gpui::{AsyncApp, Entity, WindowHandle};
+use gpui::{AsyncApp, WindowHandle};
 use std::sync::Arc;
 use tokio::net::UnixListener;
 
 use crate::{
-    app::{run_async_updates, spawn_launcher},
-    ui::{
-        launcher::{LauncherMode, LauncherView},
-        widgets::RenderableChild,
-    },
+    app::{RenderableChildEntity, run_async_updates, spawn_launcher},
+    ui::launcher::{LauncherMode, LauncherView},
     utils::{
         config::{ConfigWatcher, reload},
         errors::SherlockMessage,
@@ -16,7 +13,7 @@ use crate::{
 
 pub(super) async fn run_event_loop(
     cx: AsyncApp,
-    data: Entity<Arc<Vec<RenderableChild>>>,
+    data: RenderableChildEntity,
     mut modes: Arc<[LauncherMode]>,
     mut watcher: ConfigWatcher,
     listener: UnixListener,
@@ -27,13 +24,11 @@ pub(super) async fn run_event_loop(
 
     loop {
         if let Ok((_stream, _)) = listener.accept().await {
-            if let Ok(audit) = watcher.audit() {
-                if !audit.is_empty() {
-                    if let Some(new_modes) = reload(&cx, &data, &mut initial_messages, audit).await
-                    {
-                        modes = new_modes;
-                    }
-                }
+            if let Ok(audit) = watcher.audit()
+                && !audit.is_empty()
+                && let Some(new_modes) = reload(&cx, &data, &mut initial_messages, audit).await
+            {
+                modes = new_modes;
             }
 
             drop(active_update_task.take());
@@ -47,7 +42,7 @@ pub(super) async fn run_event_loop(
                     Arc::clone(&modes),
                     initial_messages.clone(),
                 );
-                win = Some(new_win.clone());
+                win = Some(new_win);
                 new_win
             });
 

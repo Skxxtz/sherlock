@@ -60,7 +60,7 @@ impl LauncherProvider for FileLauncher {
         inner.search_string = "file;file search".into();
         inner.icon = resolve_icon_path("folder");
 
-        let child = RenderableChild::AppLike { launcher, inner };
+        let child = RenderableChild::App { launcher, inner };
 
         Ok(vec![child])
     }

@@ -34,8 +34,8 @@ impl LauncherProvider for WebLauncher {
         inner.icon = opts
             .get("icon")
             .and_then(Value::as_str)
-            .and_then(|i| resolve_icon_path(i));
+            .and_then(resolve_icon_path);
 
-        Ok(vec![RenderableChild::AppLike { launcher, inner }])
+        Ok(vec![RenderableChild::App { launcher, inner }])
     }
 }

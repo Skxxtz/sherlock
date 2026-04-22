@@ -1,4 +1,4 @@
-use std::iter::Peekable;
+use std::{fmt::Display, iter::Peekable};
 
 use gpui::SharedString;
 use smallvec::{SmallVec, smallvec};
@@ -49,11 +49,11 @@ pub enum IntentResult {
     String(SharedString),
     Color(u32),
 }
-impl ToString for IntentResult {
-    fn to_string(&self) -> String {
+impl Display for IntentResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::String(s) => s.to_string(),
-            Self::Color(hex) => format!("#{:06x}", hex),
+            Self::String(s) => write!(f, "{}", s),
+            Self::Color(hex) => write!(f, "#{:06x}", hex),
         }
     }
 }
@@ -92,7 +92,7 @@ impl Intent {
                 Some(IntentResult::String(self.format_result(result, to).into()))
             }
             Intent::ColorDisplay { from_space, values } => {
-                ColorConverter::normalize(*from_space, values).map(IntentResult::Color)
+                ColorConverter::normalize(from_space, values).map(IntentResult::Color)
             }
             Intent::ColorConvert {
                 from_space,
@@ -123,7 +123,7 @@ impl Intent {
 impl Intent {
     pub fn tokenize(input: &str) -> impl Iterator<Item = &str> {
         input
-            .split(|c| matches!(c, ' ' | '(' | ')' | '%' | ','))
+            .split([' ', '(', ')', '%', ','])
             .map(|s| s.trim_matches(','))
             .filter(|s| !s.is_empty())
     }
@@ -216,18 +216,18 @@ impl Intent {
         }
 
         // no connector → ColorShow
-        if let Some(&connector) = tokens.peek() {
-            if matches!(connector, "to" | "in" | "as") {
-                tokens.next();
-                if let Some(to_space_str) = tokens.next() {
-                    if let Some(to_space) = to_static_space(to_space_str) {
-                        return Some(Intent::ColorConvert {
-                            from_space,
-                            values,
-                            to_space,
-                        });
-                    }
-                }
+        if let Some(&connector) = tokens.peek()
+            && matches!(connector, "to" | "in" | "as")
+        {
+            tokens.next();
+            if let Some(to_space_str) = tokens.next()
+                && let Some(to_space) = to_static_space(to_space_str)
+            {
+                return Some(Intent::ColorConvert {
+                    from_space,
+                    values,
+                    to_space,
+                });
             }
         }
 
@@ -329,7 +329,7 @@ impl Intent {
         if !s.contains(' ') && s.contains('.') {
             // must have something before and after the dot
             let parts: Vec<&str> = s.splitn(2, '.').collect();
-            if parts[0].len() >= 1 && parts[1].len() >= 2 {
+            if !parts.is_empty() && parts[1].len() >= 2 {
                 // avoid matching things like "50.0" (numbers) or ".hidden"
                 let first = parts[0];
                 let is_numeric = first.chars().all(|c| c.is_numeric());
@@ -490,31 +490,32 @@ macro_rules! define_units {
 impl Unit {
     pub fn factor(&self) -> f64 {
         // use dynamic factors for currencies
-        if self.category() == UnitCategory::Currency {
-            if let Some(Some(rates)) = CURRENCIES.get() {
-                let rate = match self {
-                    Unit::Usd => rates.usd,
-                    Unit::Eur => rates.eur,
-                    Unit::Jpy => rates.jpy,
-                    Unit::Gbp => rates.gbp,
-                    Unit::Aud => rates.aud,
-                    Unit::Cad => rates.cad,
-                    Unit::Chf => rates.chf,
-                    Unit::Cny => rates.cny,
-                    Unit::Nzd => rates.nzd,
-                    Unit::Sek => rates.sek,
-                    Unit::Nok => rates.nok,
-                    Unit::Mxn => rates.mxn,
-                    Unit::Sgd => rates.sgd,
-                    Unit::Hkd => rates.hkd,
-                    Unit::Krw => rates.krw,
-                    Unit::Pln => rates.pln,
-                    Unit::Pen => rates.pen,
-                    _ => 1.0,
-                };
-                return rate as f64;
-            }
+        if self.category() == UnitCategory::Currency
+            && let Some(Some(rates)) = CURRENCIES.get()
+        {
+            let rate = match self {
+                Unit::Usd => rates.usd,
+                Unit::Eur => rates.eur,
+                Unit::Jpy => rates.jpy,
+                Unit::Gbp => rates.gbp,
+                Unit::Aud => rates.aud,
+                Unit::Cad => rates.cad,
+                Unit::Chf => rates.chf,
+                Unit::Cny => rates.cny,
+                Unit::Nzd => rates.nzd,
+                Unit::Sek => rates.sek,
+                Unit::Nok => rates.nok,
+                Unit::Mxn => rates.mxn,
+                Unit::Sgd => rates.sgd,
+                Unit::Hkd => rates.hkd,
+                Unit::Krw => rates.krw,
+                Unit::Pln => rates.pln,
+                Unit::Pen => rates.pen,
+                _ => 1.0,
+            };
+            return rate as f64;
         }
+
         // use hardcoded factor
         self.raw_factor()
     }

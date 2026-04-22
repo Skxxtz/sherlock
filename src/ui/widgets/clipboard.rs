@@ -44,12 +44,11 @@ impl ClipData {
         let intent = Intent::parse(&content, &self.capabilities);
 
         // early return if intents are the same
-        if let Ok(guard) = self.result.read() {
-            if let Some((res_intent, _)) = guard.as_ref() {
-                if res_intent == &intent {
-                    return None;
-                }
-            }
+        if let Ok(guard) = self.result.read()
+            && let Some((res_intent, _)) = guard.as_ref()
+            && res_intent == &intent
+        {
+            return None;
         }
 
         let r = match &intent {
@@ -121,7 +120,7 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
                 exec: Some(url.to_string()),
             }),
             _ => Some(ExecMode::Copy {
-                content: res.to_string().into(),
+                content: res.to_string(),
             }),
         }
     }

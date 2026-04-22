@@ -1,11 +1,12 @@
 use gpui::{
-    AnyEntity, App, AppContext, Entity, ListState, ScrollStrategy, SharedString,
-    UniformListScrollHandle, px,
+    AnyEntity, App, AppContext, ListState, ScrollStrategy, SharedString, UniformListScrollHandle,
+    px,
 };
 use simd_json::prelude::{ArrayTrait, Indexed};
 use std::sync::Arc;
 
 use crate::{
+    app::RenderableChildEntity,
     launcher::Launcher,
     ui::{
         launcher::context_menu::ContextMenuAction,
@@ -30,7 +31,7 @@ pub struct NavigationStack {
 
 impl NavigationStack {
     pub fn new(
-        initial: Entity<Arc<Vec<RenderableChild>>>,
+        initial: RenderableChildEntity,
         messages: Vec<SherlockMessage>,
         len: usize,
         cx: &mut App,
@@ -140,10 +141,10 @@ impl NavigationStack {
             .expect("NavigationStack must always contain a root view.")
     }
     pub fn current_mut(&mut self) -> &mut NavigationView {
-        if let Some(idx) = self.active_idx {
-            if idx < self.stack.len() {
-                return &mut self.stack[idx];
-            }
+        if let Some(idx) = self.active_idx
+            && idx < self.stack.len()
+        {
+            return &mut self.stack[idx];
         }
 
         // Since we ensure to always keep the stack populated with at least the home item, this is
@@ -266,7 +267,7 @@ impl NavigationStack {
             let item_idx = filtered_indices
                 .iter()
                 .copied()
-                .filter(|i| data.get(*i).map_or(false, |item| item.shortcut()))
+                .filter(|i| data.get(*i).is_some_and(|item| item.shortcut()))
                 .nth(idx - 1);
 
             (item_idx, data_entity)
@@ -381,8 +382,7 @@ impl EntityStyle {
             } => {
                 *selected_index = n;
                 let cols = *columns;
-                if cols > 0 {
-                    let row_index = n / cols;
+                if let Some(row_index) = n.checked_div(cols) {
                     scroll_handle.scroll_to_item(row_index, ScrollStrategy::Nearest);
                 }
                 Some(())

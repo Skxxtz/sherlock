@@ -37,7 +37,7 @@ impl LauncherProvider for AppLauncher {
         )
         .map(|ad| {
             ad.into_iter()
-                .map(|inner| RenderableChild::AppLike {
+                .map(|inner| RenderableChild::App {
                     launcher: Arc::clone(&launcher),
                     inner,
                 })
