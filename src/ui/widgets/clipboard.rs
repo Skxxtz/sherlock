@@ -112,10 +112,18 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
     #[inline(always)]
     fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         let lock = self.result.read().ok()?;
-        let (_, res) = lock.as_ref()?;
-        Some(ExecMode::Copy {
-            content: res.to_string().into(),
-        })
+        let (intent, res) = lock.as_ref()?;
+
+        match intent {
+            Intent::Url { url } => Some(ExecMode::Web {
+                engine: None,
+                browser: None,
+                exec: Some(url.to_string()),
+            }),
+            _ => Some(ExecMode::Copy {
+                content: res.to_string().into(),
+            }),
+        }
     }
     #[inline(always)]
     fn priority(&self, launcher: &std::sync::Arc<crate::launcher::Launcher>) -> f32 {
