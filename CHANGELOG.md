@@ -37,8 +37,6 @@ run `git log main..dev` for all changes
 
 - Fixed `wttr.in` repeating format change
 
----
-
 ## [0.2.0-dev] - 20.04.26
 
 ### Added
