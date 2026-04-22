@@ -4,6 +4,7 @@ use crate::launcher::{Launcher, variant_type::LauncherType};
 use crate::ui::launcher::LauncherView;
 use crate::ui::widgets::RenderableChild;
 use crate::ui::widgets::file::FileData;
+use crate::utils::files::expand_path;
 use gpui::{App, SharedString, Task, WeakEntity};
 use std::env::home_dir;
 use std::path::PathBuf;
@@ -35,15 +36,16 @@ impl FileSearchModel {
     pub fn new(launcher: Arc<Launcher>, dir: Option<SharedString>) -> Self {
         if let LauncherType::Files(FileLauncher {
             ref backend,
+            ref loc,
             max_results,
             poll_interval,
         }) = launcher.launcher_type
         {
-            let paths = Arc::new(
-                dir.map(|d| vec![PathBuf::from(d.as_str())])
-                    .or(home_dir().map(|d| vec![d]))
-                    .unwrap_or_default(),
-            );
+            let home = home_dir().unwrap_or(PathBuf::from("/"));
+            let paths = Arc::new(vec![
+                dir.map(|d| expand_path(d.as_str(), &home))
+                    .unwrap_or(expand_path(loc.as_str(), &home)),
+            ]);
 
             Self {
                 backend: backend.clone(),

@@ -1,6 +1,8 @@
 use crate::app::{RenderableChildEntity, RenderableChildWeak};
+use crate::launcher::Launcher;
+use crate::launcher::variant_type::LauncherType;
 use crate::ui::launcher::context_menu::ContextMenuAction;
-use crate::ui::launcher::views::NavigationStack;
+use crate::ui::launcher::views::{NavigationStack, NavigationViewType};
 use crate::ui::model::Model;
 use crate::ui::utils::scoring::make_prio;
 use crate::ui::utils::search::SherlockSearch;
@@ -108,6 +110,30 @@ impl LauncherView {
     pub fn filter_and_sort(&mut self, cx: &mut Context<Self>) {
         let mut query: SharedString = self.text_input.read(cx).content.to_lowercase().into();
 
+        // handle mode change
+        match self.mode.transition_for_query(&query, &self.modes) {
+            ModeTransition::None => {}
+            ModeTransition::ClearInput => {
+                self.text_input.update(cx, |this, _cx| {
+                    this.reset();
+                });
+                query = "".into();
+            }
+            ModeTransition::PushStack(launcher) => {
+                let view = match &launcher.launcher_type {
+                    LauncherType::Emoji(_) => NavigationViewType::Emoji,
+                    LauncherType::Files(files) => NavigationViewType::Files {
+                        dir: Some(files.loc.clone()),
+                    },
+                    _ => return,
+                };
+
+                self.text_input.update(cx, |this, _| this.reset());
+                self.navigation.push(view.create_view(launcher, cx));
+                query = "".into();
+            }
+        }
+
         enum ModelKind {
             FileSearch {
                 weak_data: RenderableChildWeak,
@@ -155,14 +181,6 @@ impl LauncherView {
                         *deferred_render_task = None;
                     }
                 });
-
-                // handle mode change
-                if self.mode.transition_for_query(&query, &self.modes) {
-                    self.text_input.update(cx, |this, _cx| {
-                        this.reset();
-                    });
-                    query = "".into();
-                }
 
                 let mode = self.mode.clone();
                 let data_arc = data.read(cx).clone();
@@ -261,14 +279,21 @@ impl LauncherView {
     }
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum LauncherMode {
     Home,
     Search,
     Alias {
         short: SharedString,
         name: SharedString,
+        launcher: Arc<Launcher>,
     },
+}
+
+pub enum ModeTransition {
+    None,
+    PushStack(Arc<Launcher>),
+    ClearInput,
 }
 
 impl LauncherMode {
@@ -286,7 +311,7 @@ impl LauncherMode {
             Self::Alias { name, .. } => name.clone(),
         }
     }
-    pub fn transition_for_query(&mut self, query: &str, modes: &[Self]) -> bool {
+    pub fn transition_for_query(&mut self, query: &str, modes: &[Self]) -> ModeTransition {
         match (self, query.is_empty()) {
             (m @ Self::Search, true) => *m = Self::Home,
             (m @ Self::Home, false) => *m = Self::Search,
@@ -302,15 +327,25 @@ impl LauncherMode {
 
                     if let Some(new_mode) = found_mode {
                         *m = new_mode.clone();
+                        if let Self::Alias { launcher, .. } = new_mode
+                            && matches!(
+                                &launcher.launcher_type,
+                                LauncherType::Files(_) | LauncherType::Emoji(_)
+                            )
+                        {
+                            return ModeTransition::PushStack(launcher.clone());
+                        }
                         // should clear search bar
-                        return true;
+                        return ModeTransition::ClearInput;
                     }
+                } else {
+                    *m = Self::Search;
                 }
             }
             _ => {}
         }
 
         // only minor change
-        false
+        ModeTransition::None
     }
 }

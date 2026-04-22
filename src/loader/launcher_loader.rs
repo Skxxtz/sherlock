@@ -94,6 +94,7 @@ impl Loader {
                     modes.push(LauncherMode::Alias {
                         short: alias.into(),
                         name: name.into(),
+                        launcher: launcher.clone(),
                     });
                 }
             })

@@ -132,7 +132,7 @@ impl BindSerde {
 /// - **shortcut:** Specifies whether the child tile should show `modekey + number` shortcuts
 /// - **spawn_focus:** Specifies whether the tile should have focus whenever Sherlock launches
 ///   search entry & mode == `all`)
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Launcher {
     pub name: Option<SharedString>,
     pub display_name: Option<SharedString>,
@@ -242,6 +242,7 @@ impl ExecMode {
                         .map(SharedString::from)
                         .unwrap_or_default(),
                     name: app_data.name.clone().unwrap_or_default(),
+                    launcher: launcher.clone(),
                 },
             },
             LauncherType::Commands(_) => Self::Command {

@@ -1,4 +1,5 @@
 use gpui::{App, AppContext};
+use std::mem;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -41,7 +42,7 @@ macro_rules! create_variants {
             Empty,
         }
 
-        #[derive(Deserialize, Debug, Serialize, Clone, Copy, Default, Display, PartialEq)]
+        #[derive(Deserialize, Debug, Serialize, Clone, Copy, Default, Display, PartialEq, Eq)]
         #[serde(rename_all = "snake_case")]
         #[strum(serialize_all = "snake_case")]
         pub enum LauncherVariant {
@@ -75,6 +76,12 @@ macro_rules! create_variants {
                     )*
                     $name::Empty => Self::Empty,
                 }
+            }
+        }
+
+        impl PartialEq for $name {
+            fn eq(&self, other: &Self) -> bool {
+                mem::discriminant(self) == mem::discriminant(other)
             }
         }
 

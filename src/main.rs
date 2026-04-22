@@ -39,6 +39,7 @@ async fn main() {
 
     spawn_clipboard_watcher();
 
+    // This top part
     let plat = gpui_platform::current_platform(false);
     let app = Application::with_platform(plat)
         .with_assets(Assets)

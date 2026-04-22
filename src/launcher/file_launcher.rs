@@ -15,6 +15,7 @@ use crate::{
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct FileLauncher {
+    pub loc: SharedString,
     pub max_results: usize,
     pub poll_interval: u64,
     pub backend: FileSearchBackend,
@@ -41,8 +42,17 @@ impl LauncherProvider for FileLauncher {
             .map(|v| v as usize)
             .unwrap_or(50);
 
+        let loc = raw
+            .args
+            .get("path")
+            .and_then(|v| v.as_str())
+            .unwrap_or("~/")
+            .to_string()
+            .into();
+
         LauncherType::Files(Self {
             backend,
+            loc,
             poll_interval,
             max_results,
         })
