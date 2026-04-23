@@ -397,3 +397,18 @@ pub fn construct_search(name: Option<&str>, search_str: &str, use_keywords: bool
     s.make_ascii_lowercase();
     s
 }
+
+pub fn deserialize_path_buf<'de, D>(deserializer: D) -> Result<PathBuf, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+
+    if let Some(stripped) = s.strip_prefix('~')
+        && let Ok(home) = std::env::var("HOME")
+    {
+        return Ok(PathBuf::from(home).join(stripped.trim_start_matches('/')));
+    }
+
+    Ok(PathBuf::from(s))
+}

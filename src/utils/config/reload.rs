@@ -18,11 +18,13 @@ pub async fn reload(
     let mut messages: Vec<SherlockMessage> = Vec::new();
 
     if needs.config {
-        let mut flags = Loader::load_flags().ok()?;
+        let mut flags = Loader::load_flags();
         let config = match flags.get_config() {
             Err(e) => {
                 messages.push(e);
-                SherlockConfig::apply_flags(&mut flags, SherlockConfig::default())
+                let mut cfg = SherlockConfig::default();
+                cfg.apply_flags(&mut flags);
+                cfg
             }
             Ok((cfg, msgs)) => {
                 messages.extend(msgs);

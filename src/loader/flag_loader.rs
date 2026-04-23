@@ -7,7 +7,11 @@ use crate::utils::{
 };
 
 impl Loader {
-    pub fn load_flags() -> Result<SherlockFlags, SherlockMessage> {
+    /// This loads the application flags.
+    /// ### Returns:
+    /// **Error**
+    ///
+    pub fn load_flags() -> SherlockFlags {
         let args: Vec<String> = env::args().collect();
         if args.contains(&"--help".to_string()) {
             let _ = flag_documentation();
@@ -52,7 +56,7 @@ impl SherlockFlags {
             _ => long,
         }
     }
-    fn new(args: Vec<String>) -> Result<Self, SherlockMessage> {
+    fn new(args: Vec<String>) -> Self {
         // Helper closure to extract flag values
         let extract_path_value =
             |flag: &str| Self::extract_flag_value::<PathBuf>(&args, flag, None);
@@ -66,7 +70,7 @@ impl SherlockFlags {
             eprintln!("{:?}", x);
         }
 
-        Ok(SherlockFlags {
+        SherlockFlags {
             config_dir: extract_path_value("--config-dir"),
             config: extract_path_value("--config"),
             fallback: extract_path_value("--fallback"),
@@ -84,7 +88,7 @@ impl SherlockFlags {
             photo_mode: check_flag_existence("--photo"),
             input: Self::extract_flag_value::<bool>(&args, "--input", None),
             placeholder: Self::extract_flag_value::<String>(&args, "--placeholder", Some("-p")),
-        })
+        }
     }
 }
 

@@ -279,8 +279,9 @@ impl LauncherView {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub enum LauncherMode {
+    #[default]
     Home,
     Search,
     Alias {

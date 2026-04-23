@@ -15,6 +15,7 @@ use crate::{
     ui::{
         UIFunction,
         launcher::{LauncherView, context_menu::ContextMenuAction, views::EntityStyle},
+        utils::ease::Ease,
         widgets::{LauncherValues, RenderableChild, RenderableChildDelegate, Selection},
     },
     utils::config::ConfigGuard,
@@ -89,7 +90,13 @@ impl LauncherView {
             .gap_3()
             .child(div().text_color(theme.text_search_icon).child(""))
             .child(div().w_auto().child(self.text_input.clone()))
-            .children(self.variable_input.iter().cloned())
+            .children(self.variable_input.iter().cloned().map(|ipt| {
+                div().child(ipt).with_animation(
+                    "variable-input",
+                    Animation::new(Duration::from_millis(100)).with_easing(Ease::ease_in_out_sine),
+                    |this, frac| this.opacity(frac),
+                )
+            }))
             .border_b_2()
             .border_color(theme.border)
     }
@@ -227,7 +234,13 @@ impl LauncherView {
                                         .border_1()
                                         .border_color(theme.border_selected)
                                         .flex_col()
-                                        .child(sidebar),
+                                        .child(sidebar)
+                                        .with_animation(
+                                            "sidebar-pop-in",
+                                            Animation::new(Duration::from_millis(200))
+                                                .with_easing(Ease::ease_out_expo),
+                                            |this, frac| this.opacity(frac),
+                                        ),
                                 )
                                 .w(px(400.)),
                         )
@@ -274,7 +287,6 @@ impl LauncherView {
                     .child(
                         gpui::uniform_list("emoji-grid", indices.len().div_ceil(col_count), {
                             let theme = theme.clone();
-
                             move |range, _win, cx| {
                                 range
                                     .map(|row_idx| {
@@ -490,28 +502,53 @@ impl LauncherView {
                                 .pr_8()
                                 .child(
                                     div()
-                                        .px(px(8.))
-                                        .py(px(4.))
+                                        .px(px(6.5))
                                         .flex()
-                                        .gap(px(8.))
+                                        .justify_center()
+                                        .items_center()
+                                        .gap(px(2.))
+                                        .h(px(28.))
                                         .border_1()
-                                        .rounded_md()
+                                        .rounded_sm()
                                         .bg(theme.bg_code)
                                         .border_color(theme.border_selected)
-                                        .text_size(px(10.))
+                                        .text_size(px(12.))
                                         .text_color(theme.secondary_text)
-                                        .children(
-                                            ShortcutKeyMod::get()
-                                                .map(|mods| {
-                                                    mods.iter().map(|c| div().child(c.to_string()))
-                                                })
-                                                .into_iter()
-                                                .flatten(),
-                                        )
-                                        .child(div().child(shortcut_idx.to_string())),
+                                        .when(selection.is_selected, |this| {
+                                            this.aspect_square()
+                                                .child(div().child("↵").relative().top(px(1.)))
+                                        })
+                                        .when(!selection.is_selected, |this| {
+                                            this.children(
+                                                ShortcutKeyMod::get()
+                                                    .map(|mods| {
+                                                        mods.iter().map(|c| {
+                                                            div()
+                                                                .flex()
+                                                                .justify_center()
+                                                                .min_w(px(10.))
+                                                                .child(c.to_string())
+                                                        })
+                                                    })
+                                                    .into_iter()
+                                                    .flatten(),
+                                            )
+                                            .child(
+                                                div()
+                                                    .flex()
+                                                    .justify_center()
+                                                    .min_w(px(10.))
+                                                    .child(shortcut_idx.to_string()),
+                                            )
+                                        }),
                                 ),
                         )
                     }),
+            )
+            .with_animation(
+                "fade-in-results",
+                Animation::new(Duration::from_millis(500)).with_easing(Ease::ease_out_expo),
+                |this, frac| this.opacity(frac),
             )
             .into_any_element()
     }

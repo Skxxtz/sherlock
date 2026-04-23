@@ -4,9 +4,10 @@ use tokio::net::UnixListener;
 
 use crate::{
     app::{RenderableChildEntity, run_async_updates, spawn_launcher},
+    tokio_utils::AsyncSizedMessage,
     ui::launcher::{LauncherMode, LauncherView},
     utils::{
-        config::{ConfigWatcher, reload},
+        config::{ConfigGuard, ConfigWatcher, SherlockFlags, reload},
         errors::SherlockMessage,
     },
 };
@@ -23,12 +24,23 @@ pub(super) async fn run_event_loop(
     let mut active_update_task: Option<gpui::Task<()>> = None;
 
     loop {
-        if let Ok((_stream, _)) = listener.accept().await {
+        if let Ok((mut stream, _)) = listener.accept().await {
             if let Ok(audit) = watcher.audit()
                 && !audit.is_empty()
                 && let Some(new_modes) = reload(&cx, &data, &mut initial_messages, audit).await
             {
                 modes = new_modes;
+            }
+
+            match stream.read_sized::<SherlockFlags>().await {
+                Ok(mut flags) => {
+                    if let Err(e) = ConfigGuard::write_with(|c| c.apply_flags(&mut flags)) {
+                        initial_messages.push(e)
+                    }
+                }
+                Err(e) => {
+                    initial_messages.push(e);
+                }
             }
 
             drop(active_update_task.take());

@@ -161,6 +161,11 @@ fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockMess
     let raw_bytes: Vec<u8> = match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == ErrorKind::NotFound => {
+            warnings.push(sherlock_msg!(
+                Error,
+                SherlockErrorType::FileError(FileAction::Read, path.clone()),
+                e
+            ));
             include_bytes!("../../assets/fallback.json").to_vec()
         }
         Err(e) => {

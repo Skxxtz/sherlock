@@ -1,13 +1,12 @@
+use ::tokio::net::UnixStream;
 use gpui::{App, Application, QuitMode};
 use once_cell::sync::OnceCell;
-use std::{
-    io::Write,
-    sync::{OnceLock, RwLock},
-};
+use std::sync::{OnceLock, RwLock};
 
 use crate::{
     app::{bindings::ShortcutKeyMod, run_app},
     loader::{CustomIconTheme, Loader, assets::Assets},
+    tokio_utils::{AsyncSizedMessage, SizedMessageObj},
     utils::{clipboard::spawn_clipboard_watcher, config::SherlockConfig},
 };
 
@@ -15,6 +14,7 @@ mod app;
 mod launcher;
 mod loader;
 mod prelude;
+mod tokio_utils;
 mod ui;
 mod utils;
 
@@ -32,8 +32,11 @@ static SOCKET_PATH: &str = "/tmp/sherlock.sock";
 #[tokio::main]
 async fn main() {
     let socket_path = "/tmp/sherlock.sock";
-    if let Ok(mut stream) = std::os::unix::net::UnixStream::connect(socket_path) {
-        let _ = stream.write_all(b"open");
+    if let Ok(mut stream) = UnixStream::connect(socket_path).await {
+        let flags = Loader::load_flags();
+        if let Ok(flags_bin) = SizedMessageObj::from_struct(&flags) {
+            let _ = stream.write_sized(flags_bin).await;
+        }
         return;
     }
 

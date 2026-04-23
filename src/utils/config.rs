@@ -4,8 +4,8 @@ use std::{
     path::PathBuf,
 };
 
-use crate::ui::UIFunction;
 use crate::utils::config::defaults::FileDefaults;
+use crate::{loader::utils::deserialize_path_buf, ui::UIFunction};
 
 mod config_impl;
 mod defaults;
@@ -146,7 +146,7 @@ pub struct ConfigAppearance {
     #[serde(default = "OtherDefaults::one")]
     pub opacity: f64,
     #[serde(default = "BindDefaults::modkey_ascii")]
-    pub mod_key_ascii: Vec<String>,
+    pub mod_key_ascii: [char; 4],
     #[serde(default = "BindDefaults::shortcut_mod")]
     pub shortcut_mod: String,
     #[serde(default = "OtherDefaults::five")]
@@ -175,16 +175,19 @@ pub struct ConfigBehavior {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfigFiles {
     #[serde(default = "FileDefaults::config")]
+    #[serde(deserialize_with = "deserialize_path_buf")]
     pub config: PathBuf,
-    #[serde(default = "FileDefaults::css")]
-    pub css: PathBuf,
     #[serde(default = "FileDefaults::fallback")]
+    #[serde(deserialize_with = "deserialize_path_buf")]
     pub fallback: PathBuf,
     #[serde(default = "FileDefaults::alias")]
+    #[serde(deserialize_with = "deserialize_path_buf")]
     pub alias: PathBuf,
     #[serde(default = "FileDefaults::ignore")]
+    #[serde(deserialize_with = "deserialize_path_buf")]
     pub ignore: PathBuf,
     #[serde(default = "FileDefaults::actions")]
+    #[serde(deserialize_with = "deserialize_path_buf")]
     pub actions: PathBuf,
 }
 
@@ -233,6 +236,7 @@ pub struct ConfigCaching {
     #[serde(default = "OtherDefaults::bool_true")]
     pub enable: bool,
     #[serde(default = "FileDefaults::cache")]
+    #[serde(deserialize_with = "deserialize_path_buf")]
     pub cache: PathBuf,
 }
 
@@ -283,6 +287,7 @@ pub struct ConfigSourceFiles {
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfigSource {
+    #[serde(deserialize_with = "deserialize_path_buf")]
     pub file: PathBuf,
 }
 

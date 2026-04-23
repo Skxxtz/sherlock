@@ -87,10 +87,7 @@ impl EventData {
             .map_err(|e| {
                 sherlock_msg!(
                     Warning,
-                    SherlockErrorType::SocketError(
-                        SocketAction::Connect,
-                        SocketData::SOCKET_ADDR.into()
-                    ),
+                    SherlockErrorType::SocketError(SocketAction::Connect),
                     e
                 )
             })?;
@@ -107,7 +104,7 @@ impl EventData {
         stream.write_sized(req_obj).await.map_err(|e| {
             sherlock_msg!(
                 Warning,
-                SherlockErrorType::SocketError(SocketAction::Write, SocketData::SOCKET_ADDR.into()),
+                SherlockErrorType::SocketError(SocketAction::Write),
                 e.message
             )
         })?;
@@ -115,7 +112,7 @@ impl EventData {
         let resp_bin = stream.read_sized().await.map_err(|e| {
             sherlock_msg!(
                 Warning,
-                SherlockErrorType::SocketError(SocketAction::Read, SocketData::SOCKET_ADDR.into()),
+                SherlockErrorType::SocketError(SocketAction::Read),
                 e.message
             )
         })?;

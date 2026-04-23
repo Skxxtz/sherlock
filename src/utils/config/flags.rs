@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     sherlock_msg,
     utils::{
@@ -12,7 +14,7 @@ use crate::{
 };
 use std::{fs::read_to_string, path::PathBuf};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SherlockFlags {
     pub config_dir: Option<PathBuf>,
     pub config: Option<PathBuf>,
@@ -126,21 +128,20 @@ impl SherlockFlags {
                 };
                 match config_res {
                     Ok(mut config) => {
-                        config = SherlockConfig::apply_flags(self, config);
+                        config.apply_flags(self);
                         config.initialized = true;
                         Ok((config, vec![]))
                     }
                     Err(e) => {
                         let mut config = SherlockConfig::default();
-
-                        config = SherlockConfig::apply_flags(self, config);
+                        config.apply_flags(self);
                         Ok((config, vec![e]))
                     }
                 }
             }
             Err(e) => {
                 let mut config = SherlockConfig::default();
-                config = SherlockConfig::apply_flags(self, config);
+                config.apply_flags(self);
                 let e = sherlock_msg!(
                     Warning,
                     SherlockErrorType::FileError(FileAction::Read, path),

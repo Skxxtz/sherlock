@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::{
     app::RenderableChildEntity,
-    launcher::Launcher,
+    launcher::{Launcher, variant_type::LauncherType},
     ui::{
         launcher::context_menu::ContextMenuAction,
         model::{
@@ -432,6 +432,20 @@ impl NavigationViewType {
                 // manually because its not dependent on a launcher
                 unimplemented!()
             }
+        }
+    }
+}
+
+pub struct NoView;
+impl TryFrom<&LauncherType> for NavigationViewType {
+    type Error = NoView;
+    fn try_from(value: &LauncherType) -> Result<Self, Self::Error> {
+        match value {
+            LauncherType::Emoji(_) => Ok(NavigationViewType::Emoji),
+            LauncherType::Files(fs) => Ok(NavigationViewType::Files {
+                dir: Some(fs.loc.clone()),
+            }),
+            _ => Err(Self::Error {}),
         }
     }
 }

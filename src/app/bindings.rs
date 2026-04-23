@@ -90,18 +90,30 @@ pub struct ShortcutKeyMod {
 impl ShortcutKeyMod {
     pub fn from(mods: &Modifiers) {
         let mut buf: SmallVec<[char; 4]> = SmallVec::new();
+        let mut push = |idx: usize, default: char| {
+            buf.push(
+                ConfigGuard::read_with(|c| {
+                    c.appearance
+                        .mod_key_ascii
+                        .get(idx)
+                        .cloned()
+                        .unwrap_or(default)
+                })
+                .unwrap_or(default),
+            )
+        };
 
         if mods.platform {
-            buf.push('⌘');
+            push(0, '⌘');
         }
         if mods.control {
-            buf.push('^');
+            push(1, '^');
         }
         if mods.alt {
-            buf.push('⌥');
+            push(2, '⌥');
         }
         if mods.shift {
-            buf.push('⇧');
+            push(3, '⇧');
         }
 
         let _ = SHORTCUT_MOD.set(Self { buf });

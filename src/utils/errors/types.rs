@@ -14,6 +14,8 @@ pub enum SherlockErrorType {
     SerializationError,
     /// Failure while parsing external data (JSON/YAML) into internal structures.
     DeserializationError,
+    /// Failure regarding provided data
+    InvalidData,
     /// The requested UI or system action is not recognized or defined.
     InvalidAction,
     /// The specific internal function is not supported by the active launcher.
@@ -37,7 +39,7 @@ pub enum SherlockErrorType {
     /// Communication failures with the system or session DBus.
     DBusError(DBusAction, String),
     /// Low-level IPC or network socket connection/read/write failures.
-    SocketError(SocketAction, String),
+    SocketError(SocketAction),
     /// Remote request failures (HTTP, timeouts, or DNS issues).
     NetworkError(NetworkAction, String),
     /// SQL or connection failures involving the local SQLite database.
@@ -114,7 +116,7 @@ impl Display for SherlockErrorType {
             Self::DBusError(act, target) => {
                 write!(f, "DBus failed to {act} ({target})")
             }
-            Self::SocketError(act, loc) => write!(f, "Failed to {} socket at \"{}\"", act, loc),
+            Self::SocketError(act) => write!(f, "Failed to {} socket", act),
             Self::BorrowCongestion => write!(f, "Resource is currently locked/in use"),
             Self::NetworkError(act, loc) => {
                 write!(f, "Network failure during {act} from \"{loc}\"")

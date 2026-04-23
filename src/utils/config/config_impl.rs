@@ -113,71 +113,42 @@ impl SherlockConfig {
 
         std::process::exit(0);
     }
-    pub fn apply_flags(
-        sherlock_flags: &mut SherlockFlags,
-        mut config: SherlockConfig,
-    ) -> SherlockConfig {
+    pub fn apply_flags(&mut self, sherlock_flags: &mut SherlockFlags) {
         // Make paths that contain the ~ dir use the correct path
         let home = match home_dir() {
             Ok(h) => h,
-            Err(_) => return config,
+            Err(_) => return,
         };
 
         // Override config files from flags
-        config.files.config = expand_path(
-            sherlock_flags
-                .config
-                .as_deref()
-                .unwrap_or(&config.files.config),
-            &home,
-        );
-        config.files.fallback = expand_path(
-            sherlock_flags
-                .fallback
-                .as_deref()
-                .unwrap_or(&config.files.fallback),
-            &home,
-        );
-        config.files.css = expand_path(
-            sherlock_flags.style.as_deref().unwrap_or(&config.files.css),
-            &home,
-        );
-        config.files.alias = expand_path(
-            sherlock_flags
-                .alias
-                .as_deref()
-                .unwrap_or(&config.files.alias),
-            &home,
-        );
-        config.files.ignore = expand_path(
-            sherlock_flags
-                .ignore
-                .as_deref()
-                .unwrap_or(&config.files.ignore),
-            &home,
-        );
-        config.caching.cache = expand_path(
-            sherlock_flags
-                .cache
-                .as_deref()
-                .unwrap_or(&config.caching.cache),
-            &home,
-        );
-        config.runtime.sub_menu = sherlock_flags.sub_menu.take();
-        config.runtime.method = sherlock_flags.method.take();
-        config.runtime.input = sherlock_flags.input.take();
-        config.runtime.center = sherlock_flags.center_raw;
-        config.runtime.multi = sherlock_flags.multi;
-        config.runtime.display_raw = sherlock_flags.display_raw;
-        config.runtime.photo_mode = sherlock_flags.photo_mode;
-        config.runtime.field = sherlock_flags.field.take();
-        config.runtime.daemonize = sherlock_flags.daemonize;
+        if let Some(config) = sherlock_flags.config.as_deref() {
+            self.files.config = expand_path(config, &home);
+        }
+        if let Some(fallback) = sherlock_flags.fallback.as_deref() {
+            self.files.fallback = expand_path(fallback, &home);
+        }
+        if let Some(alias) = sherlock_flags.alias.as_deref() {
+            self.files.alias = expand_path(alias, &home);
+        }
+        if let Some(ignore) = sherlock_flags.ignore.as_deref() {
+            self.files.ignore = expand_path(ignore, &home);
+        }
+        if let Some(cache) = sherlock_flags.cache.as_deref() {
+            self.caching.cache = expand_path(cache, &home);
+        }
+        self.runtime.sub_menu = sherlock_flags.sub_menu.take();
+        self.runtime.method = sherlock_flags.method.take();
+        self.runtime.input = sherlock_flags.input.take();
+        self.runtime.center = sherlock_flags.center_raw;
+        self.runtime.multi = sherlock_flags.multi;
+        self.runtime.display_raw = sherlock_flags.display_raw;
+        self.runtime.photo_mode = sherlock_flags.photo_mode;
+        self.runtime.field = sherlock_flags.field.take();
+        self.runtime.daemonize = sherlock_flags.daemonize;
 
         if let Some(placeholder) = sherlock_flags.placeholder.take() {
-            config.appearance.placeholder = placeholder;
+            self.appearance.placeholder = placeholder;
         }
-
-        config
     }
 }
 

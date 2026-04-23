@@ -72,7 +72,6 @@ impl Default for ConfigFiles {
     fn default() -> Self {
         Self {
             config: FileDefaults::config(),
-            css: FileDefaults::css(),
             fallback: FileDefaults::fallback(),
             alias: FileDefaults::alias(),
             ignore: FileDefaults::ignore(),
@@ -191,7 +190,6 @@ impl WithRoot for ConfigFiles {
 
         Self {
             config: use_root(&root, FileDefaults::config()),
-            css: use_root(&root, FileDefaults::css()),
             fallback: use_root(&root, FileDefaults::fallback()),
             alias: use_root(&root, FileDefaults::alias()),
             ignore: use_root(&root, FileDefaults::ignore()),
