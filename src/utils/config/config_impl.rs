@@ -144,7 +144,6 @@ impl SherlockConfig {
         self.runtime.display_raw = sherlock_flags.display_raw;
         self.runtime.photo_mode = sherlock_flags.photo_mode;
         self.runtime.field = sherlock_flags.field.take();
-        self.runtime.daemonize = sherlock_flags.daemonize;
 
         if let Some(placeholder) = sherlock_flags.placeholder.take() {
             self.appearance.placeholder = placeholder;

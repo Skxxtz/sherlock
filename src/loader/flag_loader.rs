@@ -80,7 +80,6 @@ impl SherlockFlags {
             display_raw: check_flag_existence("--display-raw"),
             center_raw: check_flag_existence("--center"),
             cache: extract_path_value("--cache"),
-            daemonize: check_flag_existence("--daemonize"),
             sub_menu: Self::extract_flag_value::<String>(&args, "--sub-menu", Some("-sm")),
             method: Self::extract_flag_value::<String>(&args, "--method", None),
             field: Self::extract_flag_value::<String>(&args, "--field", None),
@@ -120,10 +119,6 @@ pub fn flag_documentation() -> Result<(), SherlockMessage> {
         (
             "-p, --placeholder",
             "Overwrite the placeholder text of the search bar.",
-        ),
-        (
-            "--daemonize",
-            "If this flag is set, Sherlock will run in daemon mode.",
         ),
         (
             "-sm, --sub-menu",

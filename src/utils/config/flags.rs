@@ -25,7 +25,6 @@ pub struct SherlockFlags {
     pub display_raw: bool,
     pub center_raw: bool,
     pub cache: Option<PathBuf>,
-    pub daemonize: bool,
     pub method: Option<String>,
     pub field: Option<String>,
     pub sub_menu: Option<String>,

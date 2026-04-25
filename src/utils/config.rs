@@ -226,8 +226,6 @@ pub struct Runtime {
     #[serde(default)]
     pub sub_menu: Option<String>,
     #[serde(default)]
-    pub daemonize: bool,
-    #[serde(default)]
     pub field: Option<String>,
 }
 
