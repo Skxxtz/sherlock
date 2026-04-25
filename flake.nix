@@ -31,14 +31,16 @@
         default = sherlock-gpui;
         sherlock-gpui = pkgs.rustPlatform.buildRustPackage {
           pname = "sherlock-gpui";
-          version = "0.1.0";
+          version = "0.2.0";
           src = ./.;
+
           cargoLock.lockFile = ./Cargo.lock;
           cargoLock.outputHashes = {
-            "collections-0.1.0" = "sha256-zh+9n9h3Vu7BbFczueXs3dC5sObMEPbKJMIS9YQPqYc=";
-            "xim-ctext-0.3.0" = "sha256-pRT4Sz1JU9ros47/7pmIW9kosWOGMOItcnNd+VrvnpE=";
+            "gpui-0.2.2" = "sha256-uEdle/hvTjzEcV6Hcdo/6TRjJiajCfNO/7sIIqufKMA=";
+            "naga-29.0.0" = "sha256-sNPsB8oFhAkaaSQ5Lb+CbwXsJIyOlnn80OZYmtNWS1I=";
+            "suite-223b-0.1.0" = "sha256-vxm9nZOVTcOENRBCPretttY4TF8l1SV8IkW5KP9LI3A=";
+            "wgpu-29.0.0" = "sha256-sNPsB8oFhAkaaSQ5Lb+CbwXsJIyOlnn80OZYmtNWS1I=";
             "zed-font-kit-0.14.1-zed" = "sha256-rxpumYP0QpHW+4e+J1qo5lEZXfBk1LaL/Y0APkUp9cg=";
-            "zed-reqwest-0.12.15-zed" = "sha256-p4SiUrOrbTlk/3bBrzN/mq/t+1Gzy2ot4nso6w6S+F8=";
             "zed-scap-0.0.8-zed" = "sha256-BihiQHlal/eRsktyf0GI3aSWsUCW7WcICMsC2Xvb7kw=";
           };
 
@@ -58,11 +60,11 @@
             sqlite
             fontconfig
             freetype
-            xorg.libX11
-            xorg.libXcursor
-            xorg.libXrandr
-            xorg.libXi
-            xorg.libxcb
+            libx11
+            libxcursor
+            libxrandr
+            libxi
+            libxcb
           ];
 
           LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
@@ -101,11 +103,11 @@
             sqlite
             fontconfig
             freetype
-            xorg.libX11
-            xorg.libXcursor
-            xorg.libXrandr
-            xorg.libXi
-            xorg.libxcb
+            libx11
+            libxcursor
+            libxrandr
+            libxi
+            libxcb
           ];
           LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
           LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath [
