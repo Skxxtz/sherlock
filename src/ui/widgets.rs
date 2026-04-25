@@ -4,6 +4,7 @@ use std::sync::Arc;
 pub mod app;
 pub mod calculator;
 pub mod clipboard;
+pub mod dmenu;
 pub mod emoji;
 pub mod event;
 pub mod file;
@@ -22,7 +23,10 @@ use crate::{
     loader::utils::{AppData, ExecVariable},
     ui::{
         launcher::context_menu::ContextMenuAction,
-        widgets::{message::MessageChild, script::ScriptData, translator::TranslationData},
+        widgets::{
+            dmenu::DmenuData, message::MessageChild, script::ScriptData,
+            translator::TranslationData,
+        },
     },
     utils::config::HomeType,
 };
@@ -290,6 +294,7 @@ renderable_enum! {
         Script(ScriptData),
         Translator(TranslationData),
         Weather(WeatherData),
+        Dmenu(DmenuData),
     }
 }
 

@@ -161,7 +161,7 @@ impl NavigationStack {
                 f(&view.read(cx).model)
             }
 
-            NavigationViewType::Home => {
+            NavigationViewType::Home | NavigationViewType::Dmenu { .. } => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
                 f(&view.read(cx).model)
             }
@@ -189,7 +189,7 @@ impl NavigationStack {
                 view.update(cx, |this, cx| f(&mut this.model, cx))
             }
 
-            NavigationViewType::Home => {
+            NavigationViewType::Home | NavigationViewType::Dmenu { .. } => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
                 view.update(cx, |this, cx| f(&mut this.model, cx))
             }
@@ -396,6 +396,7 @@ pub enum NavigationViewType {
     Emoji,
     Message,
     Home,
+    Dmenu { entity: RenderableChildEntity },
     Files { dir: Option<SharedString> },
 }
 
@@ -418,6 +419,17 @@ impl NavigationViewType {
             }
             Self::Files { dir } => {
                 let view = cx.new(|cx| FileView::new(launcher, dir.clone(), cx));
+                NavigationView {
+                    view: view.into(),
+                    style: EntityStyle::Row {
+                        state: ListState::new(0, gpui::ListAlignment::Top, px(50.)),
+                        selected_index: 0,
+                    },
+                    kind: self.clone(),
+                }
+            }
+            Self::Dmenu { entity } => {
+                let view = cx.new(|cx| HomeView::new(entity.clone(), cx));
                 NavigationView {
                     view: view.into(),
                     style: EntityStyle::Row {

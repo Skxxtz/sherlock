@@ -5,6 +5,7 @@ use strum::{AsRefStr, Display as StrumDisplay};
 
 #[derive(Debug, Clone, Serialize, Deserialize, AsRefStr)]
 #[serde(rename_all = "snake_case")]
+#[derive(PartialEq)]
 pub enum SherlockErrorType {
     /// Logical branch that code logic dictates is impossible to reach.
     Unreachable,
@@ -48,7 +49,7 @@ pub enum SherlockErrorType {
     UnsupportedBrowser(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum FileAction {
     Read,
@@ -58,7 +59,7 @@ pub enum FileAction {
     Find,
     Create,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum DirAction {
     Read,
@@ -66,7 +67,7 @@ pub enum DirAction {
     Remove,
     Find,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum DBusAction {
     Connect,
@@ -74,15 +75,16 @@ pub enum DBusAction {
     Send,
     Call,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum SocketAction {
     Close,
     Connect,
     Write,
     Read,
+    EoF,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum NetworkAction {
     Get,
@@ -91,7 +93,7 @@ pub enum NetworkAction {
     Update,
     Delete,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum DbAction {
     Connect,

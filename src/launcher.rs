@@ -5,6 +5,7 @@ pub mod bulk_text_launcher;
 pub mod calc_launcher;
 pub mod category_launcher;
 pub mod clipboard_launcher;
+pub mod dmenu_launcher;
 pub mod emoji_launcher;
 pub mod event_launcher;
 pub mod file_launcher;
@@ -166,6 +167,14 @@ impl Launcher {
             spawn_focus: raw.spawn_focus,
             actions: raw.actions,
             add_actions: raw.add_actions,
+        }
+    }
+    pub fn default_dmenu() -> Self {
+        Self {
+            priority: 1,
+            home: HomeType::Home,
+            launcher_type: LauncherType::Dmenu(dmenu_launcher::DmenuLauncher::default()),
+            ..Default::default()
         }
     }
 }

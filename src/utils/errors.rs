@@ -55,7 +55,7 @@ pub enum SherlockMessageLevel {
     Error,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct SherlockMessage {
     pub error_type: SherlockErrorType,
     pub level: SherlockMessageLevel,

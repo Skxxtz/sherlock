@@ -102,7 +102,7 @@ impl AsyncSizedMessage for UnixStream {
             self.read_exact(&mut buf_len).await.map_err(|e| {
                 sherlock_msg!(
                     Warning,
-                    SherlockErrorType::SocketError(SocketAction::Read),
+                    SherlockErrorType::SocketError(SocketAction::EoF),
                     e
                 )
             })?;

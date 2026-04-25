@@ -3,6 +3,7 @@ pub mod assets;
 mod flag_loader;
 mod icon;
 mod launcher_loader;
+pub mod pipe;
 mod setup;
 pub mod utils;
 

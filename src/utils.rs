@@ -6,5 +6,6 @@ pub mod errors;
 pub mod files;
 pub mod intent;
 pub mod logging;
+pub mod networking;
 pub mod paths;
 pub mod websearch;
