@@ -2296,7 +2296,7 @@ dependencies = [
  "mach2",
  "media",
  "metal",
- "naga 29.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "naga",
  "num_cpus",
  "objc",
  "parking",
@@ -3614,31 +3614,6 @@ checksum = "ac9557c559cd6fc9867e122e20d2cbefc9ca29d80d027a8e39310920ed2f0a97"
 dependencies = [
  "num-traits",
  "pxfm",
-]
-
-[[package]]
-name = "naga"
-version = "29.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85b4372fed0bd362d646d01b6926df0e837859ccc522fed720c395e0460f29c8"
-dependencies = [
- "arrayvec",
- "bit-set",
- "bitflags 2.10.0",
- "cfg-if",
- "cfg_aliases",
- "codespan-reporting",
- "half",
- "hashbrown 0.16.1",
- "hexf-parse",
- "indexmap",
- "libm",
- "log",
- "num-traits",
- "once_cell",
- "rustc-hash 1.1.0",
- "thiserror 2.0.18",
- "unicode-ident",
 ]
 
 [[package]]
