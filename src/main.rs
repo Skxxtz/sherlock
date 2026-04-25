@@ -2,6 +2,7 @@ use ::tokio::net::UnixStream;
 use gpui::{App, Application, QuitMode};
 use once_cell::sync::OnceCell;
 use std::sync::{OnceLock, RwLock};
+use tokio::io::AsyncWriteExt;
 
 use crate::{
     app::{bindings::ShortcutKeyMod, run_app},
@@ -36,8 +37,11 @@ async fn main() {
         let flags = Loader::load_flags();
         if let Ok(flags_bin) = SizedMessageObj::from_struct(&flags) {
             let _ = stream.write_sized(flags_bin).await;
+            stream.shutdown().await.ok();
         }
         return;
+    } else {
+        std::fs::remove_file(SOCKET_PATH).ok();
     }
 
     spawn_clipboard_watcher();

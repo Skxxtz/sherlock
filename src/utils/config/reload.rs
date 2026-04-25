@@ -8,7 +8,7 @@ use crate::{
     utils::errors::SherlockMessage,
 };
 
-pub async fn reload(
+pub fn reload(
     cx: &AsyncApp,
     data: &RenderableChildEntity,
     initial_messages: &mut Vec<SherlockMessage>,

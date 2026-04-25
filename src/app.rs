@@ -59,7 +59,6 @@ pub fn run_app(cx: &mut App, result: SetupResult) {
     let data: RenderableChildEntity = cx.new(|_| Rc::new(Vec::new()));
     let modes = load_modes(cx, &data, &mut messages);
 
-    let _ = std::fs::remove_file(SOCKET_PATH);
     let listener = UnixListener::bind(SOCKET_PATH).unwrap();
     let initial_messages = messages;
 
@@ -93,8 +92,8 @@ fn load_modes(
 }
 
 #[inline(always)]
-pub async fn run_async_updates(mut cx: AsyncApp, win: WindowHandle<LauncherView>) {
-    let _ = win.update(&mut cx, |this, _win, cx| {
+pub async fn run_async_updates(cx: &mut AsyncApp, win: WindowHandle<LauncherView>) {
+    let _ = win.update(cx, |this, _win, cx| {
         this.update_async(cx);
     });
 }
