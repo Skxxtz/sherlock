@@ -38,9 +38,7 @@ run `git log main..dev` for all changes
 
 ---
 
-## [Unreleased]
-
-* As of commit: **c9bcd113412117aac83479d2b3b09167ce23dcfa**
+## [0.2.1-dev] - 26.04.26
 
 ### Added
 
