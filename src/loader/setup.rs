@@ -37,15 +37,14 @@ impl Loader {
     /// - Resolve the config root directory, falling back to XDG config dir or `/tmp/sherlock`
     pub fn setup() -> SetupResult {
         let mut messages: Vec<SherlockMessage> = Vec::new();
-        let mut flags = Self::load_flags()
-            .map_err(|e| messages.push(e))
-            .unwrap_or_default();
+        let mut flags = Self::load_flags();
 
-        let config = match flags.to_config() {
+        let config = match flags.get_config() {
             Err(e) => {
                 messages.push(e);
-                let defaults = SherlockConfig::default();
-                SherlockConfig::apply_flags(&mut flags, defaults)
+                let mut defaults = SherlockConfig::default();
+                defaults.apply_flags(&mut flags);
+                defaults
             }
             Ok((cfg, non_crit)) => {
                 messages.extend(non_crit);

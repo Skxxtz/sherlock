@@ -210,10 +210,8 @@ impl Element for TextElement {
     ) -> (LayoutId, Self::RequestLayoutState) {
         let input = self.input.read(cx);
         let content: SharedString = match &input.variable {
-            Some(ExecVariable::PasswordInput(_)) => {
-                "•".repeat(input.content.chars().count()).into()
-            }
-            _ => input.content.clone().into(),
+            Some(ExecVariable::Password(_)) => "•".repeat(input.content.chars().count()).into(),
+            _ => input.content.clone(),
         };
         let style = window.text_style();
         let theme = cx.global::<ActiveTheme>().0.clone();
@@ -269,7 +267,7 @@ impl Element for TextElement {
                 completion_run,
             ]
             .into_iter()
-            .filter_map(|run| run)
+            .flatten()
             .filter(|run| run.len > 0)
             .collect()
         } else {
@@ -314,7 +312,7 @@ impl Element for TextElement {
         let theme = cx.global::<ActiveTheme>().0.clone();
 
         // handle password fields
-        if let Some(ExecVariable::PasswordInput(_)) = &input.variable {
+        if let Some(ExecVariable::Password(_)) = &input.variable {
             cursor = input.content[..cursor].chars().count() * "•".len();
 
             let start = input.content[..selected_range.start].chars().count() * "•".len();
@@ -483,7 +481,7 @@ impl TextInput {
     }
     pub(super) fn refresh_ghost_text(&mut self) {
         self.ghost_text = match &self.variable {
-            Some(ExecVariable::PathInput(inner)) => {
+            Some(ExecVariable::Path(inner)) => {
                 get_nth_path_completion(self.content.as_str(), inner.index)
             }
             _ => None,

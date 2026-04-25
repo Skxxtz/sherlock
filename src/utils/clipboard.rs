@@ -107,10 +107,10 @@ impl Dispatch<ZwlrDataControlDeviceV1, ()> for ClipboardState {
             }
             zwlr_data_control_device_v1::Event::Selection { id } => {
                 let Some(offer) = id else {
-                    if let Some(lock) = CLIPBOARD.get() {
-                        if let Ok(mut c) = lock.write() {
-                            *c = None;
-                        }
+                    if let Some(lock) = CLIPBOARD.get()
+                        && let Ok(mut c) = lock.write()
+                    {
+                        *c = None;
                     }
                     return;
                 };
@@ -148,10 +148,10 @@ impl Dispatch<ZwlrDataControlDeviceV1, ()> for ClipboardState {
                     file.read_to_end(&mut bytes).ok();
                     if let Ok(text) = String::from_utf8(bytes) {
                         let text = text.replace("\r\n", "\n");
-                        if let Some(lock) = CLIPBOARD.get() {
-                            if let Ok(mut c) = lock.write() {
-                                *c = Some(text);
-                            }
+                        if let Some(lock) = CLIPBOARD.get()
+                            && let Ok(mut c) = lock.write()
+                        {
+                            *c = Some(text);
                         }
                     }
                 }

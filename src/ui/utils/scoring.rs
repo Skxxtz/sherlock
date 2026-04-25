@@ -58,7 +58,7 @@ fn search_score(query: &str, match_in: &str) -> f32 {
 }
 
 static DEBUG_SEARCH: LazyLock<bool> =
-    LazyLock::new(|| std::env::var("DEBUG_SEARCH").map_or(false, |v| v == "true"));
+    LazyLock::new(|| std::env::var("DEBUG_SEARCH").is_ok_and(|v| v == "true"));
 
 pub fn make_prio(prio: f32, query: &str, match_in: &str) -> f32 {
     let score = search_score(query, match_in);

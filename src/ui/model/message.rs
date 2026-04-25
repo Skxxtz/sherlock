@@ -1,4 +1,4 @@
-use std::{cell::Cell, sync::Arc};
+use std::{cell::Cell, rc::Rc, sync::Arc};
 
 use gpui::{App, Context, WeakEntity};
 
@@ -46,7 +46,7 @@ impl MessageView {
                         });
                     }
                 });
-                RenderableChild::MessageLike {
+                RenderableChild::Message {
                     launcher: Arc::clone(&launcher),
                     inner,
                 }
@@ -67,8 +67,8 @@ impl MessageView {
         cx: &mut App,
     ) {
         self.model.data().update(cx, |this, _| {
-            let data = Arc::make_mut(this);
-            data.push(RenderableChild::MessageLike {
+            let data = Rc::make_mut(this);
+            data.push(RenderableChild::Message {
                 launcher: self.launcher.clone(),
                 inner: MessageChild::new(message).on_dismiss(move |cx, idx| {
                     if let Some(entity) = weak.upgrade() {
@@ -94,7 +94,7 @@ impl MessageView {
 
         let removed = data.update(cx, |this, _| {
             if idx < this.len() {
-                let data = Arc::make_mut(this);
+                let data = Rc::make_mut(this);
                 data.remove(idx);
                 true
             } else {

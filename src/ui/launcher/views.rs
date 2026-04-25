@@ -1,12 +1,13 @@
 use gpui::{
-    AnyEntity, App, AppContext, Entity, ListState, ScrollStrategy, SharedString,
-    UniformListScrollHandle, px,
+    AnyEntity, App, AppContext, ListState, ScrollStrategy, SharedString, UniformListScrollHandle,
+    px,
 };
 use simd_json::prelude::{ArrayTrait, Indexed};
 use std::sync::Arc;
 
 use crate::{
-    launcher::Launcher,
+    app::RenderableChildEntity,
+    launcher::{Launcher, variant_type::LauncherType},
     ui::{
         launcher::context_menu::ContextMenuAction,
         model::{
@@ -30,7 +31,7 @@ pub struct NavigationStack {
 
 impl NavigationStack {
     pub fn new(
-        initial: Entity<Arc<Vec<RenderableChild>>>,
+        initial: RenderableChildEntity,
         messages: Vec<SherlockMessage>,
         len: usize,
         cx: &mut App,
@@ -140,10 +141,10 @@ impl NavigationStack {
             .expect("NavigationStack must always contain a root view.")
     }
     pub fn current_mut(&mut self) -> &mut NavigationView {
-        if let Some(idx) = self.active_idx {
-            if idx < self.stack.len() {
-                return &mut self.stack[idx];
-            }
+        if let Some(idx) = self.active_idx
+            && idx < self.stack.len()
+        {
+            return &mut self.stack[idx];
         }
 
         // Since we ensure to always keep the stack populated with at least the home item, this is
@@ -160,7 +161,7 @@ impl NavigationStack {
                 f(&view.read(cx).model)
             }
 
-            NavigationViewType::Home => {
+            NavigationViewType::Home | NavigationViewType::Dmenu { .. } => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
                 f(&view.read(cx).model)
             }
@@ -188,7 +189,7 @@ impl NavigationStack {
                 view.update(cx, |this, cx| f(&mut this.model, cx))
             }
 
-            NavigationViewType::Home => {
+            NavigationViewType::Home | NavigationViewType::Dmenu { .. } => {
                 let view = current.view.clone().downcast::<HomeView>().unwrap();
                 view.update(cx, |this, cx| f(&mut this.model, cx))
             }
@@ -266,7 +267,7 @@ impl NavigationStack {
             let item_idx = filtered_indices
                 .iter()
                 .copied()
-                .filter(|i| data.get(*i).map_or(false, |item| item.shortcut()))
+                .filter(|i| data.get(*i).is_some_and(|item| item.shortcut()))
                 .nth(idx - 1);
 
             (item_idx, data_entity)
@@ -381,8 +382,7 @@ impl EntityStyle {
             } => {
                 *selected_index = n;
                 let cols = *columns;
-                if cols > 0 {
-                    let row_index = n / cols;
+                if let Some(row_index) = n.checked_div(cols) {
                     scroll_handle.scroll_to_item(row_index, ScrollStrategy::Nearest);
                 }
                 Some(())
@@ -396,6 +396,7 @@ pub enum NavigationViewType {
     Emoji,
     Message,
     Home,
+    Dmenu { entity: RenderableChildEntity },
     Files { dir: Option<SharedString> },
 }
 
@@ -427,11 +428,36 @@ impl NavigationViewType {
                     kind: self.clone(),
                 }
             }
+            Self::Dmenu { entity } => {
+                let view = cx.new(|cx| HomeView::new(entity.clone(), cx));
+                NavigationView {
+                    view: view.into(),
+                    style: EntityStyle::Row {
+                        state: ListState::new(0, gpui::ListAlignment::Top, px(50.)),
+                        selected_index: 0,
+                    },
+                    kind: self.clone(),
+                }
+            }
             Self::Message | Self::Home => {
                 // This is not implemented because the initial views should be implemented
                 // manually because its not dependent on a launcher
                 unimplemented!()
             }
+        }
+    }
+}
+
+pub struct NoView;
+impl TryFrom<&LauncherType> for NavigationViewType {
+    type Error = NoView;
+    fn try_from(value: &LauncherType) -> Result<Self, Self::Error> {
+        match value {
+            LauncherType::Emoji(_) => Ok(NavigationViewType::Emoji),
+            LauncherType::Files(fs) => Ok(NavigationViewType::Files {
+                dir: Some(fs.loc.clone()),
+            }),
+            _ => Err(Self::Error {}),
         }
     }
 }

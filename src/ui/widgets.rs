@@ -4,6 +4,7 @@ use std::sync::Arc;
 pub mod app;
 pub mod calculator;
 pub mod clipboard;
+pub mod dmenu;
 pub mod emoji;
 pub mod event;
 pub mod file;
@@ -22,7 +23,10 @@ use crate::{
     loader::utils::{AppData, ExecVariable},
     ui::{
         launcher::context_menu::ContextMenuAction,
-        widgets::{message::MessageChild, script::ScriptData, translator::TranslationData},
+        widgets::{
+            dmenu::DmenuData, message::MessageChild, script::ScriptData,
+            translator::TranslationData,
+        },
     },
     utils::config::HomeType,
 };
@@ -37,8 +41,8 @@ use file::FileData;
 /// ```
 /// renderable_enum! {
 ///     enum RenderableChild {
-///         AppLike(AppData),
-///         WeatherLike(WeatherData),
+///         App(AppData),
+///         Weather(WeatherData),
 ///     }
 /// }
 /// ```
@@ -101,7 +105,7 @@ macro_rules! renderable_enum {
 
             fn vars(&self) -> Option<&[ExecVariable]> {
                 match self {
-                    Self::AppLike { inner, .. } => Some(&inner.vars), // Works for Vec or SmallVec
+                    Self::App { inner, .. } => Some(&inner.vars), // Works for Vec or SmallVec
                     _ => None,
                 }
             }
@@ -221,13 +225,13 @@ impl RenderableChild {
     /// * `None` - If no changes were detected, allowing the UI to skip an update cycle.
     pub async fn update_async(mut self, _cx: &mut AsyncApp) -> Option<Self> {
         match &mut self {
-            Self::ClipLike { inner, .. } => {
+            Self::Clip { inner, .. } => {
                 inner.update_async();
             }
-            Self::EventLike { inner, .. } => {
+            Self::Event { inner, .. } => {
                 let _ = inner.update_async().await;
             }
-            Self::MusicLike { inner, .. } => {
+            Self::Music { inner, .. } => {
                 let launcher = AudioLauncherFunctions::new()?;
                 inner.player = launcher.get_current_player();
 
@@ -252,12 +256,18 @@ impl RenderableChild {
                 }
                 inner.raw = new_inner;
             }
-            Self::WeatherLike { inner, launcher } => {
+            Self::Weather { inner, launcher } => {
                 let LauncherType::Weather(wtr) = &launcher.launcher_type else {
                     unreachable!("WeatherLike variant must have LauncherType::Weather");
                 };
 
-                let (new_weather_data, changed) = WeatherData::fetch_async(wtr).await?;
+                let (new_weather_data, changed) = match WeatherData::fetch_async(wtr).await {
+                    Ok((w, c)) => (w, c),
+                    Err(e) => {
+                        println!("{:?}", e);
+                        return None;
+                    }
+                };
 
                 if changed {
                     *inner = new_weather_data;
@@ -273,27 +283,40 @@ impl RenderableChild {
 }
 renderable_enum! {
     enum RenderableChild {
-        AppLike(AppData),
-        CalcLike(CalcData),
-        ClipLike(ClipData),
-        EmojiLike(EmojiData),
-        EventLike(EventData),
-        FileLike(FileData),
-        MessageLike(MessageChild),
-        MusicLike(MprisState),
-        ScriptLike(ScriptData),
-        TranslatorLike(TranslationData),
-        WeatherLike(WeatherData),
+        App(AppData),
+        Calc(CalcData),
+        Clip(ClipData),
+        Emoji(EmojiData),
+        Event(Box<EventData>),
+        File(FileData),
+        Message(MessageChild),
+        Music(MprisState),
+        Script(ScriptData),
+        Translator(TranslationData),
+        Weather(WeatherData),
+        Dmenu(DmenuData),
     }
 }
 
 impl RenderableChild {
     pub fn get_exec(&self) -> Option<String> {
         match self {
-            Self::AppLike { inner, launcher } => inner.get_exec(launcher),
+            Self::App { inner, launcher } => inner.get_exec(launcher),
             _ => None,
         }
     }
+}
+
+// To make compatible with Boxed data
+pub trait HandlesBorders {
+    const HANDLES_BORDERS: bool;
+}
+
+impl<T> HandlesBorders for Box<T>
+where
+    for<'a> T: RenderableChildImpl<'a>,
+{
+    const HANDLES_BORDERS: bool = <T as RenderableChildImpl<'_>>::HANDLES_BORDERS;
 }
 
 pub trait RenderableChildDelegate<'a> {
@@ -365,10 +388,7 @@ pub trait RenderableChildImpl<'a> {
         launcher: &Arc<Launcher>,
         _cx: &mut App,
     ) -> Option<Arc<[Arc<ContextMenuAction>]>> {
-        if let Some(actions) = launcher.actions.as_ref().cloned() {
-            return Some(actions.into());
-        }
-        None
+        launcher.actions.clone()
     }
     /// Whether the `additional actions` indicator should show in the status bar
     fn has_actions(&self, _cx: &mut App) -> bool {

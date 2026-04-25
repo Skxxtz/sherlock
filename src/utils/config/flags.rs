@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     sherlock_msg,
     utils::{
@@ -12,7 +14,7 @@ use crate::{
 };
 use std::{fs::read_to_string, path::PathBuf};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SherlockFlags {
     pub config_dir: Option<PathBuf>,
     pub config: Option<PathBuf>,
@@ -23,7 +25,6 @@ pub struct SherlockFlags {
     pub display_raw: bool,
     pub center_raw: bool,
     pub cache: Option<PathBuf>,
-    pub daemonize: bool,
     pub method: Option<String>,
     pub field: Option<String>,
     pub sub_menu: Option<String>,
@@ -34,7 +35,9 @@ pub struct SherlockFlags {
 }
 
 impl SherlockFlags {
-    pub fn to_config(&mut self) -> Result<(SherlockConfig, Vec<SherlockMessage>), SherlockMessage> {
+    pub fn get_config(
+        &mut self,
+    ) -> Result<(SherlockConfig, Vec<SherlockMessage>), SherlockMessage> {
         // Get location of config file
         let config_dir = self.config_dir.take().unwrap_or(paths::get_config_dir()?);
         let home = home_dir()?;
@@ -85,25 +88,25 @@ impl SherlockFlags {
                     }
                     "toml" => {
                         // Setup to parse nested configs
-                        if let Ok(sources) = toml::de::from_str::<ConfigSourceFiles>(&config_str) {
-                            if !sources.source.is_empty() {
-                                sources
-                                    .source
-                                    .into_iter()
-                                    .map(|s| {
-                                        if s.file.starts_with("~/") {
-                                            expand_path(s.file, &home)
-                                        } else {
-                                            s.file
-                                        }
-                                    })
-                                    .filter(|f| f.is_file())
-                                    .filter_map(|f| read_to_string(&f).ok())
-                                    .for_each(|content| {
-                                        config_str.push('\n');
-                                        config_str.push_str(&content);
-                                    });
-                            }
+                        if let Ok(sources) = toml::de::from_str::<ConfigSourceFiles>(&config_str)
+                            && !sources.source.is_empty()
+                        {
+                            sources
+                                .source
+                                .into_iter()
+                                .map(|s| {
+                                    if s.file.starts_with("~/") {
+                                        expand_path(s.file, &home)
+                                    } else {
+                                        s.file
+                                    }
+                                })
+                                .filter(|f| f.is_file())
+                                .filter_map(|f| read_to_string(&f).ok())
+                                .for_each(|content| {
+                                    config_str.push('\n');
+                                    config_str.push_str(&content);
+                                });
                         }
                         toml::de::from_str(&config_str).map_err(|e| {
                             sherlock_msg!(Warning, SherlockErrorType::DeserializationError, e)
@@ -124,21 +127,20 @@ impl SherlockFlags {
                 };
                 match config_res {
                     Ok(mut config) => {
-                        config = SherlockConfig::apply_flags(self, config);
+                        config.apply_flags(self);
                         config.initialized = true;
                         Ok((config, vec![]))
                     }
                     Err(e) => {
                         let mut config = SherlockConfig::default();
-
-                        config = SherlockConfig::apply_flags(self, config);
+                        config.apply_flags(self);
                         Ok((config, vec![e]))
                     }
                 }
             }
             Err(e) => {
                 let mut config = SherlockConfig::default();
-                config = SherlockConfig::apply_flags(self, config);
+                config.apply_flags(self);
                 let e = sherlock_msg!(
                     Warning,
                     SherlockErrorType::FileError(FileAction::Read, path),

@@ -45,7 +45,7 @@ pub enum UIFunction {
     Shortcut,
 }
 impl UIFunction {
-    pub fn into_bind(&self, key: &str) -> Option<KeyBinding> {
+    pub fn get_binding(&self, key: &str) -> Option<KeyBinding> {
         // split off namespace
         let mut parts = key.rsplitn(2, '.');
 

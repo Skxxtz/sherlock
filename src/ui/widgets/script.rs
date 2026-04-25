@@ -149,7 +149,7 @@ impl<'a> RenderableChildImpl<'a> for ScriptData {
             .result
             .as_ref()
             .and_then(|res| res.actions.as_ref())
-            .map_or(false, |actions| !actions.is_empty())
+            .is_some_and(|action| !action.is_empty())
     }
     fn actions(
         &self,
@@ -228,7 +228,7 @@ impl ScriptData {
         let args_iter: Vec<String> = split_as_command(&processed_args);
 
         // Run the blocking process on a thread
-        let result = smol::unblock(move || {
+        smol::unblock(move || {
             let child = match Command::new(&absolute_exec)
                 .args(&args_iter)
                 .stdin(Stdio::null())
@@ -295,9 +295,7 @@ impl ScriptData {
                 }
             }
         })
-        .await;
-
-        result
+        .await
     }
 }
 

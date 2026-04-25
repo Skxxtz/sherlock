@@ -1,7 +1,8 @@
-use gpui::{App, Entity};
-use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc};
+use gpui::App;
+use std::{collections::HashMap, io::ErrorKind, path::PathBuf, rc::Rc, sync::Arc};
 
 use crate::{
+    app::RenderableChildEntity,
     launcher::{Launcher, variant_type::LauncherType},
     loader::utils::RawLauncher,
     sherlock_msg,
@@ -9,7 +10,10 @@ use crate::{
     utils::{
         cache::BinaryCache,
         config::ConfigGuard,
-        errors::{SherlockMessage, types::SherlockErrorType},
+        errors::{
+            SherlockMessage,
+            types::{FileAction, SherlockErrorType},
+        },
     },
 };
 
@@ -50,7 +54,7 @@ pub struct LauncherLoadResult {
 impl Loader {
     pub fn load_launchers(
         cx: &mut App,
-        data_handle: Entity<Arc<Vec<RenderableChild>>>,
+        data_handle: RenderableChildEntity,
     ) -> Result<LauncherLoadResult, SherlockMessage> {
         // read config
         let config = ConfigGuard::read()?;
@@ -90,6 +94,7 @@ impl Loader {
                     modes.push(LauncherMode::Alias {
                         short: alias.into(),
                         name: name.into(),
+                        launcher: launcher.clone(),
                     });
                 }
             })
@@ -111,7 +116,7 @@ impl Loader {
         Self::sync_cache_if_empty(&ctx, &renders, &mut messages);
 
         data_handle.update(cx, |items, cx| {
-            *items = Arc::new(renders);
+            *items = Rc::new(renders);
             cx.notify();
         });
 
@@ -153,11 +158,28 @@ fn parse_launcher_configs(path: &PathBuf) -> (Vec<RawLauncher>, Vec<SherlockMess
     let mut warnings = Vec::new();
     let mut launchers = Vec::new();
 
-    let Ok(mut file) = File::open(path) else {
-        return (launchers, warnings);
+    let raw_bytes: Vec<u8> = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            warnings.push(sherlock_msg!(
+                Error,
+                SherlockErrorType::FileError(FileAction::Read, path.clone()),
+                e
+            ));
+            include_bytes!("../../assets/fallback.json").to_vec()
+        }
+        Err(e) => {
+            warnings.push(sherlock_msg!(
+                Error,
+                SherlockErrorType::FileError(FileAction::Read, path.clone()),
+                e
+            ));
+            return (launchers, warnings);
+        }
     };
 
-    let raw_values: Vec<serde_json::Value> = match simd_json::from_reader(&mut file) {
+    let mut buffer = raw_bytes;
+    let raw_values: Vec<serde_json::Value> = match simd_json::from_slice(&mut buffer) {
         Ok(v) => v,
         Err(e) => {
             warnings.push(sherlock_msg!(

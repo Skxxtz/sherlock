@@ -58,7 +58,7 @@ impl LauncherProvider for MusicPlayerLauncher {
         _cx: &mut gpui::App,
     ) -> Result<Vec<RenderableChild>, SherlockMessage> {
         let inner = MprisState::default();
-        Ok(vec![RenderableChild::MusicLike { launcher, inner }])
+        Ok(vec![RenderableChild::Music { launcher, inner }])
     }
     fn binds(&self) -> Option<Arc<Vec<Bind>>> {
         self.binds.clone()
@@ -71,7 +71,7 @@ impl LauncherProvider for MusicPlayerLauncher {
     ) -> Result<bool, SherlockMessage> {
         let func = ensure_func!(func, InnerFunction::MusicPlayer);
 
-        let RenderableChild::MusicLike { inner, .. } = child else {
+        let RenderableChild::Music { inner, .. } = child else {
             return Err(sherlock_msg!(
                 Warning,
                 SherlockErrorType::Unreachable,
@@ -155,7 +155,7 @@ impl MprisData {
             )
         })?;
 
-        file.write_all(&image).map_err(|e| {
+        file.write_all(image).map_err(|e| {
             sherlock_msg!(
                 Warning,
                 SherlockErrorType::FileError(FileAction::Find, path.clone()),
@@ -269,12 +269,12 @@ impl AudioLauncherFunctions {
         let mut names: Vec<String> = proxy.call("ListNames", &()).ok()?;
         names.retain(|n| n.starts_with("org.mpris.MediaPlayer2."));
         let first = names.first().cloned();
-        if let Ok(config) = ConfigGuard::read() {
-            if let Some(m) = config.default_apps.mpris.as_ref() {
-                let preferred = names.into_iter().find(|name| name.contains(m));
-                if preferred.is_some() {
-                    return preferred;
-                }
+        if let Ok(config) = ConfigGuard::read()
+            && let Some(m) = config.default_apps.mpris.as_ref()
+        {
+            let preferred = names.into_iter().find(|name| name.contains(m));
+            if preferred.is_some() {
+                return preferred;
             }
         }
         first

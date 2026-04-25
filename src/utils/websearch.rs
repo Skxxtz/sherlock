@@ -61,7 +61,7 @@ pub fn websearch(
     spawn_detached(&command, query, variables)
 }
 
-fn is_url(input: &str) -> bool {
+pub fn is_url(input: &str) -> bool {
     let s = input.trim();
 
     if s.is_empty() {
@@ -122,10 +122,11 @@ fn is_url(input: &str) -> bool {
     }
 
     // host:port (only digits after colon)
-    if let Some((host, port)) = s.split_once(':') {
-        if !host.contains(' ') && port.chars().all(|c| c.is_ascii_digit()) {
-            return true;
-        }
+    if let Some((host, port)) = s.split_once(':')
+        && !host.contains(' ')
+        && port.chars().all(|c| c.is_ascii_digit())
+    {
+        return true;
     }
 
     false

@@ -31,7 +31,7 @@ impl<'a> RenderableChildImpl<'a> for AppData {
             .gap_5()
             .items_center()
             .child(if let Some(icon) = self.icon.as_ref() {
-                img(Arc::clone(&icon)).size(px(24.)).into_any_element()
+                img(Arc::clone(icon)).size(px(24.)).into_any_element()
             } else {
                 img(ImageSource::Image(Arc::new(Image::empty())))
                     .size(px(24.))

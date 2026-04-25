@@ -228,15 +228,14 @@ impl<'a> RenderableChildImpl<'a> for TranslationData {
             return Some(false);
         }
 
-        let tokens = Intent::tokenize(keyword);
-        let intent = Intent::try_parse_translation(&tokens)?;
+        let intent = Intent::try_parse_translation(keyword)?;
 
         if let Intent::Translation { text, target_lang } = intent {
             self.update_entity.update(cx, |ent, cx| {
                 ent.task = None;
                 ent.intent = Some(Intent::Translation {
                     text: text.clone(),
-                    target_lang: target_lang.clone(),
+                    target_lang,
                 });
                 ent.api = ApiStatus::Pending;
 

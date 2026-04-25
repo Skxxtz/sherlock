@@ -17,8 +17,8 @@ pub struct EmojiView {
 impl EmojiView {
     pub fn new(launcher: Arc<Launcher>, cx: &mut App) -> Self {
         let data: Vec<RenderableChild> = EMOJIS
-            .into_iter()
-            .map(|entry| RenderableChild::EmojiLike {
+            .iter()
+            .map(|entry| RenderableChild::Emoji {
                 launcher: launcher.clone(),
                 inner: EmojiData { entry },
             })

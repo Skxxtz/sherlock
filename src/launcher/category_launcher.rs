@@ -61,7 +61,7 @@ impl LauncherProvider for CategoryLauncher {
                                 .icon
                                 .as_deref()
                                 .and_then(|p| p.to_str())
-                                .and_then(|s| resolve_icon_path(s));
+                                .and_then(resolve_icon_path);
 
                             Arc::new(ContextMenuAction::App(ApplicationAction {
                                 icon: resolved_icon,
@@ -73,7 +73,7 @@ impl LauncherProvider for CategoryLauncher {
                     })
                     .collect();
 
-                RenderableChild::AppLike {
+                RenderableChild::App {
                     launcher: Arc::clone(&launcher),
                     inner,
                 }

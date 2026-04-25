@@ -1,0 +1,277 @@
+[
+    {
+        "type": "event",
+        "args": {
+            "look_ahead": "5 hours",
+            "look_back": "50 hours"
+        },
+        "async": true,
+        "priority": 3,
+        "home": "OnlyHome",
+        "spawn_focus": false,
+        "shortcut": false
+    },
+    {
+        "name": "Emoji Picker",
+        "alias": "emj",
+        "type": "emoji",
+        "args": {
+            "default_skin_tone": "Light"
+        },
+        "priority": 5,
+        "home": "Home"
+    },
+    {
+        "name": "Bookmarks",
+        "type": "bookmarks",
+        "alias": "bm",
+        "args": {
+            "icon": "sherlock-bookmark",
+            "icon_class": "reactive"
+        },
+        "priority": 7
+    },
+    {
+        "name": "Weather",
+        "type": "weather",
+        "args": {
+            "location": "bremen",
+            "update_interval": 120,
+            "show_datetime": false,
+            "icon_theme": "Sherlock"
+        },
+        "actions": [
+            {
+                "name": "Show in Web",
+                "exec": "https://www.wttr.in/bremen",
+                "icon": "sherlock-link",
+                "method": "web_launcher"
+            }
+        ],
+        "priority": 1,
+        "home": "OnlyHome",
+        "async": true,
+        "shortcut": false,
+        "spawn_focus": false
+    },
+    {
+        "name": "Spotify",
+        "type": "music_player",
+        "args": {},
+        "async": true,
+        "priority": 2,
+        "home": "OnlyHome",
+        "spawn_focus": false,
+        "exit": false,
+        "binds": [
+            {
+                "bind": "ctrl-l",
+                "callback": "next",
+                "exit": false
+            },
+            {
+                "bind": "ctrl-h",
+                "callback": "previous",
+                "exit": false
+            }
+        ],
+        "actions": [
+            {
+                "name": "Skip",
+                "icon": "media-seek-forward",
+                "method": "inner.next",
+                "exit": false
+            },
+            {
+                "name": "Previous",
+                "icon": "media-seek-backward",
+                "method": "inner.previous",
+                "exit": false
+            }
+        ]
+    },
+    {
+        "name": "Clipboard",
+        "type": "clipboard",
+        "args": {
+            "capabilities": [
+                "url",
+                "colors",
+                "calc.math"
+            ]
+        },
+        "on_return": "copy",
+        "priority": 3,
+        "home": "OnlyHome",
+        "async": true
+    },
+    {
+        "name": "Calculator",
+        "type": "calculator",
+        "alias": "calc",
+        "args": {
+            "capabilities": [
+                "calc.math",
+                "calc.units",
+                "calc.currencies",
+                "colors"
+            ]
+        },
+        "priority": 1,
+        "on_return": "copy"
+    },
+    {
+        "name": "App Launcher",
+        "alias": "app",
+        "type": "apps",
+        "args": {
+            "icon_class": "reactive",
+            "use_keywords": false
+        },
+        "priority": 4,
+        "home": "Home"
+    },
+    {
+        "name": "File Search",
+        "type": "files",
+        "args": {
+            "max_results": 50,
+            "poll_interval": 50,
+            "backend": "fd"
+        },
+        "priority": 5,
+        "home": "Home"
+    },
+    {
+        "name": "Categories",
+        "alias": "cat",
+        "type": "categories",
+        "args": {
+            "categories": {
+                "Power Menu": {
+                    "icon": "battery-full-symbolic",
+                    "icon_class": "reactive",
+                    "exec": "pm",
+                    "search_string": "powermenu;",
+                    "actions": [
+                        {
+                            "name": "Shutdown",
+                            "icon": "system-shutdown",
+                            "exec": "systemctl poweroff",
+                            "method": "command"
+                        },
+                        {
+                            "name": "Sleep",
+                            "icon": "system-suspend",
+                            "exec": "systemctl suspend",
+                            "method": "command"
+                        },
+                        {
+                            "name": "Lock",
+                            "icon": "system-lock-screen",
+                            "exec": "systemctl suspend & swaylock",
+                            "method": "command"
+                        },
+                        {
+                            "name": "Reboot",
+                            "icon": "system-reboot",
+                            "exec": "systemctl reboot",
+                            "method": "command"
+                        },
+                        {
+                            "name": "Log Out",
+                            "icon": "system-log-out",
+                            "exec": "hyprctl dispatch exit",
+                            "method": "command"
+                        }
+                    ]
+                }
+            }
+        },
+        "priority": 4,
+        "home": "Home"
+    },
+    {
+        "name": "Bookmarks",
+        "alias": "bm",
+        "type": "commands",
+        "args": {
+            "commands": {
+                "GitHub": {
+                    "variables": [
+                        {
+                            "string_input": "repository"
+                        }
+                    ],
+                    "icon": "sherlock-github",
+                    "exec": "xdg-open https://github.com/{prefix[repository]:search?q=}{variable:repository}",
+                    "search_string": "github;repository"
+                }
+            }
+        },
+        "priority": 5
+    },
+    {
+        "name": "Power Management",
+        "alias": "pm",
+        "type": "commands",
+        "args": {
+            "commands": {
+                "Shutdown": {
+                    "icon": "system-shutdown",
+                    "icon_class": "reactive",
+                    "exec": "systemctl poweroff",
+                    "search_string": "Poweroff;Shutdown"
+                },
+                "Sleep": {
+                    "icon": "system-suspend",
+                    "icon_class": "reactive",
+                    "exec": "systemctl suspend",
+                    "search_string": "Sleep;"
+                },
+                "Lock": {
+                    "icon": "system-lock-screen",
+                    "icon_class": "reactive",
+                    "exec": "systemctl suspend & swaylock",
+                    "search_string": "Lock Screen;"
+                },
+                "Reboot": {
+                    "icon": "system-reboot",
+                    "icon_class": "reactive",
+                    "exec": "systemctl reboot",
+                    "search_string": "reboot;restart"
+                },
+                "Log Out": {
+                    "icon": "system-log-out",
+                    "icon_class": "reactive",
+                    "exec": "hyprctl dispatch exit",
+                    "search_string": "logout;exit"
+                }
+            }
+        },
+        "priority": 5
+    },
+    {
+        "name": "Web Search",
+        "display_name": "Google Search",
+        "tag_start": "{keyword}",
+        "alias": "gg",
+        "type": "web",
+        "args": {
+            "search_engine": "google",
+            "icon": "google"
+        },
+        "home": "Persist",
+        "priority": 100
+    },
+    {
+        "name": "Translator",
+        "alias": "trans",
+        "type": "translator",
+        "args": {},
+        "on_return": "inner.run",
+        "exit": false,
+        "priority": 1,
+        "shortcut": false
+    }
+]

@@ -63,8 +63,8 @@ pub enum LegacyExecVariable {
 impl From<LegacyExecVariable> for ExecVariable {
     fn from(value: LegacyExecVariable) -> Self {
         match value {
-            LegacyExecVariable::StringInput(s) => ExecVariable::StringInput(s.into()),
-            LegacyExecVariable::PasswordInput(s) => ExecVariable::PasswordInput(s.into()),
+            LegacyExecVariable::StringInput(s) => ExecVariable::String(s.into()),
+            LegacyExecVariable::PasswordInput(s) => ExecVariable::Password(s.into()),
         }
     }
 }
@@ -82,51 +82,51 @@ impl LegacyRawLauncher {
         let args = &mut self.args;
         match var {
             LauncherVariant::Calculator | LauncherVariant::Clipboard => {
-                if let Some(obj) = args.as_object_mut() {
-                    if let Some(caps) = obj.get_mut("capabilities").and_then(|c| c.as_array_mut()) {
-                        let old_val = json!("colors.all");
-                        let new_val = json!("colors");
+                if let Some(obj) = args.as_object_mut()
+                    && let Some(caps) = obj.get_mut("capabilities").and_then(|c| c.as_array_mut())
+                {
+                    let old_val = json!("colors.all");
+                    let new_val = json!("colors");
 
-                        // Check if the old value exists
-                        if caps.contains(&old_val) {
-                            // Remove all instances of "colors.all"
-                            caps.retain(|x| x != &old_val);
+                    // Check if the old value exists
+                    if caps.contains(&old_val) {
+                        // Remove all instances of "colors.all"
+                        caps.retain(|x| x != &old_val);
 
-                            // Add the simplified "colors" if it's not already there
-                            if !caps.contains(&new_val) {
-                                caps.push(new_val);
-                            }
-
-                            logs.push(format!(
-                                "[{}] Renamed 'colors.all' to 'colors' in capabilities.",
-                                name
-                            ));
+                        // Add the simplified "colors" if it's not already there
+                        if !caps.contains(&new_val) {
+                            caps.push(new_val);
                         }
+
+                        logs.push(format!(
+                            "[{}] Renamed 'colors.all' to 'colors' in capabilities.",
+                            name
+                        ));
                     }
                 }
             }
             LauncherVariant::Commands => {
-                if let Some(exec) = args.get_mut("exec").and_then(|e| e.as_str()) {
-                    if exec.ends_with('&') {
-                        let cleaned = exec.trim_end_matches('&').trim().to_string();
-                        args["exec"] = serde_json::Value::String(cleaned);
-                        logs.push(format!(
-                            "[{}] Removed trailing '&' from command exec.",
-                            name
-                        ));
-                    }
+                if let Some(exec) = args.get_mut("exec").and_then(|e| e.as_str())
+                    && exec.ends_with('&')
+                {
+                    let cleaned = exec.trim_end_matches('&').trim().to_string();
+                    args["exec"] = serde_json::Value::String(cleaned);
+                    logs.push(format!(
+                        "[{}] Removed trailing '&' from command exec.",
+                        name
+                    ));
                 }
             }
             LauncherVariant::Emoji => {
-                if let Some(obj) = args.as_object_mut() {
-                    if let Some(value) = obj.remove("default_skin_color") {
-                        obj.insert("default_skin_tone".to_string(), value);
+                if let Some(obj) = args.as_object_mut()
+                    && let Some(value) = obj.remove("default_skin_color")
+                {
+                    obj.insert("default_skin_tone".to_string(), value);
 
-                        logs.push(format!(
-                            "[{}] Renamed 'default_skin_color' to 'default_skin_tone'.",
-                            name
-                        ));
-                    }
+                    logs.push(format!(
+                        "[{}] Renamed 'default_skin_color' to 'default_skin_tone'.",
+                        name
+                    ));
                 }
             }
             _ => {}
@@ -134,7 +134,7 @@ impl LegacyRawLauncher {
     }
 
     pub fn migrate_type(&self) -> Option<LauncherVariant> {
-        let new_type: Option<LauncherVariant> = serde_json::from_str(&self.r#type.as_str()).ok();
+        let new_type: Option<LauncherVariant> = serde_json::from_str(self.r#type.as_str()).ok();
         if new_type.is_some() {
             return new_type;
         }
@@ -255,7 +255,7 @@ mod tests {
             assert_eq!(vars.len(), 1);
             // Ensure the inner enum converted correctly
             match &vars[0] {
-                ExecVariable::StringInput(s) => assert_eq!(s, "username"),
+                ExecVariable::String(s) => assert_eq!(s, "username"),
                 _ => panic!("Variable type mismatch!"),
             }
         } else {

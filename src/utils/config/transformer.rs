@@ -11,7 +11,7 @@ use crate::utils::errors::types::{FileAction, SherlockErrorType};
 #[allow(dead_code)]
 pub fn migrate_file<P: AsRef<Path>>(path: P) -> Result<(), SherlockMessage> {
     let path_ref = path.as_ref();
-    let content = fs::read_to_string(&path_ref).map_err(|e| {
+    let content = fs::read_to_string(path_ref).map_err(|e| {
         sherlock_msg!(
             Warning,
             SherlockErrorType::FileError(FileAction::Read, path_ref.to_path_buf()),

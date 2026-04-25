@@ -1,9 +1,9 @@
 use chrono::Local;
 use gpui::{
-    AnyElement, App, Image, ImageSource, IntoElement, ParentElement, Styled, div, img,
-    linear_gradient, px,
+    Animation, AnimationExt, AnyElement, App, Image, ImageSource, IntoElement, ParentElement,
+    Styled, div, img, linear_gradient, px,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use crate::{
     app::theme::ThemeData,
@@ -21,36 +21,49 @@ impl<'a> RenderableChildImpl<'a> for WeatherData {
         _cx: &mut App,
     ) -> AnyElement {
         let now = Local::now().time();
+        let is_init = self.init;
         div()
-            .px_4()
-            .py_2()
             .rounded_md()
             .bg({
                 let (p1, p2) = self.css.background(now, self.sunset, self.sunrise);
                 linear_gradient(90., p1, p2)
             })
-            .text_color(self.css.color(now, self.sunset, self.sunrise))
-            .flex_col()
-            .gap_5()
-            .items_center()
-            .text_size(px(12.0))
-            .font_family(theme.font_family.clone())
-            .child(self.format_str.clone())
             .child(
                 div()
-                    .flex()
-                    .items_center()
+                    .px_4()
+                    .py_2()
+                    .text_color(self.css.color(now, self.sunset, self.sunrise))
+                    .flex_col()
                     .gap_5()
-                    .child(if let Some(icon) = self.icon.as_ref() {
-                        img(Arc::clone(&icon)).size(px(48.))
-                    } else {
-                        img(ImageSource::Image(Arc::new(Image::empty()))).size(px(24.))
-                    })
+                    .items_center()
+                    .text_size(px(12.0))
+                    .font_family(theme.font_family.clone())
+                    .child(self.format_str.clone())
                     .child(
                         div()
-                            .text_size(px(40.0))
-                            .font_family(theme.font_family.clone())
-                            .child(self.temperature.clone()),
+                            .flex()
+                            .items_center()
+                            .gap_5()
+                            .child(if let Some(icon) = self.icon.as_ref() {
+                                img(Arc::clone(icon)).size(px(48.))
+                            } else {
+                                img(ImageSource::Image(Arc::new(Image::empty()))).size(px(24.))
+                            })
+                            .child(
+                                div()
+                                    .text_size(px(40.0))
+                                    .font_family(theme.font_family.clone())
+                                    .child(self.temperature.clone()),
+                            )
+                            .with_animation(
+                                "weather_fade_in",
+                                Animation::new(Duration::from_millis(200))
+                                    .with_easing(|t| t * t * (3.0 - 2.0 * t)),
+                                move |this, frac| {
+                                    let opacity = if is_init { frac } else { 0.0 };
+                                    this.opacity(opacity.clamp(0.0, 1.0))
+                                },
+                            ),
                     ),
             )
             .into_any_element()

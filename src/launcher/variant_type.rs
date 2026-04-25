@@ -1,4 +1,5 @@
 use gpui::{App, AppContext};
+use std::mem;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,7 @@ use crate::{
         calc_launcher::CalculatorLauncher,
         category_launcher::CategoryLauncher,
         clipboard_launcher::ClipboardLauncher,
+        dmenu_launcher::DmenuLauncher,
         emoji_launcher::EmojiPicker,
         event_launcher::{EventLauncher, EventLauncherFunctions},
         file_launcher::FileLauncher,
@@ -41,7 +43,7 @@ macro_rules! create_variants {
             Empty,
         }
 
-        #[derive(Deserialize, Debug, Serialize, Clone, Copy, Default, Display, PartialEq)]
+        #[derive(Deserialize, Debug, Serialize, Clone, Copy, Default, Display, PartialEq, Eq)]
         #[serde(rename_all = "snake_case")]
         #[strum(serialize_all = "snake_case")]
         pub enum LauncherVariant {
@@ -75,6 +77,12 @@ macro_rules! create_variants {
                     )*
                     $name::Empty => Self::Empty,
                 }
+            }
+        }
+
+        impl PartialEq for $name {
+            fn eq(&self, other: &Self) -> bool {
+                mem::discriminant(self) == mem::discriminant(other)
             }
         }
 
@@ -132,6 +140,7 @@ create_variants! {
         Categories(CategoryLauncher),
         Clipboard(ClipboardLauncher),
         Commands(CommandLauncher),
+        Dmenu(DmenuLauncher),
         Emoji(EmojiPicker),
         Event(EventLauncher, EventLauncherFunctions),
         Files(FileLauncher),

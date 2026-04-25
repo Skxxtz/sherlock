@@ -30,7 +30,7 @@ impl<'g> ConfigGuard {
         })
     }
 
-    fn _get_write() -> Result<RwLockWriteGuard<'g, SherlockConfig>, SherlockMessage> {
+    fn get_write() -> Result<RwLockWriteGuard<'g, SherlockConfig>, SherlockMessage> {
         Self::get_config()?.write().map_err(|_| {
             sherlock_msg!(
                 Warning,
@@ -44,18 +44,26 @@ impl<'g> ConfigGuard {
         Self::get_read()
     }
 
-    pub fn _write_key<F>(key_fn: F) -> Result<(), SherlockMessage>
+    pub fn read_with<F, R>(key_fn: F) -> Result<R, SherlockMessage>
+    where
+        F: FnOnce(&SherlockConfig) -> R,
+    {
+        let config = Self::get_read()?;
+        Ok(key_fn(&config))
+    }
+
+    pub fn write_with<F>(key_fn: F) -> Result<(), SherlockMessage>
     where
         F: FnOnce(&mut SherlockConfig),
     {
-        let mut config = Self::_get_write()?;
+        let mut config = Self::get_write()?;
         key_fn(&mut config);
         Ok(())
     }
 }
 
-impl<'g> ConfigGuard {
+impl ConfigGuard {
     pub fn is_initialized() -> bool {
-        Self::get_read().map_or(false, |s| s.initialized)
+        Self::get_read().is_ok_and(|s| s.initialized)
     }
 }

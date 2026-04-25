@@ -41,10 +41,10 @@ static EMOJI_CONTEXT_ACTIONS: LazyLock<Arc<[Arc<ContextMenuAction>]>> = LazyLock
 pub fn set_selected_skin_tone(tone: SkinTone, place: usize) {
     let lock = SELECTED_SKIN_TONE.get_or_init(|| RwLock::new([tone, tone]));
 
-    if let Ok(mut w) = lock.write() {
-        if place < w.len() {
-            w[place] = tone;
-        }
+    if let Ok(mut w) = lock.write()
+        && place < w.len()
+    {
+        w[place] = tone;
     }
 }
 pub fn get_selected_skin_tones() -> [SkinTone; 2] {
@@ -91,7 +91,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
         theme: Arc<ThemeData>,
         _cx: &mut App,
     ) -> AnyElement {
-        let emoji = get_emoji(&self.entry, &get_selected_skin_tones());
+        let emoji = get_emoji(self.entry, &get_selected_skin_tones());
         div()
             .size_full()
             .flex()
@@ -130,7 +130,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
     #[inline(always)]
     fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         Some(ExecMode::Copy {
-            content: get_emoji(&self.entry, &get_selected_skin_tones())
+            content: get_emoji(self.entry, &get_selected_skin_tones())
                 .as_str()
                 .to_string(),
         })
@@ -141,7 +141,7 @@ impl<'a> RenderableChildImpl<'a> for EmojiData {
     }
     #[inline(always)]
     fn search(&'a self, _launcher: &Arc<Launcher>) -> &'a str {
-        &self.entry.keywords
+        self.entry.keywords
     }
     #[inline(always)]
     fn actions(

@@ -44,12 +44,11 @@ impl ClipData {
         let intent = Intent::parse(&content, &self.capabilities);
 
         // early return if intents are the same
-        if let Ok(guard) = self.result.read() {
-            if let Some((res_intent, _)) = guard.as_ref() {
-                if res_intent == &intent {
-                    return None;
-                }
-            }
+        if let Ok(guard) = self.result.read()
+            && let Some((res_intent, _)) = guard.as_ref()
+            && res_intent == &intent
+        {
+            return None;
         }
 
         let r = match &intent {
@@ -112,10 +111,18 @@ impl<'a> RenderableChildImpl<'a> for ClipData {
     #[inline(always)]
     fn build_exec(&self, _launcher: &Arc<Launcher>) -> Option<ExecMode> {
         let lock = self.result.read().ok()?;
-        let (_, res) = lock.as_ref()?;
-        Some(ExecMode::Copy {
-            content: res.to_string().into(),
-        })
+        let (intent, res) = lock.as_ref()?;
+
+        match intent {
+            Intent::Url { url } => Some(ExecMode::Web {
+                engine: None,
+                browser: None,
+                exec: Some(url.to_string()),
+            }),
+            _ => Some(ExecMode::Copy {
+                content: res.to_string(),
+            }),
+        }
     }
     #[inline(always)]
     fn priority(&self, launcher: &std::sync::Arc<crate::launcher::Launcher>) -> f32 {

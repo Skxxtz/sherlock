@@ -1,9 +1,12 @@
+use crate::app::{RenderableChildEntity, RenderableChildWeak};
+use crate::launcher::Launcher;
+use crate::launcher::variant_type::LauncherType;
 use crate::ui::launcher::context_menu::ContextMenuAction;
-use crate::ui::launcher::views::NavigationStack;
+use crate::ui::launcher::views::{NavigationStack, NavigationViewType};
 use crate::ui::model::Model;
 use crate::ui::utils::scoring::make_prio;
 use crate::ui::utils::search::SherlockSearch;
-use crate::ui::widgets::{LauncherValues, RenderableChild, RenderableChildDelegate};
+use crate::ui::widgets::{LauncherValues, RenderableChildDelegate};
 use crate::utils::config::HomeType;
 use gpui::WeakEntity;
 use gpui::{App, Context, Entity, FocusHandle, Focusable, SharedString, Subscription};
@@ -107,13 +110,37 @@ impl LauncherView {
     pub fn filter_and_sort(&mut self, cx: &mut Context<Self>) {
         let mut query: SharedString = self.text_input.read(cx).content.to_lowercase().into();
 
+        // handle mode change
+        match self.mode.transition_for_query(&query, &self.modes) {
+            ModeTransition::None => {}
+            ModeTransition::ClearInput => {
+                self.text_input.update(cx, |this, _cx| {
+                    this.reset();
+                });
+                query = "".into();
+            }
+            ModeTransition::PushStack(launcher) => {
+                let view = match &launcher.launcher_type {
+                    LauncherType::Emoji(_) => NavigationViewType::Emoji,
+                    LauncherType::Files(files) => NavigationViewType::Files {
+                        dir: Some(files.loc.clone()),
+                    },
+                    _ => return,
+                };
+
+                self.text_input.update(cx, |this, _| this.reset());
+                self.navigation.push(view.create_view(launcher, cx));
+                query = "".into();
+            }
+        }
+
         enum ModelKind {
             FileSearch {
-                weak_data: WeakEntity<Arc<Vec<RenderableChild>>>,
+                weak_data: RenderableChildWeak,
                 last_query: Option<SharedString>,
             },
             Standard {
-                data: Entity<Arc<Vec<RenderableChild>>>,
+                data: RenderableChildEntity,
             },
         }
 
@@ -132,7 +159,7 @@ impl LauncherView {
                 weak_data,
                 last_query,
             } => {
-                if last_query.map_or(false, |s| s == query) {
+                if last_query.is_some_and(|s| s == query) {
                     return;
                 }
 
@@ -142,7 +169,6 @@ impl LauncherView {
                         search.search(query.into(), weak_data, weak_self, cx);
                     }
                 });
-                return;
             }
             ModelKind::Standard { data } => {
                 // drop active tasks
@@ -155,14 +181,6 @@ impl LauncherView {
                         *deferred_render_task = None;
                     }
                 });
-
-                // handle mode change
-                if self.mode.transition_for_query(&query, &self.modes) {
-                    self.text_input.update(cx, |this, _cx| {
-                        this.reset();
-                    });
-                    query = "".into();
-                }
 
                 let mode = self.mode.clone();
                 let data_arc = data.read(cx).clone();
@@ -181,10 +199,10 @@ impl LauncherView {
                                     // [Rule 1]
                                     // Case 1: Early return if mode applies but item is not assigned to that mode
                                     // Case 2: Early return if current mode is not required mode for item
-                                    if Some(mode) != data.alias() {
-                                        if mode != "all" || data.priority() < 1.0 {
-                                            return false;
-                                        }
+                                    if Some(mode) != data.alias()
+                                        && (mode != "all" || data.priority() < 1.0)
+                                    {
+                                        return false;
                                     }
 
                                     // [Rule 2]
@@ -261,14 +279,22 @@ impl LauncherView {
     }
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub enum LauncherMode {
+    #[default]
     Home,
     Search,
     Alias {
         short: SharedString,
         name: SharedString,
+        launcher: Arc<Launcher>,
     },
+}
+
+pub enum ModeTransition {
+    None,
+    PushStack(Arc<Launcher>),
+    ClearInput,
 }
 
 impl LauncherMode {
@@ -286,7 +312,7 @@ impl LauncherMode {
             Self::Alias { name, .. } => name.clone(),
         }
     }
-    pub fn transition_for_query(&mut self, query: &str, modes: &[Self]) -> bool {
+    pub fn transition_for_query(&mut self, query: &str, modes: &[Self]) -> ModeTransition {
         match (self, query.is_empty()) {
             (m @ Self::Search, true) => *m = Self::Home,
             (m @ Self::Home, false) => *m = Self::Search,
@@ -302,15 +328,25 @@ impl LauncherMode {
 
                     if let Some(new_mode) = found_mode {
                         *m = new_mode.clone();
+                        if let Self::Alias { launcher, .. } = new_mode
+                            && matches!(
+                                &launcher.launcher_type,
+                                LauncherType::Files(_) | LauncherType::Emoji(_)
+                            )
+                        {
+                            return ModeTransition::PushStack(launcher.clone());
+                        }
                         // should clear search bar
-                        return true;
+                        return ModeTransition::ClearInput;
                     }
+                } else {
+                    *m = Self::Search;
                 }
             }
             _ => {}
         }
 
         // only minor change
-        false
+        ModeTransition::None
     }
 }

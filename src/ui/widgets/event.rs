@@ -75,10 +75,10 @@ impl EventData {
     pub async fn update_async(&mut self) -> Result<(), SherlockMessage> {
         // debounce logic
         // causes freezes if not applied!!
-        if let Some(last_call) = self.last_call {
-            if last_call.elapsed() < Duration::from_secs(50) {
-                return Ok(());
-            }
+        if let Some(last_call) = self.last_call
+            && last_call.elapsed() < Duration::from_secs(50)
+        {
+            return Ok(());
         }
         self.last_call = Some(Instant::now());
 
@@ -87,10 +87,7 @@ impl EventData {
             .map_err(|e| {
                 sherlock_msg!(
                     Warning,
-                    SherlockErrorType::SocketError(
-                        SocketAction::Connect,
-                        SocketData::SOCKET_ADDR.into()
-                    ),
+                    SherlockErrorType::SocketError(SocketAction::Connect),
                     e
                 )
             })?;
@@ -107,7 +104,7 @@ impl EventData {
         stream.write_sized(req_obj).await.map_err(|e| {
             sherlock_msg!(
                 Warning,
-                SherlockErrorType::SocketError(SocketAction::Write, SocketData::SOCKET_ADDR.into()),
+                SherlockErrorType::SocketError(SocketAction::Write),
                 e.message
             )
         })?;
@@ -115,7 +112,7 @@ impl EventData {
         let resp_bin = stream.read_sized().await.map_err(|e| {
             sherlock_msg!(
                 Warning,
-                SherlockErrorType::SocketError(SocketAction::Read, SocketData::SOCKET_ADDR.into()),
+                SherlockErrorType::SocketError(SocketAction::Read),
                 e.message
             )
         })?;
@@ -286,7 +283,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
                                             .font_family(theme.font_family.clone())
                                             .font_weight(FontWeight::MEDIUM)
                                             .text_color(theme.secondary_text)
-                                            .children(self.time.as_ref().map(|t| t.clone())),
+                                            .children(self.time.clone()),
                                     )
                                     .child(
                                         div()
@@ -410,7 +407,7 @@ impl<'a> RenderableChildImpl<'a> for EventData {
         let extra = launcher.add_actions.as_ref();
 
         // early return if only actions apply
-        if meeting.is_none() && extra.map_or(true, |e| e.is_empty()) {
+        if meeting.is_none() && extra.is_none_or(|e| e.is_empty()) {
             return Some(Arc::clone(&self.actions));
         }
 

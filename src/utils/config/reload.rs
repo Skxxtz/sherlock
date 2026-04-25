@@ -1,18 +1,16 @@
 use std::sync::Arc;
 
-use gpui::{AsyncApp, Entity};
+use gpui::AsyncApp;
 
 use super::{SherlockConfig, watcher::ConfigFileChange};
 use crate::{
-    CONFIG,
-    loader::Loader,
-    ui::{launcher::LauncherMode, widgets::RenderableChild},
+    CONFIG, app::RenderableChildEntity, loader::Loader, ui::launcher::LauncherMode,
     utils::errors::SherlockMessage,
 };
 
-pub async fn reload(
+pub fn reload(
     cx: &AsyncApp,
-    data: &Entity<Arc<Vec<RenderableChild>>>,
+    data: &RenderableChildEntity,
     initial_messages: &mut Vec<SherlockMessage>,
     changes: Vec<ConfigFileChange>,
 ) -> Option<Arc<[LauncherMode]>> {
@@ -20,11 +18,13 @@ pub async fn reload(
     let mut messages: Vec<SherlockMessage> = Vec::new();
 
     if needs.config {
-        let mut flags = Loader::load_flags().ok()?;
-        let config = match flags.to_config() {
+        let mut flags = Loader::load_flags();
+        let config = match flags.get_config() {
             Err(e) => {
                 messages.push(e);
-                SherlockConfig::apply_flags(&mut flags, SherlockConfig::default())
+                let mut cfg = SherlockConfig::default();
+                cfg.apply_flags(&mut flags);
+                cfg
             }
             Ok((cfg, msgs)) => {
                 messages.extend(msgs);

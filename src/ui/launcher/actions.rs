@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, rc::Rc, sync::Arc};
 
 use futures::{FutureExt, StreamExt, stream::FuturesUnordered};
 use gpui::{
@@ -58,11 +58,9 @@ impl LauncherView {
         // Find the first focusable item
         let first_valid_index = {
             let data_guard = data_entity.read(cx);
-            indices.iter().position(|&idx| {
-                data_guard
-                    .get(idx)
-                    .map_or(false, |child| child.spawn_focus())
-            })
+            indices
+                .iter()
+                .position(|&idx| data_guard.get(idx).is_some_and(|child| child.spawn_focus()))
         };
 
         if let Some(n) = first_valid_index {
@@ -93,7 +91,7 @@ impl LauncherView {
         self.has_actions = self
             .navigation
             .selected_item(cx)
-            .map_or(false, |i| i.has_actions(cx));
+            .is_some_and(|i| i.has_actions(cx));
 
         cx.notify()
     }
@@ -142,10 +140,10 @@ impl LauncherView {
 
         let current_style = &mut self.navigation.current_mut().style;
 
-        if let Some(target_idx) = current_style.next_index(direction) {
-            if self.valid_selection_idx(target_idx, cx) {
-                self.focus_nth(target_idx, cx);
-            }
+        if let Some(target_idx) = current_style.next_index(direction)
+            && self.valid_selection_idx(target_idx, cx)
+        {
+            self.focus_nth(target_idx, cx);
         }
     }
     pub(super) fn selection_down(
@@ -284,12 +282,10 @@ impl LauncherView {
                     func(cx)
                 }
             }
-            ExecMode::SwitchView { idx } => {
-                if self.navigation.set_active_idx(idx) {
-                    self.text_input.update(cx, |this, _| this.reset());
-                    self.filter_and_sort(cx);
-                    return Ok(false);
-                }
+            ExecMode::SwitchView { idx } if self.navigation.set_active_idx(idx) => {
+                self.text_input.update(cx, |this, _| this.reset());
+                self.filter_and_sort(cx);
+                return Ok(false);
             }
             ExecMode::Web {
                 engine,
@@ -324,11 +320,9 @@ impl LauncherView {
                 match self.execute_helper(what, keyword.as_ref(), &[], cx) {
                     Ok(exit) if exit => {
                         self.close_window(win, cx);
-                        return;
                     }
                     Err(e) => {
                         self.navigation.push_message(e, cx);
-                        return;
                     }
                     _ => {}
                 }
@@ -342,15 +336,15 @@ impl LauncherView {
         cx: &mut Context<Self>,
     ) {
         if let Some(idx) = self.context_idx {
-            if let Some(action) = self.context_actions.get(idx) {
-                if let Some(selected) = self.navigation.selected_item(cx) {
-                    let what = selected.build_action_exec(Arc::clone(action));
+            if let Some(action) = self.context_actions.get(idx)
+                && let Some(selected) = self.navigation.selected_item(cx)
+            {
+                let what = selected.build_action_exec(Arc::clone(action));
 
-                    match self.execute_helper(what, "", &[], cx) {
-                        Ok(exit) if exit => self.close_window(win, cx),
-                        Err(e) => self.navigation.push_message(e, cx),
-                        _ => {}
-                    }
+                match self.execute_helper(what, "", &[], cx) {
+                    Ok(exit) if exit => self.close_window(win, cx),
+                    Err(e) => self.navigation.push_message(e, cx),
+                    _ => {}
                 }
             }
         } else {
@@ -362,7 +356,7 @@ impl LauncherView {
                 let mut content = guard.content.to_string();
 
                 // Only transform if it's a PathInput
-                if let Some(ExecVariable::PathInput(_)) = &guard.variable {
+                if let Some(ExecVariable::Path(_)) = &guard.variable {
                     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
                     if content.starts_with('~') {
                         content = content.replacen('~', &home, 1);
@@ -376,19 +370,17 @@ impl LauncherView {
                 variables.push((guard.placeholder.clone(), SharedString::from(content)));
             }
 
-            if let Some(selected) = self.navigation.selected_item(cx) {
-                if let Some(what) = ExecMode::from_child(&selected) {
-                    match self.execute_helper(what, keyword.as_ref(), &variables, cx) {
-                        Ok(exit) if exit => {
-                            self.close_window(win, cx);
-                            return;
-                        }
-                        Err(e) => {
-                            self.navigation.push_message(e, cx);
-                            return;
-                        }
-                        _ => {}
+            if let Some(selected) = self.navigation.selected_item(cx)
+                && let Some(what) = ExecMode::from_child(&selected)
+            {
+                match self.execute_helper(what, keyword.as_ref(), &variables, cx) {
+                    Ok(exit) if exit => {
+                        self.close_window(win, cx);
                     }
+                    Err(e) => {
+                        self.navigation.push_message(e, cx);
+                    }
+                    _ => {}
                 }
             }
         }
@@ -453,7 +445,7 @@ impl LauncherView {
         cx.notify();
     }
     pub(super) fn close_context(&mut self, cx: &mut Context<Self>) {
-        if let Some(_) = self.context_idx.take() {
+        if self.context_idx.take().is_some() {
             cx.notify();
         }
     }
@@ -509,9 +501,8 @@ impl LauncherView {
     }
     pub(crate) fn update_async(&mut self, cx: &mut Context<Self>) {
         let data = self.navigation.with_model(cx, |mdl| mdl.data());
+        let items = data.read_with(cx, |this, _| this.clone());
         self.active_update_task = Some(cx.spawn(async move |this, cx: &mut AsyncApp| {
-            let items = data.read_with(cx, |this, _| this.clone());
-
             let mut futures: FuturesUnordered<_> = items
                 .iter()
                 .enumerate()
@@ -536,7 +527,7 @@ impl LauncherView {
                 if let Some(launcher) = this.upgrade() {
                     launcher.update(cx, |this, cx| {
                         data.update(cx, |items_arc, _| {
-                            let items = Arc::make_mut(items_arc);
+                            let items = Rc::make_mut(items_arc);
                             for (b_idx, b_update) in batch {
                                 items[b_idx] = b_update;
                             }

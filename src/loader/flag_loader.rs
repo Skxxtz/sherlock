@@ -7,7 +7,11 @@ use crate::utils::{
 };
 
 impl Loader {
-    pub fn load_flags() -> Result<SherlockFlags, SherlockMessage> {
+    /// This loads the application flags.
+    /// ### Returns:
+    /// **Error**
+    ///
+    pub fn load_flags() -> SherlockFlags {
         let args: Vec<String> = env::args().collect();
         if args.contains(&"--help".to_string()) {
             let _ = flag_documentation();
@@ -52,7 +56,7 @@ impl SherlockFlags {
             _ => long,
         }
     }
-    fn new(args: Vec<String>) -> Result<Self, SherlockMessage> {
+    fn new(args: Vec<String>) -> Self {
         // Helper closure to extract flag values
         let extract_path_value =
             |flag: &str| Self::extract_flag_value::<PathBuf>(&args, flag, None);
@@ -66,7 +70,7 @@ impl SherlockFlags {
             eprintln!("{:?}", x);
         }
 
-        Ok(SherlockFlags {
+        SherlockFlags {
             config_dir: extract_path_value("--config-dir"),
             config: extract_path_value("--config"),
             fallback: extract_path_value("--fallback"),
@@ -76,7 +80,6 @@ impl SherlockFlags {
             display_raw: check_flag_existence("--display-raw"),
             center_raw: check_flag_existence("--center"),
             cache: extract_path_value("--cache"),
-            daemonize: check_flag_existence("--daemonize"),
             sub_menu: Self::extract_flag_value::<String>(&args, "--sub-menu", Some("-sm")),
             method: Self::extract_flag_value::<String>(&args, "--method", None),
             field: Self::extract_flag_value::<String>(&args, "--field", None),
@@ -84,7 +87,7 @@ impl SherlockFlags {
             photo_mode: check_flag_existence("--photo"),
             input: Self::extract_flag_value::<bool>(&args, "--input", None),
             placeholder: Self::extract_flag_value::<String>(&args, "--placeholder", Some("-p")),
-        })
+        }
     }
 }
 
@@ -116,10 +119,6 @@ pub fn flag_documentation() -> Result<(), SherlockMessage> {
         (
             "-p, --placeholder",
             "Overwrite the placeholder text of the search bar.",
-        ),
-        (
-            "--daemonize",
-            "If this flag is set, Sherlock will run in daemon mode.",
         ),
         (
             "-sm, --sub-menu",

@@ -12,10 +12,12 @@ use crate::{
     utils::errors::{SherlockMessage, SherlockMessageLevel},
 };
 
+type DismissFunction = Arc<dyn Fn(&mut gpui::App, usize) + Send + Sync + 'static>;
+
 #[derive(Clone)]
 pub struct MessageChild {
     pub message: SherlockMessage,
-    pub on_dismiss: Option<Arc<dyn Fn(&mut gpui::App, usize) + Send + Sync + 'static>>,
+    pub on_dismiss: Option<DismissFunction>,
 }
 
 impl MessageChild {

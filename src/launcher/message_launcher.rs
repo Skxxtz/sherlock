@@ -24,7 +24,7 @@ impl LauncherProvider for MessageLauncher {
         _opts: Arc<serde_json::Value>,
         _cx: &mut gpui::App,
     ) -> Result<Vec<RenderableChild>, crate::utils::errors::SherlockMessage> {
-        Ok(vec![RenderableChild::AppLike {
+        Ok(vec![RenderableChild::App {
             launcher: Arc::clone(&launcher),
             inner: AppData::new()
                 .with_name("Show Messages".into())

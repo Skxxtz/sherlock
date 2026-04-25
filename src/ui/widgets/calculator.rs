@@ -37,7 +37,7 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
         let lock = self.result.read().ok()?;
         let (_, res) = lock.as_ref()?;
         Some(ExecMode::Copy {
-            content: res.to_string().into(),
+            content: res.to_string(),
         })
     }
     #[inline(always)]
@@ -75,7 +75,7 @@ impl<'a> RenderableChildImpl<'a> for CalcData {
             let trimmed_keyword = keyword.trim();
             if let Ok(r) = meval::eval_str(trimmed_keyword) {
                 let r = r.to_string();
-                if &r != trimmed_keyword {
+                if r != trimmed_keyword {
                     result = Some((r.clone(), IntentResult::String(format!("= {}", r).into())));
                 }
             }

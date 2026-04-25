@@ -55,7 +55,7 @@ impl Action for ShortcutAction {
         action
             .as_any()
             .downcast_ref::<Self>()
-            .map_or(false, |other| other.index == self.index)
+            .is_some_and(|other| other.index == self.index)
     }
 
     fn build(value: serde_json::Value) -> gpui::Result<Box<dyn Action>> {

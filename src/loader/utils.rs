@@ -4,7 +4,7 @@ use serde::{
     de::{MapAccess, Visitor},
 };
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{BTreeSet, HashMap},
     fmt::Debug,
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
@@ -150,7 +150,7 @@ impl AppData {
                 .map(|s| s.as_str())
                 .or(launcher.display_name.as_ref().map(|s| s.as_str()));
             if let Some(alias_keywords) = alias.keywords.as_ref() {
-                self.search_string = construct_search(name, &alias_keywords, use_keywords);
+                self.search_string = construct_search(name, alias_keywords, use_keywords);
             } else {
                 self.search_string = construct_search(name, &self.search_string, use_keywords);
             }
@@ -225,11 +225,13 @@ pub struct SherlockAlias {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum ExecVariable {
-    StringInput(SharedString),
-    PasswordInput(SharedString),
-    PathInput(PathData), // Use a helper struct
+    #[serde(rename = "string_input")]
+    String(SharedString),
+    #[serde(rename = "password_input")]
+    Password(SharedString),
+    #[serde(rename = "path_input")]
+    Path(PathData), // Use a helper struct
 }
 
 /// A path placeholder that deserializes from a plain string.
@@ -251,9 +253,9 @@ impl From<SharedString> for PathData {
 impl ExecVariable {
     pub fn placeholder(&self) -> SharedString {
         match self {
-            Self::StringInput(s) => s.clone(),
-            Self::PathInput(p) => p.path.clone(),
-            Self::PasswordInput(s) => s.clone(),
+            Self::String(s) => s.clone(),
+            Self::Path(p) => p.path.clone(),
+            Self::Password(s) => s.clone(),
         }
     }
 }
@@ -332,7 +334,7 @@ impl CounterReader {
 
         content.iter_mut().for_each(|(_, v)| {
             if let Some(new) = unique_values.get(v) {
-                *v = new.clone();
+                *v = *new;
             }
         });
 
@@ -345,27 +347,31 @@ impl CounterReader {
 /// Deserializes a map of `{ "App Name": AppData }` where the key becomes
 /// `AppData.name`. This is needed because the app name lives as the map key
 /// in the config format, not as a field inside the value.
-pub fn deserialize_named_appdata<'de, D>(deserializer: D) -> Result<HashSet<AppData>, D::Error>
+pub fn deserialize_named_appdata<'de, D>(deserializer: D) -> Result<Vec<AppData>, D::Error>
 where
     D: Deserializer<'de>,
 {
     struct AppDataMapVisitor;
     impl<'de> Visitor<'de> for AppDataMapVisitor {
-        type Value = HashSet<AppData>;
+        type Value = Vec<AppData>;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             formatter.write_str("a map of AppData keyed by 'name'")
         }
-        fn visit_map<M>(self, mut map: M) -> Result<HashSet<AppData>, M::Error>
+        fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
         where
             M: MapAccess<'de>,
         {
-            let mut set = HashSet::new();
+            let mut collection = Vec::new();
+
             while let Some((key, mut value)) = map.next_entry::<String, AppData>()? {
                 value.name = Some(SharedString::from(key));
-                set.insert(value);
+                // Optional: Only push if not already present
+                if !collection.iter().any(|v: &AppData| v.name == value.name) {
+                    collection.push(value);
+                }
             }
-            Ok(set)
+            Ok(collection)
         }
     }
     deserializer.deserialize_map(AppDataMapVisitor)
@@ -390,4 +396,19 @@ pub fn construct_search(name: Option<&str>, search_str: &str, use_keywords: bool
 
     s.make_ascii_lowercase();
     s
+}
+
+pub fn deserialize_path_buf<'de, D>(deserializer: D) -> Result<PathBuf, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+
+    if let Some(stripped) = s.strip_prefix('~')
+        && let Ok(home) = std::env::var("HOME")
+    {
+        return Ok(PathBuf::from(home).join(stripped.trim_start_matches('/')));
+    }
+
+    Ok(PathBuf::from(s))
 }

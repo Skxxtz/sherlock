@@ -22,10 +22,10 @@ impl ConstantDefaults {
         let mut terminal = None;
 
         //Check if $TERMAINAL is set
-        if let Ok(term) = std::env::var("TERMINAL") {
-            if Self::is_terminal_installed(&term) {
-                terminal = Some(term);
-            }
+        if let Ok(term) = std::env::var("TERMINAL")
+            && Self::is_terminal_installed(&term)
+        {
+            terminal = Some(term);
         }
         // Try other terminals
         if terminal.is_none() {
@@ -115,7 +115,7 @@ impl ConstantDefaults {
                     e
                 )
             })?
-            .filter_map(Result::ok)
+            .map_while(Result::ok)
             .find(|line| line.starts_with("Exec="))
             .and_then(|line| line.strip_prefix("Exec=").map(|l| l.to_string()))
             .ok_or_else(|| {
@@ -154,17 +154,8 @@ impl ConstantDefaults {
 
 pub struct BindDefaults {}
 impl BindDefaults {
-    pub fn modkey_ascii() -> Vec<String> {
-        vec![
-            String::from("⇧"), // shift
-            String::from("⇧"), // lock
-            String::from("⌘"), // control
-            String::from("⌘"), // meta
-            String::from("⎇"), // alt
-            String::from("✦"), // super
-            String::from("✦"), // hyper
-            String::from("⌘"), // default
-        ]
+    pub fn modkey_ascii() -> [char; 4] {
+        ['⌘', '^', '⎇', '⇧']
     }
     pub fn shortcut_mod() -> String {
         String::from("⌘")
@@ -202,9 +193,6 @@ impl FileDefaults {
     }
     pub fn fallback() -> PathBuf {
         paths::get_config_dir().unwrap().join("fallback.json")
-    }
-    pub fn css() -> PathBuf {
-        paths::get_config_dir().unwrap().join("main.css")
     }
     pub fn alias() -> PathBuf {
         paths::get_config_dir().unwrap().join("sherlock_alias.json")

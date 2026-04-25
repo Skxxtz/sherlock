@@ -5,6 +5,7 @@ use strum::{AsRefStr, Display as StrumDisplay};
 
 #[derive(Debug, Clone, Serialize, Deserialize, AsRefStr)]
 #[serde(rename_all = "snake_case")]
+#[derive(PartialEq)]
 pub enum SherlockErrorType {
     /// Logical branch that code logic dictates is impossible to reach.
     Unreachable,
@@ -14,6 +15,8 @@ pub enum SherlockErrorType {
     SerializationError,
     /// Failure while parsing external data (JSON/YAML) into internal structures.
     DeserializationError,
+    /// Failure regarding provided data
+    InvalidData,
     /// The requested UI or system action is not recognized or defined.
     InvalidAction,
     /// The specific internal function is not supported by the active launcher.
@@ -37,7 +40,7 @@ pub enum SherlockErrorType {
     /// Communication failures with the system or session DBus.
     DBusError(DBusAction, String),
     /// Low-level IPC or network socket connection/read/write failures.
-    SocketError(SocketAction, String),
+    SocketError(SocketAction),
     /// Remote request failures (HTTP, timeouts, or DNS issues).
     NetworkError(NetworkAction, String),
     /// SQL or connection failures involving the local SQLite database.
@@ -46,7 +49,7 @@ pub enum SherlockErrorType {
     UnsupportedBrowser(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum FileAction {
     Read,
@@ -56,7 +59,7 @@ pub enum FileAction {
     Find,
     Create,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum DirAction {
     Read,
@@ -64,7 +67,7 @@ pub enum DirAction {
     Remove,
     Find,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum DBusAction {
     Connect,
@@ -72,15 +75,16 @@ pub enum DBusAction {
     Send,
     Call,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum SocketAction {
     Close,
     Connect,
     Write,
     Read,
+    EoF,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum NetworkAction {
     Get,
@@ -89,7 +93,7 @@ pub enum NetworkAction {
     Update,
     Delete,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay)]
+#[derive(Debug, Clone, Serialize, Deserialize, StrumDisplay, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum DbAction {
     Connect,
@@ -114,7 +118,7 @@ impl Display for SherlockErrorType {
             Self::DBusError(act, target) => {
                 write!(f, "DBus failed to {act} ({target})")
             }
-            Self::SocketError(act, loc) => write!(f, "Failed to {} socket at \"{}\"", act, loc),
+            Self::SocketError(act) => write!(f, "Failed to {} socket", act),
             Self::BorrowCongestion => write!(f, "Resource is currently locked/in use"),
             Self::NetworkError(act, loc) => {
                 write!(f, "Network failure during {act} from \"{loc}\"")

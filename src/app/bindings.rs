@@ -48,7 +48,7 @@ pub(super) fn register_bindings(cx: &mut App) {
     add("right", KeyBinding::new("right", SelectionRight, None));
     add(
         "variable.tab",
-        UIFunction::Complete.into_bind("variable.tab").unwrap(),
+        UIFunction::Complete.get_binding("variable.tab").unwrap(),
     );
     add("enter", KeyBinding::new("enter", Execute, None));
     add("tab", KeyBinding::new("tab", NextVar, None));
@@ -72,7 +72,7 @@ pub(super) fn register_bindings(cx: &mut App) {
                         KeyBinding::new(&actual_key, ShortcutAction { index: i }, None),
                     );
                 }
-            } else if let Some(binding) = action_type.into_bind(key) {
+            } else if let Some(binding) = action_type.get_binding(key) {
                 add(key, binding);
             }
         }
@@ -90,18 +90,30 @@ pub struct ShortcutKeyMod {
 impl ShortcutKeyMod {
     pub fn from(mods: &Modifiers) {
         let mut buf: SmallVec<[char; 4]> = SmallVec::new();
+        let mut push = |idx: usize, default: char| {
+            buf.push(
+                ConfigGuard::read_with(|c| {
+                    c.appearance
+                        .mod_key_ascii
+                        .get(idx)
+                        .cloned()
+                        .unwrap_or(default)
+                })
+                .unwrap_or(default),
+            )
+        };
 
         if mods.platform {
-            buf.push('⌘');
+            push(0, '⌘');
         }
         if mods.control {
-            buf.push('^');
+            push(1, '^');
         }
         if mods.alt {
-            buf.push('⌥');
+            push(2, '⌥');
         }
         if mods.shift {
-            buf.push('⇧');
+            push(3, '⇧');
         }
 
         let _ = SHORTCUT_MOD.set(Self { buf });

@@ -68,7 +68,7 @@ impl FileData {
         };
 
         let kind = identify_file_type(extension.as_deref(), is_dir, is_symlink);
-        let is_image = extension.map_or(false, |ext| {
+        let is_image = extension.is_some_and(|ext| {
             matches!(
                 ext.as_str(),
                 "JPG"
@@ -335,7 +335,7 @@ impl<'a> RenderableChildImpl<'a> for FileData {
             .gap_5()
             .items_center()
             .child(if let Some(icon) = self.icon.as_ref() {
-                img(Arc::clone(&icon))
+                img(Arc::clone(icon))
                     .size(px(24.))
                     .flex_shrink_0()
                     .into_any_element()
@@ -454,7 +454,7 @@ impl RenderOnce for FileSidebar {
                         .overflow_hidden()
                         .text_ellipsis()
                         .whitespace_nowrap()
-                        .child(SharedString::from(value)),
+                        .child(value),
                 )
         };
 
@@ -644,7 +644,7 @@ fn load_thumbnail(path: &str, max_px: u32) -> Option<Arc<gpui::Image>> {
     }
 
     let file_size = std::fs::metadata(path).ok()?.len();
-    if file_size > 1 * 1024 * 1024 {
+    if file_size > 1024 * 1024 {
         return None;
     }
 
@@ -660,7 +660,7 @@ fn load_thumbnail(path: &str, max_px: u32) -> Option<Arc<gpui::Image>> {
 
     Some(Arc::new(gpui::Image {
         format: gpui::ImageFormat::Png,
-        bytes: bytes.into(),
+        bytes,
         id,
     }))
 }
@@ -688,7 +688,7 @@ fn load_svg_thumbnail(path: &str, max_px: u32) -> Option<Arc<gpui::Image>> {
 
     Some(Arc::new(gpui::Image {
         format: gpui::ImageFormat::Png,
-        bytes: pixmap.encode_png().ok()?.into(),
+        bytes: pixmap.encode_png().ok()?,
         id,
     }))
 }

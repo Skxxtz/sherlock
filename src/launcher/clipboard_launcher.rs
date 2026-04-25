@@ -31,6 +31,6 @@ impl LauncherProvider for ClipboardLauncher {
         let caps = Capabilities::from_strings(&capabilities);
         let inner = ClipData::new(caps, SharedString::from(""));
 
-        Ok(vec![RenderableChild::ClipLike { launcher, inner }])
+        Ok(vec![RenderableChild::Clip { launcher, inner }])
     }
 }
