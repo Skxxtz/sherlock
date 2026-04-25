@@ -5,7 +5,10 @@ use smallvec::{SmallVec, smallvec};
 
 use crate::{
     launcher::calc_launcher::CURRENCIES,
-    utils::intent::{colors::ColorConverter, translation::Language},
+    utils::{
+        intent::{colors::ColorConverter, translation::Language},
+        websearch::is_url,
+    },
 };
 
 mod colors;
@@ -316,32 +319,9 @@ impl Intent {
     }
 
     fn try_parse_url(input: &str) -> Option<Intent> {
-        let s = input.trim();
-
-        // explicit scheme
-        if s.starts_with("http://") || s.starts_with("https://") || s.starts_with("ftp://") {
-            return Some(Intent::Url {
-                url: s.to_string().into(),
-            });
-        }
-
-        // no spaces + contains a dot + looks like a domain
-        if !s.contains(' ') && s.contains('.') {
-            // must have something before and after the dot
-            let parts: Vec<&str> = s.splitn(2, '.').collect();
-            if !parts.is_empty() && parts[1].len() >= 2 {
-                // avoid matching things like "50.0" (numbers) or ".hidden"
-                let first = parts[0];
-                let is_numeric = first.chars().all(|c| c.is_numeric());
-                if !is_numeric && !first.is_empty() {
-                    return Some(Intent::Url {
-                        url: s.to_string().into(),
-                    });
-                }
-            }
-        }
-
-        None
+        is_url(input).then_some(Intent::Url {
+            url: input.to_string().into(),
+        })
     }
 }
 

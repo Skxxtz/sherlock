@@ -61,7 +61,7 @@ pub fn websearch(
     spawn_detached(&command, query, variables)
 }
 
-fn is_url(input: &str) -> bool {
+pub fn is_url(input: &str) -> bool {
     let s = input.trim();
 
     if s.is_empty() {
