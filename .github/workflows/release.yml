@@ -56,7 +56,7 @@ jobs:
       - name: Extract release notes
         run: |
           # Extract text between the first and second '## [' header
-          awk '/^## \[/ {if (++n>1) exit} {print}' CHANGELOG.md > release_notes.md
+          awk '/^## \[/ {if (++n==2) exit} n>=1' CHANGELOG.md > release_notes.md
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
